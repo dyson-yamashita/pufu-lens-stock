@@ -1,0 +1,320 @@
+import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
+import type { Env, Job } from './env';
+import { isDemo } from './env';
+import {
+  articleMemoryStatements,
+  memorySaveStatement,
+  now,
+  queueQuestionStatements,
+  jobFailureStatements,
+} from './db';
+import { fetchArticle } from './ingest';
+import { buildMemory, memoryText, modelName, summarize, generateQuestion, type Source } from './ai';
+import { dispatchJobs } from './jobs';
+import type { ArticleSummary } from '../shared/domain';
+
+const retry = {
+  retries: { limit: 2, delay: '5 seconds' as const, backoff: 'exponential' as const },
+  timeout: '3 minutes' as const,
+};
+async function jobById(env: Env, id: string) {
+  return env.DB.prepare('SELECT * FROM processing_jobs WHERE id = ?').bind(id).first<Job>();
+}
+async function done(env: Env, id: string) {
+  await env.DB.prepare("UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?")
+    .bind(now(), id)
+    .run();
+}
+async function fail(env: Env, job: Job, message: string) {
+  await env.DB.batch(jobFailureStatements(env, job, message));
+}
+async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
+  try {
+    const source = await step.do('load-question-source', async () => {
+      const row = await env.DB.prepare(
+        "SELECT q.status, a.title, a.summary_json, s.note, p.name AS project_name, p.description FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN projects p ON p.id = s.project_id JOIN articles a ON a.id = s.article_id WHERE q.stock_id = ? AND s.user_id = ? AND q.source = 'ai' AND q.generation = ? AND a.status = 'ready'",
+      )
+        .bind(job.target_id, job.user_id, job.revision)
+        .first<{
+          status: string;
+          title: string;
+          summary_json: string;
+          note: string;
+          project_name: string;
+          description: string;
+        }>();
+      if (!row || row.status === 'ready') {
+        await done(env, job.id);
+        return null;
+      }
+      await env.DB.batch([
+        env.DB.prepare(
+          "UPDATE questions SET status = 'generating', error = NULL, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND generation = ? AND status != 'ready'",
+        ).bind(now(), job.target_id, job.revision),
+        env.DB.prepare(
+          "UPDATE processing_jobs SET status = 'running', updated_at = ? WHERE id = ?",
+        ).bind(now(), job.id),
+      ]);
+      return {
+        title: row.title,
+        summary: JSON.parse(row.summary_json) as ArticleSummary,
+        note: row.note,
+        project: { name: row.project_name, description: row.description },
+      };
+    });
+    if (!source) return;
+    const question = await step.do('generate-question', retry, () => generateQuestion(env, source));
+    await step.do('save-question', async () => {
+      await env.DB.batch([
+        env.DB.prepare(
+          "UPDATE questions SET text = ?, status = 'ready', error = NULL, model = ?, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?)",
+        ).bind(
+          question.text,
+          isDemo(env) && !env.AI ? 'local-question-template' : env.AI_MODEL,
+          now(),
+          job.target_id,
+          job.revision,
+          job.user_id,
+        ),
+        env.DB.prepare(
+          "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
+        ).bind(now(), job.id),
+      ]);
+    });
+  } catch (error) {
+    await step.do('record-question-failure', () =>
+      fail(env, job, '問いを生成できませんでした。「再試行」からやり直せます。'),
+    );
+    throw error;
+  }
+}
+export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
+  async run(event: WorkflowEvent<{ jobId: string }>, step: WorkflowStep) {
+    const job = await step.do('load-job', () => jobById(this.env, event.payload.jobId));
+    if (!job || job.status === 'done') return;
+    if (job.kind === 'question') return runQuestion(this.env, job, step);
+    if (job.kind === 'cleanup') {
+      await step.do('delete-orphan-body', retry, async () => {
+        const referenced = await this.env.DB.prepare(
+          'SELECT id FROM articles WHERE content_key = ?',
+        )
+          .bind(job.target_id)
+          .first();
+        if (!referenced) await this.env.CONTENT.delete(job.target_id);
+      });
+      await step.do('finish-cleanup', () => done(this.env, job.id));
+      return;
+    }
+    try {
+      const article = await step.do('load-article', async () => {
+        const row = await this.env.DB.prepare(
+          'SELECT id, source_url, source_type, input_text, title, status FROM articles WHERE id = ? AND user_id = ? AND generation = ?',
+        )
+          .bind(job.target_id, job.user_id, job.revision)
+          .first<{
+            id: string;
+            source_url: string;
+            source_type: 'url' | 'text';
+            input_text: string | null;
+            title: string;
+            status: string;
+          }>();
+        if (!row || row.status === 'ready') {
+          await done(this.env, job.id);
+          return null;
+        }
+        await this.env.DB.batch([
+          this.env.DB.prepare(
+            "UPDATE articles SET status = 'extracting', updated_at = ? WHERE id = ? AND generation = ?",
+          ).bind(now(), row.id, job.revision),
+          this.env.DB.prepare(
+            "UPDATE processing_jobs SET status = 'running', updated_at = ? WHERE id = ?",
+          ).bind(now(), job.id),
+        ]);
+        return row;
+      });
+      if (!article) return;
+      const key = `${job.user_id}/${article.id}/${job.revision}.txt`;
+      const title = await step.do('fetch-and-store-content', retry, async () => {
+        const current = await this.env.DB.prepare(
+          'SELECT id, content_key FROM articles WHERE id = ? AND generation = ?',
+        )
+          .bind(article.id, job.revision)
+          .first<{ id: string; content_key: string | null }>();
+        if (!current) return null;
+        if (article.source_type === 'text' && !article.input_text)
+          throw new Error('保存したテキスト本文が見つかりません。');
+        const content =
+          article.source_type === 'text'
+            ? { title: article.title, text: article.input_text! }
+            : await fetchArticle(this.env, article.source_url);
+        await this.env.CONTENT.put(key, content.text, {
+          httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+        });
+        const statements = [
+          this.env.DB.prepare(
+            "UPDATE articles SET title = ?, content_key = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
+          ).bind(content.title, key, now(), article.id, job.revision),
+        ];
+        if (current.content_key && current.content_key !== key) {
+          statements.push(
+            this.env.DB.prepare(
+              "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT ?, ?, 'cleanup', ?, ? WHERE EXISTS (SELECT 1 FROM articles WHERE id = ? AND generation = ? AND content_key = ?)",
+            ).bind(
+              `gc-old-${article.id}-${job.revision}`,
+              job.user_id,
+              current.content_key,
+              job.revision,
+              article.id,
+              job.revision,
+              key,
+            ),
+          );
+        }
+        const result = await this.env.DB.batch(statements);
+        if (!result[0].meta.changes) {
+          await this.env.CONTENT.delete(key);
+          return null;
+        }
+        return content.title;
+      });
+      if (!title) {
+        await step.do('finish-deleted-article', () => done(this.env, job.id));
+        return;
+      }
+      const text = await step.do('read-article-body', async () => {
+        const content = await this.env.CONTENT.get(key);
+        if (!content) throw new Error('保存した本文が見つかりません。');
+        return content.text();
+      });
+      const summary = await summarize(this.env, title, text, (name, operation) =>
+        step.do(name, retry, operation),
+      );
+      await step.do('commit-summary', async () => {
+        const current = await this.env.DB.prepare(
+          'SELECT status FROM articles WHERE id = ? AND generation = ?',
+        )
+          .bind(article.id, job.revision)
+          .first<{ status: string }>();
+        if (!current || current.status === 'ready') {
+          await done(this.env, job.id);
+          return;
+        }
+        await this.env.DB.batch([
+          this.env.DB.prepare(
+            "UPDATE articles SET summary_json = ?, model = ?, status = 'ready', error = NULL, updated_at = ? WHERE id = ? AND generation = ?",
+          ).bind(JSON.stringify(summary), modelName(this.env), now(), article.id, job.revision),
+          ...articleMemoryStatements(this.env, job.user_id, article.id),
+          ...queueQuestionStatements(this.env, null, article.id),
+          this.env.DB.prepare(
+            "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
+          ).bind(now(), job.id),
+        ]);
+      });
+      await step.do('dispatch-memory-updates', () => dispatchJobs(this.env));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message.slice(0, 400)
+          : '記事の処理に失敗しました。再試行してください。';
+      await step.do('record-failure', () => fail(this.env, job, message));
+      await step.do('dispatch-cleanup-after-failure', () => dispatchJobs(this.env));
+      throw error;
+    }
+  }
+}
+export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
+  async run(event: WorkflowEvent<{ jobId: string }>, step: WorkflowStep) {
+    const job = await step.do('load-job', () => jobById(this.env, event.payload.jobId));
+    if (!job || job.status === 'done') return;
+    if (!isDemo(this.env)) await step.sleep('coalesce-saves', '30 seconds');
+    try {
+      const project = job.kind === 'project_memory';
+      const owner = await step.do('load-current-revision', async () => {
+        const row = project
+          ? await this.env.DB.prepare(
+              'SELECT memory_revision, name, description FROM projects WHERE id = ? AND user_id = ?',
+            )
+              .bind(job.target_id, job.user_id)
+              .first<{ memory_revision: number; name: string; description: string }>()
+          : await this.env.DB.prepare(
+              "SELECT memory_revision, name, '' AS description FROM users WHERE id = ?",
+            )
+              .bind(job.user_id)
+              .first<{ memory_revision: number; name: string; description: string }>();
+        if (!row || row.memory_revision !== job.revision) {
+          await done(this.env, job.id);
+          return null;
+        }
+        await this.env.DB.prepare(
+          "UPDATE processing_jobs SET status = 'running', updated_at = ? WHERE id = ?",
+        )
+          .bind(now(), job.id)
+          .run();
+        return row;
+      });
+      if (!owner) return;
+      const sources: Source[] = [];
+      for (let page = 0; ; page++) {
+        const rows = await step.do(`source-page-${page}`, async () => {
+          // GROUP BYでユーザー全体の同一記事を1件にする。本文ではなく原記事の要約を入力する。
+          const result = await this.env.DB.prepare(
+            "SELECT a.id AS article_id, a.title, a.summary_json, GROUP_CONCAT(DISTINCT s.note) AS note, MIN(s.created_at) AS saved_at, GROUP_CONCAT(DISTINCT p.name) AS project_name FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.user_id = ? AND a.status = 'ready' AND (? IS NULL OR s.project_id = ?) GROUP BY a.id ORDER BY a.id LIMIT 25 OFFSET ?",
+          )
+            .bind(
+              job.user_id,
+              project ? job.target_id : null,
+              project ? job.target_id : null,
+              page * 25,
+            )
+            .all<{
+              article_id: string;
+              title: string;
+              summary_json: string;
+              note: string;
+              saved_at: string;
+              project_name: string;
+            }>();
+          return result.results;
+        });
+        for (const row of rows)
+          sources.push({
+            articleId: row.article_id,
+            title: row.title,
+            summary: JSON.parse(row.summary_json) as ArticleSummary,
+            note: row.note,
+            savedAt: row.saved_at,
+            project: row.project_name,
+          });
+        if (rows.length < 25) break;
+      }
+      const memory = await buildMemory(
+        this.env,
+        sources,
+        { name: owner.name, description: owner.description, scope: project ? 'project' : 'user' },
+        (name, operation) => step.do(name, retry, operation),
+      );
+      await step.do('save-if-revision-current', async () => {
+        await this.env.DB.batch([
+          memorySaveStatement(this.env, {
+            userId: job.user_id,
+            projectId: project ? job.target_id : null,
+            revision: job.revision,
+            text: memoryText(memory),
+            dataJson: JSON.stringify(memory),
+            articleCount: sources.length,
+            model: modelName(this.env),
+          }),
+          this.env.DB.prepare(
+            "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
+          ).bind(now(), job.id),
+        ]);
+      });
+    } catch (error) {
+      await step.do('record-failure', () =>
+        fail(this.env, job, 'メモリを更新できませんでした。「再生成」から再試行できます。'),
+      );
+      throw error;
+    }
+  }
+}

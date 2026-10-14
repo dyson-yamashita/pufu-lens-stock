@@ -1,0 +1,631 @@
+import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import { bodyLimit } from 'hono/body-limit';
+import { secureHeaders } from 'hono/secure-headers';
+import { z } from 'zod';
+import {
+  profileSchema,
+  stockInputSchema,
+  userQuestionSchema,
+  type Question,
+  type User,
+} from '../shared/domain';
+import type { AppEnv, Env } from './env';
+import { isDemoOrigin } from './env';
+import {
+  authenticate,
+  demoLogin,
+  googleCallback,
+  googleConfigured,
+  googleLogin,
+  logout,
+} from './auth';
+import { canonicalUrl, hash, randomSecret, validateUrl } from './security';
+import { dirtyMemoryStatements, now, orphanCleanupStatements, queueQuestionStatements } from './db';
+import { dispatchJobs } from './jobs';
+
+const projectSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(1000).default(''),
+});
+const questionColumns =
+  'q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, s.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain';
+const questionJoins =
+  'questions q JOIN stocks s ON s.id = q.stock_id JOIN projects p ON p.id = s.project_id JOIN articles a ON a.id = s.article_id';
+async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
+  let value: unknown;
+  try {
+    value = await c.req.json();
+  } catch {
+    throw new HTTPException(400, { message: 'JSON形式で送信してください。' });
+  }
+  const result = schema.safeParse(value);
+  if (!result.success)
+    throw new HTTPException(400, {
+      message: '入力内容を確認してください。文字数または形式が正しくありません。',
+    });
+  return result.data;
+}
+async function ownedProject(env: Env, userId: string, id: string) {
+  const project = await env.DB.prepare(
+    'SELECT id, name, description, memory_revision FROM projects WHERE id = ? AND user_id = ?',
+  )
+    .bind(id, userId)
+    .first<{ id: string; name: string; description: string; memory_revision: number }>();
+  if (!project) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
+  return project;
+}
+export function createApp() {
+  const app = new Hono<AppEnv>();
+  app.use('/api/*', secureHeaders(), (c, next) =>
+    bodyLimit({
+      maxSize: c.req.method === 'POST' && c.req.path === '/api/v1/stocks' ? 163840 : 16384,
+      onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
+    })(c, next),
+  );
+  app.use('/api/*', async (c, next) => {
+    c.header('Cache-Control', 'no-store');
+    await next();
+  });
+  app.get('/api/config', (c) =>
+    c.json({
+      demo: isDemoOrigin(c.env, new URL(c.req.url).origin),
+      googleConfigured: googleConfigured(c),
+    }),
+  );
+  app.get('/api/auth/google', googleLogin);
+  app.get('/api/auth/google/callback', googleCallback);
+  app.post('/api/auth/demo', async (c) => {
+    const response = await demoLogin(c);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return response;
+  });
+  app.use('/api/v1/*', async (c, next) => {
+    const principal = await authenticate(c);
+    c.set('principal', principal);
+    if (
+      principal.kind === 'token' &&
+      !(
+        (c.req.method === 'GET' && c.req.path === '/api/v1/projects') ||
+        (c.req.method === 'POST' && c.req.path === '/api/v1/stocks')
+      )
+    )
+      throw new HTTPException(403, { message: 'このトークンには操作の権限がありません。' });
+    await next();
+  });
+  app.get('/api/v1/me', (c) =>
+    c.json({ user: c.get('principal').user, demo: isDemoOrigin(c.env, new URL(c.req.url).origin) }),
+  );
+  app.patch('/api/v1/me', async (c) => {
+    const data = await body(c, profileSchema);
+    const user = await c.env.DB.prepare(
+      'UPDATE users SET name = ?, bio = ? WHERE id = ? RETURNING id, name, bio, email, avatar_url',
+    )
+      .bind(data.name, data.bio, c.get('principal').user.id)
+      .first<User>();
+    if (!user) throw new HTTPException(401, { message: 'ログインが必要です。' });
+    return c.json({ user });
+  });
+  app.post('/api/v1/logout', logout);
+  app.get('/api/v1/projects', async (c) => {
+    const { user, tokenProjectId } = c.get('principal');
+    const result = await c.env.DB.prepare(
+      "SELECT p.id, p.name, p.description, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
+    )
+      .bind(user.id, tokenProjectId, tokenProjectId)
+      .all();
+    return c.json({ projects: result.results });
+  });
+  app.post('/api/v1/projects', async (c) => {
+    const { user } = c.get('principal');
+    const data = await body(c, projectSchema);
+    const count = await c.env.DB.prepare('SELECT COUNT(*) AS count FROM projects WHERE user_id = ?')
+      .bind(user.id)
+      .first<{ count: number }>();
+    if (count!.count >= 50)
+      throw new HTTPException(422, { message: 'プロジェクトは50件まで作成できます。' });
+    const id = crypto.randomUUID();
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        'INSERT INTO projects (id, user_id, name, description) VALUES (?, ?, ?, ?)',
+      ).bind(id, user.id, data.name, data.description),
+      ...dirtyMemoryStatements(c.env, user.id, [id]),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ id }, 201);
+  });
+  app.patch('/api/v1/projects/:id', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    const data = await body(c, projectSchema);
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        'UPDATE projects SET name = ?, description = ? WHERE id = ? AND user_id = ?',
+      ).bind(data.name, data.description, id, user.id),
+      ...dirtyMemoryStatements(c.env, user.id, [id]),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true });
+  });
+  app.delete('/api/v1/projects/:id', async (c) => {
+    const { user } = c.get('principal');
+    await ownedProject(c.env, user.id, c.req.param('id'));
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM projects WHERE id = ? AND user_id = ?').bind(
+        c.req.param('id'),
+        user.id,
+      ),
+      ...orphanCleanupStatements(c.env, user.id),
+      ...dirtyMemoryStatements(c.env, user.id, []),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true });
+  });
+  app.get('/api/v1/stocks', async (c) => {
+    const { user } = c.get('principal');
+    const projectId = c.req.query('project_id') || null;
+    if (projectId) await ownedProject(c.env, user.id, projectId);
+    const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
+    const status = c.req.query('status') ?? 'all';
+    if (!['all', 'ready', 'processing', 'failed'].includes(status)) throw new HTTPException(400);
+    const source = c.req.query('source') ?? 'all';
+    if (!['all', 'web', 'user'].includes(source)) throw new HTTPException(400);
+    const page = Math.max(1, Math.min(5000, Number(c.req.query('page')) || 1));
+    const where =
+      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (a.title LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status = ?) AND (? = 'all' OR a.source_type = ?)";
+    const params = [
+      user.id,
+      projectId,
+      projectId,
+      `%${query}%`,
+      `%${query}%`,
+      `%${query}%`,
+      status,
+      status,
+      status,
+      source,
+      source === 'web' ? 'url' : 'text',
+    ];
+    const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
+      c.env.DB.prepare(
+        `SELECT s.id, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at DESC, s.id DESC LIMIT 24 OFFSET ?`,
+      ).bind(...params, (page - 1) * 24),
+      c.env.DB.prepare(
+        `SELECT COUNT(*) AS count FROM stocks s JOIN articles a ON a.id = s.article_id WHERE ${where}`,
+      ).bind(...params),
+    ]);
+    const stocks = rows.results.map((row) => {
+      const { summary_json, ...stock } = row;
+      return { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null };
+    });
+    return c.json({ stocks, total: totals.results[0].count, page, pageSize: 24 });
+  });
+  app.post('/api/v1/stocks', async (c) => {
+    const { user, tokenProjectId } = c.get('principal');
+    const data = await body(c, stockInputSchema);
+    if (tokenProjectId && tokenProjectId !== data.project_id)
+      throw new HTTPException(403, { message: 'このトークンの保存先プロジェクトとは異なります。' });
+    await ownedProject(c.env, user.id, data.project_id);
+    const source = data.type === 'url' ? validateUrl(data.url) : null;
+    const title =
+      data.type === 'text'
+        ? data.title || data.text.split('\n', 1)[0].trim().slice(0, 80)
+        : source!.hostname;
+    const canonical =
+      data.type === 'text'
+        ? `text:${await hash(JSON.stringify([title, data.text]))}`
+        : canonicalUrl(data.url);
+    const requestHash = await hash(JSON.stringify([data.project_id, canonical, data.note]));
+    const key = c.req.header('Idempotency-Key');
+    if (key && !/^[A-Za-z0-9_-]{1,128}$/.test(key))
+      throw new HTTPException(400, {
+        message:
+          'Idempotency-Keyは128文字以内の英数字・ハイフン・アンダースコアで指定してください。',
+      });
+    const replay = async () => {
+      if (!key) return null;
+      const previous = await c.env.DB.prepare(
+        'SELECT request_hash, stock_id FROM idempotency_keys WHERE user_id = ? AND key = ?',
+      )
+        .bind(user.id, key)
+        .first<{ request_hash: string; stock_id: string | null }>();
+      if (!previous) return null;
+      if (previous.request_hash !== requestHash)
+        throw new HTTPException(409, {
+          message: '同じIdempotency-Keyで異なる内容が送信されました。',
+        });
+      if (!previous.stock_id)
+        throw new HTTPException(409, {
+          message: 'この保存は削除済みです。新しいIdempotency-Keyで送信してください。',
+        });
+      return c.json({ id: previous.stock_id, duplicate: true }, 200);
+    };
+    const existingResponse = await replay();
+    if (existingResponse) return existingResponse;
+    const existing = await c.env.DB.prepare(
+      'SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
+    )
+      .bind(user.id, data.project_id, canonical)
+      .first<{ id: string }>();
+    if (!existing) {
+      const daily = await c.env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM stocks WHERE user_id = ? AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')",
+      )
+        .bind(user.id)
+        .first<{ count: number }>();
+      if (daily!.count >= 200)
+        throw new HTTPException(429, {
+          message: '1日の保存上限（200件）に達しました。時間をおいて再度お試しください。',
+        });
+    }
+    const articleId = crypto.randomUUID();
+    const stockId = crypto.randomUUID();
+    const statements = [
+      c.env.DB.prepare(
+        'INSERT OR IGNORE INTO articles (id, user_id, canonical_url, source_url, title, domain, source_type, input_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).bind(
+        articleId,
+        user.id,
+        canonical,
+        source?.href ?? '',
+        title,
+        source?.hostname ?? '',
+        data.type,
+        data.type === 'text' ? data.text : null,
+      ),
+      c.env.DB.prepare(
+        'INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note) SELECT ?, ?, ?, id, ? FROM articles WHERE user_id = ? AND canonical_url = ?',
+      ).bind(stockId, user.id, data.project_id, data.note, user.id, canonical),
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE user_id = ? AND canonical_url = ? AND status = 'queued'",
+      ).bind(user.id, canonical),
+      ...dirtyMemoryStatements(c.env, user.id, [data.project_id], stockId),
+      ...queueQuestionStatements(c.env, stockId),
+    ];
+    if (key)
+      statements.push(
+        c.env.DB.prepare(
+          'INSERT INTO idempotency_keys (user_id, key, request_hash, stock_id) SELECT ?, ?, ?, s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
+        ).bind(user.id, key, requestHash, user.id, data.project_id, canonical),
+      );
+    let result: D1Result[];
+    try {
+      result = await c.env.DB.batch(statements);
+    } catch (error) {
+      const response = await replay();
+      if (response) return response;
+      throw error;
+    }
+    const stock = await c.env.DB.prepare(
+      'SELECT s.id, a.status FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
+    )
+      .bind(user.id, data.project_id, canonical)
+      .first<{ id: string; status: string }>();
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json(
+      { id: stock!.id, status: stock!.status, duplicate: !result[1].meta.changes },
+      result[1].meta.changes ? 202 : 200,
+    );
+  });
+  app.get('/api/v1/articles/:id', async (c) => {
+    const row = await c.env.DB.prepare(
+      'SELECT s.id, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .first<Record<string, unknown>>();
+    if (!row)
+      throw new HTTPException(404, { message: '根拠の記事は削除済み、または見つかりません。' });
+    const { summary_json, ...stock } = row;
+    return c.json({
+      stock: { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null },
+    });
+  });
+  async function ownedStock(c: import('hono').Context<AppEnv>) {
+    const stock = await c.env.DB.prepare(
+      'SELECT s.id, s.project_id, s.article_id, a.status, a.generation, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .first<{
+        id: string;
+        project_id: string;
+        article_id: string;
+        status: string;
+        generation: number;
+        content_key: string | null;
+        input_text: string | null;
+      }>();
+    if (!stock) throw new HTTPException(404, { message: '記事が見つかりません。' });
+    return stock;
+  }
+  app.get('/api/v1/questions', async (c) => {
+    const { user } = c.get('principal');
+    const projectId = c.req.query('project_id') || null;
+    if (projectId) await ownedProject(c.env, user.id, projectId);
+    const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
+    const status = c.req.query('status') ?? 'all';
+    if (!['all', 'ready', 'processing', 'failed'].includes(status)) throw new HTTPException(400);
+    const source = c.req.query('source') ?? 'all';
+    if (!['all', 'ai', 'user'].includes(source)) throw new HTTPException(400);
+    const favorite = c.req.query('favorite') ?? 'false';
+    if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
+    const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
+    const where =
+      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (q.text LIKE ? ESCAPE '\\' OR a.title LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
+      (favorite === 'true' ? ' AND q.is_favorite = 1' : '');
+    const params = [
+      user.id,
+      projectId,
+      projectId,
+      `%${query}%`,
+      `%${query}%`,
+      `%${query}%`,
+      status,
+      status,
+      status,
+      source,
+      source,
+    ];
+    const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
+      c.env.DB.prepare(
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT 24 OFFSET ?`,
+      ).bind(...params, (page - 1) * 24),
+      c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${questionJoins} WHERE ${where}`).bind(
+        ...params,
+      ),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ questions: rows.results, total: totals.results[0].count, page, pageSize: 24 });
+  });
+  app.post('/api/v1/questions', async (c) => {
+    const { user } = c.get('principal');
+    const data = await body(c, userQuestionSchema);
+    const id = `user-${user.id}-${data.request_id ?? crypto.randomUUID()}`;
+    const result = await c.env.DB.prepare(
+      "INSERT OR IGNORE INTO questions (id, stock_id, text, source, status) SELECT ?, id, ?, 'user', 'ready' FROM stocks WHERE id = ? AND user_id = ?",
+    )
+      .bind(id, data.text, data.stock_id, user.id)
+      .run();
+    const question = await c.env.DB.prepare(
+      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND s.user_id = ?`,
+    )
+      .bind(id, user.id)
+      .first<Question>();
+    if (!question) throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
+    if (
+      question.stock_id !== data.stock_id ||
+      question.text !== data.text ||
+      question.source !== 'user'
+    )
+      throw new HTTPException(409, { message: '同じリクエストIDで異なる問いが送信されました。' });
+    return c.json({ question }, result.meta.changes ? 201 : 200);
+  });
+  app.patch('/api/v1/questions/:id/favorite', async (c) => {
+    const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));
+    const question = await c.env.DB.prepare(
+      'UPDATE questions SET is_favorite = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?) RETURNING id, is_favorite',
+    )
+      .bind(Number(data.is_favorite), now(), c.req.param('id'), c.get('principal').user.id)
+      .first<Pick<Question, 'id' | 'is_favorite'>>();
+    if (!question) throw new HTTPException(404, { message: '問いが見つかりません。' });
+    return c.json(question);
+  });
+  app.get('/api/v1/stocks/:id', async (c) => {
+    const row = await c.env.DB.prepare(
+      'SELECT s.id, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .first<Record<string, unknown>>();
+    if (!row) throw new HTTPException(404, { message: '記事が見つかりません。' });
+    const { summary_json, ...stock } = row;
+    return c.json({
+      stock: { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null },
+    });
+  });
+  app.get('/api/v1/stocks/:id/question', async (c) => {
+    await ownedStock(c);
+    const rows = await c.env.DB.prepare(
+      `SELECT ${questionColumns} FROM ${questionJoins} WHERE s.id = ? AND s.user_id = ? ORDER BY q.created_at DESC, q.id DESC`,
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .all<Question>();
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({
+      question:
+        rows.results.find((question) => question.source === 'ai') ?? rows.results[0] ?? null,
+      questions: rows.results,
+    });
+  });
+  app.post('/api/v1/stocks/:id/question/retry', async (c) => {
+    const stock = await ownedStock(c);
+    const question = await c.env.DB.prepare(
+      "SELECT status, source FROM questions WHERE stock_id = ? AND source = 'ai'",
+    )
+      .bind(stock.id)
+      .first<{ status: string; source: string }>();
+    if (!question || question.source !== 'ai' || question.status !== 'failed')
+      throw new HTTPException(409, { message: '生成に失敗した問いだけ再試行できます。' });
+    if (stock.status !== 'ready')
+      throw new HTTPException(409, { message: '先に記事の取得・要約を完了してください。' });
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        "UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND status = 'failed'",
+      ).bind(now(), stock.id),
+      ...queueQuestionStatements(c.env, stock.id),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true }, 202);
+  });
+  app.get('/api/v1/stocks/:id/content', async (c) => {
+    const stock = await ownedStock(c);
+    const object = stock.content_key ? await c.env.CONTENT.get(stock.content_key) : null;
+    return c.json({ content: object ? await object.text() : stock.input_text });
+  });
+  app.patch('/api/v1/stocks/:id', async (c) => {
+    const { user } = c.get('principal');
+    const stock = await ownedStock(c);
+    const data = await body(
+      c,
+      z.object({ note: z.string().max(2000), project_id: z.string().min(1).max(100) }),
+    );
+    await ownedProject(c.env, user.id, data.project_id);
+    const duplicate = await c.env.DB.prepare(
+      'SELECT id FROM stocks WHERE project_id = ? AND article_id = ? AND id != ?',
+    )
+      .bind(data.project_id, stock.article_id, stock.id)
+      .first();
+    if (duplicate)
+      throw new HTTPException(409, { message: '移動先には同じ記事が保存されています。' });
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        'UPDATE stocks SET note = ?, project_id = ? WHERE id = ? AND user_id = ?',
+      ).bind(data.note, data.project_id, stock.id, user.id),
+      ...dirtyMemoryStatements(c.env, user.id, [...new Set([stock.project_id, data.project_id])]),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true });
+  });
+  app.delete('/api/v1/stocks/:id', async (c) => {
+    const stock = await ownedStock(c);
+    const { user } = c.get('principal');
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM stocks WHERE id = ? AND user_id = ?').bind(stock.id, user.id),
+      ...orphanCleanupStatements(c.env, user.id),
+      ...dirtyMemoryStatements(c.env, user.id, [stock.project_id]),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true });
+  });
+  app.post('/api/v1/stocks/:id/retry', async (c) => {
+    const stock = await ownedStock(c);
+    if (stock.status !== 'failed')
+      throw new HTTPException(409, { message: '取得に失敗した記事だけ再試行できます。' });
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        "UPDATE articles SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed'",
+      ).bind(now(), stock.article_id, c.get('principal').user.id),
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE id = ? AND user_id = ? AND status = 'queued'",
+      ).bind(stock.article_id, c.get('principal').user.id),
+      c.env.DB.prepare(
+        "UPDATE questions SET status = 'queued', error = NULL, updated_at = ? WHERE source = 'ai' AND status = 'failed' AND stock_id IN (SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE a.id = ? AND s.user_id = ? AND a.status = 'queued')",
+      ).bind(now(), stock.article_id, c.get('principal').user.id),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true }, 202);
+  });
+  app.get('/api/v1/memory', async (c) => {
+    const { user } = c.get('principal');
+    const projectId = c.req.query('project_id') || null;
+    const owner = projectId
+      ? await ownedProject(c.env, user.id, projectId)
+      : await c.env.DB.prepare('SELECT memory_revision FROM users WHERE id = ?')
+          .bind(user.id)
+          .first<{ memory_revision: number }>();
+    const memoryId = projectId ? `project-${projectId}` : `user-${user.id}`;
+    const row = await c.env.DB.prepare('SELECT * FROM memories WHERE id = ? AND user_id = ?')
+      .bind(memoryId, user.id)
+      .first();
+    const job = await c.env.DB.prepare(
+      'SELECT status, error FROM processing_jobs WHERE user_id = ? AND kind = ? AND target_id = ? AND revision = ?',
+    )
+      .bind(
+        user.id,
+        projectId ? 'project_memory' : 'user_memory',
+        projectId ?? user.id,
+        owner!.memory_revision,
+      )
+      .first<{ status: string; error: string | null }>();
+    const pending = Boolean(job && ['pending', 'dispatched', 'running'].includes(job.status));
+    if (!row) return c.json({ memory: null, pending, error: job?.error ?? null });
+    const { data_json, ...memory } = row;
+    return c.json({
+      memory: {
+        ...memory,
+        data: JSON.parse(String(data_json)),
+        current_revision: owner!.memory_revision,
+        pending,
+        error: job?.error ?? null,
+      },
+      pending,
+      error: job?.error ?? null,
+    });
+  });
+  app.post('/api/v1/memory/rebuild', async (c) => {
+    const { user } = c.get('principal');
+    const data = await body(
+      c,
+      z.object({ project_id: z.string().max(100).nullable().default(null) }),
+    );
+    if (data.project_id) await ownedProject(c.env, user.id, data.project_id);
+    await c.env.DB.batch(
+      dirtyMemoryStatements(c.env, user.id, data.project_id ? [data.project_id] : []),
+    );
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true }, 202);
+  });
+  app.get('/api/v1/tokens', async (c) => {
+    const rows = await c.env.DB.prepare(
+      'SELECT id, name, prefix, project_id, expires_at, revoked_at, last_used_at, created_at FROM api_tokens WHERE user_id = ? ORDER BY created_at DESC',
+    )
+      .bind(c.get('principal').user.id)
+      .all();
+    return c.json({ tokens: rows.results });
+  });
+  app.post('/api/v1/tokens', async (c) => {
+    const { user } = c.get('principal');
+    const data = await body(
+      c,
+      z.object({
+        name: z.string().trim().min(1).max(80),
+        project_id: z.string().max(100).nullable().default(null),
+        expires_days: z.number().int().min(1).max(365).nullable().default(90),
+      }),
+    );
+    if (data.project_id) await ownedProject(c.env, user.id, data.project_id);
+    const count = await c.env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM api_tokens WHERE user_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)',
+    )
+      .bind(user.id, now())
+      .first<{ count: number }>();
+    if (count!.count >= 20)
+      throw new HTTPException(422, {
+        message: '有効なトークンは20個までです。不要なトークンを失効してください。',
+      });
+    const token = `pls_${randomSecret()}`;
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare(
+      'INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, project_id, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
+      .bind(
+        id,
+        user.id,
+        data.name,
+        await hash(token),
+        token.slice(0, 11),
+        data.project_id,
+        data.expires_days === null
+          ? null
+          : new Date(Date.now() + data.expires_days * 86400000).toISOString(),
+      )
+      .run();
+    return c.json({ id, token }, 201);
+  });
+  app.delete('/api/v1/tokens/:id', async (c) => {
+    const result = await c.env.DB.prepare(
+      'UPDATE api_tokens SET revoked_at = ? WHERE id = ? AND user_id = ?',
+    )
+      .bind(now(), c.req.param('id'), c.get('principal').user.id)
+      .run();
+    if (!result.meta.changes) throw new HTTPException(404);
+    return c.json({ ok: true });
+  });
+  app.notFound((c) => c.json({ error: '見つかりません。' }, 404));
+  app.onError((error, c) => {
+    if (error instanceof HTTPException)
+      return c.json({ error: error.message || 'リクエストを確認してください。' }, error.status);
+    console.error('api_request_failed', { path: c.req.path });
+    return c.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, 500);
+  });
+  return app;
+}

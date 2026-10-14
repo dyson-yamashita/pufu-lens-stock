@@ -1,0 +1,136 @@
+import type { Env, Job } from './env';
+
+export const now = () => new Date().toISOString();
+export function queueQuestionJobStatement(
+  env: Env,
+  stockId: string | null = null,
+  articleId: string | null = null,
+): D1PreparedStatement {
+  return env.DB.prepare(
+    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id WHERE q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+  ).bind(stockId, stockId, articleId, articleId);
+}
+export function queueQuestionStatements(
+  env: Env,
+  stockId: string | null = null,
+  articleId: string | null = null,
+): D1PreparedStatement[] {
+  return [
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO questions (id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id WHERE (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+    ).bind(stockId, stockId, articleId, articleId),
+    queueQuestionJobStatement(env, stockId, articleId),
+  ];
+}
+export function jobFailureStatements(env: Env, job: Job, message: string): D1PreparedStatement[] {
+  const statements = [
+    env.DB.prepare(
+      "UPDATE processing_jobs SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND status != 'done'",
+    ).bind(message, now(), job.id),
+  ];
+  if (job.kind === 'article') {
+    statements.push(
+      env.DB.prepare(
+        "UPDATE articles SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready'",
+      ).bind(message, now(), job.target_id, job.user_id, job.revision),
+      env.DB.prepare(
+        "UPDATE questions SET status = 'failed', error = '記事の取得・要約が完了していません。記事の再取得をお試しください。', updated_at = ? WHERE source = 'ai' AND status = 'queued' AND stock_id IN (SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE a.id = ? AND s.user_id = ? AND a.generation = ? AND a.status = 'failed')",
+      ).bind(now(), job.target_id, job.user_id, job.revision),
+    );
+  } else if (job.kind === 'question') {
+    statements.push(
+      env.DB.prepare(
+        "UPDATE questions SET status = 'failed', error = ?, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?)",
+      ).bind(message, now(), job.target_id, job.revision, job.user_id),
+    );
+  }
+  return statements;
+}
+export function dirtyMemoryStatements(
+  env: Env,
+  userId: string,
+  projectIds: string[],
+  createdStockId?: string,
+): D1PreparedStatement[] {
+  const statements: D1PreparedStatement[] = [];
+  const guard = createdStockId ? ' AND EXISTS (SELECT 1 FROM stocks WHERE id = ?)' : '';
+  const guardParams = createdStockId ? [createdStockId] : [];
+  if (projectIds.length) {
+    const placeholders = projectIds.map(() => '?').join(',');
+    statements.push(
+      env.DB.prepare(
+        `UPDATE projects SET memory_revision = memory_revision + 1 WHERE user_id = ? AND id IN (${placeholders})${guard}`,
+      ).bind(userId, ...projectIds, ...guardParams),
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision FROM projects WHERE user_id = ? AND id IN (${placeholders})${guard}`,
+      ).bind(userId, ...projectIds, ...guardParams),
+    );
+  }
+  statements.push(
+    env.DB.prepare(
+      `UPDATE users SET memory_revision = memory_revision + 1 WHERE id = ?${guard}`,
+    ).bind(userId, ...guardParams),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision FROM users WHERE id = ?${guard}`,
+    ).bind(userId, ...guardParams),
+  );
+  return statements;
+}
+export function articleMemoryStatements(
+  env: Env,
+  userId: string,
+  articleId: string,
+): D1PreparedStatement[] {
+  // 要約確定と同じトランザクション内で最新の所属を読み、同時保存を取りこぼさない。
+  return [
+    env.DB.prepare(
+      'UPDATE projects SET memory_revision = memory_revision + 1 WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)',
+    ).bind(userId, articleId),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision FROM projects WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)",
+    ).bind(userId, articleId),
+    ...dirtyMemoryStatements(env, userId, []),
+  ];
+}
+export function memorySaveStatement(
+  env: Env,
+  input: {
+    userId: string;
+    projectId: string | null;
+    revision: number;
+    text: string;
+    dataJson: string;
+    articleCount: number;
+    model: string;
+  },
+): D1PreparedStatement {
+  const predicate = input.projectId
+    ? 'EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ? AND memory_revision = ?)'
+    : 'EXISTS (SELECT 1 FROM users WHERE id = ? AND id = ? AND memory_revision = ?)';
+  return env.DB.prepare(
+    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at`,
+  ).bind(
+    input.projectId ? `project-${input.projectId}` : `user-${input.userId}`,
+    input.userId,
+    input.projectId,
+    input.revision,
+    input.text,
+    input.dataJson,
+    input.articleCount,
+    input.model,
+    now(),
+    input.projectId ?? input.userId,
+    input.userId,
+    input.revision,
+  );
+}
+export function orphanCleanupStatements(env: Env, userId: string): D1PreparedStatement[] {
+  return [
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'gc-' || id || '-' || generation, user_id, 'cleanup', content_key, generation FROM articles WHERE user_id = ? AND content_key IS NOT NULL AND NOT EXISTS (SELECT 1 FROM stocks WHERE stocks.article_id = articles.id)",
+    ).bind(userId),
+    env.DB.prepare(
+      'DELETE FROM articles WHERE user_id = ? AND NOT EXISTS (SELECT 1 FROM stocks WHERE stocks.article_id = articles.id)',
+    ).bind(userId),
+  ];
+}

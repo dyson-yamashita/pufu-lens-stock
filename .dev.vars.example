@@ -1,0 +1,7 @@
+APP_URL=http://localhost:5173
+LOCAL_DEMO_ENABLED=true
+# 同じWi-Fiの端末で試す場合は、MacのプライベートIPv4アドレスを指定します。
+# LOCAL_DEMO_LAN_ORIGIN=http://192.168.1.10:5173
+# Googleログインも試す場合に設定します。空欄でもローカルデモは動作します。
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
