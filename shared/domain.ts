@@ -139,4 +139,9 @@ export type TokenInfo = {
   last_used_at: string | null;
   created_at: string;
 };
-export type Config = { demo: boolean; googleConfigured: boolean };
+export type Config = {
+  demo: boolean;
+  googleConfigured: boolean;
+  aiEnabled: boolean;
+  aiModel: string | null;
+};

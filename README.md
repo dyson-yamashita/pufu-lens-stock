@@ -47,6 +47,27 @@ npm run dev
 
 同じWi-Fiのスマホで試す場合は、MacのプライベートIPv4アドレスを確認し、`.dev.vars` に `LOCAL_DEMO_LAN_ORIGIN=http://MacのIPv4アドレス:5173` を追加して `npm run dev:lan` で起動します。`APP_URL` は `http://localhost:5173` のままにします。スマホからそのLAN用URLを開き、「ローカルデモを開く」を選択してください。Macの画面と同じデモデータを利用できます。IPv4アドレスが変わった場合は設定を更新して再起動します。
 
+## ローカルでWorkers AIを使う
+
+Cloudflareにログインしたうえで、`.dev.vars` に次を設定し、開発サーバーを再起動します。
+
+```dotenv
+LOCAL_DEMO_ENABLED=true
+WORKERS_AI_ENABLED=true
+AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
+```
+
+```sh
+npx wrangler login
+npm run dev:lan
+```
+
+すでにWranglerでログイン済みなら、再ログインは不要です。`WORKERS_AI_ENABLED` は起動時のプロセス環境変数でも指定でき、`.dev.vars` より優先します。Cloudflare環境を指定している場合は `.dev.vars.<環境名>` を優先して読みます。モデルは `AI_MODEL` で変更できます。要約・問い・メモリでは保存形式の制約をJSON Schemaとして渡すため、[JSON Mode](https://developers.cloudflare.com/workers-ai/features/json-mode/) に対応したモデルを指定してください。
+
+開発時だけ公式のリモートAIバインディングを追加し、D1・R2・Workflowsは引き続きローカルで動かします。AIを使うと、ストックの本文・要約・関連するメモリなどがCloudflareへ送信され、利用量に応じてWorkers AIの料金が発生します。APIトークンをアプリの入力欄や `VITE_` 付き変数に設定する必要はありません。[Cloudflareのローカル開発の説明](https://developers.cloudflare.com/workers/local-development/)
+
+画面上部がWorkers AI利用中の案内に変わり、`GET /api/config` は `aiEnabled: true` と `aiModel` を返します。新しいストックを追加すると、要約・問い・プロジェクトとユーザーのメモリをAIで生成し、問いからプ譜も生成できます。生成結果の `model` で実際に使用したモデルを確認できます。既存のサンプル記事・問い・プ譜は自動的には再生成しません。AIを使わないデモに戻す場合は `WORKERS_AI_ENABLED=false` にして再起動してください。
+
 ## 開発用スキル
 
 このリポジトリには [Superpowers](https://github.com/obra/superpowers) v7.0.0の15スキルと、既存コード向けの最小限のテストを作る `pragmatic-testing` を `.agents/skills/` に同梱しています。`pragmatic-testing` は指定された本文のまま保存しています。

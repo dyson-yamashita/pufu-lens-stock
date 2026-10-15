@@ -89,6 +89,8 @@ export function createApp() {
     c.json({
       demo: isDemoOrigin(c.env, new URL(c.req.url).origin),
       googleConfigured: googleConfigured(c),
+      aiEnabled: Boolean(c.env.AI),
+      aiModel: c.env.AI ? c.env.AI_MODEL : null,
     }),
   );
   app.get('/api/auth/google', googleLogin);

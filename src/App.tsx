@@ -761,7 +761,9 @@ export default function App() {
           <div className="demo-banner">
             <BookOpen size={15} aria-hidden="true" />
             <span>
-              ローカルデモ · サンプル記事を含みます。新しい記事の要約はAI未接続の本文抜粋です。
+              {config.aiEnabled
+                ? 'ローカルデモ · サンプル記事を含みます。新しいストックのAI生成にはWorkers AIを使用します。'
+                : 'ローカルデモ · サンプル記事を含みます。新しい記事の要約はAI未接続の本文抜粋です。'}
             </span>
           </div>
         )}

@@ -2,9 +2,25 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import prefixSelector from 'postcss-prefix-selector';
+import { existsSync, readFileSync } from 'node:fs';
+import { parseEnv } from 'node:util';
 
-export default defineConfig({
-  plugins: [react(), cloudflare()],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    react(),
+    cloudflare({
+      config: (config) => {
+        if (command !== 'serve' || config.ai) return;
+        const envFile = process.env.CLOUDFLARE_ENV
+          ? `.dev.vars.${process.env.CLOUDFLARE_ENV}`
+          : '.dev.vars';
+        const path = existsSync(envFile) ? envFile : '.dev.vars';
+        const vars = existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {};
+        if ((process.env.WORKERS_AI_ENABLED ?? vars.WORKERS_AI_ENABLED) === 'true')
+          return { ai: { binding: 'AI', remote: true } };
+      },
+    }),
+  ],
   resolve: { dedupe: ['react', 'react-dom'] },
   css: {
     postcss: {
@@ -19,4 +35,4 @@ export default defineConfig({
     },
   },
   server: { port: 5173, strictPort: true },
-});
+}));

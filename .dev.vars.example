@@ -1,5 +1,9 @@
 APP_URL=http://localhost:5173
 LOCAL_DEMO_ENABLED=true
+# trueにすると、WranglerのCloudflare認証を使ってWorkers AIへ接続します。
+# 変更後は開発サーバーを再起動してください。
+WORKERS_AI_ENABLED=false
+AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
 # 同じWi-Fiの端末で試す場合は、MacのプライベートIPv4アドレスを指定します。
 # LOCAL_DEMO_LAN_ORIGIN=http://192.168.1.10:5173
 # Googleログインも試す場合に設定します。空欄でもローカルデモは動作します。

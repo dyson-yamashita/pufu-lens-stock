@@ -13,6 +13,7 @@ export interface Env {
         messages: { role: string; content: string }[];
         max_tokens: number;
         temperature: number;
+        response_format?: { type: 'json_schema'; json_schema: unknown };
       },
     ): Promise<unknown>;
   };

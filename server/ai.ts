@@ -2,7 +2,7 @@ import { summarySchema, memorySchema, questionSchema } from '../shared/domain';
 import type { ArticleSummary, MemoryData } from '../shared/domain';
 import type { Env } from './env';
 import { isDemo } from './env';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 export type Source = {
   articleId: string;
@@ -60,6 +60,7 @@ async function generate<T>(
     ],
     max_tokens: 3000,
     temperature: 0.2,
+    response_format: { type: 'json_schema', json_schema: z.toJSONSchema(schema) },
   });
   return parseAiJson(response, schema);
 }
