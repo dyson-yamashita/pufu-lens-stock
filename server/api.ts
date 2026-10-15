@@ -118,12 +118,19 @@ export function createApp() {
   );
   app.patch('/api/v1/me', async (c) => {
     const data = await body(c, profileSchema);
-    const user = await c.env.DB.prepare(
-      'UPDATE users SET name = ?, bio = ? WHERE id = ? RETURNING id, name, bio, email, avatar_url',
-    )
-      .bind(data.name, data.bio, c.get('principal').user.id)
-      .first<User>();
+    const userId = c.get('principal').user.id;
+    // 更新前の自己紹介を比較し、処理要求とプロフィール・世代を同時に確定する。
+    const [queued, updated] = await c.env.DB.batch<User>([
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'um-' || id || '-' || (memory_revision + 1), id, 'user_memory', id, memory_revision + 1 FROM users WHERE id = ? AND bio <> ?",
+      ).bind(userId, data.bio),
+      c.env.DB.prepare(
+        'UPDATE users SET name = ?, memory_revision = memory_revision + CASE WHEN bio <> ? THEN 1 ELSE 0 END, bio = ? WHERE id = ? RETURNING id, name, bio, email, avatar_url',
+      ).bind(data.name, data.bio, data.bio, userId),
+    ]);
+    const user = updated.results[0];
     if (!user) throw new HTTPException(401, { message: 'ログインが必要です。' });
+    if (queued.meta.changes) c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ user });
   });
   app.post('/api/v1/logout', logout);

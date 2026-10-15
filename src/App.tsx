@@ -311,7 +311,9 @@ export default function App() {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [modal, setModal] = useState<ModalState>(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
+  const sidebarOpen = isMobile ? mobileNav : !desktopNavCollapsed;
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [stockSource, setStockSource] = useState('all');
@@ -397,7 +399,7 @@ export default function App() {
     window.addEventListener('keydown', close);
     return () => {
       window.removeEventListener('keydown', close);
-      document.getElementById('mobile-menu')?.focus();
+      document.getElementById('sidebar-toggle')?.focus();
     };
   }, [mobileNav, isMobile]);
   useEffect(() => {
@@ -579,19 +581,15 @@ export default function App() {
               : (selected?.name ?? 'すべてのストック');
   const allCount = projects.reduce((count, project) => count + project.count, 0);
   return (
-    <div className="app-shell">
-      {mobileNav && (
+    <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {isMobile && mobileNav && (
         <button
           className="nav-scrim"
           aria-label="メニューを閉じる"
           onClick={() => setMobileNav(false)}
         />
       )}
-      <aside
-        className={`sidebar ${mobileNav ? 'nav-open' : ''}`}
-        id="sidebar"
-        inert={isMobile && !mobileNav}
-      >
+      <aside className={`sidebar ${mobileNav ? 'nav-open' : ''}`} id="sidebar" inert={!sidebarOpen}>
         <Brand />
         <button
           id="sidebar-close"
@@ -711,14 +709,17 @@ export default function App() {
       <main className="workspace" inert={isMobile && mobileNav}>
         <div className="topbar">
           <button
-            id="mobile-menu"
-            className="icon-button mobile-menu"
-            aria-label="メニューを開く"
+            id="sidebar-toggle"
+            className="icon-button sidebar-toggle"
+            aria-label={sidebarOpen ? 'メニューを閉じる' : 'メニューを開く'}
             aria-controls="sidebar"
-            aria-expanded={mobileNav}
-            onClick={() => setMobileNav(true)}
+            aria-expanded={sidebarOpen}
+            onClick={() => {
+              if (isMobile) setMobileNav(true);
+              else setDesktopNavCollapsed((collapsed) => !collapsed);
+            }}
           >
-            <Menu size={22} />
+            <Menu size={22} aria-hidden="true" />
           </button>
           <nav className="breadcrumb" aria-label="パンくずリスト">
             <a href="#">マイライブラリ</a> <span aria-hidden="true">/</span>{' '}

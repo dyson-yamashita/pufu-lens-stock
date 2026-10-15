@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
-import { dirtyMemoryStatements } from '../server/db';
 import { testApp, mockEvent, mockStep } from './helpers';
-import type { Job } from '../server/env';
+import type { Env, Job } from '../server/env';
 
 describe('本文取得から要約とメモリまで', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -121,6 +120,43 @@ describe('本文取得から要約とメモリまで', () => {
       ).first<{ article_count: number }>())!.article_count,
     ).toBe(1);
   });
+  it.each([
+    {
+      kind: 'user_memory',
+      target: 'alice',
+      bio: 'Web開発の経験があり、小さな検証を大切にしています。',
+      description: 'Web開発の経験があり、小さな検証を大切にしています。',
+      scope: 'user',
+    },
+    { kind: 'user_memory', target: 'alice', bio: '', description: '', scope: 'user' },
+    {
+      kind: 'project_memory',
+      target: 'alice-project',
+      bio: 'ユーザーの活動背景。',
+      description: '信頼性の高いアプリを設計する。',
+      scope: 'project',
+    },
+  ])('メモリ生成に渡す説明を対象ごとに選ぶ: $scope / $bio', async (testCase) => {
+    await app.env.DB.prepare("UPDATE users SET bio = ? WHERE id = 'alice'")
+      .bind(testCase.bio)
+      .run();
+    await app.env.DB.prepare(
+      "UPDATE projects SET description = '信頼性の高いアプリを設計する。' WHERE id = 'alice-project'",
+    ).run();
+    await savedArticle();
+    articleFetch();
+    await runArticle();
+    const run = vi.fn<NonNullable<Env['AI']>['run']>(async () => ({
+      response: { interests: ['非同期処理への関心。'], knowledge: [], questions: [] },
+    }));
+    app.env.AI = { run };
+    await runLatestMemory(testCase.kind, testCase.target);
+    expect(run).toHaveBeenCalledOnce();
+    expect(JSON.parse(run.mock.calls[0][1].messages[1].content).context).toMatchObject({
+      scope: testCase.scope,
+      description: testCase.description,
+    });
+  });
   it('取得失敗を記録し、再試行では別のWorkflow世代を作る', async () => {
     const { id } = await savedArticle();
     articleFetch(403);
@@ -165,14 +201,21 @@ describe('本文取得から要約とメモリまで', () => {
       ).first(),
     ).not.toBeNull();
   });
-  it('メモリ生成中に入力が変わったら古い生成結果を公開しない', async () => {
+  it('メモリ生成中に自己紹介が変わったら古い生成結果を公開しない', async () => {
     await savedArticle();
     articleFetch();
     await runArticle();
     app.env.LOCAL_DEMO_ENABLED = 'false';
     app.env.AI = {
       run: vi.fn(async () => {
-        await app.env.DB.batch(dirtyMemoryStatements(app.env, 'alice', []));
+        expect(
+          (
+            await app.request('/api/v1/me', {
+              method: 'PATCH',
+              body: { name: 'Alice', bio: '新しい活動に取り組んでいます。' },
+            })
+          ).status,
+        ).toBe(200);
         return {
           response: JSON.stringify({
             interests: ['非同期処理を調査しています。'],

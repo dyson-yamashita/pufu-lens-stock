@@ -240,7 +240,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
               .bind(job.target_id, job.user_id)
               .first<{ memory_revision: number; name: string; description: string }>()
           : await this.env.DB.prepare(
-              "SELECT memory_revision, name, '' AS description FROM users WHERE id = ?",
+              'SELECT memory_revision, name, bio AS description FROM users WHERE id = ?',
             )
               .bind(job.user_id)
               .first<{ memory_revision: number; name: string; description: string }>();

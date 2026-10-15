@@ -232,6 +232,12 @@ p {
 .sidebar .brand {
   margin: 0 0 28px 8px;
 }
+.sidebar-collapsed .sidebar {
+  display: none;
+}
+.sidebar-collapsed .workspace {
+  margin-left: 0;
+}
 .nav-item {
   display: flex;
   align-items: center;
@@ -368,7 +374,8 @@ p {
   min-height: 71px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   border-bottom: 1px solid var(--border);
   padding: 0 40px;
 }
@@ -392,8 +399,8 @@ p {
   padding: 0 12px;
   color: #92a4bf;
 }
-.mobile-menu {
-  display: none;
+.sidebar-toggle {
+  margin-left: -8px;
 }
 .sidebar-close {
   display: none;
@@ -645,6 +652,9 @@ p {
   gap: 7px;
   font-size: 9px;
   margin-bottom: 14px;
+}
+.article-meta .status {
+  margin-left: auto;
 }
 .site-mark {
   width: 20px;
@@ -2040,10 +2050,6 @@ p {
     padding: 0 18px;
     justify-content: flex-start;
     gap: 8px;
-  }
-  .mobile-menu {
-    display: inline-flex;
-    margin-left: -8px;
   }
   .breadcrumb {
     font-size: 11px;

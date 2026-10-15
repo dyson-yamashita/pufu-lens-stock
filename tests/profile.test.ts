@@ -47,10 +47,55 @@ describe('本人のプロフィール', () => {
     expect(await identity('bob')).toMatchObject({ name: 'Bob', bio: '' });
   });
 
-  it('自己紹介を空に戻せる', async () => {
-    await update({ name: 'Alice', bio: '自己紹介' });
+  it('自己紹介の変更と削除でユーザーメモリだけ更新し、同じ内容や名前のみの変更では再生成しない', async () => {
+    expect((await update({ name: 'Alice', bio: '自己紹介' })).status).toBe(200);
+    expect(
+      (await app.env.DB.prepare("SELECT memory_revision FROM users WHERE id = 'alice'").first())!
+        .memory_revision,
+    ).toBe(1);
+    expect((await update({ name: '新しい名前', bio: '自己紹介' })).status).toBe(200);
+    expect((await update({ name: '新しい名前', bio: '自己紹介' })).status).toBe(200);
+    expect(
+      (await app.env.DB.prepare("SELECT memory_revision FROM users WHERE id = 'alice'").first())!
+        .memory_revision,
+    ).toBe(1);
     expect((await update({ name: 'Alice', bio: '' })).status).toBe(200);
     expect((await identity()).bio).toBe('');
+    expect(
+      (await app.env.DB.prepare("SELECT memory_revision FROM users WHERE id = 'alice'").first())!
+        .memory_revision,
+    ).toBe(2);
+    const jobs = await app.env.DB.prepare(
+      'SELECT kind, user_id, target_id, revision FROM processing_jobs ORDER BY revision',
+    ).all();
+    expect(jobs.results).toEqual([
+      { kind: 'user_memory', user_id: 'alice', target_id: 'alice', revision: 1 },
+      { kind: 'user_memory', user_id: 'alice', target_id: 'alice', revision: 2 },
+    ]);
+    expect(
+      (await app.env.DB.prepare("SELECT memory_revision FROM users WHERE id = 'bob'").first())!
+        .memory_revision,
+    ).toBe(0);
+    expect(
+      (await app.env.DB.prepare('SELECT memory_revision FROM projects').all()).results.every(
+        (project) => project.memory_revision === 0,
+      ),
+    ).toBe(true);
+  });
+
+  it('同じ自己紹介を同時に保存してもメモリ更新を重複登録しない', async () => {
+    const responses = await Promise.all([
+      update({ name: 'Alice', bio: 'Web開発に取り組んでいます。' }),
+      update({ name: 'Alice', bio: 'Web開発に取り組んでいます。' }),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    expect(
+      (await app.env.DB.prepare("SELECT memory_revision FROM users WHERE id = 'alice'").first())!
+        .memory_revision,
+    ).toBe(1);
+    expect((await app.env.DB.prepare('SELECT id FROM processing_jobs').all()).results).toHaveLength(
+      1,
+    );
   });
 
   it('文字数の上限を許可し、空白の名前・超過・不正な型を拒否する', async () => {
