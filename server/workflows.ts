@@ -280,7 +280,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
       if (!owner) return;
       const inputs: MemoryInput[] = [];
       for (let page = 0; ; page++) {
-        const rows = await step.do(`source-page-${page}`, () =>
+        const rows = await step.do(`memory-input-page-${page}`, () =>
           memoryInputPage(this.env, job.user_id, project ? job.target_id : null, page),
         );
         inputs.push(...rows);
@@ -295,12 +295,14 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         memoryUpdateState(this.env, job.user_id, project ? job.target_id : null, context, inputs),
       );
       const full = job.memory_mode === 'full' || !state.current || Boolean(state.fullReason);
-      if (!full && !state.added.length) {
+      if (!full && !state.addedIds.length) {
         await step.do('finish-unchanged-memory', () => done(this.env, job.id));
         return;
       }
       const call: AiCall<MemoryData> = (name, operation) =>
         aiStep(this.env, job, step, name, operation);
+      // ステップに永続化するのはIDだけ。要約をまとめた戻り値の1MiB超過を防ぐ。
+      const addedIds = new Set(state.addedIds);
       const memory = full
         ? await buildMemory(
             this.env,
@@ -311,7 +313,9 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         : await updateMemory(
             this.env,
             state.current!,
-            state.added.map((input) => input.source),
+            inputs
+              .filter((input) => addedIds.has(input.source.articleId))
+              .map((input) => input.source),
             context,
             {
               articleCount: inputs.length,

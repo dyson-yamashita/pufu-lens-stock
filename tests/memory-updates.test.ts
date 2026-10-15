@@ -16,6 +16,7 @@ describe('メモリの差分更新と反映状況', () => {
         interests: ['収集した知識'],
         knowledge: [
           ...(input.currentMemory?.knowledge ?? []),
+          ...(input.fragments?.flatMap((fragment: MemoryData) => fragment.knowledge) ?? []),
           ...sources.map((source: { articleId: string; title: string }) => ({
             text: source.title,
             articleIds: [source.articleId],
@@ -285,5 +286,32 @@ describe('メモリの差分更新と反映状況', () => {
     });
     const other = await app.request('/api/v1/memory', { user: 'bob' });
     expect(await other.json()).toMatchObject({ coverage: { ready_count: 0, reflected_count: 0 } });
+  });
+
+  it('128件の長い要約も各永続ステップを1MiB以内に保って全件取り込む', async () => {
+    const summary = JSON.stringify({
+      overview: '概'.repeat(1600),
+      keyPoints: Array(8).fill('点'.repeat(500)),
+      topics: ['設計'],
+    });
+    const statements: D1PreparedStatement[] = [];
+    for (let index = 0; index < 128; index++) {
+      const id = `large-${index.toString().padStart(3, '0')}`;
+      statements.push(
+        app.env.DB.prepare(
+          "INSERT INTO articles(id,user_id,canonical_url,source_url,title,domain,status,summary_json) VALUES(?,'alice',?,'',?,'','ready',?)",
+        ).bind(id, id, id, summary),
+        app.env.DB.prepare(
+          "INSERT INTO stocks(id,user_id,project_id,article_id) VALUES(?,'alice','alice-project',?)",
+        ).bind(id, id),
+      );
+    }
+    await app.env.DB.batch(statements);
+    await app.env.DB.prepare(
+      "INSERT INTO processing_jobs(id,user_id,kind,target_id,revision) VALUES('large-memory','alice','project_memory','alice-project',0)",
+    ).run();
+    await new MemoryWorkflow(app.ctx, app.env).run(mockEvent('large-memory'), mockStep(2 ** 20));
+    expect((await memory()).memory!.article_count).toBe(128);
+    expect((await memory()).coverage).toMatchObject({ reflected_count: 128, pending_count: 0 });
   });
 });

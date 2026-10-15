@@ -103,14 +103,16 @@ export async function memoryUpdateState(
     else if ([...previous].some(([articleId, sourceHash]) => current.get(articleId) !== sourceHash))
       fullReason = '反映済みの記事が削除・移動・変更されたため、全件更新が必要です。';
   }
-  const added = inputs.filter((input) => previous.get(input.source.articleId) !== input.hash);
+  const addedIds = inputs
+    .filter((input) => previous.get(input.source.articleId) !== input.hash)
+    .map((input) => input.source.articleId);
   return {
     id,
     contextHash,
     fullReason,
-    added,
+    addedIds,
     current: memory ? (JSON.parse(memory.data_json) as MemoryData) : null,
-    reflectedCount: fullReason ? 0 : inputs.length - added.length,
+    reflectedCount: fullReason ? 0 : inputs.length - addedIds.length,
   };
 }
 
