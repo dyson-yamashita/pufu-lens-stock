@@ -394,7 +394,7 @@ pnpm run check
 
 このリポジトリには [Superpowers](https://github.com/obra/superpowers) v7.0.0の15スキルと、既存コード向けの最小限のテストを作る `pragmatic-testing` を `.agents/skills/` に同梱しています。`pragmatic-testing` は指定された本文のまま保存しています。
 
-[AGENTS.md](../AGENTS.md) に開始時の読み込みとスキルの使い分けを記載しています。Superpowersの取り込み元コミット・スキル一覧は [.agents/superpowers-source.json](../.agents/superpowers-source.json)、MITライセンスは [.agents/SUPERPOWERS-LICENSE](../.agents/SUPERPOWERS-LICENSE) にあります。補助スクリプトを含むスキルの原文を維持するため、`.agents/skills/` はアプリ用のESLint・Prettierの対象外です。
+[AGENTS.md](../AGENTS.md) に開始時の読み込みとスキルの使い分けを記載しています。 PR作成前に `/review` で変更全体をレビューし、必要な修正後は検証とレビューを再実行します。Superpowersの取り込み元コミット・スキル一覧は [.agents/superpowers-source.json](../.agents/superpowers-source.json)、MITライセンスは [.agents/SUPERPOWERS-LICENSE](../.agents/SUPERPOWERS-LICENSE) にあります。補助スクリプトを含むスキルの原文を維持するため、`.agents/skills/` はアプリ用のESLint・Prettierの対象外です。
 
 ## ソース構成
 
