@@ -9,7 +9,6 @@ import {
 } from 'react';
 import {
   ArrowDownToLine,
-  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
@@ -26,6 +25,7 @@ import {
   Layers,
   LoaderCircle,
   LogOut,
+  Menu,
   Plus,
   RefreshCw,
   Settings,
@@ -595,9 +595,17 @@ export default function App() {
           id="sidebar-close"
           className="icon-button sidebar-close"
           aria-label="メニューを閉じる"
-          onClick={() => setMobileNav(false)}
+          onClick={() => {
+            if (isMobile) setMobileNav(false);
+            else {
+              setDesktopNavCollapsed(true);
+              window.requestAnimationFrame(() =>
+                document.getElementById('sidebar-toggle')?.focus(),
+              );
+            }
+          }}
         >
-          <ArrowLeft size={19} aria-hidden="true" />
+          <X size={19} aria-hidden="true" />
         </button>
         <nav aria-label="メインナビゲーション">
           <button
@@ -708,23 +716,26 @@ export default function App() {
       </aside>
       <main className="workspace" inert={isMobile && mobileNav}>
         <div className="topbar">
-          <button
-            id="sidebar-toggle"
-            className="icon-button sidebar-toggle"
-            aria-label={sidebarOpen ? 'メニューを閉じる' : 'メニューを開く'}
-            aria-controls="sidebar"
-            aria-expanded={sidebarOpen}
-            onClick={() => {
-              if (isMobile) setMobileNav(true);
-              else setDesktopNavCollapsed((collapsed) => !collapsed);
-            }}
-          >
-            {sidebarOpen ? (
-              <ArrowLeft size={22} aria-hidden="true" />
-            ) : (
-              <ArrowRight size={22} aria-hidden="true" />
-            )}
-          </button>
+          {!sidebarOpen && (
+            <button
+              id="sidebar-toggle"
+              className="icon-button sidebar-toggle"
+              aria-label="メニューを開く"
+              aria-controls="sidebar"
+              aria-expanded={false}
+              onClick={() => {
+                if (isMobile) setMobileNav(true);
+                else {
+                  setDesktopNavCollapsed(false);
+                  window.requestAnimationFrame(() =>
+                    document.getElementById('sidebar-close')?.focus(),
+                  );
+                }
+              }}
+            >
+              <Menu size={22} aria-hidden="true" />
+            </button>
+          )}
           <nav className="breadcrumb" aria-label="パンくずリスト">
             <a href="#">マイライブラリ</a> <span aria-hidden="true">/</span>{' '}
             {route.projectId && route.view !== 'stocks' && (

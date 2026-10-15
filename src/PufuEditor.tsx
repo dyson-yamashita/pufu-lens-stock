@@ -26,7 +26,7 @@ export default function PufuEditor({
   const [editor, setEditor] = useState(() => structuredClone(pufu.phases.at(-1)!));
   const editorKey = `${pufu.id}-phase-${editor.number}`;
   const currentPhase = phases.at(-1)!.number;
-  const preview = editor.number !== currentPhase;
+  const isLatest = editor.number === currentPhase;
   const feedback = editor.number % 2 === 0;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -80,7 +80,7 @@ export default function PufuEditor({
     setNotice('');
   }
   async function save(append = false) {
-    if (busy || preview) return;
+    if (busy || (append && !isLatest)) return;
     setBusy(true);
     setError('');
     setNotice('');
@@ -99,7 +99,10 @@ export default function PufuEditor({
       );
       const saved = { ...editor, score: input.data, updated_at: result.updated_at };
       const next = { ...saved, number: result.current_phase, created_at: result.updated_at };
-      setPhases((current) => [...current.slice(0, -1), saved, ...(append ? [next] : [])]);
+      setPhases((current) => [
+        ...current.map((phase) => (phase.number === editor.number ? saved : phase)),
+        ...(append ? [next] : []),
+      ]);
       baseline.current = canonical(json);
       setRevision(result.revision);
       setDirty(false);
@@ -120,33 +123,30 @@ export default function PufuEditor({
       )}
       <div className="pufu-phase-bar">
         <div className="pufu-phase-navigation" role="group" aria-label="局面の切り替え">
-          <button
-            className="icon-button pufu-phase-previous"
-            aria-label="前の局面へ"
-            disabled={busy || editor.number === 1}
-            onClick={() => selectPhase(editor.number - 1)}
-          >
-            <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
-          </button>
+          {editor.number > 1 && (
+            <button
+              className="icon-button pufu-phase-previous"
+              aria-label="前の局面へ"
+              disabled={busy}
+              onClick={() => selectPhase(editor.number - 1)}
+            >
+              <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+            </button>
+          )}
           <span className="pufu-phase-number" aria-live="polite">
             第{editor.number}局面
           </span>
-          <button
-            className="icon-button pufu-phase-next"
-            aria-label="次の局面へ"
-            disabled={busy || editor.number === currentPhase}
-            onClick={() => selectPhase(editor.number + 1)}
-          >
-            <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
-          </button>
+          {editor.number < currentPhase && (
+            <button
+              className="icon-button pufu-phase-next"
+              aria-label="次の局面へ"
+              disabled={busy}
+              onClick={() => selectPhase(editor.number + 1)}
+            >
+              <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+            </button>
+          )}
         </div>
-        <span className="field-hint">
-          {preview
-            ? '過去の局面・閲覧のみ'
-            : feedback
-              ? '振り返りでコメントを書いてみましょう。'
-              : 'プ譜を編集しましょう。'}
-        </span>
       </div>
       <div className="pufu-toolbar">
         <span className="field-hint" role="status">
@@ -169,25 +169,23 @@ export default function PufuEditor({
             <Download size={16} aria-hidden="true" />
             JSON
           </button>
-          {!preview && (
+          {isLatest && (
             <button className="button secondary" disabled={busy} onClick={() => save(true)}>
               <Plus size={17} aria-hidden="true" />
               局面を追加
             </button>
           )}
-          {!preview && (
-            <button className="button primary" disabled={busy} onClick={() => save()}>
-              {busy ? (
-                <LoaderCircle className="spin" size={17} aria-hidden="true" />
-              ) : (
-                <Save size={17} aria-hidden="true" />
-              )}
-              {busy ? '保存中…' : '保存'}
-            </button>
-          )}
+          <button className="button primary" disabled={busy} onClick={() => save()}>
+            {busy ? (
+              <LoaderCircle className="spin" size={17} aria-hidden="true" />
+            ) : (
+              <Save size={17} aria-hidden="true" />
+            )}
+            {busy ? '保存中…' : '保存'}
+          </button>
         </div>
       </div>
-      {!preview && (
+      {isLatest && (
         <p className="field-hint pufu-phase-help">
           奇数局面は編集、偶数局面はフィードバックです。局面を追加すると、現在の内容を保存して次の局面へ引き継ぎます。
         </p>
@@ -213,7 +211,6 @@ export default function PufuEditor({
             mobile={mobile}
             textSize="base"
             feedback={feedback}
-            preview={preview}
             border={!mobile}
           />
         </div>

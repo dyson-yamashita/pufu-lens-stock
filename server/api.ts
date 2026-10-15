@@ -541,22 +541,25 @@ export function createApp() {
     const data = await body(c, append ? addPufuPhaseSchema : savePufuSchema);
     if (pufu.status !== 'ready')
       throw new HTTPException(409, { message: 'プ譜の生成が完了してから保存してください。' });
-    if (data.phase !== undefined && data.phase !== pufu.current_phase)
+    const phase = data.phase ?? pufu.current_phase;
+    if (append && phase !== pufu.current_phase)
       throw new HTTPException(409, {
-        message: '過去の局面は変更できません。最新の局面を開いてください。',
+        message: '局面の追加は最新の局面から行ってください。',
       });
+    if (phase > pufu.current_phase)
+      throw new HTTPException(404, { message: '局面が見つかりません。' });
     const json = JSON.stringify(data.score);
     const timestamp = now();
     const userId = c.get('principal').user.id;
     const condition =
-      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ?";
-    const values = [pufu.id, userId, data.revision, pufu.current_phase];
+      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ? AND EXISTS (SELECT 1 FROM pufu_phases WHERE pufu_id = pufu_scores.id AND number = ?)";
+    const values = [pufu.id, userId, data.revision, pufu.current_phase, phase];
     // すべての書き込みを同じ更新番号で制限し、保存と局面追加を1トランザクションで確定する。
     const statements = [
       initialPufuPhase(c.env, pufu.id, userId),
       c.env.DB.prepare(
         `UPDATE pufu_phases SET score_json = ?, updated_at = ? WHERE pufu_id = ? AND number = ? AND EXISTS (SELECT 1 FROM pufu_scores WHERE ${condition})`,
-      ).bind(json, timestamp, pufu.id, pufu.current_phase, ...values),
+      ).bind(json, timestamp, pufu.id, phase, ...values),
     ];
     if (append)
       statements.push(
@@ -566,8 +569,8 @@ export function createApp() {
       );
     statements.push(
       c.env.DB.prepare(
-        `UPDATE pufu_scores SET score_json = ?, current_phase = current_phase + ?, revision = revision + 1, updated_at = ? WHERE ${condition} RETURNING revision,current_phase,updated_at`,
-      ).bind(json, append ? 1 : 0, timestamp, ...values),
+        `UPDATE pufu_scores SET score_json = CASE WHEN current_phase = ? THEN ? ELSE score_json END, current_phase = current_phase + ?, revision = revision + 1, updated_at = ? WHERE ${condition} RETURNING revision,current_phase,updated_at`,
+      ).bind(phase, json, append ? 1 : 0, timestamp, ...values),
     );
     const results = await c.env.DB.batch<{
       revision: number;

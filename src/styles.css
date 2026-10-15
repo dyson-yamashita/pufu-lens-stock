@@ -403,7 +403,9 @@ p {
   margin-left: -8px;
 }
 .sidebar-close {
-  display: none;
+  position: absolute;
+  top: 27px;
+  right: 7px;
 }
 .demo-banner {
   display: flex;
@@ -2021,12 +2023,6 @@ p {
   }
 }
 @media (max-width: 760px) {
-  .sidebar-close {
-    display: flex;
-    position: absolute;
-    top: 27px;
-    right: 7px;
-  }
   .sidebar {
     transform: translateX(-100%);
     width: 250px;
@@ -2629,10 +2625,6 @@ textarea::placeholder {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 3px;
-  border: 1px solid var(--field-border);
-  border-radius: 8px;
-  background: var(--card);
 }
 .pufu-phase-number {
   min-width: 72px;

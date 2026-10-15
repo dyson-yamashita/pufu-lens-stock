@@ -349,18 +349,79 @@ describe('問いからプ譜を生成・編集・保存する', () => {
         .bind(id)
         .first())!.generated_json,
     ).toBe(JSON.stringify(initial.score));
-    const readonly = await app.request(`/api/v1/pufus/${id}`, {
+    const revisedFirst = structuredClone(first);
+    revisedFirst.winCondition.text = '第1局面の内容を見直した勝利条件';
+    const historical = await app.request(`/api/v1/pufus/${id}`, {
       method: 'PATCH',
-      body: { revision: 5, phase: 1, score: third },
+      body: { revision: 5, phase: 1, score: revisedFirst },
     });
-    expect(readonly.status).toBe(409);
-    expect((await get(id)).revision).toBe(5);
+    expect(historical.status).toBe(200);
+    const revised = await get(id);
+    expect(revised.revision).toBe(6);
+    expect(revised.current_phase).toBe(3);
+    expect(revised.score).toEqual(third);
+    expect(revised.phases.map((phase) => phase.score)).toEqual([revisedFirst, second, third]);
     await app.request('/api/v1/stocks/stock', { method: 'DELETE' });
     expect(
       (await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id = ?').bind(id).all())
         .results,
     ).toEqual([]);
   });
+
+  it.each([1, 2])(
+    '過去の第%i局面を保存しても他の局面を変更せず、競合や存在しない局面を拒否する',
+    async (phase) => {
+      const id = await make();
+      await run(id);
+      const initial = await get(id);
+      for (const number of [1, 2]) {
+        expect(
+          (
+            await app.request(`/api/v1/pufus/${id}/phases`, {
+              method: 'POST',
+              body: { revision: number, phase: number, score: initial.score },
+            })
+          ).status,
+        ).toBe(201);
+      }
+      const edited = structuredClone(initial.score!);
+      edited.winCondition.text = 'この局面だけの修正';
+      edited.winCondition.comment = { color: 'green', text: '振り返りを追記する。' };
+      const save = (revision: number, target: number) =>
+        app.request(`/api/v1/pufus/${id}`, {
+          method: 'PATCH',
+          body: { revision, phase: target, score: edited },
+        });
+      expect((await save(3, phase)).status).toBe(200);
+      const saved = await get(id);
+      expect(saved.revision).toBe(4);
+      expect(saved.current_phase).toBe(3);
+      expect(saved.score).toEqual(initial.score);
+      expect(saved.phases.map((p) => p.score)).toEqual([
+        phase === 1 ? edited : initial.score,
+        phase === 2 ? edited : initial.score,
+        initial.score,
+      ]);
+      expect((await save(3, 3)).status).toBe(409);
+      expect((await save(4, 4)).status).toBe(404);
+      expect(
+        (
+          await app.request(`/api/v1/pufus/${id}/phases`, {
+            method: 'POST',
+            body: { revision: 4, phase, score: edited },
+          })
+        ).status,
+      ).toBe(409);
+      const unchanged = await get(id);
+      expect(unchanged.revision).toBe(4);
+      expect(unchanged.phases).toEqual(saved.phases);
+      expect(
+        (await app.env.DB.prepare('SELECT generated_json FROM pufu_scores WHERE id = ?')
+          .bind(id)
+          .first())!.generated_json,
+      ).toBe(JSON.stringify(initial.score));
+    },
+  );
 
   it('局面の同時追加と古い更新番号の再送で重複や上書きを起こさない', async () => {
     const id = await make();
