@@ -238,9 +238,10 @@ export function createApp() {
   app.post('/api/v1/stocks', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
     const data = await body(c, stockInputSchema);
-    if (tokenProjectId && tokenProjectId !== data.project_id)
+    if (tokenProjectId && data.project_id !== undefined && tokenProjectId !== data.project_id)
       throw new HTTPException(403, { message: 'このトークンの保存先プロジェクトとは異なります。' });
-    await ownedProject(c.env, user.id, data.project_id);
+    const projectId = data.project_id ?? tokenProjectId;
+    if (projectId) await ownedProject(c.env, user.id, projectId);
     const source = data.type === 'url' ? validateUrl(data.url) : null;
     const title =
       data.type === 'text'
@@ -250,7 +251,7 @@ export function createApp() {
       data.type === 'text'
         ? `text:${await hash(JSON.stringify([title, data.text]))}`
         : canonicalUrl(data.url);
-    const requestHash = await hash(JSON.stringify([data.project_id, canonical, data.note]));
+    const requestHash = await hash(JSON.stringify([projectId, canonical, data.note]));
     const key = c.req.header('Idempotency-Key');
     if (key && !/^[A-Za-z0-9_-]{1,128}$/.test(key))
       throw new HTTPException(400, {
@@ -277,8 +278,18 @@ export function createApp() {
     };
     const existingResponse = await replay();
     if (existingResponse) return existingResponse;
+    const projects = projectId
+      ? [{ id: projectId }]
+      : (
+          await c.env.DB.prepare(
+            'SELECT id FROM projects WHERE user_id = ? ORDER BY created_at, id',
+          )
+            .bind(user.id)
+            .all<{ id: string }>()
+        ).results;
+    if (!projects.length)
+      throw new HTTPException(400, { message: '保存先のプロジェクトを作成してください。' });
     const articleId = crypto.randomUUID();
-    const stockId = crypto.randomUUID();
     const statements = [
       c.env.DB.prepare(
         'INSERT OR IGNORE INTO articles (id, user_id, canonical_url, source_url, title, domain, source_type, input_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -293,19 +304,26 @@ export function createApp() {
         data.type === 'text' ? data.text : null,
       ),
       c.env.DB.prepare(
-        'INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note) SELECT ?, ?, ?, id, ? FROM articles WHERE user_id = ? AND canonical_url = ?',
-      ).bind(stockId, user.id, data.project_id, data.note, user.id, canonical),
-      c.env.DB.prepare(
         "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE user_id = ? AND canonical_url = ? AND status = 'queued'",
       ).bind(user.id, canonical),
-      ...dirtyMemoryStatements(c.env, user.id, [data.project_id], stockId),
-      ...queueQuestionStatements(c.env, stockId),
     ];
+    const stockInsertIndexes: number[] = [];
+    for (const project of projects) {
+      const stockId = crypto.randomUUID();
+      stockInsertIndexes.push(statements.length);
+      statements.push(
+        c.env.DB.prepare(
+          'INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note) SELECT ?, ?, ?, id, ? FROM articles WHERE user_id = ? AND canonical_url = ?',
+        ).bind(stockId, user.id, project.id, data.note, user.id, canonical),
+        ...dirtyMemoryStatements(c.env, user.id, [project.id], stockId),
+        ...queueQuestionStatements(c.env, stockId),
+      );
+    }
     if (key)
       statements.push(
         c.env.DB.prepare(
           'INSERT INTO idempotency_keys (user_id, key, request_hash, stock_id) SELECT ?, ?, ?, s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
-        ).bind(user.id, key, requestHash, user.id, data.project_id, canonical),
+        ).bind(user.id, key, requestHash, user.id, projects[0].id, canonical),
       );
     let result: D1Result[];
     try {
@@ -318,12 +336,13 @@ export function createApp() {
     const stock = await c.env.DB.prepare(
       'SELECT s.id, a.status FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
     )
-      .bind(user.id, data.project_id, canonical)
+      .bind(user.id, projects[0].id, canonical)
       .first<{ id: string; status: string }>();
+    const created = stockInsertIndexes.some((index) => result[index].meta.changes > 0);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json(
-      { id: stock!.id, status: stock!.status, duplicate: !result[1].meta.changes },
-      result[1].meta.changes ? 202 : 200,
+      { id: stock!.id, status: stock!.status, duplicate: !created },
+      created ? 202 : 200,
     );
   });
   app.get('/api/v1/articles/:id', async (c) => {

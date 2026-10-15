@@ -2028,11 +2028,7 @@ function Shortcuts({
   const base = window.location.origin;
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
-  const example = JSON.stringify(
-    { project_id: projects[0]?.id ?? 'プロジェクトID', url: 'ショートカットの入力URL', note: '' },
-    null,
-    2,
-  );
+  const example = JSON.stringify({ url: 'ショートカットの入力URL', note: '' }, null, 2);
   return (
     <div className="shortcuts-page">
       <section className="connect-guide">
@@ -2060,7 +2056,7 @@ function Shortcuts({
             <div>
               <h3>ショートカットの共有メニューを有効にする</h3>
               <p>
-                入力を「URL」にし、共有シートに表示します。保存先を選ぶ場合は、GETでプロジェクト一覧を取得します。
+                入力を「URL」にし、共有シートに表示します。保存先を選ぶ場合は、GETでプロジェクト一覧を取得し、選んだIDをJSON本文のproject_idに指定します。
               </p>
               <code>{base}/api/v1/projects</code>
             </div>
@@ -2071,6 +2067,9 @@ function Shortcuts({
               <h3>「URLの内容を取得」でPOSTする</h3>
               <p>
                 以下のURLへ、AuthorizationヘッダーとJSON本文を設定して送信します。トークンを記事のURLへ送信しないでください。
+              </p>
+              <p>
+                project_idは任意です。省略すると、プロジェクト限定トークンでは限定先に、限定なしトークンでは自分の全プロジェクトに保存します。限定先と異なるIDは指定できません。
               </p>
             </div>
           </li>

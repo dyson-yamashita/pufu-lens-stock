@@ -8,7 +8,7 @@ export const summarySchema = z.object({
 export type ArticleSummary = z.infer<typeof summarySchema>;
 export const stockTextLimit = 20000;
 const stockFields = {
-  project_id: z.string().min(1).max(100),
+  project_id: z.string().min(1).max(100).optional(),
   note: z.string().max(2000).default(''),
 };
 export const stockInputSchema = z.union([
