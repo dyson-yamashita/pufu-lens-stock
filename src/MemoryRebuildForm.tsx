@@ -3,7 +3,7 @@ import { LoaderCircle, RefreshCw } from 'lucide-react';
 import type { MemoryCoverage, MemoryUpdateMode } from '../shared/domain';
 import { api, createRequestId, send } from './api';
 
-type Target = { name: string; coverage: MemoryCoverage; pending: boolean };
+type Target = { coverage: MemoryCoverage; pending: boolean };
 
 export function MemoryCoverageSummary({ coverage }: { coverage: MemoryCoverage }) {
   return (
@@ -35,38 +35,27 @@ export default function MemoryRebuildForm({
   onDone: () => void;
   onClose: () => void;
 }) {
-  const [targets, setTargets] = useState<Target[]>([]);
+  const [target, setTarget] = useState<Target | null>(null);
   const [mode, setMode] = useState<MemoryUpdateMode>('incremental');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const request = useRef<{ mode: MemoryUpdateMode; id: string } | null>(null);
   const modeName = useId();
-  const needsFull = targets.some((target) => target.coverage.full_rebuild_reason);
-  const updating = targets.some((target) => target.pending);
-  const pendingCount = targets.reduce((sum, target) => sum + target.coverage.pending_count, 0);
+  const needsFull = Boolean(target?.coverage.full_rebuild_reason);
+  const updating = Boolean(target?.pending);
+  const pendingCount = target?.coverage.pending_count ?? 0;
 
   useEffect(() => {
     const controller = new AbortController();
-    const scopes = projectId
-      ? [
-          { name: `${projectName ?? 'プロジェクト'}のメモリ`, id: projectId },
-          { name: 'あなたのメモリ', id: null },
-        ]
-      : [{ name: 'あなたのメモリ', id: null }];
-    void Promise.all(
-      scopes.map(async (scope) => ({
-        name: scope.name,
-        ...(await api<{ coverage: MemoryCoverage; pending: boolean }>(
-          `/api/v1/memory${scope.id ? `?project_id=${encodeURIComponent(scope.id)}` : ''}`,
-          { signal: controller.signal },
-        )),
-      })),
+    void api<Target>(
+      `/api/v1/memory${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''}`,
+      { signal: controller.signal },
     )
       .then((result) => {
         if (controller.signal.aborted) return;
-        setTargets(result);
-        if (result.some((target) => target.coverage.full_rebuild_reason)) setMode('full');
+        setTarget(result);
+        if (result.coverage.full_rebuild_reason) setMode('full');
       })
       .catch((error: Error) => {
         if (!controller.signal.aborted) setError(error.message);
@@ -75,7 +64,7 @@ export default function MemoryRebuildForm({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [projectId, projectName]);
+  }, [projectId]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -83,7 +72,7 @@ export default function MemoryRebuildForm({
       busy ||
       loading ||
       updating ||
-      !targets.length ||
+      !target ||
       (mode === 'incremental' && (!pendingCount || needsFull))
     )
       return;
@@ -108,22 +97,18 @@ export default function MemoryRebuildForm({
   return (
     <form onSubmit={submit} className="memory-rebuild-form" aria-busy={loading || busy}>
       <p className="form-help">更新方法を選んでください。要約が完了したストックが対象です。</p>
-      {projectId && <p className="form-help">この操作では「あなたのメモリ」も更新します。</p>}
       {loading && <p role="status">反映状況を確認しています…</p>}
-      {targets.map((target) => (
-        <div className="memory-update-target" key={target.name}>
-          <h3>{target.name}</h3>
+      {target && (
+        <div className="memory-update-target">
+          <h3>{projectId ? `${projectName ?? 'プロジェクト'}のメモリ` : 'あなたのメモリ'}</h3>
           <MemoryCoverageSummary coverage={target.coverage} />
           {target.coverage.full_rebuild_reason && (
             <p className="update-note">{target.coverage.full_rebuild_reason}</p>
           )}
         </div>
-      ))}
+      )}
       {updating && <p className="update-note">メモリを更新中です。完了後に開き直してください。</p>}
-      <fieldset
-        className="memory-update-options"
-        disabled={loading || busy || updating || !targets.length}
-      >
+      <fieldset className="memory-update-options" disabled={loading || busy || updating || !target}>
         <legend>更新方法</legend>
         <label className="memory-update-option">
           <input
@@ -155,7 +140,7 @@ export default function MemoryRebuildForm({
           </span>
         </label>
       </fieldset>
-      {!loading && targets.length > 0 && !needsFull && !pendingCount && (
+      {!loading && target && !needsFull && !pendingCount && (
         <p className="form-help">
           未反映の要約はありません。内容を見直す場合は「全件から再生成」を選んでください。
         </p>
@@ -176,7 +161,7 @@ export default function MemoryRebuildForm({
             loading ||
             busy ||
             updating ||
-            !targets.length ||
+            !target ||
             (mode === 'incremental' && (!pendingCount || needsFull))
           }
         >

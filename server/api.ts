@@ -877,40 +877,30 @@ export function createApp() {
         });
       return c.json({ ok: true }, 202);
     }
-    const targets: { id: string; kind: 'user_memory' | 'project_memory'; table: string }[] = [
-      { id: user.id, kind: 'user_memory', table: 'users' },
-    ];
-    if (data.project_id)
-      targets.push({
-        id: data.project_id,
-        kind: 'project_memory' as const,
-        table: 'projects',
-      });
+    const target = data.project_id
+      ? { id: data.project_id, kind: 'project_memory' as const, table: 'projects' }
+      : { id: user.id, kind: 'user_memory' as const, table: 'users' };
+    const id = `${requestId}-${target.kind}`;
     const statements: D1PreparedStatement[] = [
       c.env.DB.prepare(
         'INSERT INTO memory_requests (id,user_id,project_id,mode) VALUES (?,?,?,?)',
       ).bind(requestId, user.id, data.project_id, data.mode),
+      reserveOperation(c.env, { id, user_id: user.id, kind: target.kind }),
+      assertOperation(c.env, id),
+      c.env.DB.prepare(
+        `UPDATE ${target.table} SET memory_revision=memory_revision+1 WHERE id=?`,
+      ).bind(target.id),
+      c.env.DB.prepare(
+        `INSERT INTO processing_jobs (id,user_id,kind,target_id,revision,memory_mode) SELECT ?,?,?,id,memory_revision,? FROM ${target.table} WHERE id=?`,
+      ).bind(id, user.id, target.kind, data.mode, target.id),
     ];
-    for (const target of targets) {
-      const id = `${requestId}-${target.kind}`;
+    if (data.mode === 'full')
       statements.push(
-        reserveOperation(c.env, { id, user_id: user.id, kind: target.kind }),
-        assertOperation(c.env, id),
-        c.env.DB.prepare(
-          `UPDATE ${target.table} SET memory_revision=memory_revision+1 WHERE id=?`,
-        ).bind(target.id),
-        c.env.DB.prepare(
-          `INSERT INTO processing_jobs (id,user_id,kind,target_id,revision,memory_mode) SELECT ?,?,?,id,memory_revision,? FROM ${target.table} WHERE id=?`,
-        ).bind(id, user.id, target.kind, data.mode, target.id),
+        c.env.DB.prepare('UPDATE memories SET force_full=1 WHERE id=? AND user_id=?').bind(
+          memoryId(user.id, data.project_id),
+          user.id,
+        ),
       );
-      if (data.mode === 'full')
-        statements.push(
-          c.env.DB.prepare('UPDATE memories SET force_full=1 WHERE id=? AND user_id=?').bind(
-            memoryId(user.id, target.kind === 'project_memory' ? target.id : null),
-            user.id,
-          ),
-        );
-    }
     try {
       await c.env.DB.batch(statements);
     } catch (error) {

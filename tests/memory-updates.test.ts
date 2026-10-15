@@ -145,6 +145,36 @@ describe('メモリの差分更新と反映状況', () => {
     expect((await rebuild('invalid')).status).toBe(400);
   });
 
+  it.each([
+    { projectId: 'alice-project', mode: 'incremental' },
+    { projectId: 'alice-project', mode: 'full' },
+    { projectId: null, mode: 'incremental' },
+    { projectId: null, mode: 'full' },
+  ])(
+    '手動再生成は選択したメモリだけを更新する: $projectId / $mode',
+    async ({ projectId, mode }) => {
+      await ready('反映済みの記事');
+      await execute();
+      await execute(null);
+      await app.env.DB.prepare("UPDATE processing_jobs SET status='done'").run();
+      const otherProjectId = projectId ? null : 'alice-project';
+      const previous = await memory(otherProjectId);
+      const response = await app.request('/api/v1/memory/rebuild', {
+        method: 'POST',
+        body: { project_id: projectId, mode, request_id: crypto.randomUUID() },
+      });
+      expect(response.status).toBe(202);
+      const jobs = await app.env.DB.prepare(
+        "SELECT kind,target_id FROM processing_jobs WHERE status!='done'",
+      ).all();
+      expect(jobs.results).toEqual([
+        { kind: projectId ? 'project_memory' : 'user_memory', target_id: projectId ?? 'alice' },
+      ]);
+      await execute(projectId);
+      expect(await memory(otherProjectId)).toEqual(previous);
+    },
+  );
+
   it.each(['delete', 'note', 'move', 'profile'] as const)(
     '%sで既存内容が変わったら全件更新する',
     async (change) => {
