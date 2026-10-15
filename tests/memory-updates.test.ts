@@ -115,6 +115,18 @@ describe('メモリの差分更新と反映状況', () => {
     expect((await memory()).memory!.data).toEqual(previous!.data);
   });
 
+  it('差分更新後もデモのトピック件数を全取り込み記事から集計する', async () => {
+    app.env.AI = undefined;
+    app.env.LOCAL_DEMO_ENABLED = 'true';
+    await ready('最初の設計記事');
+    await execute();
+    await ready('追加の設計記事');
+    await execute();
+    expect((await memory()).memory!.data.interests).toEqual([
+      '「設計」に関する記事を2件収集しています。',
+    ]);
+  });
+
   it('手動の全件更新は反映済み記事も入力し、同じIDの異なるモードを拒否する', async () => {
     const first = await ready('最初の記事');
     await execute();
@@ -238,6 +250,7 @@ describe('メモリの差分更新と反映状況', () => {
     await app.env.DB.prepare("UPDATE ai_attempts SET created_at='2000-01-01'").run();
     await execute();
     expect((await memory()).coverage).toMatchObject({ reflected_count: 2, pending_count: 0 });
+    expect(await memory()).toMatchObject({ error: null });
   });
 
   it('最後の記事の削除後は空メモリと空履歴を確定し、移行前と混同しない', async () => {

@@ -1,6 +1,6 @@
 # メモリ差分更新 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 通常更新を差分化し、手動再生成で差分/全件を選択でき、反映状況を確認できるようにする。
 
@@ -38,14 +38,14 @@
 
 - Produces: `MemoryCoverage` (ready_count, reflected_count, pending_count, waiting_count, full_rebuild_reason)。GET memoryのcoverage。
 - Produces: POST memory/rebuildの`mode: 'incremental' | 'full'`。省略はfull。
-- Produces: `updateMemory(env, current, sources, context, call): Promise<MemoryData>`。
+- Produces: `updateMemory(env, current, sources, context, totals, call): Promise<MemoryData>`。totalsはarticleCountと上位30件のtopicCounts。
 
-- [ ] 既存テストを実行しベースラインを記録する。
-- [ ] `tests/memory-updates.test.ts` に追加分のみ・AI省略・両スコープ・削除変更・失敗/古い結果・モード/再送・移行の回帰テストを書く。
-- [ ] `pnpm test tests/memory-updates.test.ts` → 新機能未実装の期待値でFAILを確認する。
-- [ ] スキーマ、入力ハッシュ比較、差分AI生成、原子的な保存、モード受付とcoverageを実装する。
-- [ ] `pnpm test tests/memory-updates.test.ts tests/workflows.test.ts tests/usage-limits.test.ts tests/profile.test.ts tests/text-stocks.test.ts` → PASS。
-- [ ] 型チェックと関連テストを確認しTask 1をコミットする。
+- [x] 既存テストを実行しベースラインを記録する。
+- [x] `tests/memory-updates.test.ts` に追加分のみ・AI省略・両スコープ・削除変更・失敗/古い結果・モード/再送・移行の回帰テストを書く。
+- [x] `pnpm test tests/memory-updates.test.ts` → 新機能未実装の期待値でFAILを確認する。
+- [x] スキーマ、入力ハッシュ比較、差分AI生成、原子的な保存、モード受付とcoverageを実装する。
+- [x] `pnpm test tests/memory-updates.test.ts tests/workflows.test.ts tests/usage-limits.test.ts tests/profile.test.ts tests/text-stocks.test.ts` → PASS。
+- [x] 型チェックと関連テストを確認しTask 1をコミットする。
 
 ### Task 2: 反映状況・再生成ダイアログと全体検証
 
@@ -58,10 +58,10 @@
 - Consumes: Task 1のMemoryCoverageとrebuild mode。
 - Produces: 通常の再生成ボタンから開く選択ダイアログ、件数表示。
 
-- [ ] ローカルブラウザで現状の再生成が直送であることを確認する。
-- [ ] 既存Modalを再利用し、差分/全件選択・反映件数・必要理由・送信中/エラー表示を追加する。
-- [ ] ドキュメントに差分処理、反映状況、全件更新が必要な条件を追記する。
-- [ ] ローカルブラウザでキャンセル、差分/全件の送信、未反映0件、旧履歴、キーボードと狭い画面を確認する。
-- [ ] `pnpm check` → 全チェックPASS。
+- [x] ローカルブラウザで現状の再生成が直送であることを確認する。
+- [x] 既存Modalを再利用し、差分/全件選択・反映件数・必要理由・送信中/エラー表示を追加する。
+- [x] ドキュメントに差分処理、反映状況、全件更新が必要な条件を追記する。
+- [x] ローカルブラウザでキャンセル、差分/全件の送信、未反映0件、旧履歴、キーボードと狭い画面を確認する。
+- [x] `pnpm typecheck` / `pnpm lint` / `pnpm test --maxWorkers=2` / `pnpm format:check` / `pnpm build` → 全チェックPASS（ローカルのポート制約によりテスト並列数2）。
 - [ ] `/review` を変更全体に実行し指摘を修正、検証・レビューを再実行する。
 - [ ] コミット、push、main向けPR作成、PR添付、URLを報告する。

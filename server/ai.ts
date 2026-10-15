@@ -184,6 +184,7 @@ export async function updateMemory(
   current: MemoryData,
   sources: Source[],
   context: { name: string; description: string; scope: string },
+  totals: { articleCount: number; topicCounts: { topic: string; count: number }[] },
   call: AiCall<MemoryData> = directCall,
 ): Promise<MemoryData> {
   if (!sources.length) return current;
@@ -194,7 +195,9 @@ export async function updateMemory(
   if (isDemo(env) && !env.AI) {
     const added = await buildMemory(env, sources, context, call);
     return {
-      interests: [...new Set([...current.interests, ...added.interests])].slice(-8),
+      interests: totals.topicCounts
+        .slice(0, 5)
+        .map(({ topic, count }) => `「${topic}」に関する記事を${count}件収集しています。`),
       knowledge: [...current.knowledge, ...added.knowledge].slice(-12),
       questions: current.questions,
     };
@@ -210,6 +213,7 @@ export async function updateMemory(
           {
             context,
             currentMemory: memory,
+            ...totals,
             addedSources: group,
             addedTopicCounts: topicCounts(group),
           },

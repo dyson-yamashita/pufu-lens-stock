@@ -16,6 +16,7 @@ import {
   modelName,
   summarize,
   generateQuestion,
+  topicCounts,
   type AiCall,
 } from './ai';
 import {
@@ -37,7 +38,9 @@ async function jobById(env: Env, id: string) {
   return env.DB.prepare('SELECT * FROM processing_jobs WHERE id = ?').bind(id).first<Job>();
 }
 async function done(env: Env, id: string) {
-  await env.DB.prepare("UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?")
+  await env.DB.prepare(
+    "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE id = ?",
+  )
     .bind(now(), id)
     .run();
 }
@@ -268,7 +271,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
           return null;
         }
         await this.env.DB.prepare(
-          "UPDATE processing_jobs SET status = 'running', updated_at = ? WHERE id = ?",
+          "UPDATE processing_jobs SET status = 'running', error = NULL, updated_at = ? WHERE id = ?",
         )
           .bind(now(), job.id)
           .run();
@@ -310,6 +313,10 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
             state.current!,
             state.added.map((input) => input.source),
             context,
+            {
+              articleCount: inputs.length,
+              topicCounts: topicCounts(inputs.map((input) => input.source)).slice(0, 30),
+            },
             call,
           );
       await step.do('save-if-revision-current', async () => {
@@ -326,7 +333,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
           }),
           ...memorySourceStatements(this.env, state.id, job.revision, inputs),
           this.env.DB.prepare(
-            "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
+            "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE id = ?",
           ).bind(now(), job.id),
         ]);
       });
