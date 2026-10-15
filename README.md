@@ -130,6 +130,35 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 
 本番のGoogle認証情報はWorkerのSecretとして登録済みです。公開画面・Googleログイン画面への遷移・デモ無効化・未認証APIの拒否を確認しています。Googleログイン完了後のストック保存・Workers AIによる生成・Browser Runによる本文取得は、本番環境で追加確認してください。
 
+### GitHub Actionsによる自動デプロイ
+
+[Cloudflare Deploy](.github/workflows/cloudflare-deploy.yml) は、PRで検証のみを実行し、PRのマージなどで `main` が更新されると、検証成功後に既存の本番環境へデプロイします。元リポジトリ `dyson-yamashita/pufu-lens-stock` の `main` 更新だけがデプロイ対象です。forkのPRや別ブランチからはデプロイしません。ワークフロー追加のPRをマージしたときから自動実行されます。
+
+初回マージ前に、リポジトリの **Settings → Environments → New environment** で `production` を作成し、Environment secretsに次の2つを登録してください。値をIssue・PR・チャットや設定ファイルに貼り付けないでください。
+
+| Environment secret      | 内容                                                 |
+| ----------------------- | ---------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | この本番アカウントに範囲を限定したデプロイ用トークン |
+| `CLOUDFLARE_ACCOUNT_ID` | 本番Worker・D1・R2を所有するアカウントID             |
+
+APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/) の「Edit Cloudflare Workers」テンプレートを基に作成し、このアプリが利用するリソースの権限だけを付けてください。D1マイグレーションにはアカウントの **D1: Edit** が必要です。既存のR2・AIなどのバインディングに必要な参照権限を維持し、別アカウント、不要なゾーン、Global API Keyへのアクセスは与えないでください。
+
+`production` の **Deployment branches and tags** は **Selected branches and tags → Branch: main** に制限してください。マージ後すぐの自動実行にする場合はRequired reviewersを設定しません。GitHubのmainブランチ保護・RulesetでPR経由の変更と `Check` の成功を要求し、ワークフローや依存関係を含む変更をレビューしてください。ワークフロー内の条件だけでは、mainへ悪意ある変更を書き込める管理者からSecretsを保護できません。
+
+実行順は次のとおりです。
+
+1. Secretsを持たない別ジョブで `npm ci`、`npm run check`、`npm audit --audit-level=high` を実行します。
+2. デプロイジョブでも `npm ci` と `npm run build:production` はSecretsを渡さず実行します。
+3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
+
+依存関係は `.npmrc` の `legacy-peer-deps=false` でpeer dependencyも含めて解決します。ローカルのユーザー設定に左右されないようにし、CIと同じlockfileを使います。
+
+同一mainのデプロイは直列実行し、実行中の処理は後続pushでキャンセルしません。待機中の古い実行はGitHubのconcurrencyにより最新の実行へ置き換わる場合があります。マイグレーション後にWorker更新が失敗しても、成功済みのDB変更は戻りません。マイグレーションは旧Workerとも動く追加的な変更にし、削除・破壊的な変更は別途手順を検討してください。再実行では適用済みのマイグレーションをスキップします。
+
+Googleの `GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET` はCloudflareのWorker Secretに保持し、GitHubへ複製しません。`.dev.vars*`・`.env*`・`.wrangler/`・`dist/` は引き続きGit管理対象外です。D1のIDや公開URLは接続先を識別する情報で、アクセス権を与える認証情報ではありません。新しい秘密をWranglerの `vars` やViteの `VITE_*` に設定しないでください。
+
+Actionsは公式のcheckout/setup-nodeをコミットSHAで固定し、`GITHUB_TOKEN` は `contents: read` のみに制限しています。checkoutの認証情報保持と依存キャッシュを無効にし、ビルド成果物やログファイルをArtifactsへアップロードしません。PRの検証に本番Secretsは不要です。公開リポジトリではActionsログも公開される前提で、環境変数の一覧表示やshellのトレースを追加しないでください。[GitHubの安全な利用ガイド](https://docs.github.com/en/actions/reference/security/secure-use)
+
 ## iOSショートカット
 
 1. Web画面にログインし、「ショートカット連携」でトークンを発行します。端末ごとに発行し、必要なら特定のプロジェクトに限定してください。
