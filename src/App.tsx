@@ -1024,7 +1024,10 @@ export default function App() {
                 onEvidence={evidence}
                 onRebuild={async () => {
                   try {
-                    await send('/api/v1/memory/rebuild', { project_id: route.projectId });
+                    await send('/api/v1/memory/rebuild', {
+                      project_id: route.projectId,
+                      request_id: createRequestId(),
+                    });
                     setNotice('メモリの再生成を受け付けました。');
                     reload();
                   } catch (e) {

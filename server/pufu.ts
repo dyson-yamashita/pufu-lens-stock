@@ -3,6 +3,7 @@ import { parseAiJson } from './ai';
 import type { Env, Job } from './env';
 import { isDemo } from './env';
 import { now, jobFailureStatements } from './db';
+import { invokeAi, aiStep, deferLimitedJob } from './usage';
 import { elementKeys, pufuScoreSchema, type PufuContext, type PufuScore } from '../shared/pufu';
 import type { WorkflowStep } from 'cloudflare:workers';
 
@@ -81,7 +82,7 @@ export async function generatePufu(env: Env, context: PufuContext): Promise<Pufu
     if (!env.AI) throw new Error('Workers AIが未設定です。');
     const memoryInput = (memory: PufuContext['userMemory']) =>
       memory && { revision: memory.revision, data: memory.data };
-    const response = await env.AI.run(env.AI_MODEL, {
+    const response = await invokeAi(env, {
       messages: [
         {
           role: 'system',
@@ -152,11 +153,7 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
       return JSON.parse(row.input_json) as PufuContext;
     });
     if (context) {
-      const score = await step.do(
-        'generate-pufu',
-        { retries: { limit: 2, delay: '5 seconds', backoff: 'exponential' }, timeout: '3 minutes' },
-        () => generatePufu(env, context),
-      );
+      const score = await aiStep(env, job, step, 'generate-pufu', () => generatePufu(env, context));
       await step.do('save-pufu', async () => {
         const json = JSON.stringify(score);
         await env.DB.batch([
@@ -185,6 +182,7 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
         .run();
     });
   } catch (error) {
+    if (await deferLimitedJob(env, job, error)) return;
     await step.do('record-pufu-failure', async () => {
       await env.DB.batch(
         jobFailureStatements(env, job, 'プ譜を生成できませんでした。再試行してください。'),

@@ -24,6 +24,7 @@ import {
 import { canonicalUrl, hash, randomSecret, validateUrl } from './security';
 import { dirtyMemoryStatements, now, orphanCleanupStatements, queueQuestionStatements } from './db';
 import { dispatchJobs } from './jobs';
+import { reserveOperation, assertOperation, retryAt } from './usage';
 import {
   createPufuSchema,
   savePufuSchema,
@@ -276,22 +277,6 @@ export function createApp() {
     };
     const existingResponse = await replay();
     if (existingResponse) return existingResponse;
-    const existing = await c.env.DB.prepare(
-      'SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
-    )
-      .bind(user.id, data.project_id, canonical)
-      .first<{ id: string }>();
-    if (!existing) {
-      const daily = await c.env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM stocks WHERE user_id = ? AND created_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')",
-      )
-        .bind(user.id)
-        .first<{ count: number }>();
-      if (daily!.count >= 200)
-        throw new HTTPException(429, {
-          message: '1日の保存上限（200件）に達しました。時間をおいて再度お試しください。',
-        });
-    }
     const articleId = crypto.randomUUID();
     const stockId = crypto.randomUUID();
     const statements = [
@@ -478,7 +463,10 @@ export function createApp() {
       userMemory: snapshot(null),
       projectMemory: snapshot(question.project_id),
     };
+    const jobId = `pufu-job-${id}-1`;
     const result = await c.env.DB.batch([
+      reserveOperation(c.env, { id: jobId, user_id: user.id, kind: 'pufu' }),
+      assertOperation(c.env, jobId),
       c.env.DB.prepare(
         "INSERT OR IGNORE INTO pufu_scores (id,user_id,question_id,task,input_json,editor_version) SELECT ?,?,?,?,?,? FROM questions q JOIN stocks s ON s.id = q.stock_id WHERE q.id = ? AND s.user_id = ? AND q.status = 'ready'",
       ).bind(
@@ -503,7 +491,7 @@ export function createApp() {
     if (saved.question_id !== question.id || saved.task !== data.task)
       throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
     c.executionCtx.waitUntil(dispatchJobs(c.env));
-    return c.json({ id, status: saved.status }, result[0].meta.changes ? 202 : 200);
+    return c.json({ id, status: saved.status }, result[2].meta.changes ? 202 : 200);
   });
   app.get('/api/v1/pufus/:id', async (c) => {
     const id = c.req.param('id');
@@ -590,10 +578,13 @@ export function createApp() {
     const pufu = await ownedPufu(c);
     if (pufu.status !== 'failed')
       throw new HTTPException(409, { message: '生成に失敗したプ譜だけ再試行できます。' });
+    const jobId = `pufu-job-${pufu.id}-${pufu.generation + 1}`;
     await c.env.DB.batch([
+      reserveOperation(c.env, { id: jobId, user_id: c.get('principal').user.id, kind: 'pufu' }),
+      assertOperation(c.env, jobId),
       c.env.DB.prepare(
-        "UPDATE pufu_scores SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed'",
-      ).bind(now(), pufu.id, c.get('principal').user.id),
+        "UPDATE pufu_scores SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed' AND generation = ?",
+      ).bind(now(), pufu.id, c.get('principal').user.id, pufu.generation),
       queuePufuJob(c.env, pufu.id),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
@@ -710,18 +701,21 @@ export function createApp() {
   app.post('/api/v1/stocks/:id/question/retry', async (c) => {
     const stock = await ownedStock(c);
     const question = await c.env.DB.prepare(
-      "SELECT status, source FROM questions WHERE stock_id = ? AND source = 'ai'",
+      "SELECT status, source, generation FROM questions WHERE stock_id = ? AND source = 'ai'",
     )
       .bind(stock.id)
-      .first<{ status: string; source: string }>();
+      .first<{ status: string; source: string; generation: number }>();
     if (!question || question.source !== 'ai' || question.status !== 'failed')
       throw new HTTPException(409, { message: '生成に失敗した問いだけ再試行できます。' });
     if (stock.status !== 'ready')
       throw new HTTPException(409, { message: '先に記事の取得・要約を完了してください。' });
+    const jobId = `q-${stock.id}-${question.generation + 1}`;
     await c.env.DB.batch([
+      reserveOperation(c.env, { id: jobId, user_id: c.get('principal').user.id, kind: 'question' }),
+      assertOperation(c.env, jobId),
       c.env.DB.prepare(
-        "UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND status = 'failed'",
-      ).bind(now(), stock.id),
+        "UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND status = 'failed' AND generation = ?",
+      ).bind(now(), stock.id, question.generation),
       ...queueQuestionStatements(c.env, stock.id),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
@@ -771,10 +765,16 @@ export function createApp() {
     const stock = await ownedStock(c);
     if (stock.status !== 'failed')
       throw new HTTPException(409, { message: '取得に失敗した記事だけ再試行できます。' });
+    const article = await c.env.DB.prepare('SELECT generation FROM articles WHERE id=?')
+      .bind(stock.article_id)
+      .first<{ generation: number }>();
+    const jobId = `a-${stock.article_id}-${article!.generation + 1}`;
     await c.env.DB.batch([
+      reserveOperation(c.env, { id: jobId, user_id: c.get('principal').user.id, kind: 'article' }),
+      assertOperation(c.env, jobId),
       c.env.DB.prepare(
-        "UPDATE articles SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed'",
-      ).bind(now(), stock.article_id, c.get('principal').user.id),
+        "UPDATE articles SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed' AND generation = ?",
+      ).bind(now(), stock.article_id, c.get('principal').user.id, article!.generation),
       c.env.DB.prepare(
         "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE id = ? AND user_id = ? AND status = 'queued'",
       ).bind(stock.article_id, c.get('principal').user.id),
@@ -798,7 +798,7 @@ export function createApp() {
       .bind(memoryId, user.id)
       .first();
     const job = await c.env.DB.prepare(
-      'SELECT status, error FROM processing_jobs WHERE user_id = ? AND kind = ? AND target_id = ? AND revision = ?',
+      "SELECT status, error FROM processing_jobs WHERE user_id = ? AND kind = ? AND target_id = ? AND revision = ? ORDER BY status IN ('pending','dispatched','running') DESC, created_at DESC LIMIT 1",
     )
       .bind(
         user.id,
@@ -826,12 +826,68 @@ export function createApp() {
     const { user } = c.get('principal');
     const data = await body(
       c,
-      z.object({ project_id: z.string().max(100).nullable().default(null) }),
+      z.object({
+        project_id: z.string().max(100).nullable().default(null),
+        request_id: z.uuid().optional(),
+      }),
     );
     if (data.project_id) await ownedProject(c.env, user.id, data.project_id);
-    await c.env.DB.batch(
-      dirtyMemoryStatements(c.env, user.id, data.project_id ? [data.project_id] : []),
-    );
+    const key = c.req.header('Idempotency-Key') ?? data.request_id ?? crypto.randomUUID();
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(key))
+      throw new HTTPException(400, { message: 'リクエストIDの形式が正しくありません。' });
+    const requestId = `memory-${user.id}-${key}`;
+    const previous = await c.env.DB.prepare(
+      'SELECT project_id FROM memory_requests WHERE id=? AND user_id=?',
+    )
+      .bind(requestId, user.id)
+      .first<{ project_id: string | null }>();
+    if (previous) {
+      if (previous.project_id !== data.project_id)
+        throw new HTTPException(409, {
+          message: '同じリクエストIDで異なる保存先が送信されました。',
+        });
+      return c.json({ ok: true }, 202);
+    }
+    const targets: { id: string; kind: 'user_memory' | 'project_memory'; table: string }[] = [
+      { id: user.id, kind: 'user_memory', table: 'users' },
+    ];
+    if (data.project_id)
+      targets.push({
+        id: data.project_id,
+        kind: 'project_memory' as const,
+        table: 'projects',
+      });
+    const statements: D1PreparedStatement[] = [
+      c.env.DB.prepare('INSERT INTO memory_requests (id,user_id,project_id) VALUES (?,?,?)').bind(
+        requestId,
+        user.id,
+        data.project_id,
+      ),
+    ];
+    for (const target of targets) {
+      const id = `${requestId}-${target.kind}`;
+      statements.push(
+        reserveOperation(c.env, { id, user_id: user.id, kind: target.kind }),
+        assertOperation(c.env, id),
+        c.env.DB.prepare(
+          `INSERT INTO processing_jobs (id,user_id,kind,target_id,revision) SELECT ?,?,?,id,memory_revision FROM ${target.table} WHERE id=?`,
+        ).bind(id, user.id, target.kind, target.id),
+      );
+    }
+    try {
+      await c.env.DB.batch(statements);
+    } catch (error) {
+      const replay = await c.env.DB.prepare(
+        'SELECT project_id FROM memory_requests WHERE id=? AND user_id=?',
+      )
+        .bind(requestId, user.id)
+        .first<{ project_id: string | null }>();
+      if (!replay) throw error;
+      if (replay.project_id !== data.project_id)
+        throw new HTTPException(409, {
+          message: '同じリクエストIDで異なる保存先が送信されました。',
+        });
+    }
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true }, 202);
   });
@@ -892,7 +948,34 @@ export function createApp() {
     return c.json({ ok: true });
   });
   app.notFound((c) => c.json({ error: '見つかりません。' }, 404));
-  app.onError((error, c) => {
+  app.onError(async (error, c) => {
+    const errorDetail = `${error.message} ${error.cause instanceof Error ? error.cause.message : ''}`;
+    const stockLimit = errorDetail.includes('stock_quota');
+    if (stockLimit || errorDetail.includes('ai_quota')) {
+      const at = await retryAt(
+        c.env,
+        c.get('principal').user.id,
+        stockLimit
+          ? 'stock'
+          : c.req.path.includes('/pufus')
+            ? 'pufu'
+            : c.req.path.includes('/memory/')
+              ? 'user_memory'
+              : c.req.path.includes('/question/')
+                ? 'question'
+                : 'article',
+      );
+      c.header('Retry-After', String(Math.max(1, Math.ceil((Date.parse(at) - Date.now()) / 1000))));
+      return c.json(
+        {
+          error: stockLimit
+            ? '直近24時間の保存上限（200件）に達しました。ストックを削除しても利用件数は減りません。'
+            : 'AI処理の利用上限または同時処理数に達しました。処理中の完了を待つか、再試行時刻以降にお試しください。',
+          retry_at: at,
+        },
+        429,
+      );
+    }
     if (error instanceof HTTPException)
       return c.json({ error: error.message || 'リクエストを確認してください。' }, error.status);
     console.error('api_request_failed', { path: c.req.path });

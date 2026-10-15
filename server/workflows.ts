@@ -13,6 +13,7 @@ import { buildMemory, memoryText, modelName, summarize, generateQuestion, type S
 import { dispatchJobs } from './jobs';
 import type { ArticleSummary } from '../shared/domain';
 import { runPufu } from './pufu';
+import { aiStep, deferLimitedJob } from './usage';
 
 const retry = {
   retries: { limit: 2, delay: '5 seconds' as const, backoff: 'exponential' as const },
@@ -64,7 +65,9 @@ async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
       };
     });
     if (!source) return;
-    const question = await step.do('generate-question', retry, () => generateQuestion(env, source));
+    const question = await aiStep(env, job, step, 'generate-question', () =>
+      generateQuestion(env, source),
+    );
     await step.do('save-question', async () => {
       await env.DB.batch([
         env.DB.prepare(
@@ -83,6 +86,7 @@ async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
       ]);
     });
   } catch (error) {
+    if (await deferLimitedJob(env, job, error)) return;
     await step.do('record-question-failure', () =>
       fail(env, job, '問いを生成できませんでした。「再試行」からやり直せます。'),
     );
@@ -190,7 +194,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         return content.text();
       });
       const summary = await summarize(this.env, title, text, (name, operation) =>
-        step.do(name, retry, operation),
+        aiStep(this.env, job, step, name, operation),
       );
       await step.do('commit-summary', async () => {
         const current = await this.env.DB.prepare(
@@ -215,6 +219,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
       });
       await step.do('dispatch-memory-updates', () => dispatchJobs(this.env));
     } catch (error) {
+      if (await deferLimitedJob(this.env, job, error)) return;
       const message =
         error instanceof Error
           ? error.message.slice(0, 400)
@@ -294,7 +299,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         this.env,
         sources,
         { name: owner.name, description: owner.description, scope: project ? 'project' : 'user' },
-        (name, operation) => step.do(name, retry, operation),
+        (name, operation) => aiStep(this.env, job, step, name, operation),
       );
       await step.do('save-if-revision-current', async () => {
         await this.env.DB.batch([
@@ -313,6 +318,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         ]);
       });
     } catch (error) {
+      if (await deferLimitedJob(this.env, job, error)) return;
       await step.do('record-failure', () =>
         fail(this.env, job, 'メモリを更新できませんでした。「再生成」から再試行できます。'),
       );

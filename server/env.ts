@@ -24,6 +24,13 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   AI_MODEL: string;
+  AI_PUFU_DAILY_LIMIT?: string;
+  AI_MEMORY_DAILY_LIMIT?: string;
+  AI_ARTICLE_DAILY_LIMIT?: string;
+  AI_QUESTION_DAILY_LIMIT?: string;
+  AI_CONCURRENT_JOBS?: string;
+  AI_CALL_DAILY_LIMIT?: string;
+  AI_CONCURRENT_CALLS?: string;
 }
 export type Principal = { user: User; kind: 'session' | 'token'; tokenProjectId: string | null };
 export type AppEnv = { Bindings: Env; Variables: { principal: Principal } };

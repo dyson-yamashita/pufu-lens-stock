@@ -9,14 +9,16 @@ export async function applyMigration(DB: D1Database, filename: string) {
   const schema = await readFile(new URL(`../migrations/${filename}`, import.meta.url), 'utf8');
   await DB.batch(
     schema
-      .split(';')
+      .split(schema.includes('-- statement-breakpoint') ? '-- statement-breakpoint' : ';')
       .map((sql) => sql.trim())
       .filter(Boolean)
       .map((sql) => DB.prepare(sql)),
   );
 }
 
-export async function testApp(options: { migrations?: string[] } = {}) {
+export async function testApp(
+  options: { migrations?: string[]; quotaDefaults?: boolean; usageMigration?: boolean } = {},
+) {
   const runtime = new Miniflare({
     modules: true,
     script: 'export default { fetch() { return new Response("test"); } }',
@@ -32,6 +34,9 @@ export async function testApp(options: { migrations?: string[] } = {}) {
       .filter((filename) => filename.endsWith('.sql'))
       .sort();
   for (const filename of migrations) await applyMigration(DB, filename);
+  // 旧スキーマからの移行テストでも、現在のAPIの利用制限基盤は有効にする。
+  if (options.usageMigration !== false && !migrations.includes('0013_usage_limits.sql'))
+    await applyMigration(DB, '0013_usage_limits.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),
@@ -42,6 +47,8 @@ export async function testApp(options: { migrations?: string[] } = {}) {
     APP_URL: 'http://localhost:5173',
     LOCAL_DEMO_ENABLED: 'false',
     AI_MODEL: '@cf/qwen/qwen3-30b-a3b-fp8',
+    // Workflowスタブは自動完了しない。上限制御のテストだけ本番の既定同時数を使う。
+    AI_CONCURRENT_JOBS: options.quotaDefaults ? undefined : '100',
     ARTICLE_WORKFLOW: binding,
     MEMORY_WORKFLOW: binding,
   };

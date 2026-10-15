@@ -103,6 +103,19 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     return job!;
   }
 
+  it('異なるrequest_idを25件送ってもAI生成はユーザー日次上限20件まで', async () => {
+    const ai = vi.fn(async () => ({ response: JSON.stringify(draft) }));
+    app.env.AI = { run: ai };
+    for (let i = 0; i < 25; i++) {
+      const response = await create();
+      expect(response.status).toBe(i < 20 ? 202 : 429);
+      if (i < 20) {
+        const { id } = (await response.json()) as { id: string };
+        await run(id);
+      }
+    }
+    expect(ai).toHaveBeenCalledTimes(20);
+  }, 20000);
   it('生成済みのプ譜の有無を返し、複数作成しても問いの一覧と件数が重複しない', async () => {
     const list = async () => {
       const response = await app.request('/api/v1/questions');

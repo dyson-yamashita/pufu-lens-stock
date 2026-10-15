@@ -12,10 +12,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     ...options,
     headers: { 'Content-Type': 'application/json', ...options.headers },
   });
-  const data = await response.json();
+  const data = (await response.json()) as { error?: string; retry_at?: string };
   if (!response.ok)
     throw new ApiError(
-      (data as { error?: string }).error ?? '処理に失敗しました。',
+      ((data as { error?: string }).error ?? '処理に失敗しました。') +
+        (response.status === 429 && data.retry_at
+          ? ` 再試行目安: ${new Date(data.retry_at).toLocaleString('ja-JP')}`
+          : ''),
       response.status,
     );
   return data as T;

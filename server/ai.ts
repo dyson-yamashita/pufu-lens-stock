@@ -1,3 +1,4 @@
+import { invokeAi } from './usage';
 import { summarySchema, memorySchema, questionSchema } from '../shared/domain';
 import type { ArticleSummary, MemoryData } from '../shared/domain';
 import type { Env } from './env';
@@ -50,7 +51,7 @@ async function generate<T>(
 ): Promise<T> {
   if (!env.AI)
     throw new Error('Workers AIが未設定です。CloudflareのAIバインディングを設定してください。');
-  const response = await env.AI.run(env.AI_MODEL, {
+  const response = await invokeAi(env, {
     messages: [
       {
         role: 'system',
