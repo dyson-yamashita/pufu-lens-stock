@@ -50,6 +50,7 @@ export type Question = {
   stock_id: string;
   source: 'ai' | 'user';
   is_favorite: 0 | 1;
+  has_pufu: 0 | 1;
   text: string | null;
   status: 'queued' | 'generating' | 'ready' | 'failed';
   error: string | null;
@@ -100,6 +101,7 @@ export type Project = {
 };
 export type Stock = {
   id: string;
+  is_favorite: 0 | 1;
   article_id: string;
   project_id: string;
   project_name: string;

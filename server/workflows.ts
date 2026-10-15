@@ -12,6 +12,7 @@ import { fetchArticle } from './ingest';
 import { buildMemory, memoryText, modelName, summarize, generateQuestion, type Source } from './ai';
 import { dispatchJobs } from './jobs';
 import type { ArticleSummary } from '../shared/domain';
+import { runPufu } from './pufu';
 
 const retry = {
   retries: { limit: 2, delay: '5 seconds' as const, backoff: 'exponential' as const },
@@ -92,6 +93,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
   async run(event: WorkflowEvent<{ jobId: string }>, step: WorkflowStep) {
     const job = await step.do('load-job', () => jobById(this.env, event.payload.jobId));
     if (!job || job.status === 'done') return;
+    if (job.kind === 'pufu') return runPufu(this.env, job, step);
     if (job.kind === 'question') return runQuestion(this.env, job, step);
     if (job.kind === 'cleanup') {
       await step.do('delete-orphan-body', retry, async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowUpRight,
+  ArrowRight,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -13,15 +13,25 @@ import {
 import type { Question } from '../shared/domain';
 import { api, send } from './api';
 import SearchField from './SearchField';
+import QuestionLabels from './QuestionLabels';
 
-function questionLabel(question: Question) {
-  return question.source === 'user' ? 'ユーザー' : 'AI';
-}
-function QuestionBody({ question }: { question: Question }) {
+function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () => void }) {
   return (
     <>
       {question.status === 'ready' && question.text ? (
-        <p className="question-text">{question.text}</p>
+        <p className="question-text">
+          {onOpen ? (
+            <button
+              className="question-open"
+              onClick={onOpen}
+              aria-label={`問いの詳細を開く：${question.text}`}
+            >
+              {question.text}
+            </button>
+          ) : (
+            question.text
+          )}
+        </p>
       ) : (
         <p className={`question-message ${question.status === 'failed' ? 'question-error' : ''}`}>
           {question.status !== 'failed' && (
@@ -33,16 +43,17 @@ function QuestionBody({ question }: { question: Question }) {
               : 'この記事から、考えを深める問いを生成しています。')}
         </p>
       )}
-      {question.model === 'local-question-template' && (
-        <p className="local-model-note">
-          ローカルデモでは、記事の要点とプロジェクト名から定型の問いを生成しています。
-        </p>
-      )}
     </>
   );
 }
 
-export function StockQuestion({ stockId }: { stockId: string }) {
+export function StockQuestion({
+  stockId,
+  onQuestion,
+}: {
+  stockId: string;
+  onQuestion?: (id: string) => void;
+}) {
   const [questions, setQuestions] = useState<Question[]>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -84,11 +95,12 @@ export function StockQuestion({ stockId }: { stockId: string }) {
               <div className="question-kicker">
                 <CircleHelp size={18} aria-hidden="true" />
                 この記事から生まれた問い
-                <span className={`question-origin question-origin-${question.source}`}>
-                  {questionLabel(question)}
-                </span>
+                <QuestionLabels question={question} />
               </div>
-              <QuestionBody question={question} />
+              <QuestionBody
+                question={question}
+                onOpen={onQuestion ? () => onQuestion(question.id) : undefined}
+              />
               {question.source === 'ai' && question.status === 'failed' && (
                 <button
                   className="button secondary"
@@ -118,8 +130,12 @@ export function StockQuestion({ stockId }: { stockId: string }) {
           ))
         : !error && (
             <p className="question-message">
-              <LoaderCircle className="spin" size={17} aria-hidden="true" />
-              {questions === undefined ? '問いを読み込んでいます…' : '問いの生成を準備しています。'}
+              {questions === undefined && (
+                <LoaderCircle className="spin" size={17} aria-hidden="true" />
+              )}
+              {questions === undefined
+                ? '問いを読み込んでいます…'
+                : 'このストックには問いがありません。'}
             </p>
           )}
       {error && (
@@ -136,11 +152,15 @@ export default function Questions({
   refresh,
   onScope,
   onOpen,
+  onQuestion,
+  active = true,
 }: {
   projectId: string | null;
   refresh: number;
   onScope: (projectId: string | null) => void;
   onOpen: (stockId: string) => Promise<void>;
+  onQuestion: (id: string) => void;
+  active?: boolean;
 }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [query, setQuery] = useState('');
@@ -156,6 +176,7 @@ export default function Questions({
   const favoriteVersion = useRef(0);
   useEffect(() => setPage(1), [projectId]);
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     let inFlight = false;
     setLoading(true);
@@ -197,7 +218,7 @@ export default function Questions({
       controller.abort();
       window.clearInterval(interval);
     };
-  }, [projectId, search, filter, page, refresh, reload]);
+  }, [projectId, search, filter, page, refresh, reload, active]);
   return (
     <section className="questions-page" aria-label="ストックから生まれた問い">
       <SearchField
@@ -269,48 +290,46 @@ export default function Questions({
       ) : (
         <div className="question-grid">
           {questions.map((question) => (
-            <article className="question-card" key={question.id}>
-              <div className="question-card-head">
-                <span className={`question-origin question-origin-${question.source}`}>
-                  {questionLabel(question)}
-                </span>
-              </div>
-              <QuestionBody question={question} />
-              <button
-                className="question-source"
-                disabled={opening !== null}
-                onClick={async () => {
-                  setOpening(question.stock_id);
-                  try {
-                    await onOpen(question.stock_id);
-                  } catch (e) {
-                    setError((e as Error).message);
-                  } finally {
-                    setOpening(null);
-                  }
-                }}
-              >
-                <BookOpen size={16} aria-hidden="true" />
-                <span>{question.article_title}</span>
-                {opening === question.stock_id ? (
-                  <LoaderCircle className="spin" size={16} aria-hidden="true" />
-                ) : (
-                  <ArrowUpRight size={16} aria-hidden="true" />
-                )}
-              </button>
-              <div className="question-card-footer">
-                <button onClick={() => onScope(question.project_id)}>
-                  <Folder size={14} aria-hidden="true" />
+            <article className="question-card question-detail-card" key={question.id}>
+              <div className="question-detail-meta">
+                <QuestionLabels question={question} />
+                <button className="question-project" onClick={() => onScope(question.project_id)}>
+                  <Folder size={15} aria-hidden="true" />
                   <span>{question.project_name}</span>
                 </button>
+              </div>
+              <QuestionBody question={question} onOpen={() => onQuestion(question.id)} />
+              <div className="question-detail-source">
+                <button
+                  disabled={opening !== null}
+                  onClick={async () => {
+                    setOpening(question.stock_id);
+                    try {
+                      await onOpen(question.stock_id);
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setOpening(null);
+                    }
+                  }}
+                >
+                  <BookOpen size={17} aria-hidden="true" />
+                  <span>{question.article_title}</span>
+                  {opening === question.stock_id ? (
+                    <LoaderCircle className="spin" size={16} aria-hidden="true" />
+                  ) : (
+                    <ArrowRight size={16} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+              <div className="question-card-footer">
+                <time dateTime={question.created_at}>
+                  {new Intl.DateTimeFormat('ja-JP', {
+                    dateStyle: 'medium',
+                    timeZone: 'Asia/Tokyo',
+                  }).format(new Date(question.created_at))}
+                </time>
                 <div className="question-card-actions">
-                  <time dateTime={question.created_at}>
-                    {new Intl.DateTimeFormat('ja-JP', {
-                      month: 'short',
-                      day: 'numeric',
-                      timeZone: 'Asia/Tokyo',
-                    }).format(new Date(question.created_at))}
-                  </time>
                   <button
                     type="button"
                     className="question-favorite"

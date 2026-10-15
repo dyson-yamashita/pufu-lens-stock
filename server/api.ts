@@ -8,6 +8,7 @@ import {
   stockInputSchema,
   userQuestionSchema,
   type Question,
+  type Stock,
   type User,
 } from '../shared/domain';
 import type { AppEnv, Env } from './env';
@@ -23,15 +24,27 @@ import {
 import { canonicalUrl, hash, randomSecret, validateUrl } from './security';
 import { dirtyMemoryStatements, now, orphanCleanupStatements, queueQuestionStatements } from './db';
 import { dispatchJobs } from './jobs';
+import {
+  createPufuSchema,
+  savePufuSchema,
+  pufuEditorVersion,
+  type PufuContext,
+  type PufuSummary,
+  type PufuScore,
+  type MemorySnapshot,
+} from '../shared/pufu';
+import { queuePufuJob } from './pufu';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(1000).default(''),
 });
 const questionColumns =
-  'q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, s.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain';
+  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, s.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = s.user_id AND pf.status = 'ready') AS has_pufu";
 const questionJoins =
   'questions q JOIN stocks s ON s.id = q.stock_id JOIN projects p ON p.id = s.project_id JOIN articles a ON a.id = s.article_id';
+const pufuColumns =
+  'id,question_id,task,status,error,model,editor_version,revision,generation,created_at,updated_at';
 async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
   let value: unknown;
   try {
@@ -59,7 +72,12 @@ export function createApp() {
   const app = new Hono<AppEnv>();
   app.use('/api/*', secureHeaders(), (c, next) =>
     bodyLimit({
-      maxSize: c.req.method === 'POST' && c.req.path === '/api/v1/stocks' ? 163840 : 16384,
+      maxSize:
+        c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)
+          ? 262144
+          : c.req.method === 'POST' && c.req.path === '/api/v1/stocks'
+            ? 163840
+            : 16384,
       onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
     })(c, next),
   );
@@ -171,9 +189,12 @@ export function createApp() {
     if (!['all', 'ready', 'processing', 'failed'].includes(status)) throw new HTTPException(400);
     const source = c.req.query('source') ?? 'all';
     if (!['all', 'web', 'user'].includes(source)) throw new HTTPException(400);
+    const favorite = c.req.query('favorite') ?? 'false';
+    if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Number(c.req.query('page')) || 1));
     const where =
-      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (a.title LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status = ?) AND (? = 'all' OR a.source_type = ?)";
+      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (a.title LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status = ?) AND (? = 'all' OR a.source_type = ?)" +
+      (favorite === 'true' ? ' AND s.is_favorite = 1' : '');
     const params = [
       user.id,
       projectId,
@@ -189,7 +210,7 @@ export function createApp() {
     ];
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
-        `SELECT s.id, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at DESC, s.id DESC LIMIT 24 OFFSET ?`,
+        `SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at DESC, s.id DESC LIMIT 24 OFFSET ?`,
       ).bind(...params, (page - 1) * 24),
       c.env.DB.prepare(
         `SELECT COUNT(*) AS count FROM stocks s JOIN articles a ON a.id = s.article_id WHERE ${where}`,
@@ -310,7 +331,7 @@ export function createApp() {
   });
   app.get('/api/v1/articles/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
@@ -338,6 +359,186 @@ export function createApp() {
     if (!stock) throw new HTTPException(404, { message: '記事が見つかりません。' });
     return stock;
   }
+  async function ownedQuestion(c: import('hono').Context<AppEnv>) {
+    const question = await c.env.DB.prepare(
+      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND s.user_id = ?`,
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .first<Question>();
+    if (!question) throw new HTTPException(404, { message: '問いが見つかりません。' });
+    return question;
+  }
+  async function ownedPufu(c: import('hono').Context<AppEnv>) {
+    const pufu = await c.env.DB.prepare(
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ?`,
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .first<PufuSummary>();
+    if (!pufu) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
+    return pufu;
+  }
+  app.get('/api/v1/questions/:id', async (c) => {
+    const question = await ownedQuestion(c);
+    const pufus = await c.env.DB.prepare(
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE question_id = ? AND user_id = ? ORDER BY created_at DESC,id DESC`,
+    )
+      .bind(question.id, c.get('principal').user.id)
+      .all<PufuSummary>();
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ question, pufus: pufus.results });
+  });
+  app.delete('/api/v1/questions/:id', async (c) => {
+    const question = await ownedQuestion(c);
+    const { user } = c.get('principal');
+    const statements: D1PreparedStatement[] = [];
+    if (question.source === 'ai') {
+      statements.push(
+        c.env.DB.prepare(
+          'UPDATE stocks SET ai_question_dismissed = 1 WHERE id = ? AND user_id = ?',
+        ).bind(question.stock_id, user.id),
+        c.env.DB.prepare(
+          "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE user_id = ? AND kind = 'question' AND target_id = ? AND status != 'done'",
+        ).bind(now(), user.id, question.stock_id),
+      );
+    }
+    statements.push(
+      c.env.DB.prepare(
+        "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE user_id = ? AND kind = 'pufu' AND target_id IN (SELECT id FROM pufu_scores WHERE question_id = ? AND user_id = ?) AND status != 'done'",
+      ).bind(now(), user.id, question.id, user.id),
+      c.env.DB.prepare(
+        'DELETE FROM questions WHERE id = ? AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?)',
+      ).bind(question.id, user.id),
+    );
+    await c.env.DB.batch(statements);
+    return c.json({ ok: true });
+  });
+  app.post('/api/v1/questions/:id/pufus', async (c) => {
+    const { user } = c.get('principal');
+    const question = await ownedQuestion(c);
+    const data = await body(c, createPufuSchema);
+    const id = `pufu-${user.id}-${data.request_id}`;
+    const previous = await c.env.DB.prepare(
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ?`,
+    )
+      .bind(id, user.id)
+      .first<PufuSummary>();
+    if (previous) {
+      if (previous.question_id !== question.id || previous.task !== data.task)
+        throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
+      c.executionCtx.waitUntil(dispatchJobs(c.env));
+      return c.json({ id, status: previous.status });
+    }
+    if (question.status !== 'ready' || !question.text)
+      throw new HTTPException(409, { message: '問いの生成が完了してから、プ譜を作成できます。' });
+    const project = await ownedProject(c.env, user.id, question.project_id);
+    const [stockRows, memoryRows] = await c.env.DB.batch<Record<string, unknown>>([
+      c.env.DB.prepare(
+        'SELECT note, summary_json FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
+      ).bind(question.stock_id, user.id),
+      c.env.DB.prepare(
+        'SELECT id,project_id,revision,text,data_json,updated_at FROM memories WHERE user_id = ? AND (project_id IS NULL OR project_id = ?)',
+      ).bind(user.id, question.project_id),
+    ]);
+    const stock = stockRows.results[0];
+    if (!stock) throw new HTTPException(404, { message: 'ストックが見つかりません。' });
+    const snapshot = (projectId: string | null): MemorySnapshot | null => {
+      const row = memoryRows.results.find((item) => item.project_id === projectId);
+      return row
+        ? {
+            id: String(row.id),
+            revision: Number(row.revision),
+            text: String(row.text),
+            data: JSON.parse(String(row.data_json)),
+            updated_at: String(row.updated_at),
+          }
+        : null;
+    };
+    const context: PufuContext = {
+      question: { id: question.id, text: question.text, source: question.source },
+      task: data.task,
+      project: { id: project.id, name: project.name, description: project.description },
+      stock: {
+        id: question.stock_id,
+        title: question.article_title,
+        summary: stock.summary_json ? JSON.parse(String(stock.summary_json)) : null,
+        note: String(stock.note),
+      },
+      userMemory: snapshot(null),
+      projectMemory: snapshot(question.project_id),
+    };
+    const result = await c.env.DB.batch([
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO pufu_scores (id,user_id,question_id,task,input_json,editor_version) SELECT ?,?,?,?,?,? FROM questions q JOIN stocks s ON s.id = q.stock_id WHERE q.id = ? AND s.user_id = ? AND q.status = 'ready'",
+      ).bind(
+        id,
+        user.id,
+        question.id,
+        data.task,
+        JSON.stringify(context),
+        pufuEditorVersion,
+        question.id,
+        user.id,
+      ),
+      queuePufuJob(c.env, id),
+    ]);
+    const saved = await c.env.DB.prepare(
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ?`,
+    )
+      .bind(id, user.id)
+      .first<PufuSummary>();
+    if (!saved)
+      throw new HTTPException(409, { message: '問いが変更されました。開き直してお試しください。' });
+    if (saved.question_id !== question.id || saved.task !== data.task)
+      throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ id, status: saved.status }, result[0].meta.changes ? 202 : 200);
+  });
+  app.get('/api/v1/pufus/:id', async (c) => {
+    const row = await c.env.DB.prepare(
+      `SELECT ${pufuColumns},score_json,input_json FROM pufu_scores WHERE id = ? AND user_id = ?`,
+    )
+      .bind(c.req.param('id'), c.get('principal').user.id)
+      .first<PufuSummary & { score_json: string | null; input_json: string }>();
+    if (!row) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
+    const { score_json, input_json, ...pufu } = row;
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({
+      pufu: {
+        ...pufu,
+        score: score_json ? (JSON.parse(score_json) as PufuScore) : null,
+        context: JSON.parse(input_json) as PufuContext,
+      },
+    });
+  });
+  app.patch('/api/v1/pufus/:id', async (c) => {
+    const pufu = await ownedPufu(c);
+    const data = await body(c, savePufuSchema);
+    if (pufu.status !== 'ready')
+      throw new HTTPException(409, { message: 'プ譜の生成が完了してから保存してください。' });
+    const result = await c.env.DB.prepare(
+      "UPDATE pufu_scores SET score_json = ?, revision = revision + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'ready' AND revision = ? RETURNING revision,updated_at",
+    )
+      .bind(JSON.stringify(data.score), now(), pufu.id, c.get('principal').user.id, data.revision)
+      .first<{ revision: number; updated_at: string }>();
+    if (!result)
+      throw new HTTPException(409, {
+        message: '別の画面で更新されています。編集中の内容をJSONで保存し、開き直してください。',
+      });
+    return c.json(result);
+  });
+  app.post('/api/v1/pufus/:id/retry', async (c) => {
+    const pufu = await ownedPufu(c);
+    if (pufu.status !== 'failed')
+      throw new HTTPException(409, { message: '生成に失敗したプ譜だけ再試行できます。' });
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        "UPDATE pufu_scores SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed'",
+      ).bind(now(), pufu.id, c.get('principal').user.id),
+      queuePufuJob(c.env, pufu.id),
+    ]);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ ok: true }, 202);
+  });
   app.get('/api/v1/questions', async (c) => {
     const { user } = c.get('principal');
     const projectId = c.req.query('project_id') || null;
@@ -412,7 +613,7 @@ export function createApp() {
   });
   app.get('/api/v1/stocks/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
@@ -421,6 +622,16 @@ export function createApp() {
     return c.json({
       stock: { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null },
     });
+  });
+  app.patch('/api/v1/stocks/:id/favorite', async (c) => {
+    const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));
+    const stock = await c.env.DB.prepare(
+      'UPDATE stocks SET is_favorite = ? WHERE id = ? AND user_id = ? RETURNING id, is_favorite',
+    )
+      .bind(Number(data.is_favorite), c.req.param('id'), c.get('principal').user.id)
+      .first<Pick<Stock, 'id' | 'is_favorite'>>();
+    if (!stock) throw new HTTPException(404, { message: '記事が見つかりません。' });
+    return c.json(stock);
   });
   app.get('/api/v1/stocks/:id/question', async (c) => {
     await ownedStock(c);

@@ -198,6 +198,7 @@ describe('ユーザーの問いの追加', () => {
       ],
     });
     await applyMigration(app.env.DB, '0007_text_stocks.sql');
+    await applyMigration(app.env.DB, '0011_question_deletion.sql');
     const id = await save();
     const before = await app.env.DB.prepare('SELECT * FROM questions').all();
     await applyMigration(app.env.DB, '0006_user_questions.sql');
@@ -205,6 +206,7 @@ describe('ユーザーの問いの追加', () => {
       before.results,
     );
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
+    await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     expect((await add(id, '追加1？')).status).toBe(201);
     expect((await add(id, '追加2？')).status).toBe(201);
     await expect(

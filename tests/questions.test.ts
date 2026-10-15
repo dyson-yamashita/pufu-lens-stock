@@ -379,6 +379,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
     const after = await app.env.DB.prepare('SELECT * FROM questions').all();
     await applyMigration(app.env.DB, '0007_text_stocks.sql');
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
+    await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     expect(after.results).toEqual(before.results.map((row) => ({ ...row, source: 'ai' })));
     expect((await list('?source=ai')).questions[0]).toMatchObject({
       stock_id: 'old-stock',
@@ -412,6 +413,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
       await app.env.DB.prepare("SELECT * FROM processing_jobs WHERE id = 'old-job'").first(),
     ).toEqual(previous);
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
+    await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     expect((await list()).total).toBe(1);
     app.env.LOCAL_DEMO_ENABLED = 'true';
     await run('existing-stock');

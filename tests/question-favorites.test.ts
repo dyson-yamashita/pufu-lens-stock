@@ -198,6 +198,7 @@ describe('問いのお気に入り', () => {
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
     const after = await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all();
     expect(after.results).toEqual(before.results.map((q) => ({ ...q, is_favorite: 0 })));
+    await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     expect((await list()).total).toBe(2);
     expect((await favorite('old-ai', true)).status).toBe(200);
   });

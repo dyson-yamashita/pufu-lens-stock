@@ -149,9 +149,11 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 | `GET /questions`                  | 自分の問い一覧                         | —      |
 | `POST /questions`                 | ストックに紐づくユーザーの問いを追加   | —      |
 | `PATCH /questions/:id/favorite`   | 問いのお気に入りを登録・解除           | —      |
+| `DELETE /questions/:id`           | 問いと紐づくプ譜の削除                 | —      |
 | `GET /stocks/:id/question`        | ストックに紐づく問い                   | —      |
 | `POST /stocks/:id/question/retry` | 生成失敗した問いの再試行               | —      |
 | `PATCH・DELETE /stocks/:id`       | メモ・所属の更新、保存の削除           | —      |
+| `PATCH /stocks/:id/favorite`      | ストックのお気に入りを登録・解除       | —      |
 | `POST /stocks/:id/retry`          | 失敗した取得・要約の再試行             | —      |
 | `GET /stocks/:id/content`         | 取得本文・入力テキストの閲覧           | —      |
 | `GET /articles/:id`               | メモリの根拠記事を開く                 | —      |
@@ -160,7 +162,9 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 | `GET・POST /tokens`               | トークン一覧・発行                     | —      |
 | `DELETE /tokens/:id`              | トークンの失効                         | —      |
 
-`GET /stocks` は `project_id`、`q`、`source`（`all / web / user`）、`page` を受け付け、24件ずつ返します。`source=web` は `source_type=url`、`source=user` は `source_type=text` に対応します。APIでは `status`（`all / ready / processing / failed`）も併用できます。`GET /memory` は `project_id` を省略するとユーザーメモリです。
+`GET /stocks` は `project_id`、`q`、`source`（`all / web / user`）、`favorite`（`true` のときお気に入りのみ）、`page` を受け付け、24件ずつ返します。`source=web` は `source_type=url`、`source=user` は `source_type=text` に対応します。APIでは `status`（`all / ready / processing / failed`）も併用できます。`GET /memory` は `project_id` を省略するとユーザーメモリです。
+
+ストックも日付横のスターでお気に入りを登録・解除でき、選択中は黄色で表示します。記事の詳細画面からも変更でき、一覧の「お気に入り」で絞り込めます。`PATCH /stocks/:id/favorite` に `{ "is_favorite": true }` または `false` を送り、保存した `id` と `is_favorite`（`0 / 1`）を返します。本人のWebセッションだけが変更でき、再読み込み・要約の再試行・保存先の移動でも保持します。同じ記事を別のプロジェクトに保存した場合や、記事に紐づく問いのお気に入りとは独立しています。
 
 `POST /stocks` のURL保存は `{ "type": "url", "project_id": "保存先ID", "url": "https://...", "note": "任意のメモ" }` です。`type` を省略した従来のショートカットのリクエストもURLとして受け付けます。テキスト保存は次の形式で、URLは送信しません。
 
@@ -187,6 +191,32 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 問いのラベルは作成元の「AI」「ユーザー」です。画面のフィルターは「AI」「ユーザー」「お気に入り」の3つで、選択中のフィルターを再度押すと解除して全件表示に戻ります。`GET /questions` は `project_id`、`q`、`source`（`all / ai / user`）、`favorite`（`true` のときお気に入りのみ）、`status`（`all / ready / processing / failed`）、`page` を受け付け、24件ずつ返します。既存の自動生成した問いの `source` は `ai` で、生成前・失敗時も同じ作成元です。内部の生成状態は `queued / generating / ready / failed` で保持し、生成待ちや失敗の状況は問い本文の領域で表示します。問いの生成失敗では記事の要約を保持し、問いだけを再試行できます。問いの生成は既存のArticleWorkflowで処理し、新しいCloudflareバインディングは不要です。本番では問い1件につきWorkers AIへの生成呼び出しが1回増えます（失敗時の再試行を除く）。
 
 問いカードの日付横のスターで、お気に入りを登録・解除できます。未選択は背景透過の細い枠線、選択中は黄色の塗りつぶしです。`PATCH /questions/:id/favorite` に `{ "is_favorite": true }` または `false` を送り、保存した `id` と `is_favorite`（`0 / 1`）を返します。本人のWebセッションだけが変更でき、再読み込みやAI生成の再試行でも保持します。
+
+問いの詳細画面下部の「問いを削除」で、確認後に問いと関連するすべてのプ譜を削除できます。`DELETE /questions/:id` は本人のWebセッションのみ利用でき、元のストックと記事、別の問いは保持します。関連する生成ジョブは終了扱いにし、削除したAIの問いは記事処理の完了や再試行でも自動的に作り直しません。ストックを削除して保存し直した場合は、新しいストックとしてAIの問いが生成されます。
+
+## 問いからプ譜を作成する
+
+問い一覧の本文、またはストックの問いタブから問いの詳細を開きます。下部の「問いの解決を考える」から課題を入力し、「プ譜を作成」を押します。課題は前後の空白を除いて、そのまま獲得目標になります。勝利条件・中間目的・施策・廟算八要素を、問い・ストックの要約とメモ・プロジェクトの説明・ユーザーとプロジェクトのメモリから生成します。
+
+生成は既存のArticleWorkflow内で非同期に処理し、画面を閉じても継続します。1つの問いに複数のプ譜を保存でき、再生成は新しい作成として行います。生成失敗時は同じ入力を使って再試行できます。ストックの移動では問いとともに所属が移動し、ストックやプロジェクトの削除では関連するプ譜も削除されます。
+
+生成済み（`ready`）のプ譜が1つ以上ある問いには、AI／ユーザーラベルの横に「プ譜」を表示します。問いの取得APIは `has_pufu`（`0 / 1`）を返し、一覧・詳細・ストックの問いタブで共通の判定を使います。生成中・生成失敗だけの場合は表示しません。
+
+表示・編集は `@goto-lab/pufu-editor@0.9.14` のReactコンポーネントを直接組み込んでいます。iframeは使用せず、同梱のTailwind CSSをビルド時に `.pufu-editor-root` 配下に限定しています。初期データを編集中に再取得して差し替えず、「保存」で `getScoreJson` の内容を取得します。未保存のまま画面を離れる際は確認し、別画面からの同時保存は更新番号で競合を検出します。JSONはエディター標準の `ProjectScoreModel` 形式でダウンロードできます。
+
+ローカルデモでAIが未接続の場合は、問い・課題・メモリから定型の案を作成し、その旨を表示します。本物の生成にはWorkers AIバインディングが必要です。AIへの出力指示と検証はプ譜専用で、文章の案を生成させた後、UUIDと空のコメントをサーバーで補います。未確認の予算・担当者・期限を事実として埋めません。
+
+| メソッド・パス                     | 用途                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| `GET /api/v1/questions/:id`        | 問いの詳細と関連するプ譜の一覧                                                             |
+| `POST /api/v1/questions/:id/pufus` | `{ task, request_id }` で生成受付。作成時202、同じUUIDでの再送200、異なる入力での再利用409 |
+| `GET /api/v1/pufus/:id`            | プ譜・状態・生成時の文脈を取得                                                             |
+| `PATCH /api/v1/pufus/:id`          | `{ revision, score }` で編集結果を保存。更新競合409                                        |
+| `POST /api/v1/pufus/:id/retry`     | 生成失敗の再試行                                                                           |
+
+これらのAPIは本人のWebセッションのみ利用でき、変更時は同一Originが必要です。課題は1,000文字まで。プ譜保存は256KiBまでで、各文章1,200文字、各コメント600文字、中間目的12件・各施策12件までを検証します。UUIDの重複と不正な色・進捗値も拒否します。
+
+`pufu_scores` に原案・編集結果・入力時点の問いとメモリのスナップショット（内容・更新番号）・モデル・エディターのバージョンを保持します。メモリが後で変わっても、生成した案の根拠を確認できます。プ譜の作成・編集で既存のメモリは更新しません。ライセンス文は `public/licenses/pufu-editor.txt` に同梱しています。
 
 ## 処理と整合性
 

@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -6,6 +14,7 @@ import {
   BookOpen,
   Bookmark,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -21,6 +30,7 @@ import {
   RefreshCw,
   Settings,
   Sparkles,
+  Star,
   Trash2,
   UserRound,
   X,
@@ -32,11 +42,23 @@ import Profile from './Profile';
 import Questions, { StockQuestion } from './Questions';
 import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
+import QuestionPage from './QuestionPage';
+import PufuPage from './PufuPage';
 
 type MemoryResponse = { memory: Memory | null; pending: boolean; error: string | null };
 type Route = {
-  view: 'stocks' | 'memory' | 'shortcuts' | 'profile' | 'questions' | 'settings';
+  view:
+    | 'stocks'
+    | 'memory'
+    | 'shortcuts'
+    | 'profile'
+    | 'questions'
+    | 'settings'
+    | 'question'
+    | 'resolve'
+    | 'pufu';
   projectId: string | null;
+  detailId?: string;
 };
 type ModalState =
   | { type: 'project'; project?: Project }
@@ -72,6 +94,7 @@ function routeFromHash(): Route {
       view === 'shortcuts' ||
       view === 'profile' ||
       view === 'questions' ||
+      ((view === 'question' || view === 'resolve' || view === 'pufu') && !!id) ||
       (view === 'settings' && !!id)
         ? view
         : 'stocks',
@@ -79,18 +102,17 @@ function routeFromHash(): Route {
       (view === 'project' || view === 'memory' || view === 'questions' || view === 'settings') && id
         ? decodeURIComponent(id)
         : null,
+    detailId:
+      (view === 'question' || view === 'resolve' || view === 'pufu') && id
+        ? decodeURIComponent(id)
+        : undefined,
   };
 }
-function Brand({ compact = false }: { compact?: boolean }) {
+function Brand() {
   return (
     <a className="brand" href="#" aria-label="Pufu Lens ホーム">
-      <span className="brand-mark">
-        <Bookmark size={21} fill="currentColor" aria-hidden="true" />
-      </span>
-      <span>
-        Pufu <strong>Lens</strong>
-        {!compact && <small>YOUR KNOWLEDGE, CONNECTED</small>}
-      </span>
+      <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
+      <span>Pufu Lens</span>
     </a>
   );
 }
@@ -265,9 +287,22 @@ export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [route, setRoute] = useState<Route>(routeFromHash);
+  const [questionListContext, setQuestionListContext] = useState({
+    projectId: null as string | null,
+    scope: null as string | null,
+    hash: '#questions',
+    scroll: 0,
+  });
+  const navigationGuard = useRef<(() => boolean) | null>(null);
+  const previousHash = useRef(window.location.hash);
+  const setNavigationGuard = useCallback((guard: (() => boolean) | null) => {
+    navigationGuard.current = guard;
+  }, []);
   const [libraryProjectId, setLibraryProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [stocks, setStocks] = useState<Stock[]>([]);
+  const [savingStockFavorites, setSavingStockFavorites] = useState<string[]>([]);
+  const stockFavoriteVersion = useRef(0);
   const [memoryResponse, setMemoryResponse] = useState<MemoryResponse>({
     memory: null,
     pending: false,
@@ -288,6 +323,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const selected = projects.find((project) => project.id === route.projectId);
+  const questionFlow =
+    route.view === 'question' || route.view === 'resolve' || route.view === 'pufu';
   const libraryView = !route.projectId && (route.view === 'stocks' || route.view === 'questions');
   const listProjectId = route.projectId ?? (libraryView ? libraryProjectId : null);
   const filterProject = (projectId: string | null) => {
@@ -295,6 +332,21 @@ export default function App() {
     setPage(1);
   };
   const reload = () => setRefresh((value) => value + 1);
+  const navigateDetail = (view: 'question' | 'resolve' | 'pufu', id: string) => {
+    window.location.hash = id ? `${view}/${encodeURIComponent(id)}` : questionListContext.hash;
+    setModal(null);
+    setMobileNav(false);
+  };
+  const openQuestion = (id: string) => {
+    if (route.view === 'questions')
+      setQuestionListContext({
+        projectId: route.projectId,
+        scope: listProjectId,
+        hash: window.location.hash,
+        scroll: window.scrollY,
+      });
+    navigateDetail('question', id);
+  };
   const navigate = (view: Route['view'], projectId: string | null = null) => {
     window.location.hash =
       view === 'stocks'
@@ -310,12 +362,26 @@ export default function App() {
   };
   useEffect(() => {
     const listener = () => {
+      if (navigationGuard.current && !navigationGuard.current()) {
+        window.history.replaceState(
+          null,
+          '',
+          `${window.location.pathname}${window.location.search}${previousHash.current}`,
+        );
+        return;
+      }
+      previousHash.current = window.location.hash;
       setRoute(routeFromHash());
       setPage(1);
     };
     window.addEventListener('hashchange', listener);
     return () => window.removeEventListener('hashchange', listener);
   }, []);
+  useEffect(() => {
+    if (questionFlow) window.scrollTo(0, 0);
+    else if (route.view === 'questions')
+      window.requestAnimationFrame(() => window.scrollTo(0, questionListContext.scroll));
+  }, [route.view, route.detailId, questionFlow, questionListContext.scroll]);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)');
     const listener = () => setIsMobile(media.matches);
@@ -364,7 +430,13 @@ export default function App() {
     const load = async () => {
       if (inFlight) return;
       inFlight = true;
-      const params = new URLSearchParams({ q: search, source: stockSource, page: String(page) });
+      const version = stockFavoriteVersion.current;
+      const params = new URLSearchParams({
+        q: search,
+        source: stockSource === 'favorites' ? 'all' : stockSource,
+        page: String(page),
+      });
+      if (stockSource === 'favorites') params.set('favorite', 'true');
       if (listProjectId) params.set('project_id', listProjectId);
       try {
         const [projectData, stockData, memoryData, tokenData] = await Promise.all([
@@ -382,10 +454,12 @@ export default function App() {
         ]);
         if (!controller.signal.aborted) {
           setProjects(projectData.projects);
-          setStocks(stockData.stocks);
-          setTotal(stockData.total);
-          if (page > 1 && page > Math.max(1, Math.ceil(stockData.total / 24)))
-            setPage(Math.max(1, Math.ceil(stockData.total / 24)));
+          if (version === stockFavoriteVersion.current) {
+            setStocks(stockData.stocks);
+            setTotal(stockData.total);
+            if (page > 1 && page > Math.max(1, Math.ceil(stockData.total / 24)))
+              setPage(Math.max(1, Math.ceil(stockData.total / 24)));
+          }
           setMemoryResponse(memoryData);
           setTokens(tokenData.tokens);
           setError('');
@@ -429,6 +503,32 @@ export default function App() {
     setModal(null);
     setNotice(message);
     reload();
+  };
+  const toggleStockFavorite = async (stock: Stock) => {
+    stockFavoriteVersion.current += 1;
+    setSavingStockFavorites((ids) => [...ids, stock.id]);
+    setError('');
+    try {
+      const result = await send<Pick<Stock, 'id' | 'is_favorite'>>(
+        `/api/v1/stocks/${encodeURIComponent(stock.id)}/favorite`,
+        { is_favorite: !stock.is_favorite },
+        'PATCH',
+      );
+      setStocks((items) =>
+        items.map((item) =>
+          item.id === result.id ? { ...item, is_favorite: result.is_favorite } : item,
+        ),
+      );
+      setModal((current) =>
+        current?.type === 'stock' && current.stock.id === result.id
+          ? { ...current, stock: { ...current.stock, is_favorite: result.is_favorite } }
+          : current,
+      );
+    } finally {
+      stockFavoriteVersion.current += 1;
+      setSavingStockFavorites((ids) => ids.filter((id) => id !== stock.id));
+      reload();
+    }
   };
   const evidence = async (articleId: string) => {
     try {
@@ -501,7 +601,6 @@ export default function App() {
         >
           <X size={19} />
         </button>
-        <div className="sidebar-intro">好奇心に、置き場所を。</div>
         <nav aria-label="メインナビゲーション">
           <button
             className={`nav-item ${route.view === 'stocks' && !route.projectId ? 'active' : ''}`}
@@ -515,8 +614,10 @@ export default function App() {
             すべての記事<span className="nav-count">{allCount}</span>
           </button>
           <button
-            className={`nav-item ${route.view === 'questions' && !route.projectId ? 'active' : ''}`}
-            aria-current={route.view === 'questions' && !route.projectId ? 'page' : undefined}
+            className={`nav-item ${(route.view === 'questions' && !route.projectId) || questionFlow ? 'active' : ''}`}
+            aria-current={
+              (route.view === 'questions' && !route.projectId) || questionFlow ? 'page' : undefined
+            }
             onClick={() => {
               filterProject(null);
               navigate('questions');
@@ -619,31 +720,42 @@ export default function App() {
           >
             <Menu size={22} />
           </button>
-          <div className="breadcrumb">
-            マイライブラリ <span>/</span>{' '}
+          <nav className="breadcrumb" aria-label="パンくずリスト">
+            <a href="#">マイライブラリ</a> <span aria-hidden="true">/</span>{' '}
             {route.projectId && route.view !== 'stocks' && (
               <>
-                プロジェクト <span>/</span>{' '}
+                <a href={`#project/${encodeURIComponent(route.projectId)}`}>プロジェクト</a>{' '}
+                <span aria-hidden="true">/</span>{' '}
               </>
             )}
-            {route.view === 'questions'
-              ? '問い'
-              : route.view === 'settings'
-                ? '設定'
-                : route.view === 'profile'
-                  ? 'プロフィール'
-                  : route.view === 'shortcuts'
-                    ? 'ショートカット連携'
-                    : route.view === 'memory'
-                      ? 'メモリ'
-                      : route.projectId
-                        ? 'プロジェクト'
-                        : 'すべてのストック'}
-          </div>
-          <div className="privacy">
-            <span />
-            あなただけのライブラリ
-          </div>
+            {questionFlow ? (
+              <>
+                <a href={questionListContext.hash}>問い</a> <span aria-hidden="true">/</span>{' '}
+                <a
+                  href={`#${route.view}/${encodeURIComponent(route.detailId!)}`}
+                  aria-current="page"
+                >
+                  {route.view === 'pufu' ? 'プ譜' : route.view === 'resolve' ? '課題' : '詳細'}
+                </a>
+              </>
+            ) : (
+              <a href={window.location.hash || '#'} aria-current="page">
+                {route.view === 'questions'
+                  ? '問い'
+                  : route.view === 'settings'
+                    ? '設定'
+                    : route.view === 'profile'
+                      ? 'プロフィール'
+                      : route.view === 'shortcuts'
+                        ? 'ショートカット連携'
+                        : route.view === 'memory'
+                          ? 'メモリ'
+                          : route.projectId
+                            ? 'プロジェクト'
+                            : 'すべてのストック'}
+              </a>
+            )}
+          </nav>
         </div>
         {config.demo && (
           <div className="demo-banner">
@@ -654,59 +766,66 @@ export default function App() {
           </div>
         )}
         <div className="page-body">
-          <header className="page-header">
-            <div>
-              <h1>{heading}</h1>
-              <p>
-                {route.view === 'questions'
-                  ? '日常やストックから生まれた問いを集める。'
-                  : route.view === 'settings'
-                    ? 'プロジェクトの設定を編集できます。'
-                    : route.view === 'profile'
-                      ? '名前と自己紹介を、自分らしく。'
-                      : route.view === 'shortcuts'
-                        ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
-                        : route.view === 'memory'
-                          ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
-                          : selected?.description ||
-                            '気になった記事と、そこから生まれたアイデアをひとつの場所に。'}
-              </p>
-            </div>
-            <div className="header-actions">
-              {libraryView && (
-                <div className="header-project-select">
-                  <label htmlFor="project-scope">プロジェクト</label>
-                  <select
-                    id="project-scope"
-                    value={libraryProjectId ?? ''}
-                    onChange={(event) => filterProject(event.target.value || null)}
+          {!questionFlow && (
+            <header className="page-header">
+              <div>
+                <h1>{heading}</h1>
+                {route.view !== 'profile' && (
+                  <p>
+                    {route.view === 'questions'
+                      ? '日常やストックから生まれた問いを集める。'
+                      : route.view === 'settings'
+                        ? 'プロジェクトの設定を編集できます。'
+                        : route.view === 'shortcuts'
+                          ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
+                          : route.view === 'memory'
+                            ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
+                            : selected?.description ||
+                              '気になった記事と、そこから生まれたアイデアをひとつの場所に。'}
+                  </p>
+                )}
+              </div>
+              <div className="header-actions">
+                {libraryView && (
+                  <div className="header-project-select">
+                    <label htmlFor="project-scope">プロジェクト</label>
+                    <div className="project-select-control">
+                      <select
+                        id="project-scope"
+                        value={libraryProjectId ?? ''}
+                        onChange={(event) => filterProject(event.target.value || null)}
+                      >
+                        <option value="">すべてのプロジェクト</option>
+                        {projects.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} aria-hidden="true" />
+                    </div>
+                  </div>
+                )}
+                {route.view === 'stocks' && (
+                  <button
+                    className="button primary"
+                    onClick={() =>
+                      setModal(projects.length ? { type: 'save' } : { type: 'project' })
+                    }
                   >
-                    <option value="">すべてのプロジェクト</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {route.view === 'stocks' && (
-                <button
-                  className="button primary"
-                  onClick={() => setModal(projects.length ? { type: 'save' } : { type: 'project' })}
-                >
-                  <Plus size={18} aria-hidden="true" />
-                  {projects.length ? '記事をストック' : 'プロジェクトを作成'}
-                </button>
-              )}
-              {route.view === 'questions' && (
-                <button className="button primary" onClick={() => setModal({ type: 'question' })}>
-                  <Plus size={18} aria-hidden="true" />
-                  問いを追加
-                </button>
-              )}
-            </div>
-          </header>
+                    <Plus size={18} aria-hidden="true" />
+                    {projects.length ? '記事をストック' : 'プロジェクトを作成'}
+                  </button>
+                )}
+                {route.view === 'questions' && (
+                  <button className="button primary" onClick={() => setModal({ type: 'question' })}>
+                    <Plus size={18} aria-hidden="true" />
+                    問いを追加
+                  </button>
+                )}
+              </div>
+            </header>
+          )}
           {(route.view === 'stocks' ||
             route.view === 'questions' ||
             route.view === 'settings' ||
@@ -767,7 +886,58 @@ export default function App() {
               </button>
             </div>
           )}
-          {route.view === 'settings' ? (
+          {(route.view === 'questions' || questionFlow) && (
+            <div hidden={route.view !== 'questions'}>
+              <Questions
+                key={`${(questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}-${questionCreation}`}
+                active={route.view === 'questions'}
+                projectId={questionFlow ? questionListContext.scope : listProjectId}
+                refresh={refresh}
+                onQuestion={openQuestion}
+                onScope={(id) => {
+                  if (libraryView) filterProject(id);
+                  else navigate('questions', id);
+                }}
+                onOpen={async (id) => {
+                  const { stock } = await api<{ stock: Stock }>(`/api/v1/stocks/${id}`);
+                  setModal({ type: 'stock', stock, tab: 'question' });
+                }}
+              />
+            </div>
+          )}
+          {questionFlow ? (
+            route.view === 'pufu' ? (
+              <PufuPage
+                key={route.detailId}
+                id={route.detailId!}
+                onQuestion={(id) => navigateDetail('question', id)}
+                onGuard={setNavigationGuard}
+              />
+            ) : (
+              <QuestionPage
+                key={route.detailId}
+                id={route.detailId!}
+                resolve={route.view === 'resolve'}
+                onBack={() => {
+                  if (route.view === 'resolve') navigateDetail('question', route.detailId!);
+                  else window.location.hash = questionListContext.hash;
+                }}
+                onResolve={() => navigateDetail('resolve', route.detailId!)}
+                onPufu={(id) => navigateDetail('pufu', id)}
+                onDeleted={() => {
+                  setNotice('問いを削除しました。');
+                  reload();
+                  window.location.hash = questionListContext.hash;
+                }}
+                onStock={async (id) => {
+                  const { stock } = await api<{ stock: Stock }>(
+                    `/api/v1/stocks/${encodeURIComponent(id)}`,
+                  );
+                  setModal({ type: 'stock', stock });
+                }}
+              />
+            )
+          ) : route.view === 'settings' ? (
             <section className="project-settings" aria-label="プロジェクト設定">
               {selected ? (
                 <ProjectForm
@@ -787,21 +957,7 @@ export default function App() {
                 </p>
               )}
             </section>
-          ) : route.view === 'questions' ? (
-            <Questions
-              key={`${route.projectId ?? 'all'}-${questionCreation}`}
-              projectId={listProjectId}
-              refresh={refresh}
-              onScope={(id) => {
-                if (libraryView) filterProject(id);
-                else navigate('questions', id);
-              }}
-              onOpen={async (id) => {
-                const { stock } = await api<{ stock: Stock }>(`/api/v1/stocks/${id}`);
-                setModal({ type: 'stock', stock, tab: 'question' });
-              }}
-            />
-          ) : route.view === 'profile' ? (
+          ) : route.view === 'questions' ? null : route.view === 'profile' ? (
             <Profile
               user={user}
               onSave={(savedUser) => {
@@ -881,11 +1037,12 @@ export default function App() {
                   }}
                 />
                 <div className="filter-row">
-                  <div className="filters" aria-label="ストックの作成元のフィルター">
+                  <div className="filters" aria-label="ストックのフィルター">
                     {[
                       ['all', 'すべて'],
                       ['web', 'web'],
                       ['user', 'ユーザー'],
+                      ['favorites', 'お気に入り'],
                     ].map(([value, label]) => (
                       <button
                         key={value}
@@ -941,6 +1098,10 @@ export default function App() {
                         key={stock.id}
                         stock={stock}
                         onOpen={() => setModal({ type: 'stock', stock })}
+                        favoriteBusy={savingStockFavorites.includes(stock.id)}
+                        onFavorite={() => {
+                          void toggleStockFavorite(stock).catch((e: Error) => setError(e.message));
+                        }}
                       />
                     ))}
                   </div>
@@ -1060,6 +1221,9 @@ export default function App() {
             projects={projects}
             initialTab={modal.tab ?? 'summary'}
             onDone={completed}
+            onQuestion={openQuestion}
+            favoriteBusy={savingStockFavorites.includes(modal.stock.id)}
+            onFavorite={toggleStockFavorite}
           />
         </Modal>
       )}
@@ -1077,7 +1241,17 @@ export default function App() {
     </div>
   );
 }
-function ArticleCard({ stock, onOpen }: { stock: Stock; onOpen: () => void }) {
+function ArticleCard({
+  stock,
+  onOpen,
+  onFavorite,
+  favoriteBusy,
+}: {
+  stock: Stock;
+  onOpen: () => void;
+  onFavorite: () => void;
+  favoriteBusy: boolean;
+}) {
   return (
     <article className="article-card">
       <div className="article-meta">
@@ -1091,14 +1265,12 @@ function ArticleCard({ stock, onOpen }: { stock: Stock; onOpen: () => void }) {
         <span className="domain truncate">
           {stock.source_type === 'text' ? 'テキスト' : stock.domain.replace('www.', '')}
         </span>
-        <span className={`status status-${stock.status}`}>
-          {stock.status === 'ready' ? (
-            <Check size={11} aria-hidden="true" />
-          ) : stock.status !== 'failed' ? (
-            <span className="status-dot" />
-          ) : null}
-          {statusLabels[stock.status]}
-        </span>
+        {stock.status !== 'ready' && (
+          <span className={`status status-${stock.status}`}>
+            {stock.status !== 'failed' && <span className="status-dot" />}
+            {statusLabels[stock.status]}
+          </span>
+        )}
       </div>
       <button className="article-title" onClick={onOpen}>
         <h2>{stock.title}</h2>
@@ -1121,6 +1293,7 @@ function ArticleCard({ stock, onOpen }: { stock: Stock; onOpen: () => void }) {
           <span className="truncate">{stock.project_name}</span>
         </span>
         <time dateTime={stock.created_at}>{date(stock.created_at)}</time>
+        <StockFavoriteButton stock={stock} busy={favoriteBusy} onClick={onFavorite} />
         <button
           className="icon-button small"
           aria-label={`${stock.title}の詳細を開く`}
@@ -1130,6 +1303,36 @@ function ArticleCard({ stock, onOpen }: { stock: Stock; onOpen: () => void }) {
         </button>
       </footer>
     </article>
+  );
+}
+function StockFavoriteButton({
+  stock,
+  busy,
+  onClick,
+  showLabel = false,
+}: {
+  stock: Stock;
+  busy: boolean;
+  onClick: () => void;
+  showLabel?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className="stock-favorite"
+      aria-label={stock.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+      aria-pressed={Boolean(stock.is_favorite)}
+      aria-busy={busy}
+      disabled={busy}
+      onClick={onClick}
+    >
+      {busy ? (
+        <LoaderCircle className="spin" size={20} aria-hidden="true" />
+      ) : (
+        <Star size={20} strokeWidth={1.5} aria-hidden="true" />
+      )}
+      {showLabel && <span>お気に入り</span>}
+    </button>
   );
 }
 function MemoryPanel({
@@ -1324,7 +1527,7 @@ function ProjectForm({
     >
       <p className="form-intro">
         {project
-          ? 'プロジェクト名と説明を変更できます。内容はメモリの整理にも使われます。'
+          ? 'プロジェクト名と概要を変更できます。内容はメモリの整理にも使われます。'
           : '集めたいテーマに名前をつけましょう。目的を書くと、メモリの整理にも使われます。'}
       </p>
       <label htmlFor="project-name">プロジェクト名</label>
@@ -1339,7 +1542,7 @@ function ProjectForm({
         placeholder="例：次のアプリ開発"
       />
       <label htmlFor="project-description">
-        目的・説明 <span className="optional">任意</span>
+        プロジェクト概要 <span className="optional">任意</span>
       </label>
       <textarea
         id="project-description"
@@ -1347,8 +1550,13 @@ function ProjectForm({
         disabled={busy}
         onChange={(e) => setDescription(e.target.value)}
         maxLength={1000}
-        rows={3}
-        placeholder="どんなことを調べたいですか？"
+        rows={8}
+        placeholder={`以下について書いてみましょう。
+
+・実現したいこと、取り組む目的
+・使える時間や予算
+・利用できる技術や道具、活動環境
+・競合する活動、気になる問題`}
       />
       <FormError error={error} />
       <div className="form-actions">
@@ -1360,7 +1568,7 @@ function ProjectForm({
             onClick={async () => {
               if (
                 !window.confirm(
-                  'このプロジェクトと保存先の関連を削除します。他のプロジェクトにも保存した記事は残ります。削除しますか？',
+                  'このプロジェクト内の記事・問い・プ譜を削除します。他のプロジェクトにも保存した記事は残ります。削除しますか？',
                 )
               )
                 return;
@@ -1571,11 +1779,17 @@ function StockDetail({
   projects,
   initialTab,
   onDone,
+  onQuestion,
+  onFavorite,
+  favoriteBusy,
 }: {
   stock: Stock;
   projects: Project[];
   initialTab: 'summary' | 'question';
   onDone: (message: string) => void;
+  onQuestion: (id: string) => void;
+  onFavorite: (stock: Stock) => Promise<void>;
+  favoriteBusy: boolean;
 }) {
   const [tab, setTab] = useState<string>(initialTab);
   const [note, setNote] = useState(stock.note);
@@ -1601,20 +1815,37 @@ function StockDetail({
     <div className="stock-detail">
       <div className="detail-domain">
         {stock.source_type === 'text' ? 'テキスト' : stock.domain}{' '}
-        <span className={`status status-${stock.status}`}>{statusLabels[stock.status]}</span>
+        {stock.status !== 'ready' && (
+          <span className={`status status-${stock.status}`}>{statusLabels[stock.status]}</span>
+        )}
       </div>
       <h3>{stock.title}</h3>
-      {stock.source_type === 'url' && (
-        <a
-          className="original-link"
-          href={stock.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          元の記事を開く
-          <ExternalLink size={14} aria-hidden="true" />
-        </a>
-      )}
+      <div className="stock-detail-links">
+        {stock.source_type === 'url' && (
+          <a
+            className="original-link"
+            href={stock.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            元の記事を開く
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
+        )}
+        <StockFavoriteButton
+          stock={stock}
+          busy={favoriteBusy}
+          showLabel
+          onClick={async () => {
+            setError('');
+            try {
+              await onFavorite(stock);
+            } catch (e) {
+              setError((e as Error).message);
+            }
+          }}
+        />
+      </div>
       <div className="detail-tabs" aria-label="記事の表示内容">
         {[
           ['summary', '要約'],
@@ -1682,7 +1913,7 @@ function StockDetail({
           )}
         </div>
       ) : tab === 'question' ? (
-        <StockQuestion stockId={stock.id} />
+        <StockQuestion stockId={stock.id} onQuestion={onQuestion} />
       ) : tab === 'content' ? (
         content === undefined ? (
           <p className="content-loading">
@@ -1743,7 +1974,8 @@ function StockDetail({
           className="button danger-text"
           disabled={busy}
           onClick={async () => {
-            if (!window.confirm('このプロジェクトから記事を削除しますか？')) return;
+            if (!window.confirm('この記事と、紐づく問い・プ譜をこのプロジェクトから削除しますか？'))
+              return;
             setBusy(true);
             try {
               await api(`/api/v1/stocks/${stock.id}`, { method: 'DELETE' });

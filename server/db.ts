@@ -17,7 +17,7 @@ export function queueQuestionStatements(
 ): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id WHERE (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+      "INSERT OR IGNORE INTO questions (id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
     ).bind(stockId, stockId, articleId, articleId),
     queueQuestionJobStatement(env, stockId, articleId),
   ];
@@ -36,6 +36,12 @@ export function jobFailureStatements(env: Env, job: Job, message: string): D1Pre
       env.DB.prepare(
         "UPDATE questions SET status = 'failed', error = '記事の取得・要約が完了していません。記事の再取得をお試しください。', updated_at = ? WHERE source = 'ai' AND status = 'queued' AND stock_id IN (SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE a.id = ? AND s.user_id = ? AND a.generation = ? AND a.status = 'failed')",
       ).bind(now(), job.target_id, job.user_id, job.revision),
+    );
+  } else if (job.kind === 'pufu') {
+    statements.push(
+      env.DB.prepare(
+        "UPDATE pufu_scores SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready'",
+      ).bind(message, now(), job.target_id, job.user_id, job.revision),
     );
   } else if (job.kind === 'question') {
     statements.push(

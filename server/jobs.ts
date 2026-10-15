@@ -7,7 +7,10 @@ export async function dispatchJobs(env: Env): Promise<void> {
   ).all<Job>();
   for (const job of pending.results) {
     const binding =
-      job.kind === 'article' || job.kind === 'cleanup' || job.kind === 'question'
+      job.kind === 'article' ||
+      job.kind === 'cleanup' ||
+      job.kind === 'question' ||
+      job.kind === 'pufu'
         ? env.ARTICLE_WORKFLOW
         : env.MEMORY_WORKFLOW;
     try {
@@ -33,7 +36,10 @@ export async function scheduledMaintenance(env: Env): Promise<void> {
   for (const job of stale.results) {
     try {
       const binding =
-        job.kind === 'article' || job.kind === 'cleanup' || job.kind === 'question'
+        job.kind === 'article' ||
+        job.kind === 'cleanup' ||
+        job.kind === 'question' ||
+        job.kind === 'pufu'
           ? env.ARTICLE_WORKFLOW
           : env.MEMORY_WORKFLOW;
       const instance = await binding.get(job.id);

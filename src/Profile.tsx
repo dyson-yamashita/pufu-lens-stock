@@ -86,8 +86,14 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
             setBio(e.target.value);
             setFieldErrors((errors) => ({ ...errors, bio: undefined }));
           }}
-          placeholder="興味のある分野や、取り組んでいることなど"
-          rows={5}
+          placeholder={`以下について書いてみましょう。
+
+・関心のあること、取り組みたいテーマ
+・役割や経験、得意分野
+・大切にしている考え方や進め方
+・普段関わる人やコミュニティ
+・仕事や活動の環境、使い慣れた技術や道具`}
+          rows={9}
           maxLength={1000}
           disabled={busy}
           aria-invalid={Boolean(fieldErrors.bio)}
