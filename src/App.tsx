@@ -44,6 +44,7 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
+import McpConnections from './McpConnections';
 
 type MemoryResponse = { memory: Memory | null; pending: boolean; error: string | null };
 type Route = {
@@ -51,6 +52,7 @@ type Route = {
     | 'stocks'
     | 'memory'
     | 'shortcuts'
+    | 'mcp'
     | 'profile'
     | 'questions'
     | 'settings'
@@ -92,6 +94,7 @@ function routeFromHash(): Route {
     view:
       view === 'memory' ||
       view === 'shortcuts' ||
+      view === 'mcp' ||
       view === 'profile' ||
       view === 'questions' ||
       ((view === 'question' || view === 'resolve' || view === 'pufu') && !!id) ||
@@ -572,13 +575,15 @@ export default function App() {
           : 'すべての問い'
         : route.view === 'profile'
           ? 'プロフィール'
-          : route.view === 'shortcuts'
-            ? 'いつもの共有メニューから。'
-            : route.view === 'memory'
-              ? selected
-                ? `${selected.name}のメモリ`
-                : 'あなたのメモリ'
-              : (selected?.name ?? 'すべてのストック');
+          : route.view === 'mcp'
+            ? 'MCP連携'
+            : route.view === 'shortcuts'
+              ? 'いつもの共有メニューから。'
+              : route.view === 'memory'
+                ? selected
+                  ? `${selected.name}のメモリ`
+                  : 'あなたのメモリ'
+                : (selected?.name ?? 'すべてのストック');
   const allCount = projects.reduce((count, project) => count + project.count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -691,6 +696,14 @@ export default function App() {
             <KeyRound size={18} aria-hidden="true" />
             ショートカット連携
           </button>
+          <button
+            className={`nav-item ${route.view === 'mcp' ? 'active' : ''}`}
+            aria-current={route.view === 'mcp' ? 'page' : undefined}
+            onClick={() => navigate('mcp')}
+          >
+            <Layers size={18} aria-hidden="true" />
+            MCP連携
+          </button>
           <div className="user-row">
             <div className="avatar">{user.name.slice(0, 1)}</div>
             <div className="user-info">
@@ -762,13 +775,15 @@ export default function App() {
                     ? '設定'
                     : route.view === 'profile'
                       ? 'プロフィール'
-                      : route.view === 'shortcuts'
-                        ? 'ショートカット連携'
-                        : route.view === 'memory'
-                          ? 'メモリ'
-                          : route.projectId
-                            ? 'プロジェクト'
-                            : 'すべてのストック'}
+                      : route.view === 'mcp'
+                        ? 'MCP連携'
+                        : route.view === 'shortcuts'
+                          ? 'ショートカット連携'
+                          : route.view === 'memory'
+                            ? 'メモリ'
+                            : route.projectId
+                              ? 'プロジェクト'
+                              : 'すべてのストック'}
               </a>
             )}
           </nav>
@@ -794,12 +809,14 @@ export default function App() {
                       ? '日常やストックから生まれた問いを集める。'
                       : route.view === 'settings'
                         ? 'プロジェクトの設定を編集できます。'
-                        : route.view === 'shortcuts'
-                          ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
-                          : route.view === 'memory'
-                            ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
-                            : selected?.description ||
-                              '気になった記事と、そこから生まれたアイデアをひとつの場所に。'}
+                        : route.view === 'mcp'
+                          ? '会話から、ストックと問いにつなげる。'
+                          : route.view === 'shortcuts'
+                            ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
+                            : route.view === 'memory'
+                              ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
+                              : selected?.description ||
+                                '気になった記事と、そこから生まれたアイデアをひとつの場所に。'}
                   </p>
                 )}
               </div>
@@ -983,6 +1000,8 @@ export default function App() {
                 setNotice('プロフィールを保存しました。');
               }}
             />
+          ) : route.view === 'mcp' ? (
+            <McpConnections />
           ) : route.view === 'shortcuts' ? (
             <Shortcuts
               projects={projects}

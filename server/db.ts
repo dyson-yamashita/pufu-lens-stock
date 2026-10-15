@@ -17,7 +17,7 @@ export function queueQuestionStatements(
 ): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
     ).bind(stockId, stockId, articleId, articleId),
     queueQuestionJobStatement(env, stockId, articleId),
   ];

@@ -144,21 +144,23 @@ export default function QuestionPage({
                   ? '問いを生成できませんでした。'
                   : '問いを生成しています…')}
             </h2>
-            <div className="question-detail-source">
-              <button
-                onClick={async () => {
-                  try {
-                    await onStock(question.stock_id);
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
-                }}
-              >
-                <BookOpen size={17} aria-hidden="true" />
-                <span>{question.article_title}</span>
-                <ArrowRight size={16} aria-hidden="true" />
-              </button>
-            </div>
+            {question.stock_id && (
+              <div className="question-detail-source">
+                <button
+                  onClick={async () => {
+                    try {
+                      await onStock(question.stock_id!);
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  <BookOpen size={17} aria-hidden="true" />
+                  <span>{question.article_title}</span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+            )}
             <div className="question-card-footer">
               <time dateTime={question.created_at}>
                 {new Intl.DateTimeFormat('ja-JP', {
@@ -224,7 +226,7 @@ export default function QuestionPage({
                 placeholder="例：記事の取得が途中で失敗しても、要約まで確実に完了できる仕組みをつくる。"
               />
               <p className="field-hint">
-                問い・元のストック・あなたとプロジェクトのメモリを参考に、勝利条件や施策を生成します。未作成のメモリは空として扱います。
+                問い・プロジェクトの説明・あなたとプロジェクトのメモリを参考に、勝利条件や施策を生成します。関連するストックがあれば、その要約とメモも使います。
               </p>
               <div className="form-actions">
                 <button

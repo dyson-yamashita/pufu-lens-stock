@@ -11,7 +11,7 @@ import {
   type Stock,
   type User,
 } from '../shared/domain';
-import type { AppEnv, Env } from './env';
+import type { AppEnv, Env, Principal } from './env';
 import { isDemoOrigin } from './env';
 import {
   authenticate,
@@ -43,9 +43,9 @@ const projectSchema = z.object({
   description: z.string().trim().max(1000).default(''),
 });
 const questionColumns =
-  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, s.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = s.user_id AND pf.status = 'ready') AS has_pufu";
+  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu";
 const questionJoins =
-  'questions q JOIN stocks s ON s.id = q.stock_id JOIN projects p ON p.id = s.project_id JOIN articles a ON a.id = s.article_id';
+  'questions q JOIN projects p ON p.id = q.project_id LEFT JOIN stocks s ON s.id = q.stock_id LEFT JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
   'id,question_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
 async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
@@ -71,7 +71,8 @@ async function ownedProject(env: Env, userId: string, id: string) {
   if (!project) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
   return project;
 }
-export function createApp() {
+// OAuth検証済みユーザーによるプロセス内MCP呼び出しでのみprincipalを指定する。
+export function createApp(trustedPrincipal?: Principal) {
   const app = new Hono<AppEnv>();
   app.use('/api/*', secureHeaders(), (c, next) =>
     bodyLimit({
@@ -105,8 +106,19 @@ export function createApp() {
     return response;
   });
   app.use('/api/v1/*', async (c, next) => {
-    const principal = await authenticate(c);
+    const principal = trustedPrincipal ?? (await authenticate(c));
     c.set('principal', principal);
+    if (
+      principal.kind === 'mcp' &&
+      !(
+        (c.req.method === 'GET' &&
+          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+)$/.test(
+            c.req.path,
+          )) ||
+        (c.req.method === 'POST' && ['/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
+      )
+    )
+      throw new HTTPException(403);
     if (
       principal.kind === 'token' &&
       !(
@@ -358,7 +370,7 @@ export function createApp() {
   }
   async function ownedQuestion(c: import('hono').Context<AppEnv>) {
     const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND s.user_id = ?`,
+      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Question>();
@@ -403,7 +415,7 @@ export function createApp() {
         "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE user_id = ? AND kind = 'pufu' AND target_id IN (SELECT id FROM pufu_scores WHERE question_id = ? AND user_id = ?) AND status != 'done'",
       ).bind(now(), user.id, question.id, user.id),
       c.env.DB.prepare(
-        'DELETE FROM questions WHERE id = ? AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?)',
+        'DELETE FROM questions WHERE id = ? AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?)',
       ).bind(question.id, user.id),
     );
     await c.env.DB.batch(statements);
@@ -437,7 +449,8 @@ export function createApp() {
       ).bind(user.id, question.project_id),
     ]);
     const stock = stockRows.results[0];
-    if (!stock) throw new HTTPException(404, { message: 'ストックが見つかりません。' });
+    if (question.stock_id && !stock)
+      throw new HTTPException(404, { message: 'ストックが見つかりません。' });
     const snapshot = (projectId: string | null): MemorySnapshot | null => {
       const row = memoryRows.results.find((item) => item.project_id === projectId);
       return row
@@ -454,12 +467,15 @@ export function createApp() {
       question: { id: question.id, text: question.text, source: question.source },
       task: data.task,
       project: { id: project.id, name: project.name, description: project.description },
-      stock: {
-        id: question.stock_id,
-        title: question.article_title,
-        summary: stock.summary_json ? JSON.parse(String(stock.summary_json)) : null,
-        note: String(stock.note),
-      },
+      stock:
+        question.stock_id && stock
+          ? {
+              id: question.stock_id,
+              title: question.article_title ?? '',
+              summary: stock.summary_json ? JSON.parse(String(stock.summary_json)) : null,
+              note: String(stock.note),
+            }
+          : null,
       userMemory: snapshot(null),
       projectMemory: snapshot(question.project_id),
     };
@@ -468,7 +484,7 @@ export function createApp() {
       reserveOperation(c.env, { id: jobId, user_id: user.id, kind: 'pufu' }),
       assertOperation(c.env, jobId),
       c.env.DB.prepare(
-        "INSERT OR IGNORE INTO pufu_scores (id,user_id,question_id,task,input_json,editor_version) SELECT ?,?,?,?,?,? FROM questions q JOIN stocks s ON s.id = q.stock_id WHERE q.id = ? AND s.user_id = ? AND q.status = 'ready'",
+        "INSERT OR IGNORE INTO pufu_scores (id,user_id,question_id,task,input_json,editor_version) SELECT ?,?,?,?,?,? FROM questions q JOIN projects p ON p.id = q.project_id WHERE q.id = ? AND p.user_id = ? AND q.status = 'ready'",
       ).bind(
         id,
         user.id,
@@ -603,7 +619,7 @@ export function createApp() {
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
     const where =
-      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (q.text LIKE ? ESCAPE '\\' OR a.title LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
+      "p.user_id = ? AND (? IS NULL OR q.project_id = ?) AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
       (favorite === 'true' ? ' AND q.is_favorite = 1' : '');
     const params = [
       user.id,
@@ -632,20 +648,33 @@ export function createApp() {
   app.post('/api/v1/questions', async (c) => {
     const { user } = c.get('principal');
     const data = await body(c, userQuestionSchema);
+    const stockId = data.stock_id ?? null;
+    const stock = stockId
+      ? await c.env.DB.prepare('SELECT project_id FROM stocks WHERE id = ? AND user_id = ?')
+          .bind(stockId, user.id)
+          .first<{ project_id: string }>()
+      : null;
+    if (stockId && !stock)
+      throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
+    if (stock && data.project_id && stock.project_id !== data.project_id)
+      throw new HTTPException(400, { message: 'ストックとプロジェクトが一致しません。' });
+    const projectId = data.project_id ?? stock!.project_id;
+    await ownedProject(c.env, user.id, projectId);
     const id = `user-${user.id}-${data.request_id ?? crypto.randomUUID()}`;
     const result = await c.env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, stock_id, text, source, status) SELECT ?, id, ?, 'user', 'ready' FROM stocks WHERE id = ? AND user_id = ?",
+      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, text, source, status) SELECT ?, id, ?, ?, 'user', 'ready' FROM projects WHERE id = ? AND user_id = ?",
     )
-      .bind(id, data.text, data.stock_id, user.id)
+      .bind(id, stockId, data.text, projectId, user.id)
       .run();
     const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND s.user_id = ?`,
+      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
     )
       .bind(id, user.id)
       .first<Question>();
     if (!question) throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
     if (
-      question.stock_id !== data.stock_id ||
+      question.stock_id !== stockId ||
+      question.project_id !== projectId ||
       question.text !== data.text ||
       question.source !== 'user'
     )
@@ -655,7 +684,7 @@ export function createApp() {
   app.patch('/api/v1/questions/:id/favorite', async (c) => {
     const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));
     const question = await c.env.DB.prepare(
-      'UPDATE questions SET is_favorite = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?) RETURNING id, is_favorite',
+      'UPDATE questions SET is_favorite = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?) RETURNING id, is_favorite',
     )
       .bind(Number(data.is_favorite), now(), c.req.param('id'), c.get('principal').user.id)
       .first<Pick<Question, 'id' | 'is_favorite'>>();

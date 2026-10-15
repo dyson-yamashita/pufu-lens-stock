@@ -41,13 +41,18 @@ export const questionSchema = z.object({
 });
 export const userQuestionSchema = questionSchema
   .extend({
-    stock_id: z.string().trim().min(1, 'ストックを選択してください。').max(100),
+    project_id: z.string().trim().min(1, 'プロジェクトを選択してください。').max(100).optional(),
+    stock_id: z.string().trim().min(1).max(100).nullable().optional(),
     request_id: z.uuid().optional(),
   })
-  .strict();
+  .strict()
+  .refine((input) => input.project_id || input.stock_id, {
+    message: 'プロジェクトを選択してください。',
+    path: ['project_id'],
+  });
 export type Question = {
   id: string;
-  stock_id: string;
+  stock_id: string | null;
   source: 'ai' | 'user';
   is_favorite: 0 | 1;
   has_pufu: 0 | 1;
@@ -59,9 +64,9 @@ export type Question = {
   updated_at: string;
   project_id: string;
   project_name: string;
-  article_title: string;
-  article_status: Stock['status'];
-  domain: string;
+  article_title: string | null;
+  article_status: Stock['status'] | null;
+  domain: string | null;
 };
 export const memorySchema = z.object({
   interests: z.array(z.string().min(1).max(300)).max(8),

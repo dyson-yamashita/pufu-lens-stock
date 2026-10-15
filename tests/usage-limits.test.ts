@@ -297,6 +297,7 @@ describe('永続利用量制限', () => {
       ),
     ]);
     await applyMigration(app.env.DB, '0013_usage_limits.sql');
+    await applyMigration(app.env.DB, '0014_independent_questions.sql');
     expect(
       await app.env.DB.prepare(
         "SELECT stock_id,user_id FROM stock_usage WHERE stock_id='old-stock'",

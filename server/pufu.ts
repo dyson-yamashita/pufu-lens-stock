@@ -41,7 +41,7 @@ export async function generatePufu(env: Env, context: PufuContext): Promise<Pufu
     const knowledge =
       context.projectMemory?.data.knowledge[0]?.text ??
       context.userMemory?.data.knowledge[0]?.text ??
-      context.stock.summary?.keyPoints[0] ??
+      context.stock?.summary?.keyPoints[0] ??
       '根拠を集めて仮説を確かめる。';
     draft = draftSchema.parse({
       winCondition: `「${context.task.slice(0, 300)}」の達成を、元の問いに対する説明と検証結果によって確認できる。`,
@@ -54,7 +54,7 @@ export async function generatePufu(env: Env, context: PufuContext): Promise<Pufu
               color: 'white',
             },
             {
-              text: `ストック「${context.stock.title.slice(0, 200)}」とメモリの根拠を読み直す。参考：${knowledge.slice(0, 400)}`,
+              text: `問いと${context.stock ? `ストック「${context.stock.title.slice(0, 200)}」と` : ''}メモリの根拠を読み直す。参考：${knowledge.slice(0, 400)}`,
               color: 'white',
             },
           ],

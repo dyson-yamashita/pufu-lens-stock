@@ -1,9 +1,12 @@
 import type { User } from '../shared/domain';
 import ipaddr from 'ipaddr.js';
+import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider';
 
 export interface Env {
   DB: D1Database;
   CONTENT: R2Bucket;
+  OAUTH_KV?: KVNamespace;
+  OAUTH_PROVIDER?: OAuthHelpers;
   ARTICLE_WORKFLOW: Workflow<{ jobId: string }>;
   MEMORY_WORKFLOW: Workflow<{ jobId: string }>;
   AI?: {
@@ -32,7 +35,11 @@ export interface Env {
   AI_CALL_DAILY_LIMIT?: string;
   AI_CONCURRENT_CALLS?: string;
 }
-export type Principal = { user: User; kind: 'session' | 'token'; tokenProjectId: string | null };
+export type Principal = {
+  user: User;
+  kind: 'session' | 'token' | 'mcp';
+  tokenProjectId: string | null;
+};
 export type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export type Job = {
   id: string;

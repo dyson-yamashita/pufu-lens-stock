@@ -220,7 +220,7 @@ export default function Questions({
     };
   }, [projectId, search, filter, page, refresh, reload, active]);
   return (
-    <section className="questions-page" aria-label="ストックから生まれた問い">
+    <section className="questions-page" aria-label="プロジェクトの問い">
       <SearchField
         label="問いを検索"
         placeholder="問い、記事のタイトル、メモから検索"
@@ -277,14 +277,12 @@ export default function Questions({
             <CircleHelp size={28} aria-hidden="true" />
           </span>
           <h2>
-            {search || filter !== 'all'
-              ? '該当する問いはありません'
-              : '記事から、考えを深める問いへ'}
+            {search || filter !== 'all' ? '該当する問いはありません' : '問いから、次の一歩へ'}
           </h2>
           <p>
             {search || filter !== 'all'
               ? '検索語やフィルターを変えてお試しください。'
-              : '記事をストックすると、要約をもとにAIの問いが生成されます。「問いを追加」から自分の問いも保存できます。'}
+              : '「問いを追加」から、日常や会話で生まれた問いを保存できます。記事をストックすると、要約をもとにAIの問いも生成されます。'}
           </p>
         </div>
       ) : (
@@ -299,29 +297,31 @@ export default function Questions({
                 </button>
               </div>
               <QuestionBody question={question} onOpen={() => onQuestion(question.id)} />
-              <div className="question-detail-source">
-                <button
-                  disabled={opening !== null}
-                  onClick={async () => {
-                    setOpening(question.stock_id);
-                    try {
-                      await onOpen(question.stock_id);
-                    } catch (e) {
-                      setError((e as Error).message);
-                    } finally {
-                      setOpening(null);
-                    }
-                  }}
-                >
-                  <BookOpen size={17} aria-hidden="true" />
-                  <span>{question.article_title}</span>
-                  {opening === question.stock_id ? (
-                    <LoaderCircle className="spin" size={16} aria-hidden="true" />
-                  ) : (
-                    <ArrowRight size={16} aria-hidden="true" />
-                  )}
-                </button>
-              </div>
+              {question.stock_id && (
+                <div className="question-detail-source">
+                  <button
+                    disabled={opening !== null}
+                    onClick={async () => {
+                      setOpening(question.stock_id);
+                      try {
+                        await onOpen(question.stock_id!);
+                      } catch (e) {
+                        setError((e as Error).message);
+                      } finally {
+                        setOpening(null);
+                      }
+                    }}
+                  >
+                    <BookOpen size={17} aria-hidden="true" />
+                    <span>{question.article_title}</span>
+                    {opening === question.stock_id ? (
+                      <LoaderCircle className="spin" size={16} aria-hidden="true" />
+                    ) : (
+                      <ArrowRight size={16} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              )}
               <div className="question-card-footer">
                 <time dateTime={question.created_at}>
                   {new Intl.DateTimeFormat('ja-JP', {
