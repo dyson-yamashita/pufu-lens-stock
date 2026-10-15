@@ -19,12 +19,14 @@ Webの記事や入力したテキストをプロジェクトごとに保存し�
 
 ## ローカルで起動
 
-Node.js 22.12以降が必要です。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
+Node.js 22.12以降とpnpm 10.34.7を使用します。pnpmのバージョンは `package.json` の `packageManager` で固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
+
+Corepackを利用する場合は、初回に `corepack enable` を実行してpnpmを有効にしてください。
 
 ```sh
-npm ci
-npm run setup
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run setup
+pnpm run dev
 ```
 
 <http://localhost:5173/> を開き、「ローカルデモを開く」を選択してください。`setup` は既存の `.dev.vars` を上書きせず、ローカルD1へマイグレーションを適用します。
@@ -47,7 +49,7 @@ npm run dev
 
 ローカルデモは `LOCAL_DEMO_ENABLED=true` かつ `APP_URL` がループバックホストの場合に有効です。ログイン先は同じプロトコル・ポートのループバックホスト、または明示したLAN用アドレスに限ります。本番設定では無効です。`.dev.vars`、`.wrangler`、`dist` はGit管理対象外です。
 
-同じWi-Fiのスマホで試す場合は、MacのプライベートIPv4アドレスを確認し、`.dev.vars` に `LOCAL_DEMO_LAN_ORIGIN=http://MacのIPv4アドレス:5173` を追加して `npm run dev:lan` で起動します。`APP_URL` は `http://localhost:5173` のままにします。スマホからそのLAN用URLを開き、「ローカルデモを開く」を選択してください。Macの画面と同じデモデータを利用できます。IPv4アドレスが変わった場合は設定を更新して再起動します。
+同じWi-Fiのスマホで試す場合は、MacのプライベートIPv4アドレスを確認し、`.dev.vars` に `LOCAL_DEMO_LAN_ORIGIN=http://MacのIPv4アドレス:5173` を追加して `pnpm run dev:lan` で起動します。`APP_URL` は `http://localhost:5173` のままにします。スマホからそのLAN用URLを開き、「ローカルデモを開く」を選択してください。Macの画面と同じデモデータを利用できます。IPv4アドレスが変わった場合は設定を更新して再起動します。
 
 ## ローカルでWorkers AIを使う
 
@@ -60,8 +62,8 @@ AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
 ```
 
 ```sh
-npx wrangler login
-npm run dev:lan
+pnpm exec wrangler login
+pnpm run dev:lan
 ```
 
 すでにWranglerでログイン済みなら、再ログインは不要です。`WORKERS_AI_ENABLED` は起動時のプロセス環境変数でも指定でき、`.dev.vars` より優先します。Cloudflare環境を指定している場合は `.dev.vars.<環境名>` を優先して読みます。モデルは `AI_MODEL` で変更できます。要約・問い・メモリでは保存形式の制約をJSON Schemaとして渡すため、[JSON Mode](https://developers.cloudflare.com/workers-ai/features/json-mode/) に対応したモデルを指定してください。
@@ -98,9 +100,9 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
 1. Cloudflareアカウントへログインし、D1と非公開R2バケットを作成します。
 
    ```sh
-   npx wrangler login
-   npx wrangler d1 create stock-db
-   npx wrangler r2 bucket create pufu-lens-stock-content
+   pnpm exec wrangler login
+   pnpm exec wrangler d1 create stock-db
+   pnpm exec wrangler r2 bucket create pufu-lens-stock-content
    ```
 
 2. `wrangler.jsonc` の `env.production` を編集します。
@@ -113,15 +115,15 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
 3. GoogleのSecretを登録します。値は対話入力してください。
 
    ```sh
-   npx wrangler secret put GOOGLE_CLIENT_ID --env production
-   npx wrangler secret put GOOGLE_CLIENT_SECRET --env production
+   pnpm exec wrangler secret put GOOGLE_CLIENT_ID --env production
+   pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET --env production
    ```
 
 4. マイグレーション適用とデプロイを実行します。
 
    ```sh
-   npm run db:migrate:production
-   npm run deploy
+   pnpm run db:migrate:production
+   pnpm run deploy
    ```
 
 Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生します。標準のモデルは `@cf/qwen/qwen3-30b-a3b-fp8` で、`AI_MODEL` から変更できます。モデルは、後述するJSON形式を返せるテキスト生成モデルを指定してください。
@@ -147,17 +149,17 @@ APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflar
 
 実行順は次のとおりです。
 
-1. Secretsを持たない別ジョブで `npm ci`、`npm run check`、`npm audit --audit-level=high` を実行します。
-2. デプロイジョブでも `npm ci` と `npm run build:production` はSecretsを渡さず実行します。
+1. Secretsを持たない別ジョブで `pnpm install --frozen-lockfile`、`pnpm run check`、`pnpm audit --audit-level=high` を実行します。
+2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。
 3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
-依存関係は `.npmrc` の `legacy-peer-deps=false` でpeer dependencyも含めて解決します。ローカルのユーザー設定に左右されないようにし、CIと同じlockfileを使います。
+依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。開発用のWranglerも明示的な依存として固定しています。
 
 同一mainのデプロイは直列実行し、実行中の処理は後続pushでキャンセルしません。待機中の古い実行はGitHubのconcurrencyにより最新の実行へ置き換わる場合があります。マイグレーション後にWorker更新が失敗しても、成功済みのDB変更は戻りません。マイグレーションは旧Workerとも動く追加的な変更にし、削除・破壊的な変更は別途手順を検討してください。再実行では適用済みのマイグレーションをスキップします。
 
 Googleの `GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET` はCloudflareのWorker Secretに保持し、GitHubへ複製しません。`.dev.vars*`・`.env*`・`.wrangler/`・`dist/` は引き続きGit管理対象外です。D1のIDや公開URLは接続先を識別する情報で、アクセス権を与える認証情報ではありません。新しい秘密をWranglerの `vars` やViteの `VITE_*` に設定しないでください。
 
-Actionsは公式のcheckout/setup-nodeをコミットSHAで固定し、`GITHUB_TOKEN` は `contents: read` のみに制限しています。checkoutの認証情報保持と依存キャッシュを無効にし、ビルド成果物やログファイルをArtifactsへアップロードしません。PRの検証に本番Secretsは不要です。公開リポジトリではActionsログも公開される前提で、環境変数の一覧表示やshellのトレースを追加しないでください。[GitHubの安全な利用ガイド](https://docs.github.com/en/actions/reference/security/secure-use)
+Actionsはcheckout/setup-node/pnpm/action-setupをコミットSHAで固定し、`GITHUB_TOKEN` は `contents: read` のみに制限しています。checkoutの認証情報保持と依存キャッシュを無効にし、ビルド成果物やログファイルをArtifactsへアップロードしません。PRの検証に本番Secretsは不要です。公開リポジトリではActionsログも公開される前提で、環境変数の一覧表示やshellのトレースを追加しないでください。[GitHubの安全な利用ガイド](https://docs.github.com/en/actions/reference/security/secure-use)
 
 ## iOSショートカット
 
@@ -334,14 +336,14 @@ AI処理はD1の利用枠を原子的に確保してからWorkflowを起動し�
 ## 検証
 
 ```sh
-npm run check
+pnpm run check
 ```
 
 型チェック、lint、Vitest、整形チェック、クライアント／Workerのビルドを実行します。テストはMiniflareのD1・R2と実際のアプリのルートを使用します。Workflow基底クラスとAI・記事HTTP応答はテスト内で差し替えます。Cloudflare Workflowsの永続化・リトライそのものはNodeテストの対象外で、ローカルWorkersでもデモの処理を確認します。
 
-`npm audit` で依存関係を検査できます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
+`pnpm audit` で依存関係を検査できます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
 
-開発サーバーの起動中に `npm run test:smoke` を実行すると、MDNの公開記事を取得し、実際のローカルWorkers・Workflows・R2・D1を通して保存と問い・メモリの生成を確認します。この検証で作成したプロジェクトと記事は終了時に削除します。デモ環境専用で、本番には接続しません。
+開発サーバーの起動中に `pnpm run test:smoke` を実行すると、MDNの公開記事を取得し、実際のローカルWorkers・Workflows・R2・D1を通して保存と問い・メモリの生成を確認します。この検証で作成したプロジェクトと記事は終了時に削除します。デモ環境専用で、本番には接続しません。
 
 ## ソース
 
