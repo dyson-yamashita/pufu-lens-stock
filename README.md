@@ -151,6 +151,8 @@ APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflar
 2. デプロイジョブでも `npm ci` と `npm run build:production` はSecretsを渡さず実行します。
 3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
+依存関係は `.npmrc` の `legacy-peer-deps=false` でpeer dependencyも含めて解決します。ローカルのユーザー設定に左右されないようにし、CIと同じlockfileを使います。
+
 同一mainのデプロイは直列実行し、実行中の処理は後続pushでキャンセルしません。待機中の古い実行はGitHubのconcurrencyにより最新の実行へ置き換わる場合があります。マイグレーション後にWorker更新が失敗しても、成功済みのDB変更は戻りません。マイグレーションは旧Workerとも動く追加的な変更にし、削除・破壊的な変更は別途手順を検討してください。再実行では適用済みのマイグレーションをスキップします。
 
 Googleの `GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET` はCloudflareのWorker Secretに保持し、GitHubへ複製しません。`.dev.vars*`・`.env*`・`.wrangler/`・`dist/` は引き続きGit管理対象外です。D1のIDや公開URLは接続先を識別する情報で、アクセス権を与える認証情報ではありません。新しい秘密をWranglerの `vars` やViteの `VITE_*` に設定しないでください。
