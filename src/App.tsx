@@ -35,7 +35,15 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import type { Config, Memory, Project, Stock, TokenInfo, User } from '../shared/domain';
+import type {
+  Config,
+  Memory,
+  MemoryCoverage,
+  Project,
+  Stock,
+  TokenInfo,
+  User,
+} from '../shared/domain';
 import { stockInputSchema, stockTextLimit } from '../shared/domain';
 import { api, ApiError, createRequestId, send } from './api';
 import Profile from './Profile';
@@ -44,8 +52,14 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
+import MemoryRebuildForm, { MemoryCoverageSummary } from './MemoryRebuildForm';
 
-type MemoryResponse = { memory: Memory | null; pending: boolean; error: string | null };
+type MemoryResponse = {
+  memory: Memory | null;
+  pending: boolean;
+  error: string | null;
+  coverage?: MemoryCoverage;
+};
 type Route = {
   view:
     | 'stocks'
@@ -66,6 +80,7 @@ type ModalState =
   | { type: 'stock'; stock: Stock; tab?: 'question' }
   | { type: 'token' }
   | { type: 'question' }
+  | { type: 'memory'; projectId: string | null }
   | null;
 const statusLabels = {
   queued: '処理待ち',
@@ -1022,18 +1037,7 @@ export default function App() {
                 project={selected}
                 full
                 onEvidence={evidence}
-                onRebuild={async () => {
-                  try {
-                    await send('/api/v1/memory/rebuild', {
-                      project_id: route.projectId,
-                      request_id: createRequestId(),
-                    });
-                    setNotice('メモリの再生成を受け付けました。');
-                    reload();
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
-                }}
+                onRebuild={() => setModal({ type: 'memory', projectId: route.projectId })}
               />
             </div>
           ) : (
@@ -1185,6 +1189,16 @@ export default function App() {
           )}
         </div>
       </main>
+      {modal?.type === 'memory' && (
+        <Modal title="メモリの更新方法" onClose={() => setModal(null)}>
+          <MemoryRebuildForm
+            projectId={modal.projectId}
+            projectName={projects.find((project) => project.id === modal.projectId)?.name}
+            onClose={() => setModal(null)}
+            onDone={() => completed('メモリの更新を受け付けました。')}
+          />
+        </Modal>
+      )}
       {modal?.type === 'project' && (
         <Modal
           title={modal.project ? 'プロジェクトを編集' : '新しいプロジェクト'}
@@ -1368,10 +1382,9 @@ function MemoryPanel({
   project?: Project;
   full?: boolean;
   onExpand?: () => void;
-  onRebuild?: () => Promise<void>;
+  onRebuild?: () => void;
   onEvidence: (id: string) => Promise<void>;
 }) {
-  const [busy, setBusy] = useState(false);
   const memory = response.memory;
   const data = memory?.data;
   return (
@@ -1393,6 +1406,10 @@ function MemoryPanel({
       <p className="memory-caption">
         {project ? 'このプロジェクトで集めた記事から。' : 'すべてのプロジェクトに共通する関心。'}
       </p>
+      {response.coverage && <MemoryCoverageSummary coverage={response.coverage} />}
+      {response.coverage?.full_rebuild_reason && (
+        <p className="update-note">{response.coverage.full_rebuild_reason}</p>
+      )}
       {response.pending && <p className="update-note">新しい記事を反映しています…</p>}
       {response.error && (
         <p className="form-error" role="alert">
@@ -1476,19 +1493,9 @@ function MemoryPanel({
             記事の保存は、その主張への賛同を意味しません。ここには、保存の傾向と記事から収集した情報を整理しています。
           </p>
           <div className="memory-controls">
-            <button
-              className="button secondary"
-              disabled={busy || response.pending}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await onRebuild?.();
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {busy ? <Spinner /> : <RefreshCw size={16} aria-hidden="true" />}再生成
+            <button className="button secondary" disabled={response.pending} onClick={onRebuild}>
+              <RefreshCw size={16} aria-hidden="true" />
+              再生成
             </button>
             {memory && (
               <button

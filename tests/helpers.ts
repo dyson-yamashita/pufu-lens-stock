@@ -1,6 +1,7 @@
 import { Miniflare } from 'miniflare';
 import { readFile, readdir } from 'node:fs/promises';
 import { vi } from 'vitest';
+import { serialize } from 'node:v8';
 import { createApp } from '../server/api';
 import { hash } from '../server/security';
 import type { Env } from '../server/env';
@@ -121,17 +122,20 @@ export async function testApp(
     },
   };
 }
-export const mockStep = () => {
+export const mockStep = (maxResultBytes?: number) => {
   const names = new Set<string>();
   return {
     do: async (name: string, configOrOperation: unknown, operation?: () => Promise<unknown>) => {
       if (names.has(name)) throw new Error(`Duplicate step: ${name}`);
       names.add(name);
-      return (
+      const result = await (
         typeof configOrOperation === 'function'
           ? (configOrOperation as () => Promise<unknown>)
           : operation!
       )();
+      if (maxResultBytes && serialize(result).byteLength > maxResultBytes)
+        throw new Error('Workflow step result exceeds 1 MiB');
+      return result;
     },
     sleep: vi.fn(async () => undefined),
   } as unknown as import('cloudflare:workers').WorkflowStep;

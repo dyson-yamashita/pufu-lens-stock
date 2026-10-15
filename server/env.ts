@@ -40,6 +40,7 @@ export type Job = {
   kind: 'article' | 'project_memory' | 'user_memory' | 'cleanup' | 'question' | 'pufu';
   target_id: string;
   revision: number;
+  memory_mode?: 'incremental' | 'full';
   status: string;
 };
 export type JobStateGuard = { status?: string; attempts?: number; updatedAt?: string };

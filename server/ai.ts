@@ -176,6 +176,55 @@ export function groundedMemory(data: MemoryData, allowedIds: Set<string>): Memor
       .filter((item) => item.articleIds.length > 0),
   };
 }
+const memoryInstruction =
+  '保存した記事から、興味の傾向(interests)、記事から得た知識(knowledge)、未解決の論点(questions)を整理します。scopeがuserの場合、context.descriptionは本人が記入した自己紹介です。関心や活動の背景として参照し、自己紹介だけの内容を記事由来の知識として記録しません。保存したことは賛同や既知の証拠ではありません。頻度は入力の集計を使用してください。知識の各項目に入力に存在するarticleIdを根拠として付けます。相反する主張は出典とともに区別します。JSON形式: {"interests":["..."],"knowledge":[{"text":"...","articleIds":["..."]}],"questions":["..."]}。';
+
+export async function updateMemory(
+  env: Env,
+  current: MemoryData,
+  sources: Source[],
+  context: { name: string; description: string; scope: string },
+  totals: { articleCount: number; topicCounts: { topic: string; count: number }[] },
+  call: AiCall<MemoryData> = directCall,
+): Promise<MemoryData> {
+  if (!sources.length) return current;
+  const allowed = new Set([
+    ...current.knowledge.flatMap((item) => item.articleIds),
+    ...sources.map((source) => source.articleId),
+  ]);
+  if (isDemo(env) && !env.AI) {
+    const added = await buildMemory(env, sources, context, call);
+    return {
+      interests: totals.topicCounts
+        .slice(0, 5)
+        .map(({ topic, count }) => `「${topic}」に関する記事を${count}件収集しています。`),
+      knowledge: [...current.knowledge, ...added.knowledge].slice(-12),
+      questions: current.questions,
+    };
+  }
+  let memory = current;
+  for (const [index, group] of chunks(sources).entries()) {
+    memory = groundedMemory(
+      await call(`memory-update-${index}`, () =>
+        generate(
+          env,
+          memoryInstruction +
+            ' currentMemoryは反映済みのメモリ、addedSourcesは未反映の追加記事です。既存の知識と根拠IDを踏まえて追加分を統合し、重複を整理した更新後のメモリ全体を返してください。addedTopicCountsは追加分だけの集計です。',
+          {
+            context,
+            currentMemory: memory,
+            ...totals,
+            addedSources: group,
+            addedTopicCounts: topicCounts(group),
+          },
+          memorySchema,
+        ),
+      ),
+      allowed,
+    );
+  }
+  return memory;
+}
 export async function buildMemory(
   env: Env,
   sources: Source[],
@@ -193,8 +242,7 @@ export async function buildMemory(
         .map((source) => ({ text: source.summary.keyPoints[0], articleIds: [source.articleId] })),
       questions: [],
     };
-  const instruction =
-    '保存した記事から、興味の傾向(interests)、記事から得た知識(knowledge)、未解決の論点(questions)を整理します。scopeがuserの場合、context.descriptionは本人が記入した自己紹介です。関心や活動の背景として参照し、自己紹介だけの内容を記事由来の知識として記録しません。保存したことは賛同や既知の証拠ではありません。頻度は入力の集計を使用してください。知識の各項目に入力に存在するarticleIdを根拠として付けます。相反する主張は出典とともに区別します。JSON形式: {"interests":["..."],"knowledge":[{"text":"...","articleIds":["..."]}],"questions":["..."]}。';
+  const instruction = memoryInstruction;
   const allowed = new Set(sources.map((source) => source.articleId));
   let fragments: MemoryData[] = [];
   for (const [index, group] of chunks(sources).entries()) {

@@ -432,17 +432,17 @@ describe('永続利用量制限', () => {
     ).toBe(1);
     expect((await rebuild(crypto.randomUUID(), 'bob')).status).toBe(202);
   });
-  it('プロジェクトのメモリ再生成で2件分を確保できなければ受付全体を取り消す', async () => {
+  it('プロジェクトのメモリ再生成は1件分の実行枠で受け付ける', async () => {
     app.env.AI_CONCURRENT_JOBS = '1';
     const response = await app.request('/api/v1/memory/rebuild', {
       method: 'POST',
       body: { project_id: 'alice-project', request_id: crypto.randomUUID() },
     });
-    expect(response.status).toBe(429);
+    expect(response.status).toBe(202);
     for (const table of ['ai_operations', 'memory_requests', 'processing_jobs']) {
       expect(
         (await app.env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>())!.n,
-      ).toBe(0);
+      ).toBe(1);
     }
   });
 });
