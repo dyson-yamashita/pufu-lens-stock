@@ -1,6 +1,7 @@
 import { Miniflare } from 'miniflare';
 import { readFile, readdir } from 'node:fs/promises';
 import { vi } from 'vitest';
+import { serialize } from 'node:v8';
 import { createApp } from '../server/api';
 import { hash } from '../server/security';
 import type { Env } from '../server/env';
@@ -39,6 +40,8 @@ export async function testApp(
   // 旧スキーマからの移行テストでも、現在のAPIの利用制限基盤は有効にする。
   if (options.usageMigration !== false && !migrations.includes('0013_usage_limits.sql'))
     await applyMigration(DB, '0013_usage_limits.sql');
+  if (options.usageMigration !== false && !migrations.includes('0014_job_retry_limits.sql'))
+    await applyMigration(DB, '0014_job_retry_limits.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),
@@ -122,17 +125,20 @@ export async function testApp(
     },
   };
 }
-export const mockStep = () => {
+export const mockStep = (maxResultBytes?: number) => {
   const names = new Set<string>();
   return {
     do: async (name: string, configOrOperation: unknown, operation?: () => Promise<unknown>) => {
       if (names.has(name)) throw new Error(`Duplicate step: ${name}`);
       names.add(name);
-      return (
+      const result = await (
         typeof configOrOperation === 'function'
           ? (configOrOperation as () => Promise<unknown>)
           : operation!
       )();
+      if (maxResultBytes && serialize(result).byteLength > maxResultBytes)
+        throw new Error('Workflow step result exceeds 1 MiB');
+      return result;
     },
     sleep: vi.fn(async () => undefined),
   } as unknown as import('cloudflare:workers').WorkflowStep;

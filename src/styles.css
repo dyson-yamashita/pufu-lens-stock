@@ -14,7 +14,7 @@
   --placeholder: #6b778b;
   --border: #d9e1ed;
   --card: #fff;
-  --page: #f6f8fc;
+  --page: #fbfcff;
   --wash: #edf2f9;
   --sidebar: #eef2f8;
   --selected: #dce6f4;
@@ -1026,21 +1026,6 @@ p {
 .memory-page {
   max-width: 900px;
 }
-.memory-select {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 24px;
-}
-.memory-select label {
-  margin: 0;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-.memory-select select {
-  max-width: 330px;
-  font-size: 12px;
-}
 .full-memory {
   padding: 30px 36px;
 }
@@ -1077,6 +1062,83 @@ p {
 .memory-controls {
   display: flex;
   gap: 10px;
+}
+.memory-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.memory-coverage strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.memory-update-target {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.memory-update-target h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.memory-update-options {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 0;
+  border: 0;
+}
+.memory-update-options legend {
+  margin-bottom: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.memory-update-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.memory-update-option:has(input:checked) {
+  border-color: var(--accent);
+}
+.memory-update-option:has(input:disabled) {
+  cursor: default;
+}
+.memory-update-option input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 3px 0 0;
+}
+.memory-update-option strong,
+.memory-update-option span span {
+  display: block;
+}
+.memory-update-option span span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.memory-rebuild-form .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.memory-rebuild-form .form-help {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
 }
 .dialog {
   border: 1px solid var(--border);
@@ -2240,14 +2302,6 @@ p {
   }
   .memory-controls {
     flex-wrap: wrap;
-  }
-  .memory-select {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 9px;
-  }
-  .memory-select select {
-    max-width: 100%;
   }
   .dialog {
     padding: 22px;

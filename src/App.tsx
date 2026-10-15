@@ -35,7 +35,15 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import type { Config, Memory, Project, Stock, TokenInfo, User } from '../shared/domain';
+import type {
+  Config,
+  Memory,
+  MemoryCoverage,
+  Project,
+  Stock,
+  TokenInfo,
+  User,
+} from '../shared/domain';
 import { stockInputSchema, stockTextLimit } from '../shared/domain';
 import { api, ApiError, createRequestId, send } from './api';
 import Profile from './Profile';
@@ -45,8 +53,14 @@ import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
 import McpConnections from './McpConnections';
+import MemoryRebuildForm from './MemoryRebuildForm';
 
-type MemoryResponse = { memory: Memory | null; pending: boolean; error: string | null };
+type MemoryResponse = {
+  memory: Memory | null;
+  pending: boolean;
+  error: string | null;
+  coverage?: MemoryCoverage;
+};
 type Route = {
   view:
     | 'stocks'
@@ -68,6 +82,7 @@ type ModalState =
   | { type: 'stock'; stock: Stock; tab?: 'question' }
   | { type: 'token' }
   | { type: 'question' }
+  | { type: 'memory'; projectId: string | null }
   | null;
 const statusLabels = {
   queued: '処理待ち',
@@ -1019,40 +1034,12 @@ export default function App() {
             />
           ) : route.view === 'memory' ? (
             <div className="memory-page">
-              {!route.projectId && (
-                <div className="memory-select">
-                  <label htmlFor="memory-scope">メモリの対象</label>
-                  <select
-                    id="memory-scope"
-                    value=""
-                    onChange={(e) => navigate('memory', e.target.value || null)}
-                  >
-                    <option value="">あなたの全プロジェクト</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <MemoryPanel
                 response={memoryResponse}
                 project={selected}
                 full
                 onEvidence={evidence}
-                onRebuild={async () => {
-                  try {
-                    await send('/api/v1/memory/rebuild', {
-                      project_id: route.projectId,
-                      request_id: createRequestId(),
-                    });
-                    setNotice('メモリの再生成を受け付けました。');
-                    reload();
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
-                }}
+                onRebuild={() => setModal({ type: 'memory', projectId: route.projectId })}
               />
             </div>
           ) : (
@@ -1204,6 +1191,16 @@ export default function App() {
           )}
         </div>
       </main>
+      {modal?.type === 'memory' && (
+        <Modal title="メモリの更新方法" onClose={() => setModal(null)}>
+          <MemoryRebuildForm
+            projectId={modal.projectId}
+            projectName={projects.find((project) => project.id === modal.projectId)?.name}
+            onClose={() => setModal(null)}
+            onDone={() => completed('メモリの更新を受け付けました。')}
+          />
+        </Modal>
+      )}
       {modal?.type === 'project' && (
         <Modal
           title={modal.project ? 'プロジェクトを編集' : '新しいプロジェクト'}
@@ -1387,10 +1384,9 @@ function MemoryPanel({
   project?: Project;
   full?: boolean;
   onExpand?: () => void;
-  onRebuild?: () => Promise<void>;
+  onRebuild?: () => void;
   onEvidence: (id: string) => Promise<void>;
 }) {
-  const [busy, setBusy] = useState(false);
   const memory = response.memory;
   const data = memory?.data;
   return (
@@ -1412,6 +1408,9 @@ function MemoryPanel({
       <p className="memory-caption">
         {project ? 'このプロジェクトで集めた記事から。' : 'すべてのプロジェクトに共通する関心。'}
       </p>
+      {response.coverage?.full_rebuild_reason && (
+        <p className="update-note">{response.coverage.full_rebuild_reason}</p>
+      )}
       {response.pending && <p className="update-note">新しい記事を反映しています…</p>}
       {response.error && (
         <p className="form-error" role="alert">
@@ -1495,19 +1494,9 @@ function MemoryPanel({
             記事の保存は、その主張への賛同を意味しません。ここには、保存の傾向と記事から収集した情報を整理しています。
           </p>
           <div className="memory-controls">
-            <button
-              className="button secondary"
-              disabled={busy || response.pending}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await onRebuild?.();
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {busy ? <Spinner /> : <RefreshCw size={16} aria-hidden="true" />}再生成
+            <button className="button secondary" disabled={response.pending} onClick={onRebuild}>
+              <RefreshCw size={16} aria-hidden="true" />
+              再生成
             </button>
             {memory && (
               <button
@@ -2047,11 +2036,7 @@ function Shortcuts({
   const base = window.location.origin;
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
-  const example = JSON.stringify(
-    { project_id: projects[0]?.id ?? 'プロジェクトID', url: 'ショートカットの入力URL', note: '' },
-    null,
-    2,
-  );
+  const example = JSON.stringify({ url: 'ショートカットの入力URL', note: '' }, null, 2);
   return (
     <div className="shortcuts-page">
       <section className="connect-guide">
@@ -2079,7 +2064,7 @@ function Shortcuts({
             <div>
               <h3>ショートカットの共有メニューを有効にする</h3>
               <p>
-                入力を「URL」にし、共有シートに表示します。保存先を選ぶ場合は、GETでプロジェクト一覧を取得します。
+                入力を「URL」にし、共有シートに表示します。保存先を選ぶ場合は、GETでプロジェクト一覧を取得し、選んだIDをJSON本文のproject_idに指定します。
               </p>
               <code>{base}/api/v1/projects</code>
             </div>
@@ -2090,6 +2075,9 @@ function Shortcuts({
               <h3>「URLの内容を取得」でPOSTする</h3>
               <p>
                 以下のURLへ、AuthorizationヘッダーとJSON本文を設定して送信します。トークンを記事のURLへ送信しないでください。
+              </p>
+              <p>
+                project_idは任意です。省略すると、プロジェクト限定トークンでは限定先に、限定なしトークンでは自分の全プロジェクトに保存します。限定先と異なるIDは指定できません。
               </p>
             </div>
           </li>

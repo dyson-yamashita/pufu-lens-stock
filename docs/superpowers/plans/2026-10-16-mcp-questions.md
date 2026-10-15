@@ -27,7 +27,7 @@
 
 ### Task 1: 独立した問いをDB・API・Web・プ譜で扱う
 
-**Files:** migrations/0014_independent_questions.sql、shared/domain.ts、shared/pufu.ts、server/api.ts、server/db.ts、server/workflows.ts、server/demo.ts、server/ai.ts、server/pufu.ts、src/QuestionForm.tsx、src/Questions.tsx、src/QuestionPage.tsx、tests/independent-questions.test.ts、既存の関連テスト。
+**Files:** migrations/0016_independent_questions.sql、shared/domain.ts、shared/pufu.ts、server/api.ts、server/db.ts、server/workflows.ts、server/demo.ts、server/ai.ts、server/pufu.ts、src/QuestionForm.tsx、src/Questions.tsx、src/QuestionPage.tsx、tests/independent-questions.test.ts、既存の関連テスト。
 
 **Interfaces:** Questionはproject_id必須、stock_idと記事関連フィールドはnullable。POST /questionsはproject_idと任意stock_idを受け付け、既存stock_idだけの入力も受け付ける。PufuContext.stockはnullable。
 

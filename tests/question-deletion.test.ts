@@ -188,7 +188,7 @@ describe('問いの削除', () => {
       beforeQuestions,
     );
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
-    await applyMigration(app.env.DB, '0014_independent_questions.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
     expect((await remove('manual-first')).status).toBe(200);
   });
 });

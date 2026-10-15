@@ -214,7 +214,7 @@ describe('URLとテキストのストック', () => {
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
-    await applyMigration(app.env.DB, '0014_independent_questions.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
     expect((await detail('old-stock')).stock).toMatchObject({
       source_type: 'url',
       title: '既存記事',

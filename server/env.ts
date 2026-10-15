@@ -47,8 +47,10 @@ export type Job = {
   kind: 'article' | 'project_memory' | 'user_memory' | 'cleanup' | 'question' | 'pufu';
   target_id: string;
   revision: number;
+  memory_mode?: 'incremental' | 'full';
   status: string;
 };
+export type JobStateGuard = { status?: string; attempts?: number; updatedAt?: string };
 export const isDemo = (env: Env) =>
   env.LOCAL_DEMO_ENABLED === 'true' &&
   ['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.APP_URL).hostname);

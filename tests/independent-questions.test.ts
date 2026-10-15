@@ -160,7 +160,7 @@ describe('プロジェクトに所属する独立した問い', () => {
     const before = await app.env.DB.prepare('SELECT * FROM questions').all();
     const scores = await app.env.DB.prepare('SELECT * FROM pufu_scores').all();
     const phases = await app.env.DB.prepare('SELECT * FROM pufu_phases').all();
-    await applyMigration(app.env.DB, '0014_independent_questions.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
     expect((await app.env.DB.prepare('SELECT * FROM questions').all()).results).toEqual(
       before.results.map((q) => ({ ...q, project_id: 'alice-project' })),
     );

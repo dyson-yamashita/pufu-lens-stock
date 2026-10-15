@@ -220,7 +220,7 @@ describe('ユーザーの問いの追加', () => {
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
-    await applyMigration(app.env.DB, '0014_independent_questions.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
     expect((await add(id, '追加1？')).status).toBe(201);
     expect((await add(id, '追加2？')).status).toBe(201);
     await expect(
