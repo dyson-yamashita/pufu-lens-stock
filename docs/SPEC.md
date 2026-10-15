@@ -326,7 +326,7 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 
 ### GitHub Actionsによる自動デプロイ
 
-[Cloudflare Deploy](../.github/workflows/cloudflare-deploy.yml) は、PRで検証のみを実行し、PRのマージなどで `main` が更新されると、検証成功後に既存の本番環境へデプロイします。元リポジトリ `dyson-yamashita/pufu-lens-stock` の `main` 更新だけがデプロイ対象です。forkのPRや別ブランチからはデプロイしません。文書だけの変更でも、main更新時は同じワークフローの対象です。
+[CI](../.github/workflows/ci.yml) は、`main` 向けPRの作成・更新時に検証のみを実行します。[Cloudflare Deploy](../.github/workflows/cloudflare-deploy.yml) は、PRのマージなどで `main` が更新されたときだけ起動し、検証成功後に既存の本番環境へデプロイします。PRの更新時はデプロイ用ワークフロー自体が起動しません。元リポジトリ `dyson-yamashita/pufu-lens-stock` の `main` 更新だけがデプロイ対象です。forkのPRや別ブランチからはデプロイしません。文書だけの変更でも、main更新時はデプロイ用ワークフローの対象です。
 
 初期設定として、リポジトリの **Settings → Environments → New environment** で `production` を作成し、Environment secretsに次の2つを登録してください。値をIssue・PR・チャットや設定ファイルに貼り付けないでください。
 
