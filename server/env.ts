@@ -40,6 +40,7 @@ export type Job = {
   kind: 'article' | 'project_memory' | 'user_memory' | 'cleanup' | 'question' | 'pufu';
   target_id: string;
   revision: number;
+  memory_mode?: 'incremental' | 'full';
   status: string;
 };
 export const isDemo = (env: Env) =>

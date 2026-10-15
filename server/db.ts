@@ -108,13 +108,14 @@ export function memorySaveStatement(
     dataJson: string;
     articleCount: number;
     model: string;
+    contextHash?: string;
   },
 ): D1PreparedStatement {
   const predicate = input.projectId
     ? 'EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ? AND memory_revision = ?)'
     : 'EXISTS (SELECT 1 FROM users WHERE id = ? AND id = ? AND memory_revision = ?)';
   return env.DB.prepare(
-    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at`,
+    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at, context_hash) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at, context_hash = excluded.context_hash, force_full = 0`,
   ).bind(
     input.projectId ? `project-${input.projectId}` : `user-${input.userId}`,
     input.userId,
@@ -125,6 +126,7 @@ export function memorySaveStatement(
     input.articleCount,
     input.model,
     now(),
+    input.contextHash ?? '',
     input.projectId ?? input.userId,
     input.userId,
     input.revision,

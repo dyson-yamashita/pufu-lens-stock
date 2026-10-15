@@ -9,9 +9,23 @@ import {
   jobFailureStatements,
 } from './db';
 import { fetchArticle } from './ingest';
-import { buildMemory, memoryText, modelName, summarize, generateQuestion, type Source } from './ai';
+import {
+  buildMemory,
+  updateMemory,
+  memoryText,
+  modelName,
+  summarize,
+  generateQuestion,
+  type AiCall,
+} from './ai';
+import {
+  memoryInputPage,
+  memoryUpdateState,
+  memorySourceStatements,
+  type MemoryInput,
+} from './memory';
 import { dispatchJobs } from './jobs';
-import type { ArticleSummary } from '../shared/domain';
+import type { ArticleSummary, MemoryData } from '../shared/domain';
 import { runPufu } from './pufu';
 import { aiStep, deferLimitedJob } from './usage';
 
@@ -261,46 +275,43 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         return row;
       });
       if (!owner) return;
-      const sources: Source[] = [];
+      const inputs: MemoryInput[] = [];
       for (let page = 0; ; page++) {
-        const rows = await step.do(`source-page-${page}`, async () => {
-          // GROUP BYでユーザー全体の同一記事を1件にする。本文ではなく原記事の要約を入力する。
-          const result = await this.env.DB.prepare(
-            "SELECT a.id AS article_id, a.title, a.summary_json, GROUP_CONCAT(DISTINCT s.note) AS note, MIN(s.created_at) AS saved_at, GROUP_CONCAT(DISTINCT p.name) AS project_name FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.user_id = ? AND a.status = 'ready' AND (? IS NULL OR s.project_id = ?) GROUP BY a.id ORDER BY a.id LIMIT 25 OFFSET ?",
-          )
-            .bind(
-              job.user_id,
-              project ? job.target_id : null,
-              project ? job.target_id : null,
-              page * 25,
-            )
-            .all<{
-              article_id: string;
-              title: string;
-              summary_json: string;
-              note: string;
-              saved_at: string;
-              project_name: string;
-            }>();
-          return result.results;
-        });
-        for (const row of rows)
-          sources.push({
-            articleId: row.article_id,
-            title: row.title,
-            summary: JSON.parse(row.summary_json) as ArticleSummary,
-            note: row.note,
-            savedAt: row.saved_at,
-            project: row.project_name,
-          });
+        const rows = await step.do(`source-page-${page}`, () =>
+          memoryInputPage(this.env, job.user_id, project ? job.target_id : null, page),
+        );
+        inputs.push(...rows);
         if (rows.length < 25) break;
       }
-      const memory = await buildMemory(
-        this.env,
-        sources,
-        { name: owner.name, description: owner.description, scope: project ? 'project' : 'user' },
-        (name, operation) => aiStep(this.env, job, step, name, operation),
+      const context = {
+        name: owner.name,
+        description: owner.description,
+        scope: project ? 'project' : 'user',
+      };
+      const state = await step.do('load-memory-input-state', () =>
+        memoryUpdateState(this.env, job.user_id, project ? job.target_id : null, context, inputs),
       );
+      const full = job.memory_mode === 'full' || !state.current || Boolean(state.fullReason);
+      if (!full && !state.added.length) {
+        await step.do('finish-unchanged-memory', () => done(this.env, job.id));
+        return;
+      }
+      const call: AiCall<MemoryData> = (name, operation) =>
+        aiStep(this.env, job, step, name, operation);
+      const memory = full
+        ? await buildMemory(
+            this.env,
+            inputs.map((input) => input.source),
+            context,
+            call,
+          )
+        : await updateMemory(
+            this.env,
+            state.current!,
+            state.added.map((input) => input.source),
+            context,
+            call,
+          );
       await step.do('save-if-revision-current', async () => {
         await this.env.DB.batch([
           memorySaveStatement(this.env, {
@@ -309,9 +320,11 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
             revision: job.revision,
             text: memoryText(memory),
             dataJson: JSON.stringify(memory),
-            articleCount: sources.length,
+            articleCount: inputs.length,
             model: modelName(this.env),
+            contextHash: state.contextHash,
           }),
+          ...memorySourceStatements(this.env, state.id, job.revision, inputs),
           this.env.DB.prepare(
             "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
           ).bind(now(), job.id),
