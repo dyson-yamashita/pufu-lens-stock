@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp } from './helpers';
 import { memorySaveStatement } from '../server/db';
+import { hash } from '../server/security';
 
 describe('認証と保存API（実際のSQLite）', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -22,6 +23,47 @@ describe('認証と保存API（実際のSQLite）', () => {
   it('セッションによる他サイトからの変更を拒否する', async () => {
     expect((await save({}, { Origin: 'https://evil.example.com' })).status).toBe(403);
   });
+  it('期限切れのセッションでは閲覧・保存できず、別ユーザーのセッションは有効', async () => {
+    await app.env.DB.prepare('UPDATE sessions SET expires_at = ? WHERE user_id = ?')
+      .bind('2020-01-01T00:00:00.000Z', 'alice')
+      .run();
+    expect((await app.request('/api/v1/me')).status).toBe(401);
+    expect((await save()).status).toBe(401);
+    expect((await app.request('/api/v1/me', { user: 'bob' })).status).toBe(200);
+  });
+  it('別サイトからのログアウトを拒否し、ログアウト後は対象のセッションだけを無効にする', async () => {
+    await app.env.DB.prepare(
+      'INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
+    )
+      .bind(
+        await hash('alice-other-session'),
+        'alice',
+        new Date(Date.now() + 86400000).toISOString(),
+      )
+      .run();
+    expect(
+      (
+        await app.request('/api/v1/logout', {
+          method: 'POST',
+          headers: { Origin: 'https://evil.example.com' },
+        })
+      ).status,
+    ).toBe(403);
+    expect((await app.request('/api/v1/me')).status).toBe(200);
+    const response = await app.request('/api/v1/logout', { method: 'POST' });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Set-Cookie')).toMatch(/stock_session=;.*Max-Age=0/i);
+    expect((await app.request('/api/v1/me')).status).toBe(401);
+    expect((await save()).status).toBe(401);
+    expect(
+      (
+        await app.request('/api/v1/me', {
+          headers: { Cookie: 'stock_session=alice-other-session' },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await app.request('/api/v1/me', { user: 'bob' })).status).toBe(200);
+  });
   it('他ユーザーのプロジェクトとメモリにアクセスできない', async () => {
     expect((await save({ project_id: 'bob-project' })).status).toBe(404);
     expect((await app.request('/api/v1/memory?project_id=bob-project')).status).toBe(404);
@@ -29,6 +71,50 @@ describe('認証と保存API（実際のSQLite）', () => {
       projects: { id: string }[];
     };
     expect(projects.map((p) => p.id)).not.toContain('bob-project');
+  });
+  it('プロジェクトを作成・編集・削除し、別プロジェクトに保存した同じ記事は保持する', async () => {
+    const created = await app.request('/api/v1/projects', {
+      method: 'POST',
+      body: { name: '新しいプロジェクト', description: '最初の概要' },
+    });
+    expect(created.status).toBe(201);
+    const { id } = (await created.json()) as { id: string };
+    expect(
+      (
+        await app.request(`/api/v1/projects/${id}`, {
+          method: 'PATCH',
+          body: { name: '更新した名前', description: '更新した概要\n使える時間や予算' },
+        })
+      ).status,
+    ).toBe(200);
+    const { projects } = (await (await app.request('/api/v1/projects')).json()) as {
+      projects: { id: string; name: string; description: string }[];
+    };
+    expect(projects.find((project) => project.id === id)).toMatchObject({
+      name: '更新した名前',
+      description: '更新した概要\n使える時間や予算',
+    });
+    const removedStock = (await (await save({ project_id: id })).json()) as { id: string };
+    const keptStock = (await (await save()).json()) as { id: string };
+    expect((await app.request(`/api/v1/projects/${id}`, { method: 'DELETE' })).status).toBe(200);
+    expect((await app.request(`/api/v1/stocks/${removedStock.id}`)).status).toBe(404);
+    expect((await app.request(`/api/v1/stocks/${keptStock.id}`)).status).toBe(200);
+    const remaining = (await (await app.request('/api/v1/projects')).json()) as {
+      projects: { id: string }[];
+    };
+    expect(remaining.projects.map((project) => project.id)).not.toContain(id);
+  });
+  it.each(['PATCH', 'DELETE'])('他ユーザーのプロジェクトを%sで変更できない', async (method) => {
+    const before = await (await app.request('/api/v1/projects', { user: 'bob' })).json();
+    expect(
+      (
+        await app.request('/api/v1/projects/bob-project', {
+          method,
+          body: method === 'PATCH' ? { name: '変更を試みる', description: '' } : undefined,
+        })
+      ).status,
+    ).toBe(404);
+    expect(await (await app.request('/api/v1/projects', { user: 'bob' })).json()).toEqual(before);
   });
   it('受付、処理要求、メモリ更新要求を保存する', async () => {
     expect((await save()).status).toBe(202);

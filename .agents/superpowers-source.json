@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/obra/superpowers",
+  "version": "7.0.0",
+  "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+  "skills": [
+    "brainstorming",
+    "diagnosing-superpowers",
+    "dispatching-parallel-agents",
+    "executing-plans",
+    "finishing-a-development-branch",
+    "receiving-code-review",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "systematic-debugging",
+    "test-driven-development",
+    "using-git-worktrees",
+    "using-superpowers",
+    "verification-before-completion",
+    "writing-plans",
+    "writing-skills"
+  ],
+  "license": "MIT",
+  "license_file": "SUPERPOWERS-LICENSE"
+}
