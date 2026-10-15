@@ -20,7 +20,7 @@ import {
   type AiCall,
 } from './ai';
 import {
-  memoryInputPage,
+  loadMemoryInputs,
   memoryUpdateState,
   memorySourceStatements,
   type MemoryInput,
@@ -281,7 +281,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
       const inputs: MemoryInput[] = [];
       for (let page = 0; ; page++) {
         const rows = await step.do(`memory-input-page-${page}`, () =>
-          memoryInputPage(this.env, job.user_id, project ? job.target_id : null, page),
+          loadMemoryInputs(this.env, job.user_id, project ? job.target_id : null, page),
         );
         inputs.push(...rows);
         if (rows.length < 25) break;

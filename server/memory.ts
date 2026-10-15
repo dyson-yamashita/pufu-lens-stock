@@ -8,20 +8,20 @@ export type MemoryInput = { source: Source; hash: string };
 export const memoryId = (userId: string, projectId: string | null) =>
   projectId ? `project-${projectId}` : `user-${userId}`;
 
-export async function memoryInputPage(
+export async function loadMemoryInputs(
   env: Env,
   userId: string,
   projectId: string | null,
-  page: number,
+  page?: number,
 ): Promise<MemoryInput[]> {
   const rows = await env.DB.prepare(
     `SELECT a.id, a.title, a.summary_json,
       json_group_array(json_object('projectId',p.id,'name',p.name,'note',s.note,'savedAt',s.created_at)) AS memberships
     FROM articles a JOIN stocks s ON s.article_id=a.id JOIN projects p ON p.id=s.project_id
     WHERE a.user_id=? AND a.status='ready' AND (? IS NULL OR s.project_id=?)
-    GROUP BY a.id ORDER BY a.id LIMIT 25 OFFSET ?`,
+    GROUP BY a.id ORDER BY a.id ${page === undefined ? '' : 'LIMIT 25 OFFSET ?'}`,
   )
-    .bind(userId, projectId, projectId, page * 25)
+    .bind(userId, projectId, projectId, ...(page === undefined ? [] : [page * 25]))
     .all<{
       id: string;
       title: string;
@@ -49,15 +49,6 @@ export async function memoryInputPage(
       return { source, hash: await hash(JSON.stringify({ source, memberships })) };
     }),
   );
-}
-
-export async function memoryInputs(env: Env, userId: string, projectId: string | null) {
-  const inputs: MemoryInput[] = [];
-  for (let page = 0; ; page++) {
-    const rows = await memoryInputPage(env, userId, projectId, page);
-    inputs.push(...rows);
-    if (rows.length < 25) return inputs;
-  }
 }
 
 export async function memoryUpdateState(
@@ -122,7 +113,9 @@ export async function memoryCoverage(
   projectId: string | null,
   context: MemoryContext,
 ): Promise<MemoryCoverage> {
-  const inputs = await memoryInputs(env, userId, projectId);
+  // HTTPの読み取りは一括取得し、記事数に比例するDB往復を避ける。
+  // Workflowからはpageを指定し、永続化するページのサイズを制限する。
+  const inputs = await loadMemoryInputs(env, userId, projectId);
   const state = await memoryUpdateState(env, userId, projectId, context, inputs);
   const row = await env.DB.prepare(
     'SELECT COUNT(DISTINCT article_id) AS count FROM stocks WHERE user_id=? AND (? IS NULL OR project_id=?)',

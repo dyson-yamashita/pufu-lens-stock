@@ -314,4 +314,43 @@ describe('メモリの差分更新と反映状況', () => {
     expect((await memory()).memory!.article_count).toBe(128);
     expect((await memory()).coverage).toMatchObject({ reflected_count: 128, pending_count: 0 });
   });
+
+  it('1100件の反映状況をリクエスト当たり50回のDB呼び出し以内で取得する', async () => {
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        `WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<1100)
+        INSERT INTO articles(id,user_id,canonical_url,source_url,title,domain,status,summary_json)
+        SELECT 'history-'||x,'alice','history-'||x,'','記事'||x,'','ready',? FROM n`,
+      ).bind(JSON.stringify({ overview: '要約', keyPoints: ['知識'], topics: ['設計'] })),
+      app.env.DB.prepare(`INSERT INTO stocks(id,user_id,project_id,article_id,created_at)
+        SELECT 'stock-'||id,'alice','alice-project',id,'2000-01-01' FROM articles WHERE user_id='alice'`),
+    ]);
+    let queries = 0;
+    const prepare = app.env.DB.prepare.bind(app.env.DB);
+    const limited = (statement: D1PreparedStatement): D1PreparedStatement =>
+      new Proxy(statement, {
+        get(target, property) {
+          if (property === 'bind') return (...args: unknown[]) => limited(target.bind(...args));
+          const value = Reflect.get(target, property, target);
+          if (typeof value !== 'function') return value;
+          return (...args: unknown[]) => {
+            if (['first', 'all', 'run', 'raw'].includes(String(property)) && ++queries > 50)
+              throw new Error('Too many D1 queries');
+            return value.apply(target, args);
+          };
+        },
+      });
+    app.env.DB = new Proxy(app.env.DB, {
+      get(target, property) {
+        if (property === 'prepare') return (sql: string) => limited(prepare(sql));
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const response = await app.request('/api/v1/memory');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      coverage: { ready_count: 1100, pending_count: 1100 },
+    });
+  });
 });
