@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   ArrowDownToLine,
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
@@ -25,7 +26,6 @@ import {
   Layers,
   LoaderCircle,
   LogOut,
-  Menu,
   Plus,
   RefreshCw,
   Settings,
@@ -597,7 +597,7 @@ export default function App() {
           aria-label="メニューを閉じる"
           onClick={() => setMobileNav(false)}
         >
-          <X size={19} />
+          <ArrowLeft size={19} aria-hidden="true" />
         </button>
         <nav aria-label="メインナビゲーション">
           <button
@@ -719,7 +719,11 @@ export default function App() {
               else setDesktopNavCollapsed((collapsed) => !collapsed);
             }}
           >
-            <Menu size={22} aria-hidden="true" />
+            {sidebarOpen ? (
+              <ArrowLeft size={22} aria-hidden="true" />
+            ) : (
+              <ArrowRight size={22} aria-hidden="true" />
+            )}
           </button>
           <nav className="breadcrumb" aria-label="パンくずリスト">
             <a href="#">マイライブラリ</a> <span aria-hidden="true">/</span>{' '}

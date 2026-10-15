@@ -2613,8 +2613,41 @@ textarea::placeholder {
 }
 .pufu-toolbar > div {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
   margin-left: auto;
+}
+.pufu-phase-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.pufu-phase-navigation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.pufu-phase-number {
+  min-width: 72px;
+  text-align: center;
+  white-space: nowrap;
+}
+.pufu-phase-previous svg {
+  transform: rotate(-90deg);
+}
+.pufu-phase-next svg {
+  transform: rotate(90deg);
+}
+.pufu-phase-help {
+  line-height: 1.8;
+  margin: 0 0 16px;
 }
 .pufu-demo-note {
   padding: 12px 16px;

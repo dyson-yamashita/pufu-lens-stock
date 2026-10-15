@@ -126,6 +126,12 @@ export function queuePufuJob(env: Env, id: string): D1PreparedStatement {
     "INSERT OR IGNORE INTO processing_jobs (id,user_id,kind,target_id,revision) SELECT 'pufu-job-' || id || '-' || generation,user_id,'pufu',id,generation FROM pufu_scores WHERE id = ? AND status = 'queued'",
   ).bind(id);
 }
+// DB移行後、旧Workerが第1局面の編集・生成を完了した場合も最新のJSONを引き継ぐ。
+export function initialPufuPhase(env: Env, id: string, userId: string): D1PreparedStatement {
+  return env.DB.prepare(
+    "INSERT INTO pufu_phases (pufu_id, number, score_json, created_at, updated_at) SELECT id, 1, score_json, created_at, updated_at FROM pufu_scores WHERE id = ? AND user_id = ? AND status = 'ready' AND current_phase = 1 AND score_json IS NOT NULL ON CONFLICT (pufu_id, number) DO UPDATE SET score_json = excluded.score_json, updated_at = excluded.updated_at WHERE pufu_phases.score_json <> excluded.score_json",
+  ).bind(id, userId);
+}
 export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
   try {
     const context = await step.do('load-pufu-context', async () => {
@@ -153,10 +159,10 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
       );
       await step.do('save-pufu', async () => {
         const json = JSON.stringify(score);
-        await env.DB.prepare(
-          "UPDATE pufu_scores SET generated_json = ?, score_json = ?, status = 'ready', error = NULL, model = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status IN ('queued','generating')",
-        )
-          .bind(
+        await env.DB.batch([
+          env.DB.prepare(
+            "UPDATE pufu_scores SET generated_json = ?, score_json = ?, status = 'ready', error = NULL, model = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status IN ('queued','generating')",
+          ).bind(
             json,
             json,
             isDemo(env) && !env.AI ? 'local-pufu-template' : env.AI_MODEL,
@@ -164,8 +170,11 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
             job.target_id,
             job.user_id,
             job.revision,
-          )
-          .run();
+          ),
+          env.DB.prepare(
+            "INSERT OR IGNORE INTO pufu_phases (pufu_id, number, score_json, created_at, updated_at) SELECT id, 1, score_json, created_at, updated_at FROM pufu_scores WHERE id = ? AND user_id = ? AND generation = ? AND status = 'ready' AND current_phase = 1",
+          ).bind(job.target_id, job.user_id, job.revision),
+        ]);
       });
     }
     await step.do('finish-pufu-job', async () => {

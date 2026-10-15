@@ -60,8 +60,16 @@ export const createPufuSchema = z.strictObject({
 });
 export const savePufuSchema = z.strictObject({
   revision: z.number().int().positive(),
+  phase: z.number().int().positive().optional(),
   score: pufuScoreSchema,
 });
+export const addPufuPhaseSchema = savePufuSchema.extend({ phase: z.number().int().positive() });
+export type PufuPhase = {
+  number: number;
+  score: PufuScore;
+  created_at: string;
+  updated_at: string;
+};
 export type MemorySnapshot = {
   id: string;
   revision: number;
@@ -86,8 +94,13 @@ export type PufuSummary = {
   model: string | null;
   editor_version: string;
   revision: number;
+  current_phase: number;
   generation: number;
   created_at: string;
   updated_at: string;
 };
-export type Pufu = PufuSummary & { score: PufuScore | null; context: PufuContext };
+export type Pufu = PufuSummary & {
+  score: PufuScore | null;
+  phases: PufuPhase[];
+  context: PufuContext;
+};

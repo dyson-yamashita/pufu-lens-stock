@@ -27,13 +27,15 @@ import { dispatchJobs } from './jobs';
 import {
   createPufuSchema,
   savePufuSchema,
+  addPufuPhaseSchema,
   pufuEditorVersion,
   type PufuContext,
   type PufuSummary,
   type PufuScore,
+  type PufuPhase,
   type MemorySnapshot,
 } from '../shared/pufu';
-import { queuePufuJob } from './pufu';
+import { queuePufuJob, initialPufuPhase } from './pufu';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -44,7 +46,7 @@ const questionColumns =
 const questionJoins =
   'questions q JOIN stocks s ON s.id = q.stock_id JOIN projects p ON p.id = s.project_id JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
-  'id,question_id,task,status,error,model,editor_version,revision,generation,created_at,updated_at';
+  'id,question_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
 async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
   let value: unknown;
   try {
@@ -73,7 +75,8 @@ export function createApp() {
   app.use('/api/*', secureHeaders(), (c, next) =>
     bodyLimit({
       maxSize:
-        c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)
+        (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
+        (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
           ? 262144
           : c.req.method === 'POST' && c.req.path === '/api/v1/stocks'
             ? 163840
@@ -503,38 +506,83 @@ export function createApp() {
     return c.json({ id, status: saved.status }, result[0].meta.changes ? 202 : 200);
   });
   app.get('/api/v1/pufus/:id', async (c) => {
-    const row = await c.env.DB.prepare(
-      `SELECT ${pufuColumns},score_json,input_json FROM pufu_scores WHERE id = ? AND user_id = ?`,
-    )
-      .bind(c.req.param('id'), c.get('principal').user.id)
-      .first<PufuSummary & { score_json: string | null; input_json: string }>();
+    const id = c.req.param('id');
+    const userId = c.get('principal').user.id;
+    // 本体の更新番号と局面一覧を、同じトランザクションの状態として読み取る。
+    const [, rows, phases] = await c.env.DB.batch([
+      initialPufuPhase(c.env, id, userId),
+      c.env.DB.prepare(
+        `SELECT ${pufuColumns},score_json,input_json FROM pufu_scores WHERE id = ? AND user_id = ?`,
+      ).bind(id, userId),
+      c.env.DB.prepare(
+        'SELECT number,score_json,created_at,updated_at FROM pufu_phases WHERE pufu_id = ? AND EXISTS (SELECT 1 FROM pufu_scores WHERE id = pufu_id AND user_id = ?) ORDER BY number',
+      ).bind(id, userId),
+    ]);
+    const row = rows.results[0] as
+      (PufuSummary & { score_json: string | null; input_json: string }) | undefined;
     if (!row) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
     const { score_json, input_json, ...pufu } = row;
+    const phaseRows = phases.results as (Omit<PufuPhase, 'score'> & { score_json: string })[];
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({
       pufu: {
         ...pufu,
         score: score_json ? (JSON.parse(score_json) as PufuScore) : null,
+        phases: phaseRows.map(({ score_json, ...phase }) => ({
+          ...phase,
+          score: JSON.parse(score_json) as PufuScore,
+        })),
         context: JSON.parse(input_json) as PufuContext,
       },
     });
   });
-  app.patch('/api/v1/pufus/:id', async (c) => {
+  async function savePufu(c: import('hono').Context<AppEnv>, append: boolean) {
     const pufu = await ownedPufu(c);
-    const data = await body(c, savePufuSchema);
+    const data = await body(c, append ? addPufuPhaseSchema : savePufuSchema);
     if (pufu.status !== 'ready')
       throw new HTTPException(409, { message: 'プ譜の生成が完了してから保存してください。' });
-    const result = await c.env.DB.prepare(
-      "UPDATE pufu_scores SET score_json = ?, revision = revision + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'ready' AND revision = ? RETURNING revision,updated_at",
-    )
-      .bind(JSON.stringify(data.score), now(), pufu.id, c.get('principal').user.id, data.revision)
-      .first<{ revision: number; updated_at: string }>();
+    if (data.phase !== undefined && data.phase !== pufu.current_phase)
+      throw new HTTPException(409, {
+        message: '過去の局面は変更できません。最新の局面を開いてください。',
+      });
+    const json = JSON.stringify(data.score);
+    const timestamp = now();
+    const userId = c.get('principal').user.id;
+    const condition =
+      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ?";
+    const values = [pufu.id, userId, data.revision, pufu.current_phase];
+    // すべての書き込みを同じ更新番号で制限し、保存と局面追加を1トランザクションで確定する。
+    const statements = [
+      initialPufuPhase(c.env, pufu.id, userId),
+      c.env.DB.prepare(
+        `UPDATE pufu_phases SET score_json = ?, updated_at = ? WHERE pufu_id = ? AND number = ? AND EXISTS (SELECT 1 FROM pufu_scores WHERE ${condition})`,
+      ).bind(json, timestamp, pufu.id, pufu.current_phase, ...values),
+    ];
+    if (append)
+      statements.push(
+        c.env.DB.prepare(
+          `INSERT INTO pufu_phases (pufu_id, number, score_json, created_at, updated_at) SELECT id, current_phase + 1, ?, ?, ? FROM pufu_scores WHERE ${condition}`,
+        ).bind(json, timestamp, timestamp, ...values),
+      );
+    statements.push(
+      c.env.DB.prepare(
+        `UPDATE pufu_scores SET score_json = ?, current_phase = current_phase + ?, revision = revision + 1, updated_at = ? WHERE ${condition} RETURNING revision,current_phase,updated_at`,
+      ).bind(json, append ? 1 : 0, timestamp, ...values),
+    );
+    const results = await c.env.DB.batch<{
+      revision: number;
+      current_phase: number;
+      updated_at: string;
+    }>(statements);
+    const result = results.at(-1)!.results[0];
     if (!result)
       throw new HTTPException(409, {
         message: '別の画面で更新されています。編集中の内容をJSONで保存し、開き直してください。',
       });
-    return c.json(result);
-  });
+    return c.json(result, append ? 201 : 200);
+  }
+  app.patch('/api/v1/pufus/:id', (c) => savePufu(c, false));
+  app.post('/api/v1/pufus/:id/phases', (c) => savePufu(c, true));
   app.post('/api/v1/pufus/:id/retry', async (c) => {
     const pufu = await ownedPufu(c);
     if (pufu.status !== 'failed')

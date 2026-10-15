@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ProjectScore, getScoreJson } from '@goto-lab/pufu-editor';
-import { Check, Download, LoaderCircle, Save } from 'lucide-react';
+import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
 import { pufuScoreSchema, type Pufu } from '../shared/pufu';
 import { send } from './api';
 
@@ -21,13 +21,20 @@ export default function PufuEditor({
 }) {
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1000px)').matches);
   const [revision, setRevision] = useState(pufu.revision);
+  const [phases, setPhases] = useState(pufu.phases);
+  // エディターは入力オブジェクトを直接変更するため、保存済みの局面とは参照を分ける。
+  const [editor, setEditor] = useState(() => structuredClone(pufu.phases.at(-1)!));
+  const editorKey = `${pufu.id}-phase-${editor.number}`;
+  const currentPhase = phases.at(-1)!.number;
+  const preview = editor.number !== currentPhase;
+  const feedback = editor.number % 2 === 0;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [dirty, setDirty] = useState(false);
-  const baseline = useRef(canonical(JSON.stringify(pufu.score)));
+  const baseline = useRef(canonical(JSON.stringify(editor.score)));
   const hasChanges = () => {
-    const json = getScoreJson(pufu.id);
+    const json = getScoreJson(editorKey);
     return Boolean(json && canonical(json) !== baseline.current);
   };
   useEffect(() => {
@@ -38,7 +45,7 @@ export default function PufuEditor({
   }, []);
   useEffect(() => {
     const changed = () => {
-      const json = getScoreJson(pufu.id);
+      const json = getScoreJson(editorKey);
       return Boolean(json && canonical(json) !== baseline.current);
     };
     onGuard(
@@ -57,29 +64,47 @@ export default function PufuEditor({
       window.removeEventListener('beforeunload', unload);
       window.clearInterval(timer);
     };
-  }, [pufu.id, onGuard]);
-  async function save() {
-    if (busy) return;
+  }, [editorKey, onGuard]);
+  function selectPhase(number: number) {
+    if (number === editor.number || busy) return;
+    if (
+      hasChanges() &&
+      !window.confirm('保存していない変更があります。保存せずに局面を切り替えますか？')
+    )
+      return;
+    const phase = phases.find((phase) => phase.number === number)!;
+    baseline.current = canonical(JSON.stringify(phase.score));
+    setEditor(structuredClone(phase));
+    setDirty(false);
+    setError('');
+    setNotice('');
+  }
+  async function save(append = false) {
+    if (busy || preview) return;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const json = getScoreJson(pufu.id);
+      const json = getScoreJson(editorKey);
       if (!json) throw new Error('編集内容を読み取れませんでした。');
       const input = pufuScoreSchema.safeParse(JSON.parse(json));
       if (!input.success)
         throw new Error(
           '文章は各1,200文字以内、コメントは600文字以内、中間目的と各施策は12件以内で入力してください。',
         );
-      const result = await send<{ revision: number }>(
-        `/api/v1/pufus/${encodeURIComponent(pufu.id)}`,
-        { revision, score: input.data },
-        'PATCH',
+      const result = await send<{ revision: number; current_phase: number; updated_at: string }>(
+        `/api/v1/pufus/${encodeURIComponent(pufu.id)}${append ? '/phases' : ''}`,
+        { revision, phase: editor.number, score: input.data },
+        append ? 'POST' : 'PATCH',
       );
+      const saved = { ...editor, score: input.data, updated_at: result.updated_at };
+      const next = { ...saved, number: result.current_phase, created_at: result.updated_at };
+      setPhases((current) => [...current.slice(0, -1), saved, ...(append ? [next] : [])]);
       baseline.current = canonical(json);
       setRevision(result.revision);
-      setDirty(hasChanges());
-      setNotice('プ譜を保存しました。');
+      setDirty(false);
+      if (append) setEditor(structuredClone(next));
+      setNotice(append ? `第${result.current_phase}局面を追加しました。` : 'プ譜を保存しました。');
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -93,6 +118,36 @@ export default function PufuEditor({
           ローカルデモ：AI未接続のため、問い・課題・メモリから定型の案を作成しています。
         </p>
       )}
+      <div className="pufu-phase-bar">
+        <div className="pufu-phase-navigation" role="group" aria-label="局面の切り替え">
+          <button
+            className="icon-button pufu-phase-previous"
+            aria-label="前の局面へ"
+            disabled={busy || editor.number === 1}
+            onClick={() => selectPhase(editor.number - 1)}
+          >
+            <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+          </button>
+          <span className="pufu-phase-number" aria-live="polite">
+            第{editor.number}局面
+          </span>
+          <button
+            className="icon-button pufu-phase-next"
+            aria-label="次の局面へ"
+            disabled={busy || editor.number === currentPhase}
+            onClick={() => selectPhase(editor.number + 1)}
+          >
+            <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+          </button>
+        </div>
+        <span className="field-hint">
+          {preview
+            ? '過去の局面・閲覧のみ'
+            : feedback
+              ? '振り返りでコメントを書いてみましょう。'
+              : 'プ譜を編集しましょう。'}
+        </span>
+      </div>
       <div className="pufu-toolbar">
         <span className="field-hint" role="status">
           {dirty ? '未保存の変更があります' : '保存済み'}
@@ -101,12 +156,12 @@ export default function PufuEditor({
           <button
             className="button secondary"
             onClick={() => {
-              const json = getScoreJson(pufu.id);
+              const json = getScoreJson(editorKey);
               if (!json) return;
               const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
               const link = document.createElement('a');
               link.href = url;
-              link.download = `${pufu.id}.json`;
+              link.download = `${pufu.id}-phase-${editor.number}.json`;
               link.click();
               URL.revokeObjectURL(url);
             }}
@@ -114,16 +169,29 @@ export default function PufuEditor({
             <Download size={16} aria-hidden="true" />
             JSON
           </button>
-          <button className="button primary" disabled={busy} onClick={save}>
-            {busy ? (
-              <LoaderCircle className="spin" size={17} aria-hidden="true" />
-            ) : (
-              <Save size={17} aria-hidden="true" />
-            )}
-            {busy ? '保存中…' : '保存'}
-          </button>
+          {!preview && (
+            <button className="button secondary" disabled={busy} onClick={() => save(true)}>
+              <Plus size={17} aria-hidden="true" />
+              局面を追加
+            </button>
+          )}
+          {!preview && (
+            <button className="button primary" disabled={busy} onClick={() => save()}>
+              {busy ? (
+                <LoaderCircle className="spin" size={17} aria-hidden="true" />
+              ) : (
+                <Save size={17} aria-hidden="true" />
+              )}
+              {busy ? '保存中…' : '保存'}
+            </button>
+          )}
         </div>
       </div>
+      {!preview && (
+        <p className="field-hint pufu-phase-help">
+          奇数局面は編集、偶数局面はフィードバックです。局面を追加すると、現在の内容を保存して次の局面へ引き継ぎます。
+        </p>
+      )}
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -135,15 +203,17 @@ export default function PufuEditor({
           {notice}
         </p>
       )}
-      <div className="pufu-editor-shell">
+      <div className="pufu-editor-shell" inert={busy} aria-busy={busy}>
         <div className="pufu-editor-root">
           <ProjectScore
-            uniqueKey={pufu.id}
-            initScore={pufu.score!}
+            key={editorKey}
+            uniqueKey={editorKey}
+            initScore={editor.score}
             lang="ja"
             mobile={mobile}
             textSize="base"
-            feedback
+            feedback={feedback}
+            preview={preview}
             border={!mobile}
           />
         </div>

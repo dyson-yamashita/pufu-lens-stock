@@ -294,6 +294,226 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     expect((await get(id)).revision).toBe(2);
   });
 
+  it('第1局面から編集内容とコメントを引き継ぎ、過去の局面を保持する', async () => {
+    const id = await make();
+    await run(id);
+    const initial = await get(id);
+    expect(initial.current_phase).toBe(1);
+    expect(initial.phases).toMatchObject([{ number: 1, score: initial.score }]);
+    const first = structuredClone(initial.score!);
+    first.winCondition.text = '編集した勝利条件';
+    const added = await app.request(`/api/v1/pufus/${id}/phases`, {
+      method: 'POST',
+      body: { revision: 1, phase: 1, score: first },
+    });
+    expect(added.status).toBe(201);
+    expect(await added.json()).toMatchObject({ revision: 2, current_phase: 2 });
+    const second = structuredClone(first);
+    second.winCondition.comment = { color: 'red', text: '達成の確認方法を具体化する。' };
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}`, {
+          method: 'PATCH',
+          body: { revision: 2, phase: 2, score: second },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}/phases`, {
+          method: 'POST',
+          body: { revision: 3, phase: 2, score: second },
+        })
+      ).status,
+    ).toBe(201);
+    const third = structuredClone(second);
+    third.winCondition.text = 'フィードバックを受けて修正した勝利条件';
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}`, {
+          method: 'PATCH',
+          body: { revision: 4, phase: 3, score: third },
+        })
+      ).status,
+    ).toBe(200);
+    const saved = await get(id);
+    expect(saved.current_phase).toBe(3);
+    expect(saved.score).toEqual(third);
+    expect(saved.phases.map((phase) => [phase.number, phase.score])).toEqual([
+      [1, first],
+      [2, second],
+      [3, third],
+    ]);
+    expect(
+      (await app.env.DB.prepare('SELECT generated_json FROM pufu_scores WHERE id = ?')
+        .bind(id)
+        .first())!.generated_json,
+    ).toBe(JSON.stringify(initial.score));
+    const readonly = await app.request(`/api/v1/pufus/${id}`, {
+      method: 'PATCH',
+      body: { revision: 5, phase: 1, score: third },
+    });
+    expect(readonly.status).toBe(409);
+    expect((await get(id)).revision).toBe(5);
+    await app.request('/api/v1/stocks/stock', { method: 'DELETE' });
+    expect(
+      (await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id = ?').bind(id).all())
+        .results,
+    ).toEqual([]);
+  });
+
+  it('局面の同時追加と古い更新番号の再送で重複や上書きを起こさない', async () => {
+    const id = await make();
+    await run(id);
+    const { score } = await get(id);
+    const candidates = ['先に保存された案', 'もう一方の画面の案'].map((text) => ({
+      ...structuredClone(score!),
+      winCondition: { ...score!.winCondition, text },
+    }));
+    const add = (candidate = candidates[0]) =>
+      app.request(`/api/v1/pufus/${id}/phases`, {
+        method: 'POST',
+        body: { revision: 1, phase: 1, score: candidate },
+      });
+    const responses = await Promise.all(candidates.map(add));
+    expect(responses.map((r) => r.status).sort()).toEqual([201, 409]);
+    const winner = candidates[responses.findIndex((response) => response.status === 201)];
+    expect((await add()).status).toBe(409);
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}`, {
+          method: 'PATCH',
+          body: { revision: 1, phase: 1, score },
+        })
+      ).status,
+    ).toBe(409);
+    const saved = await get(id);
+    expect(saved.revision).toBe(2);
+    expect(saved.phases.map((p) => p.number)).toEqual([1, 2]);
+    expect(saved.score).toEqual(winner);
+    expect(saved.phases.map((p) => p.score)).toEqual([winner, winner]);
+  });
+
+  it('他ユーザー・未認証・別サイト・不正入力・生成待ちの局面追加を拒否する', async () => {
+    const id = await make();
+    const add = (body: unknown, options = {}) =>
+      app.request(`/api/v1/pufus/${id}/phases`, {
+        method: 'POST',
+        body,
+        ...options,
+      });
+    expect((await add({ revision: 1, phase: 1, score: {} })).status).toBe(400);
+    await run(id);
+    const { score } = await get(id);
+    const input = { revision: 1, phase: 1, score };
+    expect((await add(input, { user: 'bob' })).status).toBe(404);
+    expect((await add(input, { user: 'nobody' })).status).toBe(401);
+    expect((await add(input, { headers: { Origin: 'https://attacker.example' } })).status).toBe(
+      403,
+    );
+    expect((await add({ ...input, phase: 0 })).status).toBe(400);
+    expect((await add({ ...input, phase: 2 })).status).toBe(409);
+    const pending = await make();
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${pending}/phases`, {
+          method: 'POST',
+          body: input,
+        })
+      ).status,
+    ).toBe(409);
+    expect((await get(id)).phases).toHaveLength(1);
+    expect((await get(pending)).phases).toEqual([]);
+  });
+
+  it('16KiBを超える局面を追加でき、256KiB超過は変更せず拒否する', async () => {
+    const id = await make();
+    await run(id);
+    const { score } = await get(id);
+    for (const node of Object.values(score!.elements)) node.text = '記'.repeat(1200);
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}/phases`, {
+          method: 'POST',
+          body: { revision: 1, phase: 1, score },
+        })
+      ).status,
+    ).toBe(201);
+    const purpose = score!.purposes[0];
+    score!.purposes = Array.from({ length: 12 }, () => ({
+      ...purpose,
+      uuid: crypto.randomUUID(),
+      measures: Array.from({ length: 12 }, () => ({
+        ...purpose.measures[0],
+        uuid: crypto.randomUUID(),
+        text: '記'.repeat(1200),
+      })),
+    }));
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}/phases`, {
+          method: 'POST',
+          body: { revision: 2, phase: 2, score },
+        })
+      ).status,
+    ).toBe(413);
+    expect((await get(id)).phases).toHaveLength(2);
+    expect((await get(id)).revision).toBe(2);
+  });
+
+  it('既存の編集済みプ譜を第1局面へ移行する', async () => {
+    await app.dispose();
+    app = await testApp({
+      migrations: [
+        '0001_initial.sql',
+        '0002_unlimited_tokens.sql',
+        '0003_user_profiles.sql',
+        '0004_stock_questions.sql',
+        '0005_question_sources.sql',
+        '0006_user_questions.sql',
+        '0007_text_stocks.sql',
+        '0008_question_favorites.sql',
+        '0009_pufu_scores.sql',
+        '0010_stock_favorites.sql',
+        '0011_question_deletion.sql',
+      ],
+    });
+    // 旧スキーマの関連データと生成・編集済みJSONを用意する。
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO articles (id,user_id,canonical_url,source_url,title,domain,status) VALUES ('old-article','alice','https://example.com/old','https://example.com/old','既存記事','example.com','ready')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO stocks (id,user_id,project_id,article_id) VALUES ('old-stock','alice','alice-project','old-article')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO questions (id,stock_id,source,text,status) VALUES ('old-question','old-stock','user','既存の問い','ready')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO pufu_scores (id,user_id,question_id,task,input_json,generated_json,score_json,editor_version,status,revision) VALUES ('old-pufu','alice','old-question','既存課題','{}','{\"original\":true}','{\"edited\":true}','0.9.14','ready',7)",
+      ),
+    ]);
+    await applyMigration(app.env.DB, '0012_pufu_phases.sql');
+    const migrated = await get('old-pufu');
+    expect(migrated.revision).toBe(7);
+    expect(migrated.current_phase).toBe(1);
+    expect(migrated.phases).toMatchObject([{ number: 1, score: { edited: true } }]);
+    expect(migrated.score).toEqual({ edited: true });
+    // DB移行からWorker更新までの間に、旧Workerが編集・生成を完了する場合も保護する。
+    await app.env.DB.prepare(
+      "UPDATE pufu_scores SET score_json = '{\"lateEdit\":true}', revision = 8 WHERE id = 'old-pufu'",
+    ).run();
+    const lateEdit = await get('old-pufu');
+    expect(lateEdit.revision).toBe(8);
+    expect(lateEdit.phases).toMatchObject([{ number: 1, score: { lateEdit: true } }]);
+    await app.env.DB.prepare(
+      "INSERT INTO pufu_scores (id,user_id,question_id,task,input_json,score_json,editor_version,status) VALUES ('late-pufu','alice','old-question','課題','{}','{\"generated\":true}','0.9.14','ready')",
+    ).run();
+    expect((await get('late-pufu')).phases).toMatchObject([
+      { number: 1, score: { generated: true } },
+    ]);
+  });
+
   it('不正JSONを失敗として記録し、再試行しても古い世代の結果は保存しない', async () => {
     const id = await make();
     app.env.AI = { run: vi.fn(async () => ({ response: '{invalid' })) };
@@ -331,6 +551,11 @@ describe('問いからプ譜を生成・編集・保存する', () => {
       ],
       [`/api/v1/pufus/${id}`, 'GET', undefined],
       [`/api/v1/pufus/${id}`, 'PATCH', { revision: 1, score: (await get(id)).score }],
+      [
+        `/api/v1/pufus/${id}/phases`,
+        'POST',
+        { revision: 1, phase: 1, score: (await get(id)).score },
+      ],
       [`/api/v1/pufus/${id}/retry`, 'POST', {}],
     ] as const) {
       expect((await app.request(path, { method, body, user: 'bob' })).status).toBe(404);
@@ -349,6 +574,15 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     expect(
       (await app.request(`/api/v1/pufus/${id}`, { headers: { Authorization: `Bearer ${token}` } }))
         .status,
+    ).toBe(403);
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${id}/phases`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: { revision: 1, phase: 1, score: (await get(id)).score },
+        })
+      ).status,
     ).toBe(403);
   });
 
