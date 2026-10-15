@@ -67,7 +67,8 @@ export default function QuestionForm({
     event.preventDefault();
     setError('');
     const result = userQuestionSchema.safeParse({
-      stock_id: stockId,
+      project_id: project,
+      stock_id: stockId || null,
       text,
       request_id: key.current,
     });
@@ -75,7 +76,7 @@ export default function QuestionForm({
       setError(result.error.issues[0].message);
       document
         .getElementById(
-          result.error.issues[0].path[0] === 'stock_id' ? 'question-stock' : 'question-text',
+          result.error.issues[0].path[0] === 'project_id' ? 'question-project' : 'question-text',
         )
         ?.focus();
       return;
@@ -93,7 +94,7 @@ export default function QuestionForm({
   return (
     <form onSubmit={submit}>
       <p className="form-intro">
-        ストックした記事について、自分で考えた問いを追加します。「ユーザー」のラベルで保存されます。
+        プロジェクトに自分の問いを保存します。関連するストックは任意で選べます。
       </p>
       <label htmlFor="question-project">プロジェクト</label>
       <select
@@ -134,10 +135,11 @@ export default function QuestionForm({
           key.current = createRequestId();
         }}
       />
-      <label htmlFor="question-stock">紐づけるストック</label>
+      <label htmlFor="question-stock">
+        紐づけるストック<span className="optional">任意</span>
+      </label>
       <select
         id="question-stock"
-        required
         value={stockId}
         disabled={busy || loading || !stocks.length}
         onChange={(event) => {
@@ -146,7 +148,7 @@ export default function QuestionForm({
         }}
       >
         <option value="">
-          {loading ? 'ストックを読み込んでいます…' : 'ストックを選択してください'}
+          {loading ? 'ストックを読み込んでいます…' : 'ストックを紐づけずに保存'}
         </option>
         {stocks.map((stock) => (
           <option key={stock.id} value={stock.id}>
@@ -158,7 +160,7 @@ export default function QuestionForm({
         <p className="profile-hint">
           {query
             ? '該当するストックがありません。検索語を変えてください。'
-            : '問いを紐づけるストックがありません。先に記事を保存してください。'}
+            : 'ストックがなくても問いを保存できます。'}
         </p>
       )}
       {total > 24 && (
@@ -202,7 +204,7 @@ export default function QuestionForm({
         required
         rows={4}
         maxLength={500}
-        placeholder="この記事を読んで、考えたいことは？"
+        placeholder="考えたいこと、確かめたいことは？"
         aria-describedby="question-text-hint"
         onChange={(event) => {
           setText(event.target.value);
@@ -220,7 +222,7 @@ export default function QuestionForm({
         </p>
       )}
       <div className="form-actions">
-        <button className="button primary" disabled={busy || loading || !stockId}>
+        <button className="button primary" disabled={busy || !project}>
           {busy ? (
             <LoaderCircle className="spin" size={17} aria-hidden="true" />
           ) : (

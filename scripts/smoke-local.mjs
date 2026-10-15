@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 
 const base = 'http://localhost:5173';
+// 同時実行枠が埋まると最短60秒待機するため、再試行と完了までの時間も含める。
+const processingTimeoutMs = 180000;
 const config = await (await fetch(`${base}/api/config`)).json();
 assert.equal(config.demo, true, 'この検証はローカルデモ専用です。');
 const login = await fetch(`${base}/api/auth/demo`, { method: 'POST', headers: { Origin: base } });
@@ -32,7 +34,7 @@ try {
     project_id: projectId,
     url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/202',
   });
-  const deadline = Date.now() + 60000;
+  const deadline = Date.now() + processingTimeoutMs;
   let verified = false;
   while (Date.now() < deadline) {
     const { stocks } = await request(`/stocks?project_id=${projectId}`);
@@ -71,7 +73,7 @@ try {
         project_id: projectId,
         text: inputText,
       });
-      const textDeadline = Date.now() + 60000;
+      const textDeadline = Date.now() + processingTimeoutMs;
       let textVerified = false;
       while (Date.now() < textDeadline) {
         const { stock: textDetail } = await request(`/stocks/${textStock.id}`);
@@ -97,7 +99,7 @@ try {
         }
         await setTimeout(1000);
       }
-      assert.ok(textVerified, '60秒以内にテキストの処理が完了しませんでした。');
+      assert.ok(textVerified, '180秒以内にテキストの処理が完了しませんでした。');
       console.log(
         'ローカルWorkersでURLとテキストの保存・R2保存・要約・AIの問い・ユーザーの問いの追加・根拠付きメモリ更新を確認しました。',
       );
@@ -106,7 +108,7 @@ try {
     }
     await setTimeout(1000);
   }
-  assert.ok(verified, '60秒以内に非同期処理が完了しませんでした。');
+  assert.ok(verified, '180秒以内に非同期処理が完了しませんでした。');
 } finally {
   if (projectId) await request(`/projects/${projectId}`, 'DELETE');
 }

@@ -7,6 +7,7 @@ import { isDemoOrigin } from './env';
 import { hash, randomSecret } from './security';
 import { now, dirtyMemoryStatements, queueQuestionStatements } from './db';
 import { seedDemo } from './demo';
+import { consumeMcpLogin } from './mcp-login';
 
 const cookieName = (c: Context<AppEnv>) =>
   new URL(c.env.APP_URL).protocol === 'https:' ? '__Host-stock_session' : 'stock_session';
@@ -104,7 +105,7 @@ export async function googleCallback(c: Context<AppEnv>) {
       .bind(payload.sub)
       .first<{ id: string }>();
     await createSession(c, user!.id);
-    return c.redirect('/');
+    return c.redirect((await consumeMcpLogin(c)) ?? '/');
   } catch {
     return c.redirect('/?login_error=1');
   }

@@ -187,6 +187,8 @@ describe('問いの削除', () => {
     expect((await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all()).results).toEqual(
       beforeQuestions,
     );
+    await applyMigration(app.env.DB, '0012_pufu_phases.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
     expect((await remove('manual-first')).status).toBe(200);
   });
 });

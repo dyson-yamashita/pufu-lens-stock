@@ -1539,6 +1539,27 @@ p {
 .shortcuts-page {
   max-width: 970px;
 }
+.mcp-endpoint-field {
+  margin: 24px 0;
+}
+.mcp-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mcp-endpoint input {
+  flex: 1;
+  min-width: 0;
+}
+.mcp-connections {
+  padding: 0;
+  list-style: none;
+}
+.mcp-connections p {
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
 .connect-guide {
   background: #fff;
   border: 1px solid var(--border);

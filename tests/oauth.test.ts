@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp } from './helpers';
 import type { User } from '../shared/domain';
+import { hash } from '../server/security';
 
 const base64url = (value: Uint8Array) => Buffer.from(value).toString('base64url');
 describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', () => {
@@ -129,6 +130,30 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
     expect(
       response.headers.getSetCookie().some((cookie) => cookie.startsWith('stock_session=')),
     ).toBe(false);
+  });
+  it('MCPから開始したログインは保存した認可要求に一度だけ復帰する', async () => {
+    const target = `${app.env.APP_URL}/oauth/authorize?client_id=registered-client&state=mcp-state`;
+    await app.env.OAUTH_KV!.put(`mcp-login:${await hash('browser-bound-handle')}`, target, {
+      expirationTtl: 600,
+    });
+    const { state, headers } = await login();
+    const response = await app.request(`/api/auth/google/callback?state=${state}&code=test-code`, {
+      headers: { Cookie: `${headers.Cookie}; stock_mcp_login=browser-bound-handle` },
+    });
+    expect(response.headers.get('Location')).toBe(
+      '/oauth/authorize?client_id=registered-client&state=mcp-state',
+    );
+    expect(
+      await app.env.OAUTH_KV!.get(`mcp-login:${await hash('browser-bound-handle')}`),
+    ).toBeNull();
+    const next = await login();
+    const expired = await app.request(
+      `/api/auth/google/callback?state=${next.state}&code=test-code`,
+      {
+        headers: { Cookie: `${next.headers.Cookie}; stock_mcp_login=browser-bound-handle` },
+      },
+    );
+    expect(expired.headers.get('Location')).toBe('/');
   });
   it('編集した名前と自己紹介をGoogle再ログインで上書きしない', async () => {
     expect(

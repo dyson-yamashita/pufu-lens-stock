@@ -7,5 +7,9 @@ export default defineConfig({
       'cloudflare:workers': fileURLToPath(new URL('./tests/workflow-runtime.ts', import.meta.url)),
     },
   },
-  test: { include: ['tests/**/*.test.ts'], testTimeout: 20000 },
+  test: {
+    include: ['tests/**/*.test.ts'],
+    testTimeout: 20000,
+    server: { deps: { inline: ['@cloudflare/workers-oauth-provider'] } },
+  },
 });

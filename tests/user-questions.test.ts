@@ -199,7 +199,19 @@ describe('ユーザーの問いの追加', () => {
     });
     await applyMigration(app.env.DB, '0007_text_stocks.sql');
     await applyMigration(app.env.DB, '0011_question_deletion.sql');
-    const id = await save();
+    // 移行前のスキーマに旧形式のデータを用意する。
+    const id = 'legacy-stock';
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO articles (id,user_id,canonical_url,source_url,title,domain,status) VALUES ('legacy-article','alice','https://example.com/legacy','https://example.com/legacy','既存記事','example.com','queued')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO stocks (id,user_id,project_id,article_id) VALUES ('legacy-stock','alice','alice-project','legacy-article')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO questions (id,stock_id,status) VALUES ('question-legacy-stock','legacy-stock','queued')",
+      ),
+    ]);
     const before = await app.env.DB.prepare('SELECT * FROM questions').all();
     await applyMigration(app.env.DB, '0006_user_questions.sql');
     expect((await app.env.DB.prepare('SELECT * FROM questions').all()).results).toEqual(
@@ -207,6 +219,8 @@ describe('ユーザーの問いの追加', () => {
     );
     await applyMigration(app.env.DB, '0008_question_favorites.sql');
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
+    await applyMigration(app.env.DB, '0012_pufu_phases.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
     expect((await add(id, '追加1？')).status).toBe(201);
     expect((await add(id, '追加2？')).status).toBe(201);
     await expect(

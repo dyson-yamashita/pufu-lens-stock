@@ -5,3 +5,5 @@ export class WorkflowEntrypoint<Env> {
     public env: Env,
   ) {}
 }
+
+export class WorkerEntrypoint<Env> extends WorkflowEntrypoint<Env> {}

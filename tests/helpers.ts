@@ -26,9 +26,11 @@ export async function testApp(
     compatibilityDate: '2026-07-30',
     d1Databases: { DB: 'test-database' },
     r2Buckets: { CONTENT: 'test-content' },
+    kvNamespaces: { OAUTH_KV: 'test-oauth' },
   });
   const DB = (await runtime.getD1Database('DB')) as unknown as D1Database;
   const CONTENT = (await runtime.getR2Bucket('CONTENT')) as unknown as R2Bucket;
+  const OAUTH_KV = (await runtime.getKVNamespace('OAUTH_KV')) as unknown as KVNamespace;
   const migrations =
     options.migrations ??
     (await readdir(new URL('../migrations/', import.meta.url)))
@@ -47,6 +49,7 @@ export async function testApp(
   const env: Env = {
     DB,
     CONTENT,
+    OAUTH_KV,
     APP_URL: 'http://localhost:5173',
     LOCAL_DEMO_ENABLED: 'false',
     AI_MODEL: '@cf/qwen/qwen3-30b-a3b-fp8',

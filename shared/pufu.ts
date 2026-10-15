@@ -81,7 +81,7 @@ export type PufuContext = {
   question: { id: string; text: string; source: 'ai' | 'user' };
   task: string;
   project: { id: string; name: string; description: string };
-  stock: { id: string; title: string; summary: ArticleSummary | null; note: string };
+  stock: { id: string; title: string; summary: ArticleSummary | null; note: string } | null;
   userMemory: MemorySnapshot | null;
   projectMemory: MemorySnapshot | null;
 };
