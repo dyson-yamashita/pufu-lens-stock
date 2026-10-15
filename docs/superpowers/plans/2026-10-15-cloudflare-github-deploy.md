@@ -6,7 +6,7 @@
 
 **Architecture:** PRとmain更新で秘密情報を持たない検証ジョブを実行する。元リポジトリのmain更新に限り、別ジョブで本番ビルド後、Secretsを渡したステップでD1マイグレーションとWorker更新を順に実行する。
 
-**Tech Stack:** GitHub Actions、Node.js 22、既存のnpm・Vitest・Wrangler・Cloudflare Vite plugin。
+**Tech Stack:** GitHub Actions、Node.js 22、pnpm 10.34.7、既存のVitest・Wrangler・Cloudflare Vite plugin。
 
 **Spec:** 今回の依頼「mainにPRマージするとCloudflareでデプロイ。公開リポジトリでも秘密情報を露出しない」。
 
@@ -28,12 +28,12 @@
 
 ## Task 1: ワークフローと運用手順
 
-**Files:** Create `.github/workflows/cloudflare-deploy.yml`, `.npmrc`; Modify `README.md`, `package-lock.json`.
+**Files:** Create `.github/workflows/cloudflare-deploy.yml`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`; Modify `package.json`, `README.md`, `.gitignore`, `.prettierignore`; Remove `package-lock.json`.
 
 - [x] SHA固定の公式checkout/setup-node、contents:read、イベント・リポジトリ条件、concurrency、タイムアウトを定義する。
 - [x] 検証とproduction用ビルドを行い、最後のステップにだけSecretsを渡してマイグレーション後にデプロイする。
 - [x] READMEに初回Secrets登録・必要権限・main制限・マイグレーション運用・初回実行条件を記載する。
-- [x] actionlint、npm run check、npm audit、本番ビルド、Wrangler dry-runを実行する。秘密未設定時の停止とローカルDBマイグレーションも確認する。
+- [x] actionlint、pnpm run check、pnpm audit、本番ビルド、Wrangler dry-runを実行する。秘密未設定時の停止とローカルDBマイグレーションも確認する。
 - [x] 差分と秘密情報の混入を確認し、レビュー後にコミット・push・PR作成する。本番は変更しない。
 
-**CIで発見した修正:** ローカルのユーザー設定が `legacy-peer-deps=true` であったため、既存lockfileに `react-sortablejs` のpeer依存 `@types/sortablejs` が欠落していた。通常のpeer解決でCIの失敗をローカルでも再現し、lockfileに不足分を補完する。`.npmrc` でpeer解決を有効に固定し、ユーザー設定による再発を防ぐ。既存パッケージのバージョン更新は行わない。
+**pnpm移行:** pnpm 10.34.7をpackageManagerで固定し、既存Node.js/Corepackと互換性を保つ。既存lockfileをimportし、overrideをpnpm-workspace.yamlへ移す。CLIで使うWranglerは既存と同じ4.151.0を直接の開発依存にする。pnpm設定とlockfileの不整合、frozenインストール、脆弱性対策の維持を検証する。
