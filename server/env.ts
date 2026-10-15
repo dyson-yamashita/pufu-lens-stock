@@ -42,6 +42,7 @@ export type Job = {
   revision: number;
   status: string;
 };
+export type JobStateGuard = { status?: string; attempts?: number; updatedAt?: string };
 export const isDemo = (env: Env) =>
   env.LOCAL_DEMO_ENABLED === 'true' &&
   ['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.APP_URL).hostname);

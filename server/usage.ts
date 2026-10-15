@@ -1,5 +1,6 @@
 import type { Env, Job } from './env';
 import type { WorkflowStep } from 'cloudflare:workers';
+import { MAX_ATTEMPTS, deferJob } from './job-retries';
 
 const windowStart = () => new Date(Date.now() - 86400000).toISOString();
 const setting = (value: string | undefined, fallback: number) =>
@@ -11,9 +12,9 @@ export const limits = (env: Env) => ({
   memory: setting(env.AI_MEMORY_DAILY_LIMIT, 48),
   article: setting(env.AI_ARTICLE_DAILY_LIMIT, 200),
   question: setting(env.AI_QUESTION_DAILY_LIMIT, 200),
-  concurrent: setting(env.AI_CONCURRENT_JOBS, 2),
+  concurrent: setting(env.AI_CONCURRENT_JOBS, 5),
   calls: setting(env.AI_CALL_DAILY_LIMIT, 500),
-  concurrentCalls: setting(env.AI_CONCURRENT_CALLS, 2),
+  concurrentCalls: setting(env.AI_CONCURRENT_CALLS, 5),
 });
 const category = (kind: Job['kind']) => (kind.endsWith('_memory') ? 'memory' : kind);
 export function reserveOperation(env: Env, job: Pick<Job, 'id' | 'user_id' | 'kind'>) {
@@ -122,7 +123,10 @@ export async function aiStep<T extends object>(
 ): Promise<T> {
   const outcome = await step.do(
     name,
-    { retries: { limit: 2, delay: '5 seconds', backoff: 'exponential' }, timeout: '3 minutes' },
+    {
+      retries: { limit: MAX_ATTEMPTS - 1, delay: '5 seconds', backoff: 'constant' },
+      timeout: '3 minutes',
+    },
     async () => {
       if (!(await admitJob(env, job)))
         return { retryAt: await retryAt(env, job.user_id, job.kind), json: null };
@@ -141,7 +145,7 @@ export async function aiStep<T extends object>(
       if (previous?.status === 'done') return { retryAt: null, json: previous.result_json! };
       if (
         previous &&
-        (previous.retry_blocked || previous.attempts >= 3) &&
+        (previous.retry_blocked || previous.attempts >= MAX_ATTEMPTS) &&
         previous.status === 'failed'
       )
         throw new Error('AI処理の再試行上限に達しました。');
@@ -153,7 +157,7 @@ export async function aiStep<T extends object>(
         WHERE (SELECT COUNT(*) FROM ai_attempts WHERE user_id=? AND created_at>?) < ?
         AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running') < ?
         ON CONFLICT(id) DO UPDATE SET status='running', attempts=ai_calls.attempts+1, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE ai_calls.status='failed' AND ai_calls.attempts<3 AND ai_calls.retry_blocked=0`,
+        WHERE ai_calls.status='failed' AND ai_calls.attempts<? AND ai_calls.retry_blocked=0`,
         ).bind(
           id,
           job.id,
@@ -163,6 +167,7 @@ export async function aiStep<T extends object>(
           config.calls,
           job.user_id,
           config.concurrentCalls,
+          MAX_ATTEMPTS,
         ),
         env.DB.prepare('INSERT INTO ai_attempts (id,user_id) SELECT ?,? WHERE changes()=1').bind(
           attempt,
@@ -196,28 +201,22 @@ export async function aiStep<T extends object>(
 export async function deferLimitedJob(env: Env, job: Job, error: unknown): Promise<boolean> {
   if (!(error instanceof AiLimitError)) return false;
   const message = `${error.message} 再試行目安: ${error.retryAt}`;
-  const statements = [
-    env.DB.prepare(
-      "UPDATE processing_jobs SET status='pending',error=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND status!='done'",
-    ).bind(message, job.id),
-    env.DB.prepare(
-      'INSERT INTO ai_deferrals (job_id,retry_at) VALUES (?,?) ON CONFLICT(job_id) DO UPDATE SET retry_at=excluded.retry_at',
-    ).bind(job.id, error.retryAt),
-  ];
+  if (!(await deferJob(env, job, error.retryAt, message))) return true;
+  const statements: D1PreparedStatement[] = [];
   if (job.kind === 'pufu' || job.kind === 'article') {
     const table = job.kind === 'pufu' ? 'pufu_scores' : 'articles';
     statements.push(
       env.DB.prepare(
-        `UPDATE ${table} SET status='queued',error=? WHERE id=? AND user_id=? AND generation=? AND status!='ready'`,
-      ).bind(message, job.target_id, job.user_id, job.revision),
+        `UPDATE ${table} SET status='queued',error=? WHERE id=? AND user_id=? AND generation=? AND status!='ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='pending')`,
+      ).bind(message, job.target_id, job.user_id, job.revision, job.id),
     );
   } else if (job.kind === 'question') {
     statements.push(
       env.DB.prepare(
-        "UPDATE questions SET status='queued',error=? WHERE stock_id=? AND generation=? AND source='ai' AND status!='ready'",
-      ).bind(message, job.target_id, job.revision),
+        "UPDATE questions SET status='queued',error=? WHERE stock_id=? AND generation=? AND source='ai' AND status!='ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='pending')",
+      ).bind(message, job.target_id, job.revision, job.id),
     );
   }
-  await env.DB.batch(statements);
+  if (statements.length) await env.DB.batch(statements);
   return true;
 }
