@@ -254,7 +254,7 @@ describe('永続利用量制限', () => {
       ).first<{ n: number }>())!.n,
     ).toBe(1);
   });
-  it('同じAIステップの失敗再試行も課金枠に記録し、3回で停止する', async () => {
+  it('同じAIステップの失敗再試行も課金枠に記録し、10回で停止する', async () => {
     app.env.AI = { run: vi.fn() };
     const job: Job = {
       id: 'retry-job',
@@ -270,17 +270,17 @@ describe('永続利用量制限', () => {
     const operation = vi.fn(async () => {
       throw new Error('確認用の失敗');
     });
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 10; i++)
       await expect(aiStep(app.env, job, mockStep(), 'generate', operation)).rejects.toThrow(
         '確認用の失敗',
       );
     await expect(aiStep(app.env, job, mockStep(), 'generate', operation)).rejects.toThrow(
       '再試行上限',
     );
-    expect(operation).toHaveBeenCalledTimes(3);
+    expect(operation).toHaveBeenCalledTimes(10);
     expect(
       (await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first<{ n: number }>())!.n,
-    ).toBe(3);
+    ).toBe(10);
   });
   it('0012からの移行で既存保存履歴を引き継ぎ、削除後も上限を維持する', async () => {
     await app.dispose();
@@ -297,6 +297,7 @@ describe('永続利用量制限', () => {
       ),
     ]);
     await applyMigration(app.env.DB, '0013_usage_limits.sql');
+    await applyMigration(app.env.DB, '0014_job_retry_limits.sql');
     expect(
       await app.env.DB.prepare(
         "SELECT stock_id,user_id FROM stock_usage WHERE stock_id='old-stock'",
