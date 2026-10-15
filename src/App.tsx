@@ -52,7 +52,7 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
-import MemoryRebuildForm, { MemoryCoverageSummary } from './MemoryRebuildForm';
+import MemoryRebuildForm from './MemoryRebuildForm';
 
 type MemoryResponse = {
   memory: Memory | null;
@@ -1406,7 +1406,6 @@ function MemoryPanel({
       <p className="memory-caption">
         {project ? 'このプロジェクトで集めた記事から。' : 'すべてのプロジェクトに共通する関心。'}
       </p>
-      {response.coverage && <MemoryCoverageSummary coverage={response.coverage} />}
       {response.coverage?.full_rebuild_reason && (
         <p className="update-note">{response.coverage.full_rebuild_reason}</p>
       )}
