@@ -10,3 +10,40 @@ dist/
 coverage/
 *.log
 .DS_Store
+
+# Credentials and private keys
+secrets/
+.secrets/
+credentials.json
+*-credentials.json
+client_secret*.json
+*service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local data, backups, and captured network traffic
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.db
+*.db-*
+backups/
+dumps/
+*.har
+*.trace
+*.log.*
+
+# Local tooling and test artifacts
+.cache/
+.vite/
+.superpowers/
+.idea/
+.vscode/
+*.tsbuildinfo
+playwright-report/
+test-results/
