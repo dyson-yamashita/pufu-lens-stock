@@ -1026,21 +1026,6 @@ p {
 .memory-page {
   max-width: 900px;
 }
-.memory-select {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 24px;
-}
-.memory-select label {
-  margin: 0;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-.memory-select select {
-  max-width: 330px;
-  font-size: 12px;
-}
 .full-memory {
   padding: 30px 36px;
 }
@@ -2296,14 +2281,6 @@ p {
   }
   .memory-controls {
     flex-wrap: wrap;
-  }
-  .memory-select {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 9px;
-  }
-  .memory-select select {
-    max-width: 100%;
   }
   .dialog {
     padding: 22px;
