@@ -38,6 +38,8 @@ export async function testApp(
   // 旧スキーマからの移行テストでも、現在のAPIの利用制限基盤は有効にする。
   if (options.usageMigration !== false && !migrations.includes('0013_usage_limits.sql'))
     await applyMigration(DB, '0013_usage_limits.sql');
+  if (options.usageMigration !== false && !migrations.includes('0014_job_retry_limits.sql'))
+    await applyMigration(DB, '0014_job_retry_limits.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),

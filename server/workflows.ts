@@ -34,8 +34,14 @@ const retry = {
   retries: { limit: 2, delay: '5 seconds' as const, backoff: 'exponential' as const },
   timeout: '3 minutes' as const,
 };
-async function jobById(env: Env, id: string) {
-  return env.DB.prepare('SELECT * FROM processing_jobs WHERE id = ?').bind(id).first<Job>();
+async function claimJob(env: Env, id: string) {
+  // 起動応答を失っても、開始済みのジョブはdispatcherの待機・失敗処理から保護する。
+  // 停止が先に確定した場合は、遅れて起動したWorkflowをここで拒否する。
+  return env.DB.prepare(
+    "UPDATE processing_jobs SET status='running',updated_at=? WHERE id=? AND status NOT IN ('done','failed') RETURNING *",
+  )
+    .bind(now(), id)
+    .first<Job>();
 }
 async function done(env: Env, id: string) {
   await env.DB.prepare(
@@ -112,7 +118,7 @@ async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
 }
 export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
   async run(event: WorkflowEvent<{ jobId: string }>, step: WorkflowStep) {
-    const job = await step.do('load-job', () => jobById(this.env, event.payload.jobId));
+    const job = await step.do('load-job', () => claimJob(this.env, event.payload.jobId));
     if (!job || job.status === 'done') return;
     if (job.kind === 'pufu') return runPufu(this.env, job, step);
     if (job.kind === 'question') return runQuestion(this.env, job, step);
@@ -249,7 +255,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
 }
 export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
   async run(event: WorkflowEvent<{ jobId: string }>, step: WorkflowStep) {
-    const job = await step.do('load-job', () => jobById(this.env, event.payload.jobId));
+    const job = await step.do('load-job', () => claimJob(this.env, event.payload.jobId));
     if (!job || job.status === 'done') return;
     if (!isDemo(this.env)) await step.sleep('coalesce-saves', '30 seconds');
     try {

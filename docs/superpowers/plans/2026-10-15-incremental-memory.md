@@ -31,7 +31,7 @@
 
 **Files:**
 
-- Create: `migrations/0014_incremental_memory.sql`, `server/memory.ts`, `tests/memory-updates.test.ts`
+- Create: `migrations/0015_incremental_memory.sql`, `server/memory.ts`, `tests/memory-updates.test.ts`
 - Modify: `server/ai.ts`, `server/workflows.ts`, `server/db.ts`, `server/api.ts`, `server/env.ts`, `shared/domain.ts`, `tests/helpers.ts`
 
 **Interfaces:**

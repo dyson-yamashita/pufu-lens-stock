@@ -1,4 +1,4 @@
-import type { Env, Job } from './env';
+import type { Env, Job, JobStateGuard } from './env';
 
 export const now = () => new Date().toISOString();
 export function queueQuestionJobStatement(
@@ -22,32 +22,47 @@ export function queueQuestionStatements(
     queueQuestionJobStatement(env, stockId, articleId),
   ];
 }
-export function jobFailureStatements(env: Env, job: Job, message: string): D1PreparedStatement[] {
+export function jobFailureStatements(
+  env: Env,
+  job: Job,
+  message: string,
+  guard: JobStateGuard = {},
+): D1PreparedStatement[] {
   const statements = [
     env.DB.prepare(
-      "UPDATE processing_jobs SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND status != 'done'",
-    ).bind(message, now(), job.id),
+      "UPDATE processing_jobs SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND status != 'done' AND (? IS NULL OR status=?) AND (? IS NULL OR COALESCE((SELECT attempts FROM job_dispatch_attempts WHERE job_id=processing_jobs.id),0)=?) AND (? IS NULL OR updated_at=?)",
+    ).bind(
+      message,
+      now(),
+      job.id,
+      guard.status ?? null,
+      guard.status ?? null,
+      guard.attempts ?? null,
+      guard.attempts ?? null,
+      guard.updatedAt ?? null,
+      guard.updatedAt ?? null,
+    ),
   ];
   if (job.kind === 'article') {
     statements.push(
       env.DB.prepare(
-        "UPDATE articles SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready'",
-      ).bind(message, now(), job.target_id, job.user_id, job.revision),
+        "UPDATE articles SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')",
+      ).bind(message, now(), job.target_id, job.user_id, job.revision, job.id),
       env.DB.prepare(
-        "UPDATE questions SET status = 'failed', error = '記事の取得・要約が完了していません。記事の再取得をお試しください。', updated_at = ? WHERE source = 'ai' AND status = 'queued' AND stock_id IN (SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE a.id = ? AND s.user_id = ? AND a.generation = ? AND a.status = 'failed')",
-      ).bind(now(), job.target_id, job.user_id, job.revision),
+        "UPDATE questions SET status = 'failed', error = '記事の取得・要約が完了していません。記事の再取得をお試しください。', updated_at = ? WHERE source = 'ai' AND status = 'queued' AND stock_id IN (SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE a.id = ? AND s.user_id = ? AND a.generation = ? AND a.status = 'failed') AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')",
+      ).bind(now(), job.target_id, job.user_id, job.revision, job.id),
     );
   } else if (job.kind === 'pufu') {
     statements.push(
       env.DB.prepare(
-        "UPDATE pufu_scores SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready'",
-      ).bind(message, now(), job.target_id, job.user_id, job.revision),
+        "UPDATE pufu_scores SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')",
+      ).bind(message, now(), job.target_id, job.user_id, job.revision, job.id),
     );
   } else if (job.kind === 'question') {
     statements.push(
       env.DB.prepare(
-        "UPDATE questions SET status = 'failed', error = ?, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?)",
-      ).bind(message, now(), job.target_id, job.revision, job.user_id),
+        "UPDATE questions SET status = 'failed', error = ?, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?) AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')",
+      ).bind(message, now(), job.target_id, job.revision, job.user_id, job.id),
     );
   }
   return statements;
