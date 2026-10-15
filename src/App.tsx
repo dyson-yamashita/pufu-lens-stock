@@ -1015,23 +1015,6 @@ export default function App() {
             />
           ) : route.view === 'memory' ? (
             <div className="memory-page">
-              {!route.projectId && (
-                <div className="memory-select">
-                  <label htmlFor="memory-scope">メモリの対象</label>
-                  <select
-                    id="memory-scope"
-                    value=""
-                    onChange={(e) => navigate('memory', e.target.value || null)}
-                  >
-                    <option value="">あなたの全プロジェクト</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <MemoryPanel
                 response={memoryResponse}
                 project={selected}
