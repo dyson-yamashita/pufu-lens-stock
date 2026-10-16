@@ -1560,6 +1560,14 @@ p {
 .shortcuts-page {
   max-width: 970px;
 }
+.integration-heading {
+  margin: 32px 0 14px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.integration-heading:first-child {
+  margin-top: 0;
+}
 .mcp-endpoint-field {
   margin: 24px 0;
 }
@@ -1604,7 +1612,7 @@ p {
   color: var(--accent);
   flex-shrink: 0;
 }
-.guide-header h2 {
+.guide-header :is(h2, h3) {
   font-size: 18px;
   font-weight: 600;
 }
@@ -2280,7 +2288,7 @@ p {
   .connect-guide {
     padding: 23px;
   }
-  .guide-header h2 {
+  .guide-header :is(h2, h3) {
     font-size: 16px;
   }
   .section-head {
@@ -2350,7 +2358,7 @@ p {
     width: 38px;
     height: 38px;
   }
-  .guide-header h2 {
+  .guide-header :is(h2, h3) {
     font-size: 15px;
   }
   .setup-steps li {
