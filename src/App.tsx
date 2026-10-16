@@ -21,6 +21,7 @@ import {
   Copy,
   ExternalLink,
   Folder,
+  Globe,
   KeyRound,
   Layers,
   LoaderCircle,
@@ -1296,7 +1297,7 @@ function ArticleCard({
           {stock.source_type === 'text' ? (
             <BookOpen size={13} aria-hidden="true" />
           ) : (
-            stock.domain.replace('www.', '').slice(0, 1).toUpperCase()
+            <Globe size={13} aria-hidden="true" />
           )}
         </span>
         <span className="domain truncate">
