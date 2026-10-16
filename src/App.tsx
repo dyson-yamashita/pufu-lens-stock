@@ -1165,17 +1165,12 @@ export default function App() {
                 </div>
               </section>
               <aside className="memory-aside">
-                <MemoryPanel
-                  response={memoryResponse}
-                  project={selected}
-                  onEvidence={evidence}
-                  onExpand={() => navigate('memory', route.projectId)}
-                />
+                <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
                 <div className="shortcut-tip">
-                  <div className="tip-icon">
+                  <h3>
                     <ArrowDownToLine size={19} aria-hidden="true" />
-                  </div>
-                  <h3>見つけた、そのときに。</h3>
+                    見つけた、そのときに。
+                  </h3>
                   <p>
                     iPhoneの共有メニューから、
                     <br />
@@ -1376,14 +1371,12 @@ function MemoryPanel({
   response,
   project,
   full = false,
-  onExpand,
   onRebuild,
   onEvidence,
 }: {
   response: MemoryResponse;
   project?: Project;
   full?: boolean;
-  onExpand?: () => void;
   onRebuild?: () => void;
   onEvidence: (id: string) => Promise<void>;
 }) {
@@ -1482,11 +1475,6 @@ function MemoryPanel({
             ? `${memory.article_count}記事から生成 · ${date(memory.updated_at)}更新`
             : '記事の要約後に更新'}
         </span>
-        {onExpand && (
-          <button onClick={onExpand} aria-label="メモリの詳細を開く">
-            <ArrowUpRight size={18} />
-          </button>
-        )}
       </div>
       {full && (
         <>
