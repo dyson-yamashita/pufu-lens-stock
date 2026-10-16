@@ -18,7 +18,12 @@ export async function applyMigration(DB: D1Database, filename: string) {
 }
 
 export async function testApp(
-  options: { migrations?: string[]; quotaDefaults?: boolean; usageMigration?: boolean } = {},
+  options: {
+    migrations?: string[];
+    quotaDefaults?: boolean;
+    usageMigration?: boolean;
+    projectMemoryMigration?: boolean;
+  } = {},
 ) {
   const runtime = new Miniflare({
     modules: true,
@@ -42,6 +47,12 @@ export async function testApp(
     await applyMigration(DB, '0013_usage_limits.sql');
   if (options.usageMigration !== false && !migrations.includes('0014_job_retry_limits.sql'))
     await applyMigration(DB, '0014_job_retry_limits.sql');
+  // 旧スキーマの機能移行テストでも、現在のAPIが参照するプロジェクト設定を用意する。
+  if (
+    options.projectMemoryMigration !== false &&
+    !migrations.includes('0018_project_user_memory.sql')
+  )
+    await applyMigration(DB, '0018_project_user_memory.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),

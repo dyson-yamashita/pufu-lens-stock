@@ -43,6 +43,7 @@ import { queuePufuJob, initialPufuPhase } from './pufu';
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(1000).default(''),
+  include_in_user_memory: z.boolean().optional(),
 });
 const questionColumns =
   "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu";
@@ -196,11 +197,16 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/projects', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
+      "SELECT p.id, p.name, p.description, p.include_in_user_memory, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
     )
       .bind(user.id, tokenProjectId, tokenProjectId)
       .all();
-    return c.json({ projects: result.results });
+    return c.json({
+      projects: result.results.map((project) => ({
+        ...project,
+        include_in_user_memory: Boolean(project.include_in_user_memory),
+      })),
+    });
   });
   app.post('/api/v1/projects', async (c) => {
     const { user } = c.get('principal');
@@ -213,8 +219,8 @@ export function createApp(trustedPrincipal?: Principal) {
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'INSERT INTO projects (id, user_id, name, description) VALUES (?, ?, ?, ?)',
-      ).bind(id, user.id, data.name, data.description),
+        'INSERT INTO projects (id, user_id, name, description, include_in_user_memory) VALUES (?, ?, ?, ?, ?)',
+      ).bind(id, user.id, data.name, data.description, Number(data.include_in_user_memory ?? true)),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
@@ -227,8 +233,14 @@ export function createApp(trustedPrincipal?: Principal) {
     const data = await body(c, projectSchema);
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'UPDATE projects SET name = ?, description = ? WHERE id = ? AND user_id = ?',
-      ).bind(data.name, data.description, id, user.id),
+        'UPDATE projects SET name = ?, description = ?, include_in_user_memory = COALESCE(?, include_in_user_memory) WHERE id = ? AND user_id = ?',
+      ).bind(
+        data.name,
+        data.description,
+        data.include_in_user_memory === undefined ? null : Number(data.include_in_user_memory),
+        id,
+        user.id,
+      ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));

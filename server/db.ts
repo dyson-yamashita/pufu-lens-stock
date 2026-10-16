@@ -67,6 +67,21 @@ export function jobFailureStatements(
   }
   return statements;
 }
+function userMemoryStatements(
+  env: Env,
+  userId: string,
+  guard = '',
+  guardParams: string[] = [],
+): D1PreparedStatement[] {
+  return [
+    env.DB.prepare(
+      `UPDATE users SET memory_revision = memory_revision + 1 WHERE id = ?${guard}`,
+    ).bind(userId, ...guardParams),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision FROM users WHERE id = ?${guard}`,
+    ).bind(userId, ...guardParams),
+  ];
+}
 export function dirtyMemoryStatements(
   env: Env,
   userId: string,
@@ -87,14 +102,11 @@ export function dirtyMemoryStatements(
       ).bind(userId, ...projectIds, ...guardParams),
     );
   }
-  statements.push(
-    env.DB.prepare(
-      `UPDATE users SET memory_revision = memory_revision + 1 WHERE id = ?${guard}`,
-    ).bind(userId, ...guardParams),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision FROM users WHERE id = ?${guard}`,
-    ).bind(userId, ...guardParams),
-  );
+  // 保存と同じbatchで現在の設定を読み、重複保存やオフの保存先では更新しない。
+  const userGuard = createdStockId
+    ? ' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id=s.project_id WHERE s.id=? AND p.include_in_user_memory=1)'
+    : '';
+  statements.push(...userMemoryStatements(env, userId, userGuard, guardParams));
   return statements;
 }
 export function articleMemoryStatements(
@@ -110,7 +122,12 @@ export function articleMemoryStatements(
     env.DB.prepare(
       "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision FROM projects WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)",
     ).bind(userId, articleId),
-    ...dirtyMemoryStatements(env, userId, []),
+    ...userMemoryStatements(
+      env,
+      userId,
+      ' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id=s.project_id WHERE s.article_id=? AND p.include_in_user_memory=1)',
+      [articleId],
+    ),
   ];
 }
 export function memorySaveStatement(
