@@ -1410,7 +1410,7 @@ function MemoryPanel({
         )}
       </div>
       <p className="memory-caption">
-        {project ? 'このプロジェクトで集めた記事から。' : 'すべてのプロジェクトに共通する関心。'}
+        {project ? 'このプロジェクトで集めた記事から。' : '対象のプロジェクトを横断した関心。'}
       </p>
       {response.coverage?.full_rebuild_reason && (
         <p className="update-note">{response.coverage.full_rebuild_reason}</p>
@@ -1530,6 +1530,9 @@ function ProjectForm({
 }) {
   const [name, setName] = useState(project?.name ?? '');
   const [description, setDescription] = useState(project?.description ?? '');
+  const [includeInUserMemory, setIncludeInUserMemory] = useState(
+    project?.include_in_user_memory ?? true,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
@@ -1541,7 +1544,7 @@ function ProjectForm({
         try {
           const data = await send<{ id: string }>(
             project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
-            { name, description },
+            { name, description, include_in_user_memory: includeInUserMemory },
             project ? 'PATCH' : 'POST',
           );
           onDone(project?.id ?? data.id);
@@ -1585,6 +1588,26 @@ function ProjectForm({
 ・利用できる技術や道具、活動環境
 ・競合する活動、気になる問題`}
       />
+      {project && (
+        <details className="project-advanced">
+          <summary>詳細設定</summary>
+          <label className="project-memory-toggle" htmlFor="project-user-memory">
+            <span>ストック追加時にユーザーのメモリを更新する</span>
+            <input
+              id="project-user-memory"
+              type="checkbox"
+              role="switch"
+              checked={includeInUserMemory}
+              disabled={busy}
+              onChange={(event) => setIncludeInUserMemory(event.target.checked)}
+              aria-describedby="project-user-memory-hint"
+            />
+          </label>
+          <p id="project-user-memory-hint" className="project-memory-hint">
+            オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。保存すると、既存のメモリにも変更を反映します。
+          </p>
+        </details>
+      )}
       <FormError error={error} />
       <div className="form-actions">
         {project && (

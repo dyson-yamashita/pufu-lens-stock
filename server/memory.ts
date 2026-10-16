@@ -18,7 +18,7 @@ export async function loadMemoryInputs(
     `SELECT a.id, a.title, a.summary_json,
       json_group_array(json_object('projectId',p.id,'name',p.name,'note',s.note,'savedAt',s.created_at)) AS memberships
     FROM articles a JOIN stocks s ON s.article_id=a.id JOIN projects p ON p.id=s.project_id
-    WHERE a.user_id=? AND a.status='ready' AND (? IS NULL OR s.project_id=?)
+    WHERE a.user_id=? AND a.status='ready' AND ((? IS NULL AND p.include_in_user_memory=1) OR s.project_id=?)
     GROUP BY a.id ORDER BY a.id ${page === undefined ? '' : 'LIMIT 25 OFFSET ?'}`,
   )
     .bind(userId, projectId, projectId, ...(page === undefined ? [] : [page * 25]))
@@ -118,7 +118,7 @@ export async function memoryCoverage(
   const inputs = await loadMemoryInputs(env, userId, projectId);
   const state = await memoryUpdateState(env, userId, projectId, context, inputs);
   const row = await env.DB.prepare(
-    'SELECT COUNT(DISTINCT article_id) AS count FROM stocks WHERE user_id=? AND (? IS NULL OR project_id=?)',
+    'SELECT COUNT(DISTINCT s.article_id) AS count FROM stocks s JOIN projects p ON p.id=s.project_id WHERE s.user_id=? AND ((? IS NULL AND p.include_in_user_memory=1) OR s.project_id=?)',
   )
     .bind(userId, projectId, projectId)
     .first<{ count: number }>();

@@ -113,6 +113,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  include_in_user_memory: boolean;
   count: number;
   ready_count: number;
   created_at: string;
