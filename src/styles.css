@@ -371,6 +371,11 @@ p {
   min-width: 0;
 }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--page);
+  transition: transform 0.18s ease;
   min-height: 71px;
   display: flex;
   align-items: center;
@@ -378,6 +383,9 @@ p {
   gap: 8px;
   border-bottom: 1px solid var(--border);
   padding: 0 40px;
+}
+.topbar.is-hidden:not(:has(:focus-visible)) {
+  transform: translateY(-100%);
 }
 .breadcrumb {
   font-size: 12px;
