@@ -880,6 +880,18 @@ p {
   padding-top: 18px;
   border-top: 1px solid var(--border);
 }
+.knowledge-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin: 0;
+}
+.knowledge-text.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
 .evidence-links {
   display: flex;
   flex-wrap: wrap;

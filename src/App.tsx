@@ -55,6 +55,7 @@ import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
+import MemoryKnowledge from './MemoryKnowledge';
 
 type MemoryResponse = {
   memory: Memory | null;
@@ -1457,15 +1458,14 @@ function MemoryPanel({
             <ul>
               {data.knowledge.slice(0, full ? 12 : 2).map((item, index) => (
                 <li key={index}>
-                  {item.text}
-                  <div className="evidence-links">
+                  <MemoryKnowledge text={item.text}>
                     {item.articleIds.slice(0, full ? 5 : 1).map((id, sourceIndex) => (
                       <button key={id} onClick={() => void onEvidence(id)}>
                         根拠記事{item.articleIds.length > 1 ? ` ${sourceIndex + 1}` : ''}
                         <ArrowUpRight size={11} aria-hidden="true" />
                       </button>
                     ))}
-                  </div>
+                  </MemoryKnowledge>
                 </li>
               ))}
             </ul>

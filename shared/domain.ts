@@ -74,7 +74,11 @@ export const memorySchema = z.object({
   knowledge: z
     .array(
       z.object({
-        text: z.string().min(1).max(500),
+        text: z
+          .string()
+          .min(1)
+          .max(500)
+          .describe('1つの要点を1〜3文、全体で80〜120文字程度を目安に簡潔にまとめる。'),
         articleIds: z.array(z.string()).min(1).max(20),
       }),
     )
