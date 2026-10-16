@@ -765,7 +765,19 @@ export default function App() {
             </button>
           )}
           <nav className="breadcrumb" aria-label="パンくずリスト">
-            <a href="#">マイライブラリ</a> <span aria-hidden="true">/</span>{' '}
+            <a href="#">
+              {!sidebarOpen && (
+                <img
+                  className="brand-mark"
+                  src="/pufu-lens-logo.png"
+                  alt=""
+                  width="28"
+                  height="28"
+                />
+              )}
+              マイライブラリ
+            </a>{' '}
+            <span aria-hidden="true">/</span>{' '}
             {route.projectId && route.view !== 'stocks' && (
               <>
                 <a href={`#project/${encodeURIComponent(route.projectId)}`}>プロジェクト</a>{' '}
