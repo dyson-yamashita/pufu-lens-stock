@@ -70,7 +70,8 @@ export async function fetchXPost(env: Env, userId: string, id: string) {
   try {
     const response = await fetch(`https://api.x.com/2/tweets/${id}?tweet.fields=note_tweet`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      redirect: 'error',
+      // Workersはerror未対応。追跡せず、リダイレクトも下のHTTP判定で拒否する。
+      redirect: 'manual',
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) {
