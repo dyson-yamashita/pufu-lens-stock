@@ -188,9 +188,9 @@ describe('永続利用量制限', () => {
     const job = pending.results[0];
     await new MemoryWorkflow(app.ctx, app.env).run(mockEvent(job.id), mockStep());
     expect(run).toHaveBeenCalledOnce();
-    expect(JSON.parse(run.mock.calls[0][1]?.messages[1].content ?? '{}').context.description).toBe(
-      '最新の自己紹介',
-    );
+    expect(
+      JSON.parse(String(run.mock.calls[0][1]?.messages[1].content ?? '{}')).context.description,
+    ).toBe('最新の自己紹介');
     const result = await app.request('/api/v1/memory');
     expect(await result.json()).toMatchObject({
       pending: false,

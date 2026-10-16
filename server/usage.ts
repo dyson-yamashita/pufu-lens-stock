@@ -8,6 +8,7 @@ const setting = (value: string | undefined, fallback: number) =>
     ? Number(value)
     : fallback;
 export const limits = (env: Env) => ({
+  ocr: setting(env.AI_OCR_DAILY_LIMIT, 50),
   pufu: setting(env.AI_PUFU_DAILY_LIMIT, 20),
   memory: setting(env.AI_MEMORY_DAILY_LIMIT, 48),
   article: setting(env.AI_ARTICLE_DAILY_LIMIT, 200),
@@ -16,11 +17,14 @@ export const limits = (env: Env) => ({
   calls: setting(env.AI_CALL_DAILY_LIMIT, 500),
   concurrentCalls: setting(env.AI_CONCURRENT_CALLS, 5),
 });
-const category = (kind: Job['kind']) => (kind.endsWith('_memory') ? 'memory' : kind);
-export function reserveOperation(env: Env, job: Pick<Job, 'id' | 'user_id' | 'kind'>) {
+const category = (kind: Job['kind'] | 'ocr') => (kind.endsWith('_memory') ? 'memory' : kind);
+export function reserveOperation(
+  env: Env,
+  job: Pick<Job, 'id' | 'user_id'> & { kind: Job['kind'] | 'ocr' },
+) {
   const kind = category(job.kind);
   const config = limits(env);
-  const maximum = config[kind as 'pufu' | 'memory' | 'article' | 'question'];
+  const maximum = config[kind as 'pufu' | 'memory' | 'article' | 'question' | 'ocr'];
   return env.DB.prepare(
     `INSERT OR IGNORE INTO ai_operations (id,user_id,kind)
     SELECT ?,?,? WHERE
@@ -75,7 +79,7 @@ export class AiLimitError extends Error {
 export async function retryAt(
   env: Env,
   userId: string,
-  kind: Job['kind'] | 'stock' | 'calls',
+  kind: Job['kind'] | 'stock' | 'calls' | 'ocr',
 ): Promise<string> {
   if (kind === 'stock') {
     const row = await env.DB.prepare(
@@ -99,7 +103,8 @@ export async function retryAt(
   const counts: Record<string, number> = {};
   for (const row of rows.results) {
     if (row.kind !== 'calls' && row.kind !== category(kind as Job['kind'])) continue;
-    const maximum = config[row.kind as 'pufu' | 'memory' | 'article' | 'question' | 'calls'];
+    const maximum =
+      config[row.kind as 'pufu' | 'memory' | 'article' | 'question' | 'calls' | 'ocr'];
     counts[row.kind] = (counts[row.kind] ?? 0) + 1;
     if (counts[row.kind] === maximum) at = Math.max(at, Date.parse(row.created_at) + 86400001);
   }

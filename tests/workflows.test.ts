@@ -152,7 +152,7 @@ describe('本文取得から要約とメモリまで', () => {
     app.env.AI = { run };
     await runLatestMemory(testCase.kind, testCase.target);
     expect(run).toHaveBeenCalledOnce();
-    expect(JSON.parse(run.mock.calls[0][1].messages[1].content).context).toMatchObject({
+    expect(JSON.parse(String(run.mock.calls[0][1].messages[1].content)).context).toMatchObject({
       scope: testCase.scope,
       description: testCase.description,
     });

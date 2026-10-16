@@ -165,7 +165,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
     app.env.AI = { run: ai };
     await run(id);
     expect(ai).toHaveBeenCalledOnce();
-    const input = JSON.parse(ai.mock.calls[0][1].messages[1].content);
+    const input = JSON.parse(String(ai.mock.calls[0][1].messages[1].content));
     expect(input).toMatchObject({
       summary,
       note: '再試行の設計を考えたい。',

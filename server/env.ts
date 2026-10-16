@@ -13,11 +13,21 @@ export interface Env {
     run(
       model: string,
       input: {
-        messages: { role: string; content: string }[];
-        max_tokens: number;
+        messages: {
+          role: string;
+          content:
+            | string
+            | (
+                { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }
+              )[];
+        }[];
+        max_tokens?: number;
+        max_completion_tokens?: number;
         temperature: number;
+        chat_template_kwargs?: { enable_thinking: boolean };
         response_format?: { type: 'json_schema'; json_schema: unknown };
       },
+      options?: { signal?: AbortSignal },
     ): Promise<unknown>;
   };
   BROWSER?: Fetcher;
@@ -28,6 +38,8 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   AI_MODEL: string;
+  OCR_MODEL?: string;
+  AI_OCR_DAILY_LIMIT?: string;
   AI_PUFU_DAILY_LIMIT?: string;
   AI_MEMORY_DAILY_LIMIT?: string;
   AI_ARTICLE_DAILY_LIMIT?: string;

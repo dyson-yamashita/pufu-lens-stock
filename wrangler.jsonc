@@ -27,6 +27,8 @@
     "APP_URL": "http://localhost:5173",
     "LOCAL_DEMO_ENABLED": "false",
     "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "OCR_MODEL": "@cf/qwen/qwen3.8-27b",
+    "AI_OCR_DAILY_LIMIT": "50",
   },
   "env": {
     "production": {
@@ -36,6 +38,8 @@
         "APP_URL": "https://pufu-lens-stock.halu-works.workers.dev",
         "LOCAL_DEMO_ENABLED": "false",
         "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+        "OCR_MODEL": "@cf/qwen/qwen3.8-27b",
+        "AI_OCR_DAILY_LIMIT": "50",
       },
       "d1_databases": [
         {

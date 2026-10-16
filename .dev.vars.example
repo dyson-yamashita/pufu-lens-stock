@@ -4,6 +4,9 @@ LOCAL_DEMO_ENABLED=true
 # 変更後は開発サーバーを再起動してください。
 WORKERS_AI_ENABLED=false
 AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
+# OCRは画像対応モデルを別設定します。利用上限はユーザーごと直近24時間の回数です。
+OCR_MODEL=@cf/qwen/qwen3.8-27b
+AI_OCR_DAILY_LIMIT=50
 # 同じWi-Fiの端末で試す場合は、MacのプライベートIPv4アドレスを指定します。
 # LOCAL_DEMO_LAN_ORIGIN=http://192.168.1.10:5173
 # Googleログインも試す場合に設定します。空欄でもローカルデモは動作します。

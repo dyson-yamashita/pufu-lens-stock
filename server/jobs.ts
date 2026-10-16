@@ -66,6 +66,10 @@ export async function dispatchJobs(env: Env): Promise<void> {
   }
 }
 export async function scheduledMaintenance(env: Env): Promise<void> {
+  // OCRは90秒で中断する。Worker自体の終了で残った枠も10分後に回復し、自動再推論しない。
+  await env.DB.prepare(
+    "UPDATE ai_calls SET status='failed',retry_blocked=1 WHERE id LIKE 'ocr:%' AND status='running' AND updated_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-10 minutes')",
+  ).run();
   // 結果の保存前にWorkerが終了した場合、同じAIを再発行せず失敗として回復する。
   // 実行中Workflowの枠は期限だけで解放しない。終端状態も確認する。
   const uncertain = await env.DB.prepare(

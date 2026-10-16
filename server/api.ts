@@ -25,7 +25,8 @@ import {
 import { canonicalUrl, hash, randomSecret, validateUrl } from './security';
 import { dirtyMemoryStatements, now, orphanCleanupStatements, queueQuestionStatements } from './db';
 import { dispatchJobs } from './jobs';
-import { reserveOperation, assertOperation, retryAt } from './usage';
+import { reserveOperation, assertOperation, retryAt, AiLimitError } from './usage';
+import { recognizeImage, ocrImageByteLimit } from './ocr';
 import { memoryCoverage, memoryId } from './memory';
 import {
   createPufuSchema,
@@ -79,14 +80,16 @@ export function createApp(trustedPrincipal?: Principal) {
   app.use('/api/*', secureHeaders(), (c, next) =>
     bodyLimit({
       maxSize:
-        (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
-        (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
-          ? 262144
-          : c.req.method === 'POST' &&
-              (c.req.path === '/api/v1/stocks' ||
-                /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
-            ? 163840
-            : 16384,
+        c.req.method === 'POST' && c.req.path === '/api/v1/ocr'
+          ? ocrImageByteLimit
+          : (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
+              (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
+            ? 262144
+            : c.req.method === 'POST' &&
+                (c.req.path === '/api/v1/stocks' ||
+                  /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
+              ? 163840
+              : 16384,
       onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
     })(c, next),
   );
@@ -144,6 +147,18 @@ export function createApp(trustedPrincipal?: Principal) {
       available: /^[a-f0-9]{64}$/i.test(c.env.INTEGRATION_ENCRYPTION_KEY ?? ''),
       updated_at: row?.updated_at ?? null,
     });
+  });
+  app.post('/api/v1/ocr', async (c) => {
+    const operation = recognizeImage(
+      c.env,
+      c.get('principal').user.id,
+      c.req.header('Idempotency-Key') ?? '',
+      c.req.header('Content-Type') ?? '',
+      await c.req.arrayBuffer(),
+    );
+    // クライアント切断後も結果を記録し、同じ要求の再送で二重推論しない。
+    c.executionCtx.waitUntil(operation.catch(() => undefined));
+    return c.json(await operation);
   });
   app.put('/api/v1/integrations/x', async (c) => {
     const { token } = await body(
@@ -1077,6 +1092,13 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.notFound((c) => c.json({ error: '見つかりません。' }, 404));
   app.onError(async (error, c) => {
+    if (error instanceof AiLimitError) {
+      c.header(
+        'Retry-After',
+        String(Math.max(1, Math.ceil((Date.parse(error.retryAt) - Date.now()) / 1000))),
+      );
+      return c.json({ error: error.message, retry_at: error.retryAt }, 429);
+    }
     const errorDetail = `${error.message} ${error.cause instanceof Error ? error.cause.message : ''}`;
     const stockLimit = errorDetail.includes('stock_quota');
     if (stockLimit || errorDetail.includes('ai_quota')) {

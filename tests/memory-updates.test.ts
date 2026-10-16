@@ -1,31 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryWorkflow } from '../server/workflows';
 import { testApp, mockEvent, mockStep } from './helpers';
-import type { Job } from '../server/env';
+import type { Job, Env } from '../server/env';
 import type { MemoryData } from '../shared/domain';
 
 describe('メモリの差分更新と反映状況', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
   const inputs: Record<string, unknown>[] = [];
-  const run = vi.fn(async (_model: string, options: { messages: { content: string }[] }) => {
-    const input = JSON.parse(options.messages[1].content);
-    inputs.push(input);
-    const sources = input.addedSources ?? input.sources ?? [];
-    return {
-      response: {
-        interests: ['収集した知識'],
-        knowledge: [
-          ...(input.currentMemory?.knowledge ?? []),
-          ...(input.fragments?.flatMap((fragment: MemoryData) => fragment.knowledge) ?? []),
-          ...sources.map((source: { articleId: string; title: string }) => ({
-            text: source.title,
-            articleIds: [source.articleId],
-          })),
-        ].slice(-12),
-        questions: [],
-      },
-    };
-  });
+  const run = vi.fn(
+    async (_model: string, options: Parameters<NonNullable<Env['AI']>['run']>[1]) => {
+      const input = JSON.parse(String(options.messages[1].content));
+      inputs.push(input);
+      const sources = input.addedSources ?? input.sources ?? [];
+      return {
+        response: {
+          interests: ['収集した知識'],
+          knowledge: [
+            ...(input.currentMemory?.knowledge ?? []),
+            ...(input.fragments?.flatMap((fragment: MemoryData) => fragment.knowledge) ?? []),
+            ...sources.map((source: { articleId: string; title: string }) => ({
+              text: source.title,
+              articleIds: [source.articleId],
+            })),
+          ].slice(-12),
+          questions: [],
+        },
+      };
+    },
+  );
   beforeEach(async () => {
     app = await testApp();
     app.env.AI = { run };
