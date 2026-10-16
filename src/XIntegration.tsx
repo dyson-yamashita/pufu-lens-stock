@@ -18,8 +18,7 @@ export default function XIntegration() {
     return () => controller.abort();
   }, []);
   return (
-    <section className="connect-guide">
-      <h2>Xからストックする</h2>
+    <section className="connect-guide" aria-label="X API連携">
       <p>
         X公式APIのBearer
         Tokenを登録すると、投稿URLから本文を取得できます。APIの契約・閲覧権限・利用料金はX側の設定に従います。

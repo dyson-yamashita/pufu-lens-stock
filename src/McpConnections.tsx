@@ -35,14 +35,16 @@ export default function McpConnections() {
   }, []);
   return (
     <div className="shortcuts-page">
+      <h2 className="integration-heading">X API連携</h2>
       <XIntegration />
-      <section className="connect-guide">
+      <h2 className="integration-heading">MCP連携</h2>
+      <section className="connect-guide" aria-label="MCP連携">
         <div className="guide-header">
           <span className="connect-symbol">
             <Layers size={23} aria-hidden="true" />
           </span>
           <div>
-            <h2>ChatGPTなどからストック・問いを使う</h2>
+            <h3>ChatGPTなどからストック・問いを使う</h3>
             <p>会話の中で、保存した情報を活用できます。</p>
           </div>
         </div>
