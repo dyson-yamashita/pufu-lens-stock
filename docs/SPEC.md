@@ -385,7 +385,7 @@ APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflar
 
 実行順は次のとおりです。
 
-1. Secretsを持たない別ジョブで `pnpm install --frozen-lockfile`、`pnpm run check`、`pnpm audit --audit-level=high` を実行します。
+1. [共通の検証ワークフロー](../.github/workflows/validate.yml) をSecretsなしで実行します。型チェック・lint・整形チェック・ビルド・依存監査のジョブと、Vitestの全テストを2分割したジョブを並列実行します。各ジョブで `pnpm install --frozen-lockfile` を行い、テストの内容・分離設定・実行対象は変えません。片方のテストが失敗しても残りの分割は実行し、すべての検証が成功した場合だけ従来の必須チェック `Check` が成功します。失敗・キャンセル・スキップは成功扱いにしません。並列化により同時に使うランナー数は増えます。ローカルの `pnpm run check` は従来どおり全検証を実行します。
 2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。
 3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
