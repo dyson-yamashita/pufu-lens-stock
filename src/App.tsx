@@ -1674,7 +1674,6 @@ function SaveForm({
                 project_id: target,
                 url,
                 note,
-                ...(text.trim() ? { supplemental_text: text } : {}),
               }
             : { type: 'text', project_id: target, title, text, note };
         const parsed = stockInputSchema.safeParse(payload);
@@ -1750,23 +1749,7 @@ function SaveForm({
             autoFocus
             placeholder="https://…"
           />
-          <p className="profile-hint">
-            Xは「外部連携」でBearer
-            Tokenを登録すると取得できます。本文を補完するとAPIを使わず保存できます。
-          </p>
-          <label htmlFor="stock-supplement">本文の補完（任意・入力時はこの本文を使用）</label>
-          <textarea
-            id="stock-supplement"
-            value={text}
-            disabled={busy}
-            rows={4}
-            maxLength={stockTextLimit}
-            onChange={(event) => {
-              setText(event.target.value);
-              key.current = createRequestId();
-            }}
-            placeholder="投稿本文を貼り付けてください"
-          />
+          <p className="profile-hint">Xは「外部連携」でBearer Tokenを登録すると取得できます。</p>
         </>
       ) : (
         <>
