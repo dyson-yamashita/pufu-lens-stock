@@ -177,7 +177,7 @@ export function groundedMemory(data: MemoryData, allowedIds: Set<string>): Memor
   };
 }
 const memoryInstruction =
-  '保存した記事から、興味の傾向(interests)、記事から得た知識(knowledge)、未解決の論点(questions)を整理します。scopeがuserの場合、context.descriptionは本人が記入した自己紹介です。関心や活動の背景として参照し、自己紹介だけの内容を記事由来の知識として記録しません。保存したことは賛同や既知の証拠ではありません。頻度は入力の集計を使用してください。知識の各項目に入力に存在するarticleIdを根拠として付けます。相反する主張は出典とともに区別します。JSON形式: {"interests":["..."],"knowledge":[{"text":"...","articleIds":["..."]}],"questions":["..."]}。';
+  '保存した記事から、興味の傾向(interests)、記事から得た知識(knowledge)、未解決の論点(questions)を整理します。scopeがuserの場合、context.descriptionは本人が記入した自己紹介です。関心や活動の背景として参照し、自己紹介だけの内容を記事由来の知識として記録しません。保存したことは賛同や既知の証拠ではありません。頻度は入力の集計を使用してください。knowledgeの各textは1つの要点を1〜3文、全体で80〜120文字程度を目安に簡潔にまとめます。結論や学びを優先し、長い背景説明や事例の列挙を避けます。短くするために重要な条件・留保や相反する主張を落とさず、出典とともに区別します。知識の各項目に入力に存在するarticleIdを根拠として付けます。JSON形式: {"interests":["..."],"knowledge":[{"text":"...","articleIds":["..."]}],"questions":["..."]}。';
 
 export async function updateMemory(
   env: Env,
