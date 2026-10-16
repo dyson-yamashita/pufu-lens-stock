@@ -891,21 +891,10 @@ p {
   text-underline-offset: 3px;
 }
 .memory-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   border-top: 1px solid var(--border);
   padding: 12px 0;
   font-size: 8px;
   color: var(--muted);
-}
-.memory-foot button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  min-width: 30px;
 }
 .update-note {
   font-size: 10px;
@@ -945,14 +934,16 @@ p {
   padding: 21px;
   margin-top: 18px;
 }
-.tip-icon {
-  color: var(--accent);
-  margin-bottom: 12px;
-}
 .shortcut-tip h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   color: var(--accent);
   font-size: 12px;
   font-weight: 600;
+}
+.shortcut-tip h3 svg {
+  flex-shrink: 0;
 }
 .shortcut-tip p {
   font-size: 10px;

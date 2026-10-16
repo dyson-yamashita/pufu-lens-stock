@@ -40,7 +40,11 @@ describe('永続利用量制限', () => {
     return `question-${id}`;
   }
   it('削除しても保存履歴が減らず、並行保存・Cookie/Bearerで200件を共有する', async () => {
-    for (let i = 0; i < 199; i++) expect((await save(i)).status).toBe(202);
+    // 上限直前の履歴を一括で準備し、保存・削除と並行保存はAPIで検証する。
+    await app.env.DB.prepare(
+      "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<198) INSERT INTO stock_usage (stock_id,user_id) SELECT 'history-'||i,'alice' FROM n",
+    ).run();
+    expect((await save(0)).status).toBe(202);
     const existing = await app.env.DB.prepare('SELECT id FROM stocks LIMIT 1').first<{
       id: string;
     }>();
