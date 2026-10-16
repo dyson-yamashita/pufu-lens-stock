@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Miniflare } from 'miniflare';
 import { testApp, mockEvent, mockStep } from './helpers';
 import { encryptToken, xPostId, xToken } from '../server/x';
 import { fetchArticle } from '../server/ingest';
@@ -114,7 +115,7 @@ describe('X外部連携と本文補完', () => {
     expect(network).toHaveBeenCalledWith(
       'https://api.x.com/2/tweets/123?tweet.fields=note_tweet',
       expect.objectContaining({
-        redirect: 'error',
+        redirect: 'manual',
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       }),
     );
@@ -147,6 +148,33 @@ describe('X外部連携と本文補完', () => {
     await expect(fetchArticle(app.env, 'https://x.com/u/status/123', 'alice')).rejects.toThrow(
       '時間をおくか',
     );
+  });
+  it('Workersが受理できるリクエストでX本文を取得する', async () => {
+    await register();
+    const runtime = new Miniflare({
+      modules: true,
+      compatibilityDate: '2026-07-30',
+      script: `export default {
+        async fetch(request) {
+          const { url, redirect } = await request.json();
+          new Request(url, { redirect });
+          return Response.json({ data: { id: '123', text: '投稿本文' } });
+        }
+      };`,
+    });
+    try {
+      vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
+        runtime.dispatchFetch('http://localhost/', {
+          method: 'POST',
+          body: JSON.stringify({ url, redirect: init?.redirect }),
+        }),
+      );
+      await expect(
+        fetchArticle(app.env, 'https://x.com/person/status/123?s=12', 'alice'),
+      ).resolves.toEqual({ title: '投稿本文', text: '投稿本文' });
+    } finally {
+      await runtime.dispose();
+    }
   });
   it('URLを残して補完本文で保存・失敗後の再試行を行い、外部通信をしない', async () => {
     const response = await app.request('/api/v1/stocks', {
