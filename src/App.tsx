@@ -56,6 +56,7 @@ import PufuPage from './PufuPage';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
+import ScrollHeader from './ScrollHeader';
 
 type MemoryResponse = {
   memory: Memory | null;
@@ -745,7 +746,7 @@ export default function App() {
         </div>
       </aside>
       <main className="workspace" inert={isMobile && mobileNav}>
-        <div className="topbar">
+        <ScrollHeader autoHide={isMobile}>
           {!sidebarOpen && (
             <button
               id="sidebar-toggle"
@@ -816,7 +817,7 @@ export default function App() {
               </a>
             )}
           </nav>
-        </div>
+        </ScrollHeader>
         {config.demo && (
           <div className="demo-banner">
             <BookOpen size={15} aria-hidden="true" />
