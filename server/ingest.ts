@@ -1,5 +1,6 @@
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
+import { fetchXPost, xPostId } from './x';
 import type { Env } from './env';
 import { assertPublicDestination, validateUrl } from './security';
 
@@ -117,7 +118,13 @@ export async function fetchPublic(value: string): Promise<{ response: Response; 
 export async function fetchArticle(
   env: Env,
   value: string,
+  userId?: string,
 ): Promise<{ title: string; text: string }> {
+  const postId = xPostId(validateUrl(value).href);
+  if (postId) {
+    if (!userId) throw new Error('Xの取得にはユーザー認証が必要です。');
+    return fetchXPost(env, userId, postId);
+  }
   const { response, url } = await fetchPublic(value);
   if (!response.ok)
     throw new Error(

@@ -173,10 +173,9 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         if (!current) return null;
         if (article.source_type === 'text' && !article.input_text)
           throw new Error('保存したテキスト本文が見つかりません。');
-        const content =
-          article.source_type === 'text'
-            ? { title: article.title, text: article.input_text! }
-            : await fetchArticle(this.env, article.source_url);
+        const content = article.input_text
+          ? { title: article.title, text: article.input_text! }
+          : await fetchArticle(this.env, article.source_url, job.user_id);
         await this.env.CONTENT.put(key, content.text, {
           httpMetadata: { contentType: 'text/plain; charset=utf-8' },
         });

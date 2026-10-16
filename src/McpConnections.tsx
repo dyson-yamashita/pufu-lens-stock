@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Copy, Layers, LoaderCircle, Trash2 } from 'lucide-react';
+import XIntegration from './XIntegration';
 import { api } from './api';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
 
@@ -34,6 +35,7 @@ export default function McpConnections() {
   }, []);
   return (
     <div className="shortcuts-page">
+      <XIntegration />
       <section className="connect-guide">
         <div className="guide-header">
           <span className="connect-symbol">

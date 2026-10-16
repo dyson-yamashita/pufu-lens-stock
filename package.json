@@ -30,6 +30,8 @@
     "@goto-lab/pufu-editor": "0.9.14",
     "@modelcontextprotocol/server": "^2.3.1",
     "@mozilla/readability": "^0.6.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/jpn": "^1.0.0",
     "agents": "^0.28.1",
     "dom-to-image": "^2.6.0",
     "hono": "^4.13.13",
@@ -50,6 +52,7 @@
     "react-textarea-autosize": "^8.5.9",
     "short-uuid": "^4.2.2",
     "sortablejs": "^1.15.2",
+    "tesseract.js": "^6.0.1",
     "ts-interface-checker": "^1.0.2",
     "zod": "^4.0.0",
     "zustand": "^4.5.2"

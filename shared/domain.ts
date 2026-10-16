@@ -16,6 +16,7 @@ export const stockInputSchema = z.union([
     .object({
       ...stockFields,
       type: z.literal('url').default('url'),
+      supplemental_text: z.string().trim().min(1).max(stockTextLimit).optional(),
       url: z.string().trim().min(1, 'URLを入力してください。').max(4096),
     })
     .strict(),

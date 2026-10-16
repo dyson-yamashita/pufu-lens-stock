@@ -48,3 +48,6 @@ dumps/
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+# Generated from pinned OCR dependencies by Vite
+public/ocr/
