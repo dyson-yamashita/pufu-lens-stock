@@ -53,7 +53,6 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
-import ImageOcr from './ImageOcr';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 
@@ -1634,15 +1633,13 @@ function SaveForm({
   projectId: string | null;
   onDone: (duplicate: boolean) => void;
 }) {
-  const [type, setType] = useState<'url' | 'text' | 'image'>('url');
+  const [type, setType] = useState<'url' | 'text'>('url');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [target, setTarget] = useState(projectId ?? projects[0]?.id ?? '');
   const [note, setNote] = useState('');
-  const [saving, setBusy] = useState(false);
-  const [ocrBusy, setOcrBusy] = useState(false);
-  const busy = saving || ocrBusy;
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const key = useRef(createRequestId());
   return (
@@ -1687,7 +1684,7 @@ function SaveForm({
       }}
     >
       <p className="form-intro">
-        URL・テキスト・画像の読み取り結果を保存すると、要約と問いを生成し、メモリを自動で更新します。
+        URL・テキストを保存すると、要約と問いを生成し、メモリを自動で更新します。
       </p>
       <fieldset className="stock-source-picker" disabled={busy}>
         <legend>種別</legend>
@@ -1696,7 +1693,6 @@ function SaveForm({
             [
               ['url', 'URL'],
               ['text', 'テキスト'],
-              ['image', '画像OCR'],
             ] as const
           ).map(([value, label]) => (
             <label key={value} className={type === value ? 'selected' : ''}>
@@ -1749,29 +1745,11 @@ function SaveForm({
               setText(event.target.value);
               key.current = createRequestId();
             }}
-            placeholder="投稿本文を貼り付けるか、画像から読み取ってください"
-          />
-          <ImageOcr
-            disabled={busy}
-            onBusy={setOcrBusy}
-            onText={(value) => {
-              setText(value);
-              key.current = createRequestId();
-            }}
+            placeholder="投稿本文を貼り付けてください"
           />
         </>
       ) : (
         <>
-          {type === 'image' && (
-            <ImageOcr
-              disabled={busy}
-              onBusy={setOcrBusy}
-              onText={(value) => {
-                setText(value);
-                key.current = createRequestId();
-              }}
-            />
-          )}
           <label htmlFor="stock-text-title">
             タイトル <span className="optional">任意</span>
           </label>
@@ -1871,10 +1849,8 @@ function StockDetail({
   const [note, setNote] = useState(stock.note);
   const [projectId, setProjectId] = useState(stock.project_id);
   const [content, setContent] = useState<string | null | undefined>();
-  const [saving, setBusy] = useState(false);
-  const [ocrBusy, setOcrBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [supplemental, setSupplemental] = useState('');
-  const busy = saving || ocrBusy;
   const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
@@ -1980,7 +1956,6 @@ function StockDetail({
                     rows={5}
                     onChange={(event) => setSupplemental(event.target.value)}
                   />
-                  <ImageOcr disabled={busy} onBusy={setOcrBusy} onText={setSupplemental} />
                 </>
               )}
               <button

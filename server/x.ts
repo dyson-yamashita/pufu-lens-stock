@@ -47,7 +47,7 @@ export async function xToken(env: Env, userId: string): Promise<string> {
     .first<{ encrypted_token: string }>();
   if (!row)
     throw new Error(
-      '外部連携でXのBearer Tokenを登録するか、投稿本文・画像OCRで本文を補完してください。',
+      '外部連携でXのBearer Tokenを登録するか、投稿本文を貼り付けて補完してください。',
     );
   try {
     const [version, iv, cipher] = row.encrypted_token.split('.');
@@ -97,7 +97,7 @@ export async function fetchXPost(env: Env, userId: string, id: string) {
     // Fetch例外・API応答には秘密情報が含まれ得るため、既知の固定メッセージだけを公開する。
     if (error instanceof XFetchError) throw error;
     throw new Error(
-      'Xの本文を取得できませんでした。時間をおくか、投稿本文・画像OCRで本文を補完してください。',
+      'Xの本文を取得できませんでした。時間をおくか、投稿本文を貼り付けて補完してください。',
     );
   }
 }

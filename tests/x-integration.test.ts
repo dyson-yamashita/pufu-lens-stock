@@ -182,7 +182,7 @@ describe('X外部連携と本文補完', () => {
       body: {
         url: 'https://x.com/u/status/123',
         project_id: 'alice-project',
-        supplemental_text: '画像から読み取った投稿本文',
+        supplemental_text: '貼り付けた投稿本文',
       },
       headers: { 'Idempotency-Key': 'supplement' },
     });
@@ -210,7 +210,7 @@ describe('X外部連携と本文補完', () => {
     vi.stubGlobal('fetch', network);
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
     expect(await (await app.request(`/api/v1/stocks/${id}/content`)).json()).toEqual({
-      content: '画像から読み取った投稿本文',
+      content: '貼り付けた投稿本文',
     });
     await app.env.DB.prepare("UPDATE articles SET status='failed' WHERE id=?")
       .bind(job!.target_id)
