@@ -1318,16 +1318,20 @@ function ArticleCard({
           </span>
         )}
       </div>
-      <button className="article-title" onClick={onOpen}>
-        <h2>{stock.title}</h2>
-      </button>
-      <p className="article-summary">
-        {stock.summary?.overview ??
-          stock.error ??
-          (stock.source_type === 'text'
-            ? '保存したテキストから、要点をまとめています。'
-            : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。')}
-      </p>
+      <div className="article-content">
+        <h2 className="article-title">
+          <button type="button" className="article-open" onClick={onOpen}>
+            {stock.title}
+          </button>
+        </h2>
+        <p className="article-summary">
+          {stock.summary?.overview ??
+            stock.error ??
+            (stock.source_type === 'text'
+              ? '保存したテキストから、要点をまとめています。'
+              : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。')}
+        </p>
+      </div>
       <div className="article-tags">
         {stock.summary?.topics.slice(0, 3).map((topic) => (
           <span key={topic}>{topic}</span>
@@ -1340,13 +1344,6 @@ function ArticleCard({
         </span>
         <time dateTime={stock.created_at}>{date(stock.created_at)}</time>
         <StockFavoriteButton stock={stock} busy={favoriteBusy} onClick={onFavorite} />
-        <button
-          className="icon-button small"
-          aria-label={`${stock.title}の詳細を開く`}
-          onClick={onOpen}
-        >
-          <ArrowUpRight size={17} />
-        </button>
       </footer>
     </article>
   );
@@ -1804,7 +1801,7 @@ function SaveForm({
         ))}
       </select>
       <label htmlFor="stock-note">
-        ひとことメモ <span className="optional">任意</span>
+        メモ <span className="optional">任意</span>
       </label>
       <textarea
         id="stock-note"
@@ -2017,7 +2014,7 @@ function StockDetail({
             }
           }}
         >
-          <label htmlFor="edit-note">ひとことメモ</label>
+          <label htmlFor="edit-note">メモ</label>
           <textarea
             id="edit-note"
             value={note}
