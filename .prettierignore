@@ -3,3 +3,4 @@ dist
 .wrangler
 pnpm-lock.yaml
 .agents/skills/
+public/ocr/

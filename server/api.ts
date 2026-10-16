@@ -1,3 +1,4 @@
+import { encryptToken } from './x';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
@@ -81,7 +82,9 @@ export function createApp(trustedPrincipal?: Principal) {
         (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
         (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
           ? 262144
-          : c.req.method === 'POST' && c.req.path === '/api/v1/stocks'
+          : c.req.method === 'POST' &&
+              (c.req.path === '/api/v1/stocks' ||
+                /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
             ? 163840
             : 16384,
       onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
@@ -129,6 +132,45 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       throw new HTTPException(403, { message: 'このトークンには操作の権限がありません。' });
     await next();
+  });
+  app.get('/api/v1/integrations/x', async (c) => {
+    const row = await c.env.DB.prepare(
+      "SELECT updated_at FROM external_integrations WHERE user_id = ? AND provider = 'x'",
+    )
+      .bind(c.get('principal').user.id)
+      .first<{ updated_at: string }>();
+    return c.json({
+      configured: Boolean(row),
+      available: /^[a-f0-9]{64}$/i.test(c.env.INTEGRATION_ENCRYPTION_KEY ?? ''),
+      updated_at: row?.updated_at ?? null,
+    });
+  });
+  app.put('/api/v1/integrations/x', async (c) => {
+    const { token } = await body(
+      c,
+      z.strictObject({
+        token: z
+          .string()
+          .trim()
+          .min(10)
+          .max(4096)
+          .regex(/^[A-Za-z0-9%._~+/=-]+$/),
+      }),
+    );
+    const userId = c.get('principal').user.id;
+    const encrypted = await encryptToken(c.env, userId, token);
+    await c.env.DB.prepare(
+      "INSERT INTO external_integrations (user_id, provider, encrypted_token) VALUES (?, 'x', ?) ON CONFLICT(user_id, provider) DO UPDATE SET encrypted_token = excluded.encrypted_token, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+    )
+      .bind(userId, encrypted)
+      .run();
+    return c.json({ ok: true });
+  });
+  app.delete('/api/v1/integrations/x', async (c) => {
+    await c.env.DB.prepare("DELETE FROM external_integrations WHERE user_id = ? AND provider = 'x'")
+      .bind(c.get('principal').user.id)
+      .run();
+    return c.json({ ok: true });
   });
   app.get('/api/v1/me', (c) =>
     c.json({ user: c.get('principal').user, demo: isDemoOrigin(c.env, new URL(c.req.url).origin) }),
@@ -264,7 +306,14 @@ export function createApp(trustedPrincipal?: Principal) {
       data.type === 'text'
         ? `text:${await hash(JSON.stringify([title, data.text]))}`
         : canonicalUrl(data.url);
-    const requestHash = await hash(JSON.stringify([projectId, canonical, data.note]));
+    const requestHash = await hash(
+      JSON.stringify([
+        projectId,
+        canonical,
+        data.note,
+        ...(data.type === 'url' && data.supplemental_text ? [data.supplemental_text] : []),
+      ]),
+    );
     const key = c.req.header('Idempotency-Key');
     if (key && !/^[A-Za-z0-9_-]{1,128}$/.test(key))
       throw new HTTPException(400, {
@@ -314,7 +363,7 @@ export function createApp(trustedPrincipal?: Principal) {
         title,
         source?.hostname ?? '',
         data.type,
-        data.type === 'text' ? data.text : null,
+        data.type === 'text' ? data.text : (data.supplemental_text ?? null),
       ),
       c.env.DB.prepare(
         "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE user_id = ? AND canonical_url = ? AND status = 'queued'",
@@ -812,6 +861,23 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.post('/api/v1/stocks/:id/retry', async (c) => {
     const stock = await ownedStock(c);
+    const raw = await c.req.text();
+    const parsed = z
+      .strictObject({ supplemental_text: z.string().trim().min(1).max(20000).optional() })
+      .safeParse(
+        raw
+          ? (() => {
+              try {
+                return JSON.parse(raw);
+              } catch {
+                return null;
+              }
+            })()
+          : {},
+      );
+    if (!parsed.success)
+      throw new HTTPException(400, { message: '補完本文は1〜20,000文字で入力してください。' });
+    const supplemental = parsed.data.supplemental_text;
     if (stock.status !== 'failed')
       throw new HTTPException(409, { message: '取得に失敗した記事だけ再試行できます。' });
     const article = await c.env.DB.prepare('SELECT generation FROM articles WHERE id=?')
@@ -822,8 +888,14 @@ export function createApp(trustedPrincipal?: Principal) {
       reserveOperation(c.env, { id: jobId, user_id: c.get('principal').user.id, kind: 'article' }),
       assertOperation(c.env, jobId),
       c.env.DB.prepare(
-        "UPDATE articles SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed' AND generation = ?",
-      ).bind(now(), stock.article_id, c.get('principal').user.id, article!.generation),
+        "UPDATE articles SET status = 'queued', error = NULL, input_text = COALESCE(?, input_text), generation = generation + 1, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'failed' AND generation = ?",
+      ).bind(
+        supplemental ?? null,
+        now(),
+        stock.article_id,
+        c.get('principal').user.id,
+        article!.generation,
+      ),
       c.env.DB.prepare(
         "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE id = ? AND user_id = ? AND status = 'queued'",
       ).bind(stock.article_id, c.get('principal').user.id),

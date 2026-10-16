@@ -53,6 +53,7 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
+import ImageOcr from './ImageOcr';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 
@@ -592,7 +593,7 @@ export default function App() {
         : route.view === 'profile'
           ? 'プロフィール'
           : route.view === 'mcp'
-            ? 'MCP連携'
+            ? '外部連携'
             : route.view === 'shortcuts'
               ? 'いつもの共有メニューから。'
               : route.view === 'memory'
@@ -718,7 +719,7 @@ export default function App() {
             onClick={() => navigate('mcp')}
           >
             <Layers size={18} aria-hidden="true" />
-            MCP連携
+            外部連携
           </button>
           <div className="user-row">
             <div className="avatar">{user.name.slice(0, 1)}</div>
@@ -804,7 +805,7 @@ export default function App() {
                     : route.view === 'profile'
                       ? 'プロフィール'
                       : route.view === 'mcp'
-                        ? 'MCP連携'
+                        ? '外部連携'
                         : route.view === 'shortcuts'
                           ? 'ショートカット連携'
                           : route.view === 'memory'
@@ -1633,13 +1634,15 @@ function SaveForm({
   projectId: string | null;
   onDone: (duplicate: boolean) => void;
 }) {
-  const [type, setType] = useState<'url' | 'text'>('url');
+  const [type, setType] = useState<'url' | 'text' | 'image'>('url');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [target, setTarget] = useState(projectId ?? projects[0]?.id ?? '');
   const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [saving, setBusy] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const busy = saving || ocrBusy;
   const [error, setError] = useState('');
   const key = useRef(createRequestId());
   return (
@@ -1649,16 +1652,22 @@ function SaveForm({
         setError('');
         const payload =
           type === 'url'
-            ? { type, project_id: target, url, note }
-            : { type, project_id: target, title, text, note };
+            ? {
+                type,
+                project_id: target,
+                url,
+                note,
+                ...(text.trim() ? { supplemental_text: text } : {}),
+              }
+            : { type: 'text', project_id: target, title, text, note };
         const parsed = stockInputSchema.safeParse(payload);
         if (!parsed.success) {
           setError(
-            type === 'text' && !text.trim()
+            type !== 'url' && !text.trim()
               ? '本文を入力してください。'
               : '入力内容を確認してください。文字数または形式が正しくありません。',
           );
-          document.getElementById(type === 'text' ? 'stock-text' : 'stock-url')?.focus();
+          document.getElementById(type !== 'url' ? 'stock-text' : 'stock-url')?.focus();
           return;
         }
         setBusy(true);
@@ -1678,7 +1687,7 @@ function SaveForm({
       }}
     >
       <p className="form-intro">
-        URLやテキストを保存すると、要約と問いを生成し、メモリを自動で更新します。
+        URL・テキスト・画像の読み取り結果を保存すると、要約と問いを生成し、メモリを自動で更新します。
       </p>
       <fieldset className="stock-source-picker" disabled={busy}>
         <legend>種別</legend>
@@ -1687,6 +1696,7 @@ function SaveForm({
             [
               ['url', 'URL'],
               ['text', 'テキスト'],
+              ['image', '画像OCR'],
             ] as const
           ).map(([value, label]) => (
             <label key={value} className={type === value ? 'selected' : ''}>
@@ -1697,6 +1707,7 @@ function SaveForm({
                 checked={type === value}
                 onChange={() => {
                   setType(value);
+                  setText('');
                   setError('');
                   key.current = createRequestId();
                 }}
@@ -1708,7 +1719,7 @@ function SaveForm({
       </fieldset>
       {type === 'url' ? (
         <>
-          <label htmlFor="stock-url">記事のURL</label>
+          <label htmlFor="stock-url">記事・Xの投稿URL</label>
           <input
             id="stock-url"
             type="url"
@@ -1723,9 +1734,44 @@ function SaveForm({
             autoFocus
             placeholder="https://…"
           />
+          <p className="profile-hint">
+            Xは「外部連携」でBearer
+            Tokenを登録すると取得できます。本文を補完するとAPIを使わず保存できます。
+          </p>
+          <label htmlFor="stock-supplement">本文の補完（任意・入力時はこの本文を使用）</label>
+          <textarea
+            id="stock-supplement"
+            value={text}
+            disabled={busy}
+            rows={4}
+            maxLength={stockTextLimit}
+            onChange={(event) => {
+              setText(event.target.value);
+              key.current = createRequestId();
+            }}
+            placeholder="投稿本文を貼り付けるか、画像から読み取ってください"
+          />
+          <ImageOcr
+            disabled={busy}
+            onBusy={setOcrBusy}
+            onText={(value) => {
+              setText(value);
+              key.current = createRequestId();
+            }}
+          />
         </>
       ) : (
         <>
+          {type === 'image' && (
+            <ImageOcr
+              disabled={busy}
+              onBusy={setOcrBusy}
+              onText={(value) => {
+                setText(value);
+                key.current = createRequestId();
+              }}
+            />
+          )}
           <label htmlFor="stock-text-title">
             タイトル <span className="optional">任意</span>
           </label>
@@ -1825,7 +1871,10 @@ function StockDetail({
   const [note, setNote] = useState(stock.note);
   const [projectId, setProjectId] = useState(stock.project_id);
   const [content, setContent] = useState<string | null | undefined>();
-  const [busy, setBusy] = useState(false);
+  const [saving, setBusy] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [supplemental, setSupplemental] = useState('');
+  const busy = saving || ocrBusy;
   const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
@@ -1919,27 +1968,50 @@ function StockDetail({
             <p>{stock.error ?? '要約を生成しています。少しお待ちください。'}</p>
           )}
           {stock.status === 'failed' && (
-            <button
-              className="button secondary"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await send(`/api/v1/stocks/${stock.id}/retry`);
-                  onDone(
-                    stock.source_type === 'text'
-                      ? 'テキストの要約の再試行を受け付けました。'
-                      : '記事の再取得を受け付けました。',
-                  );
-                } catch (e) {
-                  setError((e as Error).message);
-                  setBusy(false);
-                }
-              }}
-            >
-              <RefreshCw size={16} aria-hidden="true" />
-              {stock.source_type === 'text' ? '要約を再試行' : '取得を再試行'}
-            </button>
+            <>
+              {stock.source_type === 'url' && (
+                <>
+                  <label htmlFor="retry-content">本文を補完して再試行（任意）</label>
+                  <textarea
+                    id="retry-content"
+                    value={supplemental}
+                    disabled={busy}
+                    maxLength={stockTextLimit}
+                    rows={5}
+                    onChange={(event) => setSupplemental(event.target.value)}
+                  />
+                  <ImageOcr disabled={busy} onBusy={setOcrBusy} onText={setSupplemental} />
+                </>
+              )}
+              <button
+                className="button secondary"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await send(
+                      `/api/v1/stocks/${stock.id}/retry`,
+                      supplemental.trim() ? { supplemental_text: supplemental } : {},
+                    );
+                    onDone(
+                      stock.source_type === 'text'
+                        ? 'テキストの要約の再試行を受け付けました。'
+                        : '記事の再取得を受け付けました。',
+                    );
+                  } catch (e) {
+                    setError((e as Error).message);
+                    setBusy(false);
+                  }
+                }}
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+                {supplemental.trim()
+                  ? 'この本文で再試行'
+                  : stock.source_type === 'text'
+                    ? '要約を再試行'
+                    : '取得を再試行'}
+              </button>
+            </>
           )}
         </div>
       ) : tab === 'question' ? (

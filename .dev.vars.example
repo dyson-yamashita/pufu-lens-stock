@@ -9,3 +9,7 @@ AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
 # Googleログインも試す場合に設定します。空欄でもローカルデモは動作します。
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+
+# X APIトークン保存用AES-256キー（64文字の16進数）。本番はWrangler Secretへ設定。
+# 値をGitへ追加しないでください。未設定時は登録を受け付けません。
+INTEGRATION_ENCRYPTION_KEY=
