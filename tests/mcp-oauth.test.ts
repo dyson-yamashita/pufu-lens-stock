@@ -17,6 +17,26 @@ describe('MCP OAuth連携', () => {
   const session = { Cookie: 'stock_session=alice-session', Origin: 'http://localhost:5173' };
   const scopes =
     'projects:read stocks:read stocks:write questions:read questions:write offline_access';
+  it('OAuth用KVが未設定でも本人に接続URLと未設定状態を返す', async () => {
+    delete app.env.OAUTH_KV;
+    const response = await request('/api/v1/mcp/connections', { headers: session });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      enabled: false,
+      url: 'http://localhost:5173/mcp',
+      connections: [],
+    });
+    expect((await request('/api/v1/mcp/connections')).status).toBe(401);
+    const { token } = (await (
+      await app.request('/api/v1/tokens', { method: 'POST', body: { name: 'Shortcut' } })
+    ).json()) as { token: string };
+    expect(
+      (await request('/api/v1/mcp/connections', { headers: { Authorization: `Bearer ${token}` } }))
+        .status,
+    ).toBe(403);
+    expect((await request('/mcp')).status).toBe(503);
+    expect((await request('/oauth/authorize')).status).toBe(503);
+  });
   async function authorize(
     options: {
       project?: string;
@@ -124,9 +144,13 @@ describe('MCP OAuth連携', () => {
     expect(((await refreshed.json()) as { access_token: string }).access_token).toBeTruthy();
     const listing = await request('/api/v1/mcp/connections', { headers: session });
     expect(listing.status).toBe(200);
-    const { connections } = (await listing.json()) as {
+    const { enabled, url, connections } = (await listing.json()) as {
+      enabled: boolean;
+      url: string;
       connections: { id: string; project_id: string }[];
     };
+    expect(enabled).toBe(true);
+    expect(url).toBe('http://localhost:5173/mcp');
     expect(connections).toHaveLength(1);
     expect(connections[0].project_id).toBe('alice-project');
     const id = connections[0].id;
