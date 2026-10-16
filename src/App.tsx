@@ -845,7 +845,7 @@ export default function App() {
                             : route.view === 'memory'
                               ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
                               : selected?.description ||
-                                '気になった記事と、そこから生まれたアイデアをひとつの場所に。'}
+                                '気になった記事と、生まれたアイデアをひとつの場所に。'}
                   </p>
                 )}
               </div>
