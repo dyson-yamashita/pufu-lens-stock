@@ -711,21 +711,38 @@ p {
   background: currentColor;
   border-radius: 50%;
 }
-.article-title {
-  min-height: 44px;
-  text-align: left;
-  padding: 0;
-  margin: 0 0 11px;
+.article-content {
+  position: relative;
+  margin-bottom: 15px;
 }
-.article-title h2 {
+.article-title {
+  margin-bottom: 11px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.8;
   color: var(--text);
   overflow-wrap: anywhere;
 }
-.article-title:hover h2 {
+.article-content:hover .article-title {
   color: var(--accent);
+}
+.article-open {
+  min-height: 44px;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+}
+.article-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.article-open:focus-visible {
+  outline: none;
+}
+.article-open:focus-visible::after {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 .article-summary {
   color: var(--muted);
@@ -735,7 +752,6 @@ p {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 15px;
 }
 .article-tags {
   display: flex;
@@ -773,11 +789,6 @@ p {
 .article-card time {
   white-space: nowrap;
   font-size: 8px;
-}
-.article-card footer .icon-button {
-  min-width: 27px;
-  min-height: 32px;
-  margin-right: -7px;
 }
 .library-footer {
   display: flex;
@@ -2023,7 +2034,7 @@ p {
   .page-body {
     padding-top: 45px;
   }
-  .article-title h2 {
+  .article-title {
     font-size: 16px;
   }
   .article-summary {
@@ -2063,7 +2074,7 @@ p {
   .article-grid {
     grid-template-columns: 1fr;
   }
-  .article-title h2 {
+  .article-title {
     font-size: 15px;
   }
   .article-summary {
@@ -2177,7 +2188,7 @@ p {
     font-size: 12px;
     flex-shrink: 0;
   }
-  .article-title h2 {
+  .article-title {
     font-size: 15px;
   }
   .article-summary {
@@ -2204,10 +2215,6 @@ p {
   .icon-button.small {
     min-height: 44px;
     min-width: 44px;
-  }
-  .article-card footer .icon-button {
-    min-height: 44px;
-    min-width: 36px;
   }
   .memory-head h2 {
     font-size: 14px;
@@ -2292,7 +2299,7 @@ p {
   .article-card {
     padding: 20px 20px 0;
   }
-  .article-title h2 {
+  .article-title {
     font-size: 16px;
   }
   .article-summary {
@@ -2393,7 +2400,7 @@ p {
 .search-field input {
   font-size: 12px;
 }
-.article-title h2 {
+.article-title {
   font-size: 16px;
 }
 .article-summary {
