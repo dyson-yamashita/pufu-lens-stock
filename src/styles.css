@@ -387,7 +387,14 @@ p {
 .breadcrumb a {
   display: inline-flex;
   align-items: center;
+  vertical-align: middle;
   min-height: 44px;
+}
+.breadcrumb .brand-mark {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  border-radius: 8px;
 }
 .breadcrumb a:hover,
 .breadcrumb a:focus-visible {
