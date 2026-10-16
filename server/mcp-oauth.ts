@@ -129,9 +129,9 @@ function authorizationApp() {
   };
   app.get('/api/v1/mcp/connections', async (c) =>
     c.json({
-      enabled: true,
+      enabled: !!c.env.OAUTH_PROVIDER,
       url: `${c.env.APP_URL}/mcp`,
-      connections: (await grants(c)).map(
+      connections: (c.env.OAUTH_PROVIDER ? await grants(c) : []).map(
         (grant) =>
           ({
             id: grant.id,
@@ -162,14 +162,14 @@ function authorizationApp() {
   });
   return app;
 }
-const oauthApp = authorizationApp();
+export const mcpAuthorizationApp = authorizationApp();
 
 export function createMcpOAuthProvider(
   env: Env,
   apiHandler: {
     fetch(request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response>;
   },
-  fallback: typeof oauthApp,
+  fallback: typeof mcpAuthorizationApp,
 ) {
   return new OAuthProvider<Env>({
     apiRoute: '/mcp',
@@ -191,7 +191,7 @@ export function createMcpOAuthProvider(
       fetch(request, bindings, ctx) {
         const path = new URL(request.url).pathname;
         return path.startsWith('/oauth/') || path.startsWith('/api/v1/mcp/')
-          ? oauthApp.fetch(request, bindings, ctx)
+          ? mcpAuthorizationApp.fetch(request, bindings, ctx)
           : fallback.fetch(request, bindings, ctx);
       },
     },

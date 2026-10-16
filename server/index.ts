@@ -1,7 +1,7 @@
 import { createApp } from './api';
 import { scheduledMaintenance } from './jobs';
 import type { Env } from './env';
-import { createMcpOAuthProvider } from './mcp-oauth';
+import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp-oauth';
 import { handleMcp } from './mcp';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -23,6 +23,8 @@ entry.use(
 );
 entry.all('*', (c) => {
   if (!c.env.OAUTH_KV) {
+    if (c.req.method === 'GET' && c.req.path === '/api/v1/mcp/connections')
+      return mcpAuthorizationApp.fetch(c.req.raw, c.env, c.executionCtx);
     if (
       c.req.path === '/mcp' ||
       c.req.path.startsWith('/oauth/') ||
