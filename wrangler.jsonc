@@ -46,6 +46,7 @@
         },
       ],
       "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
+      "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "1b28f17444c54123a47acb11701f0819" }],
       "ai": { "binding": "AI" },
       "browser": { "binding": "BROWSER" },
       "workflows": [

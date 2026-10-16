@@ -148,6 +148,8 @@ Web記事や入力テキストを保存し、要約・問い・メモリ・プ�
 
 ### 本番の準備
 
+このリポジトリの本番環境にはOAuth用KVを設定しています。別の環境へ構築する場合は、次の手順で専用のKVを作成・設定してください。
+
 1. OAuth用KVを作成します。
 
    ```sh
@@ -158,7 +160,7 @@ Web記事や入力テキストを保存し、要約・問い・メモリ・プ�
 3. `APP_URL` を末尾スラッシュなしの本番HTTPSオリジンに合わせます。既存GoogleログインのClient ID・Secretとコールバック設定を使います。MCPクライアントにGoogleのトークンやセッションCookieを渡す必要はありません。
 4. 新Workerの公開前に `pnpm run db:migrate:production` で `0016_independent_questions.sql` まで適用し、`pnpm run deploy` で公開します。0016は既存の問い・お気に入り・プ譜・局面を保全し、移行後も旧Workerのストック指定による問い生成を受け付けます。
 
-本変更では、KVの本番作成・本番DBの移行・デプロイは実施していません。`global_fetch_strictly_public` と、静的配信よりWorkerを先に処理する `/mcp`・`/oauth/*`・`/.well-known/*` のルートは設定済みです。
+`global_fetch_strictly_public` と、静的配信よりWorkerを先に処理する `/mcp`・`/oauth/*`・`/.well-known/*` のルートは設定済みです。通常の本番反映はmainの更新を受けたGitHub ActionsがDB移行とWorker公開を順に実行します。
 
 ### ChatGPTから接続
 
