@@ -1533,6 +1533,7 @@ function ProjectForm({
   const [includeInUserMemory, setIncludeInUserMemory] = useState(
     project?.include_in_user_memory ?? true,
   );
+  const userMemoryId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
@@ -1588,26 +1589,25 @@ function ProjectForm({
 ・利用できる技術や道具、活動環境
 ・競合する活動、気になる問題`}
       />
-      {project && (
-        <details className="project-advanced">
-          <summary>詳細設定</summary>
-          <label className="project-memory-toggle" htmlFor="project-user-memory">
-            <span>ストック追加時にユーザーのメモリを更新する</span>
-            <input
-              id="project-user-memory"
-              type="checkbox"
-              role="switch"
-              checked={includeInUserMemory}
-              disabled={busy}
-              onChange={(event) => setIncludeInUserMemory(event.target.checked)}
-              aria-describedby="project-user-memory-hint"
-            />
-          </label>
-          <p id="project-user-memory-hint" className="project-memory-hint">
-            オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。保存すると、既存のメモリにも変更を反映します。
-          </p>
-        </details>
-      )}
+      <details className="project-advanced">
+        <summary>詳細設定</summary>
+        <label className="project-memory-toggle" htmlFor={userMemoryId}>
+          <span>ストック追加時にユーザーのメモリを更新する</span>
+          <input
+            id={userMemoryId}
+            type="checkbox"
+            role="switch"
+            checked={includeInUserMemory}
+            disabled={busy}
+            onChange={(event) => setIncludeInUserMemory(event.target.checked)}
+            aria-describedby={`${userMemoryId}-hint`}
+          />
+        </label>
+        <p id={`${userMemoryId}-hint`} className="project-memory-hint">
+          オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。
+          {project && '保存すると、既存のメモリにも変更を反映します。'}
+        </p>
+      </details>
       <FormError error={error} />
       <div className="form-actions">
         {project && (
