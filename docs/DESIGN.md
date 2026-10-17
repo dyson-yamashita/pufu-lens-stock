@@ -277,3 +277,5 @@ URLは接続一覧の読み込み中や取得失敗時にも表示します。�
 | [src/SearchField.tsx](../src/SearchField.tsx)       | 一覧の検索・クリア                                               |
 | [src/QuestionForm.tsx](../src/QuestionForm.tsx)     | 問いの追加フォーム                                               |
 | [vite.config.ts](../vite.config.ts)                 | エディターCSSを `.pufu-editor-root` 配下へ限定する設定           |
+
+YouTube動画のストック詳細には、タイトルの下にサムネイル・チャンネル名と、タイトル・説明文のみが要約と問いの材料である案内を表示します。動画本編・字幕が未取得であることを明記し、元URLへのリンクは「元の動画を開く」、本文タブは「取得した動画情報」とします。説明文がない場合はタイトル・チャンネル名のみを取得したことを表示します。

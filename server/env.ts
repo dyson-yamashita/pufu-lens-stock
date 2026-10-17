@@ -25,6 +25,7 @@ export interface Env {
   LOCAL_DEMO_ENABLED?: string;
   LOCAL_DEMO_LAN_ORIGIN?: string;
   INTEGRATION_ENCRYPTION_KEY?: string;
+  YOUTUBE_API_KEY?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   AI_MODEL: string;
