@@ -7,6 +7,7 @@ import { z } from 'zod';
 import {
   profileSchema,
   stockInputSchema,
+  stockListOptionsSchema,
   userQuestionSchema,
   type Question,
   type Stock,
@@ -262,6 +263,16 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/stocks', async (c) => {
     const { user } = c.get('principal');
+    const options = stockListOptionsSchema.safeParse({
+      limit: c.req.query('limit') === undefined ? undefined : Number(c.req.query('limit')),
+      sort_by: c.req.query('sort_by'),
+      order: c.req.query('order'),
+      detail: c.req.query('detail'),
+    });
+    if (!options.success)
+      throw new HTTPException(400, { message: '取得件数・並び順・表示形式を確認してください。' });
+    const { limit, sort_by, order, detail } = options.data;
+    const direction = order === 'asc' ? 'ASC' : 'DESC';
     const projectId = c.req.query('project_id') || null;
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
@@ -288,15 +299,34 @@ export function createApp(trustedPrincipal?: Principal) {
       source,
       source === 'web' ? 'url' : 'text',
     ];
+    const columns =
+      detail === 'compact'
+        ? "s.id, s.project_id, p.name AS project_name, s.created_at, a.title, a.status, substr(json_extract(a.summary_json, '$.overview'), 1, 201) AS summary_excerpt"
+        : 's.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model';
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
-        `SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at DESC, s.id DESC LIMIT 24 OFFSET ?`,
-      ).bind(...params, (page - 1) * 24),
+        `SELECT ${columns} FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at ${direction}, s.id ${direction} LIMIT ? OFFSET ?`,
+      ).bind(...params, limit, (page - 1) * limit),
       c.env.DB.prepare(
         `SELECT COUNT(*) AS count FROM stocks s JOIN articles a ON a.id = s.article_id WHERE ${where}`,
       ).bind(...params),
     ]);
     const stocks = rows.results.map((row) => {
+      if (detail === 'compact') {
+        const { summary_excerpt, ...stock } = row;
+        const characters = typeof summary_excerpt === 'string' ? Array.from(summary_excerpt) : [];
+        const truncated = characters.length > 200;
+        return {
+          ...stock,
+          summary_excerpt:
+            typeof summary_excerpt === 'string'
+              ? truncated
+                ? characters.slice(0, 199).join('') + '…'
+                : summary_excerpt
+              : null,
+          summary_truncated: truncated,
+        };
+      }
       const { summary_json, youtube_json, ...stock } = row;
       return {
         ...stock,
@@ -304,7 +334,17 @@ export function createApp(trustedPrincipal?: Principal) {
         youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
       };
     });
-    return c.json({ stocks, total: totals.results[0].count, page, pageSize: 24 });
+    const total = Number(totals.results[0].count);
+    return c.json({
+      stocks,
+      total,
+      page,
+      pageSize: limit,
+      has_more: page * limit < total,
+      sort_by,
+      order,
+      detail,
+    });
   });
   app.post('/api/v1/stocks', async (c) => {
     const { user, tokenProjectId } = c.get('principal');

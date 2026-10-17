@@ -94,6 +94,48 @@ describe('ストックのweb／ユーザーフィルター', () => {
     expect((await list('?source=web')).total).toBe(5);
   });
 
+  it('軽量一覧でも未生成の要約を空欄で返し、同じ件数で次のページに進める', async () => {
+    await app.env.DB.batch([
+      ...fixture('a', 'text', { status: 'queued' }),
+      ...fixture('b', 'text'),
+      ...fixture('c', 'text'),
+    ]);
+    const response = await app.request(
+      '/api/v1/stocks?detail=compact&limit=2&sort_by=created_at&order=asc',
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      pageSize: 2,
+      has_more: true,
+      total: 3,
+      stocks: [
+        { id: 'stock-a', summary_excerpt: null, summary_truncated: false, status: 'queued' },
+        { id: 'stock-b' },
+      ],
+    });
+    const next = await app.request(
+      '/api/v1/stocks?detail=compact&limit=2&sort_by=created_at&order=asc&page=2',
+    );
+    expect(await next.json()).toMatchObject({
+      pageSize: 2,
+      has_more: false,
+      total: 3,
+      stocks: [{ id: 'stock-c' }],
+    });
+  });
+
+  it.each([
+    'limit=0',
+    'limit=25',
+    'limit=1.5',
+    'limit=no',
+    'sort_by=title',
+    'order=unknown',
+    'detail=unknown',
+  ])('HTTP APIも不正な件数・並び順・表示形式を拒否する: %s', async (query) => {
+    expect((await app.request(`/api/v1/stocks?${query}`)).status).toBe(400);
+  });
+
   it('不正な作成元と他ユーザーの保存先、未認証の閲覧を拒否する', async () => {
     for (const source of ['unknown', 'url', 'text', 'ai'])
       expect((await app.request(`/api/v1/stocks?source=${source}`)).status).toBe(400);

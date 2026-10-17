@@ -7,6 +7,7 @@ type Result = {
   result: {
     isError?: boolean;
     structuredContent: Record<string, unknown>;
+    content?: { type: string; text: string }[];
     tools?: { name: string; annotations: { readOnlyHint: boolean } }[];
   };
 };
@@ -45,6 +46,164 @@ describe('MCPによるストックと問いの取得・追加', () => {
   }
   const call = (token: string, name: string, args: unknown = {}) =>
     rpc(token, 'tools/call', { name, arguments: args });
+  async function seedStock(
+    name: string,
+    savedAt: string,
+    owner = 'alice',
+    projectId = `${owner}-project`,
+  ) {
+    const summary = {
+      overview: '😀'.repeat(210),
+      keyPoints: ['要点だけの検索語'],
+      topics: ['トピックだけの検索語'],
+    };
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO articles (id,user_id,canonical_url,source_url,title,domain,source_type,input_text,status,summary_json) VALUES (?,?,?,'',?,'','text',?,'ready',?)",
+      ).bind(
+        name,
+        owner,
+        `text:${name}`,
+        `MCP資料 ${name}`,
+        '本文だけの検索語',
+        JSON.stringify(summary),
+      ),
+      app.env.DB.prepare(
+        'INSERT INTO stocks (id,user_id,project_id,article_id,note,is_favorite,created_at) VALUES (?,?,?,?,?,1,?)',
+      ).bind(`stock-${name}`, owner, projectId, name, 'メモだけの検索語', savedAt),
+    ]);
+  }
+
+  it('既定の一覧は短い抜粋だけを返し、必要な詳細と本文は明示して取得できる', async () => {
+    await seedStock('only', '2026-10-17T00:00:00.000Z');
+    const token = await mcpToken(app, 'alice-project');
+    const response = (
+      await call(token, 'list_stocks', { limit: 5, sort_by: 'created_at', order: 'desc' })
+    ).result;
+    const data = response.structuredContent as {
+      stocks: Record<string, unknown>[];
+      pageSize: number;
+      detail: string;
+    };
+    expect(data).toMatchObject({
+      pageSize: 5,
+      detail: 'compact',
+      sort_by: 'created_at',
+      order: 'desc',
+      has_more: false,
+    });
+    const stock = data.stocks[0];
+    expect(stock).toEqual({
+      id: 'stock-only',
+      title: 'MCP資料 only',
+      project_id: 'alice-project',
+      project_name: 'Alice project',
+      created_at: '2026-10-17T00:00:00.000Z',
+      status: 'ready',
+      summary_excerpt: '😀'.repeat(199) + '…',
+      summary_truncated: true,
+    });
+    expect(response.content?.[0].type).toBe('text');
+    expect(JSON.parse(response.content![0].text)).toEqual(data);
+    const full = (await call(token, 'list_stocks', { detail: 'full' })).result
+      .structuredContent as { stocks: Record<string, unknown>[] };
+    expect(full.stocks[0]).toMatchObject({
+      is_favorite: 1,
+      note: 'メモだけの検索語',
+      summary: { overview: '😀'.repeat(210), keyPoints: ['要点だけの検索語'] },
+    });
+    const detail = (await call(token, 'get_stock', { stock_id: 'stock-only' })).result
+      .structuredContent;
+    expect(detail.stock).toEqual(full.stocks[0]);
+    expect(detail).not.toHaveProperty('content');
+    expect(
+      (await call(token, 'get_stock', { stock_id: 'stock-only', include_content: true })).result
+        .structuredContent,
+    ).toMatchObject({ content: '本文だけの検索語', content_truncated: false });
+    const rest = (await (await app.request('/api/v1/stocks')).json()) as {
+      stocks: unknown[];
+      pageSize: number;
+    };
+    expect(rest.pageSize).toBe(24);
+    expect(rest.stocks[0]).toEqual(full.stocks[0]);
+  });
+
+  it('件数・保存日時順・同時刻のID順でページを分割し、許可された保存先だけを返す', async () => {
+    await seedStock('z', '2026-10-15T00:00:00.000Z');
+    await seedStock('m', '2026-10-16T00:00:00.000Z');
+    await seedStock('a', '2026-10-17T00:00:00.000Z');
+    await seedStock('b', '2026-10-17T00:00:00.000Z');
+    await seedStock('outside', '2026-10-19T00:00:00.000Z', 'alice', 'alice-second');
+    await seedStock('bob', '2026-10-20T00:00:00.000Z', 'bob');
+    const token = await mcpToken(app, 'alice-project');
+    async function list(args = {}) {
+      const data = (
+        await call(token, 'list_stocks', {
+          limit: 2,
+          source: 'user',
+          favorite: true,
+          status: 'ready',
+          ...args,
+        })
+      ).result.structuredContent as { stocks: { id: string }[] };
+      return { ...data, ids: data.stocks.map((stock) => stock.id) };
+    }
+    expect(await list()).toMatchObject({
+      ids: ['stock-b', 'stock-a'],
+      total: 4,
+      page: 1,
+      pageSize: 2,
+      has_more: true,
+    });
+    expect(await list({ page: 2 })).toMatchObject({
+      ids: ['stock-m', 'stock-z'],
+      total: 4,
+      page: 2,
+      pageSize: 2,
+      has_more: false,
+    });
+    expect(await list({ limit: 1 })).toMatchObject({ ids: ['stock-b'], total: 4, pageSize: 1 });
+    expect(await list({ order: 'asc' })).toMatchObject({ ids: ['stock-z', 'stock-m'], total: 4 });
+    expect(await list({ order: 'asc', page: 2 })).toMatchObject({
+      ids: ['stock-a', 'stock-b'],
+      total: 4,
+      has_more: false,
+    });
+  });
+
+  it('軽量表示でも要点・メモを検索し、本文だけの語は検索対象にしない', async () => {
+    await seedStock('search', '2026-10-17T00:00:00.000Z');
+    const token = await mcpToken(app, 'alice-project');
+    for (const q of ['MCP資料', '要点だけの検索語', 'トピックだけの検索語', 'メモだけの検索語'])
+      expect(
+        (await call(token, 'list_stocks', { q, limit: 1 })).result.structuredContent,
+      ).toMatchObject({ total: 1, stocks: [{ id: 'stock-search' }] });
+    expect(
+      (await call(token, 'list_stocks', { q: '本文だけの検索語' })).result.structuredContent.total,
+    ).toBe(0);
+  });
+
+  it.each([
+    { limit: 0 },
+    { limit: 25 },
+    { limit: 1.5 },
+    { sort_by: 'title' },
+    { order: 'desc; DROP TABLE stocks' },
+    { detail: 'unknown' },
+  ])('不正な一覧オプションを拒否する: %j', async (args) => {
+    const token = await mcpToken(app, 'alice-project');
+    expect((await call(token, 'list_stocks', args)).result.isError).toBe(true);
+  });
+
+  it('軽量表示と詳細表示のどちらも読み取り権限を要求する', async () => {
+    const token = await mcpToken(app, null, ['projects:read']);
+    for (const detail of ['compact', 'full'])
+      expect((await call(token, 'list_stocks', { detail, limit: 1 })).result).toMatchObject({
+        isError: true,
+        structuredContent: { status: 403 },
+      });
+  });
+
   it('初期化・ツール列挙・検索・URL/テキスト保存・独立した問いの追加と再送が動く', async () => {
     const token = await mcpToken(app, 'alice-project');
     const initialized = await rpc(token, 'initialize', {

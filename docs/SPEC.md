@@ -143,7 +143,7 @@ Web記事や入力テキストを保存し、要約・問い・メモリ・プ�
 | ツール           | 用途                                                                                                           |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |
 | `list_projects`  | 許可されたプロジェクトの一覧                                                                                   |
-| `list_stocks`    | 検索・プロジェクト・作成元・お気に入り・状態による絞り込み、24件ずつのページ送り                               |
+| `list_stocks`    | 軽量なストック一覧。検索・絞り込み・件数指定・保存日時順・ページ送り                                           |
 | `get_stock`      | ストック詳細。`include_content: true` の場合だけ本文を20,000文字まで取得（超過時は `content_truncated: true`） |
 | `add_stock`      | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                               |
 | `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
@@ -151,6 +151,40 @@ Web記事や入力テキストを保存し、要約・問い・メモリ・プ�
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
 
 追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
+
+### ストック一覧の取得量と検索範囲
+
+MCPの `list_stocks` は既定で `detail: "compact"` を使用します。検索対象はタイトル・要約全体（要点・トピックを含む）・メモです。記事本文・入力テキストは検索対象に含みません。抜粋はoverviewの先頭なので、一致語が要点やメモにある場合は抜粋に出ないことがあります。その場合は該当IDを `get_stock` で取得します。
+
+| 引数      | 既定値       | 動作                                                                        |
+| --------- | ------------ | --------------------------------------------------------------------------- |
+| `limit`   | `24`         | 1〜24の整数。DB取得時の上限とページ幅。最新1件なら `1`                      |
+| `sort_by` | `created_at` | ストックの保存日時。記事・動画の公開日時ではありません                      |
+| `order`   | `desc`       | 新しい順。`asc` で古い順。同時刻は同じ方向のストックID順                    |
+| `detail`  | `compact`    | ID・タイトル・短い要約・保存先・保存日時・記事状態を返す。`full` で従来形式 |
+| `page`    | `1`          | 1〜5000。続きは同じ `limit`・並び順・フィルターでページを増やす             |
+
+```json
+{
+  "limit": 5,
+  "sort_by": "created_at",
+  "order": "desc",
+  "detail": "compact"
+}
+```
+
+compactの各ストックは `id`、`title`、`project_id`、`project_name`、`created_at`、`status`、`summary_excerpt`、`summary_truncated` を返します。要約の抜粋は最大200文字（超過時は末尾の「…」を含む）です。`summary_truncated` はoverviewの先頭を切り詰めた場合に `true` となり、要約未生成時は抜粋が `null`、切り詰めが `false` になります。Unicodeコードポイント単位で切り詰め、サロゲートペアを分断しません。要約の要点・トピック・メモ・本文・URLなどは軽量一覧に含めません。
+
+一覧の外側には `stocks`、フィルター後の総件数 `total`、`page`、実際のページ幅 `pageSize`、次ページの有無 `has_more`、`sort_by`、`order`、`detail` を返します。並び順の値は検証してから固定のSQL句を選び、件数・offsetはバインドします。プロジェクト限定・他ユーザーの除外・読み取り権限は、compact／fullの両方に適用します。
+
+### 互換性と今回の改善範囲
+
+- MCPで従来の一覧項目が必要なクライアントは `detail: "full"` を指定します。`get_stock` は従来の詳細を返し、本文は `include_content: true` の場合だけ取得します。
+- Web画面が使うHTTP API `GET /stocks` の既定値は従来どおり24件・新しい順・fullです。HTTP APIでも上記の一覧オプションを指定できます。
+- `content` のJSONテキストと `structuredContent` は同じデータを保持します。構造化結果を読めないクライアントのための互換性を残し、まず返す項目と件数を減らします。
+- full／詳細の既存フィールド名（`summary.keyPoints`、`source_type`、`pageSize`など）と `is_favorite` の `0 / 1` は維持します。型・命名の一括変更は既存クライアントへの破壊的変更になるため、今回は行いません。
+- 本文検索にはR2に保存した本文の検索索引と一致箇所の返却設計が必要です。全本文を取得して走査する方式は追加せず、検索対象をツール定義にも明示します。
+- ストックの `status` は記事取得・要約の状態です。問いとメモリは別の非同期処理なので、記事が `ready` でもすべての処理が完了したことを意味しません。問いは `list_questions`／`get_question` で確認できます。複数記事をまとめるメモリ更新を1ストックの完了状態として返す設計は、今回の一覧改善から分けます。
 
 ### 本番の準備
 
@@ -211,7 +245,7 @@ Web記事や入力テキストを保存し、要約・問い・メモリ・プ�
 | `GET・POST /tokens`               | トークン一覧・発行                     | —      |
 | `DELETE /tokens/:id`              | トークンの失効                         | —      |
 
-`GET /stocks` は `project_id`、`q`、`source`（`all / web / user`）、`favorite`（`true` のときお気に入りのみ）、`page` を受け付け、24件ずつ返します。`source=web` は `source_type=url`、`source=user` は `source_type=text` に対応します。APIでは `status`（`all / ready / processing / failed`）も併用できます。`GET /memory` は `project_id` を省略するとユーザーメモリです。
+`GET /stocks` は `project_id`、`q`、`source`（`all / web / user`）、`favorite`（`true` のときお気に入りのみ）、`page` を受け付け、既定は24件ずつ返します。`limit`（1〜24）、`sort_by=created_at`、`order=asc / desc`、`detail=compact / full` も指定でき、HTTP APIの既定は `full`・新しい順です。`source=web` は `source_type=url`、`source=user` は `source_type=text` に対応します。APIでは `status`（`all / ready / processing / failed`）も併用できます。`GET /memory` は `project_id` を省略するとユーザーメモリです。
 
 ストックも日付横のスターでお気に入りを登録・解除でき、選択中は黄色で表示します。記事の詳細画面からも変更でき、一覧の「お気に入り」で絞り込めます。`PATCH /stocks/:id/favorite` に `{ "is_favorite": true }` または `false` を送り、保存した `id` と `is_favorite`（`0 / 1`）を返します。本人のWebセッションだけが変更でき、再読み込み・要約の再試行・保存先の移動でも保持します。同じ記事を別のプロジェクトに保存した場合や、記事に紐づく問いのお気に入りとは独立しています。
 
