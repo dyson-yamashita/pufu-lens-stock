@@ -596,12 +596,18 @@ export default function App() {
           : route.view === 'mcp'
             ? '外部連携'
             : route.view === 'shortcuts'
-              ? 'いつもの共有メニューから。'
+              ? 'ショートカット連携'
               : route.view === 'memory'
                 ? selected
                   ? `${selected.name}のメモリ`
                   : 'あなたのメモリ'
                 : (selected?.name ?? 'すべてのストック');
+  const questionListProject = projects.find(
+    (project) => project.id === questionListContext.projectId,
+  );
+  const questionListHeading = questionListProject
+    ? `${questionListProject.name}の問い`
+    : 'すべての問い';
   const allCount = projects.reduce((count, project) => count + project.count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -778,42 +784,35 @@ export default function App() {
                   height="28"
                 />
               )}
-              マイライブラリ
+              トップ
             </a>{' '}
             <span aria-hidden="true">/</span>{' '}
             {route.projectId && route.view !== 'stocks' && (
               <>
-                <a href={`#project/${encodeURIComponent(route.projectId)}`}>プロジェクト</a>{' '}
+                <a href={`#project/${encodeURIComponent(route.projectId)}`}>
+                  {selected?.name ?? 'プロジェクト'}
+                </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
               </>
             )}
             {questionFlow ? (
               <>
-                <a href={questionListContext.hash}>問い</a> <span aria-hidden="true">/</span>{' '}
+                <a href={questionListContext.hash}>{questionListHeading}</a>{' '}
+                <span aria-hidden="true">/</span>{' '}
                 <a
                   href={`#${route.view}/${encodeURIComponent(route.detailId!)}`}
                   aria-current="page"
                 >
-                  {route.view === 'pufu' ? 'プ譜' : route.view === 'resolve' ? '課題' : '詳細'}
+                  {route.view === 'pufu'
+                    ? 'プ譜'
+                    : route.view === 'resolve'
+                      ? '課題からプ譜を作成'
+                      : '問いの詳細'}
                 </a>
               </>
             ) : (
               <a href={window.location.hash || '#'} aria-current="page">
-                {route.view === 'questions'
-                  ? '問い'
-                  : route.view === 'settings'
-                    ? '設定'
-                    : route.view === 'profile'
-                      ? 'プロフィール'
-                      : route.view === 'mcp'
-                        ? '外部連携'
-                        : route.view === 'shortcuts'
-                          ? 'ショートカット連携'
-                          : route.view === 'memory'
-                            ? 'メモリ'
-                            : route.projectId
-                              ? 'プロジェクト'
-                              : 'すべてのストック'}
+                {heading}
               </a>
             )}
           </nav>
