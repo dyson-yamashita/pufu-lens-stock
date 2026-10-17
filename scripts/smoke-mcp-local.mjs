@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { randomUUID, createHash } from 'node:crypto';
 import { URL, URLSearchParams } from 'node:url';
 
@@ -149,6 +150,29 @@ try {
       .structuredContent.content,
     input.text,
   );
+  const compact = await call('list_stocks', {
+    q: input.title,
+    limit: 1,
+    sort_by: 'created_at',
+    order: 'desc',
+  });
+  assert.equal(compact.structuredContent.detail, 'compact');
+  assert.equal(compact.structuredContent.pageSize, 1);
+  assert.equal(compact.structuredContent.has_more, false);
+  assert.equal(compact.structuredContent.stocks.length, 1);
+  assert.equal(compact.structuredContent.stocks[0].id, saved.structuredContent.id);
+  assert.ok(!('summary' in compact.structuredContent.stocks[0]));
+  assert.ok(!('note' in compact.structuredContent.stocks[0]));
+  assert.deepEqual(JSON.parse(compact.content[0].text), compact.structuredContent);
+  const full = await call('list_stocks', { q: input.title, limit: 1, detail: 'full' });
+  assert.equal(full.structuredContent.stocks[0].id, saved.structuredContent.id);
+  assert.ok('summary' in full.structuredContent.stocks[0]);
+  assert.ok('note' in full.structuredContent.stocks[0]);
+  const compactBytes = Buffer.byteLength(JSON.stringify(compact));
+  const fullBytes = Buffer.byteLength(JSON.stringify(full));
+  assert.ok(compactBytes < fullBytes);
+  console.log(`MCP一覧の応答量（1件）: compact=${compactBytes} bytes / full=${fullBytes} bytes`);
+  assert.ok((await call('list_stocks', { limit: 0 })).isError);
   const question = await call('add_question', {
     project_id: projectId,
     text: 'ストックなしの問いを保存できるか？',

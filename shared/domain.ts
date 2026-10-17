@@ -6,6 +6,12 @@ export const summarySchema = z.object({
   topics: z.array(z.string().min(1).max(40)).min(1).max(8),
 });
 export type ArticleSummary = z.infer<typeof summarySchema>;
+export const stockListOptionsSchema = z.object({
+  limit: z.number().int().min(1).max(24).default(24),
+  sort_by: z.literal('created_at').default('created_at'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+  detail: z.enum(['compact', 'full']).default('full'),
+});
 export const stockTextLimit = 20000;
 const stockFields = {
   project_id: z.string().min(1).max(100).optional(),
