@@ -79,6 +79,18 @@ type Route = {
   projectId: string | null;
   detailId?: string;
 };
+const headerLabels: Record<Route['view'], string> = {
+  stocks: 'ストック',
+  questions: '問い',
+  memory: 'メモリ',
+  settings: '設定',
+  profile: 'プロフィール',
+  mcp: '外部連携',
+  shortcuts: 'ショートカット',
+  question: '詳細',
+  resolve: 'プ譜を作成',
+  pufu: 'プ譜',
+};
 type ModalState =
   | { type: 'project'; project?: Project }
   | { type: 'save' }
@@ -608,6 +620,8 @@ export default function App() {
   const questionListHeading = questionListProject
     ? `${questionListProject.name}の問い`
     : 'すべての問い';
+  const headerProjectId = questionFlow ? questionListContext.projectId : route.projectId;
+  const headerProject = questionFlow ? questionListProject : selected;
   const allCount = projects.reduce((count, project) => count + project.count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -787,32 +801,36 @@ export default function App() {
               トップ
             </a>{' '}
             <span aria-hidden="true">/</span>{' '}
-            {route.projectId && route.view !== 'stocks' && (
+            {headerProjectId && (
               <>
-                <a href={`#project/${encodeURIComponent(route.projectId)}`}>
-                  {selected?.name ?? 'プロジェクト'}
+                <a
+                  className="breadcrumb-project"
+                  href={`#project/${encodeURIComponent(headerProjectId)}`}
+                  title={headerProject?.name ?? 'プロジェクト'}
+                >
+                  <span className="breadcrumb-project-name">
+                    {headerProject?.name ?? 'プロジェクト'}
+                  </span>
                 </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
               </>
             )}
             {questionFlow ? (
               <>
-                <a href={questionListContext.hash}>{questionListHeading}</a>{' '}
+                <a href={questionListContext.hash} title={questionListHeading}>
+                  問い
+                </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
                 <a
                   href={`#${route.view}/${encodeURIComponent(route.detailId!)}`}
                   aria-current="page"
                 >
-                  {route.view === 'pufu'
-                    ? 'プ譜'
-                    : route.view === 'resolve'
-                      ? '課題からプ譜を作成'
-                      : '問いの詳細'}
+                  {headerLabels[route.view]}
                 </a>
               </>
             ) : (
               <a href={window.location.hash || '#'} aria-current="page">
-                {heading}
+                {headerLabels[route.view]}
               </a>
             )}
           </nav>

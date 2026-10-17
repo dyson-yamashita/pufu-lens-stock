@@ -376,7 +376,7 @@ p {
   z-index: 10;
   background: var(--page);
   transition: transform 0.18s ease;
-  min-height: 71px;
+  height: 71px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -388,20 +388,34 @@ p {
   transform: translateY(-100%);
 }
 .breadcrumb {
+  display: flex;
+  flex: 1;
+  align-items: center;
   min-width: 0;
   font-size: 12px;
   letter-spacing: 0.03em;
   color: var(--muted);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .breadcrumb a {
   display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 0;
   align-items: center;
   vertical-align: middle;
   min-height: 44px;
   max-width: 100%;
 }
+.breadcrumb .breadcrumb-project {
+  flex-shrink: 1;
+}
+.breadcrumb-project-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .breadcrumb .brand-mark {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
   margin-right: 8px;
@@ -413,7 +427,8 @@ p {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.breadcrumb span {
+.breadcrumb > span {
+  flex-shrink: 0;
   padding: 0 12px;
   color: #92a4bf;
 }
@@ -2236,7 +2251,7 @@ p {
     margin-left: 0;
   }
   .topbar {
-    min-height: 62px;
+    height: 62px;
     padding: 0 18px;
     justify-content: flex-start;
     gap: 8px;
@@ -2244,7 +2259,7 @@ p {
   .breadcrumb {
     font-size: 11px;
   }
-  .breadcrumb span {
+  .breadcrumb > span {
     padding: 0 6px;
   }
   .page-body {
