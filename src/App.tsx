@@ -1895,6 +1895,26 @@ function StockDetail({
         )}
       </div>
       <h3>{stock.title}</h3>
+      {stock.youtube && (
+        <div className="youtube-source">
+          {stock.youtube.thumbnailUrl && (
+            <img
+              className="youtube-thumbnail"
+              src={stock.youtube.thumbnailUrl}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          )}
+          {stock.youtube.channelTitle && <p>{stock.youtube.channelTitle}</p>}
+          <p className="local-model-note">
+            {stock.youtube.hasDescription
+              ? 'タイトル・説明文をもとに要約・問いを作成します。'
+              : '説明文がないため、タイトル・チャンネル名のみをもとに要約・問いを作成します。'}
+            動画本編・字幕は取得していません。
+          </p>
+        </div>
+      )}
       <div className="stock-detail-links">
         {stock.source_type === 'url' && (
           <a
@@ -1903,7 +1923,7 @@ function StockDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            元の記事を開く
+            {stock.youtube ? '元の動画を開く' : '元の記事を開く'}
             <ExternalLink size={14} aria-hidden="true" />
           </a>
         )}
@@ -1926,7 +1946,14 @@ function StockDetail({
           ['summary', '要約'],
           ['question', '問い'],
           ['note', 'メモ・保存先'],
-          ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
+          [
+            'content',
+            stock.youtube
+              ? '取得した動画情報'
+              : stock.source_type === 'text'
+                ? '入力した本文'
+                : '取得した本文',
+          ],
         ].map(([value, label]) => (
           <button
             key={value}
@@ -1943,7 +1970,7 @@ function StockDetail({
           {stock.summary ? (
             <>
               <p>{stock.summary.overview}</p>
-              <h4>この記事の要点</h4>
+              <h4>{stock.youtube ? '取得した動画情報の要点' : 'この記事の要点'}</h4>
               <ul>
                 {stock.summary.keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>

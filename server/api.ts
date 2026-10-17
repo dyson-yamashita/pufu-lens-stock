@@ -290,15 +290,19 @@ export function createApp(trustedPrincipal?: Principal) {
     ];
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
-        `SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at DESC, s.id DESC LIMIT 24 OFFSET ?`,
+        `SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at DESC, s.id DESC LIMIT 24 OFFSET ?`,
       ).bind(...params, (page - 1) * 24),
       c.env.DB.prepare(
         `SELECT COUNT(*) AS count FROM stocks s JOIN articles a ON a.id = s.article_id WHERE ${where}`,
       ).bind(...params),
     ]);
     const stocks = rows.results.map((row) => {
-      const { summary_json, ...stock } = row;
-      return { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null };
+      const { summary_json, youtube_json, ...stock } = row;
+      return {
+        ...stock,
+        summary: summary_json ? JSON.parse(String(summary_json)) : null,
+        youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
+      };
     });
     return c.json({ stocks, total: totals.results[0].count, page, pageSize: 24 });
   });
@@ -421,15 +425,19 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/articles/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
     if (!row)
       throw new HTTPException(404, { message: '根拠の記事は削除済み、または見つかりません。' });
-    const { summary_json, ...stock } = row;
+    const { summary_json, youtube_json, ...stock } = row;
     return c.json({
-      stock: { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null },
+      stock: {
+        ...stock,
+        summary: summary_json ? JSON.parse(String(summary_json)) : null,
+        youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
+      },
     });
   });
   async function ownedStock(c: import('hono').Context<AppEnv>) {
@@ -774,14 +782,18 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/stocks/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
     if (!row) throw new HTTPException(404, { message: '記事が見つかりません。' });
-    const { summary_json, ...stock } = row;
+    const { summary_json, youtube_json, ...stock } = row;
     return c.json({
-      stock: { ...stock, summary: summary_json ? JSON.parse(String(summary_json)) : null },
+      stock: {
+        ...stock,
+        summary: summary_json ? JSON.parse(String(summary_json)) : null,
+        youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
+      },
     });
   });
   app.patch('/api/v1/stocks/:id/favorite', async (c) => {

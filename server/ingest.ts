@@ -1,6 +1,8 @@
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 import { fetchXPost, xPostId } from './x';
+import { fetchYouTubeVideo, youtubeVideoId } from './youtube';
+import type { YouTubeMetadata } from '../shared/domain';
 import type { Env } from './env';
 import { assertPublicDestination, validateUrl } from './security';
 
@@ -119,7 +121,9 @@ export async function fetchArticle(
   env: Env,
   value: string,
   userId?: string,
-): Promise<{ title: string; text: string }> {
+): Promise<{ title: string; text: string; youtube?: YouTubeMetadata }> {
+  const videoId = youtubeVideoId(validateUrl(value).href);
+  if (videoId) return fetchYouTubeVideo(env, videoId);
   const postId = xPostId(validateUrl(value).href);
   if (postId) {
     if (!userId) throw new Error('Xの取得にはユーザー認証が必要です。');
