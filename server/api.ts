@@ -198,7 +198,7 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/projects', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.include_in_user_memory, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
+      "SELECT p.id, p.name, p.description, p.include_in_user_memory, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
     )
       .bind(user.id, tokenProjectId, tokenProjectId)
       .all();

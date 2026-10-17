@@ -123,6 +123,7 @@ export type Project = {
   count: number;
   ready_count: number;
   created_at: string;
+  question_count: number;
 };
 export type YouTubeMetadata = {
   videoId: string;

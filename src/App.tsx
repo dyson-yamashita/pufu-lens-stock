@@ -631,6 +631,7 @@ export default function App() {
     ? headerLabels[route.view]
     : (globalHeaderLabels[route.view] ?? headerLabels[route.view]);
   const allCount = projects.reduce((count, project) => count + project.count, 0);
+  const allQuestionCount = projects.reduce((count, project) => count + project.question_count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
       {isMobile && mobileNav && (
@@ -681,7 +682,7 @@ export default function App() {
             }}
           >
             <CircleHelp size={19} aria-hidden="true" />
-            すべての問い
+            すべての問い<span className="nav-count">{allQuestionCount}</span>
           </button>
           <button
             className={`nav-item ${route.view === 'memory' && !route.projectId ? 'active' : ''}`}
