@@ -6,6 +6,7 @@ import type { OAuthResourceContext, GrantSummary } from '@cloudflare/workers-oau
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
+import { getCookie } from 'hono/cookie';
 import type { AppEnv, Env } from './env';
 import { authenticate } from './auth';
 import { rememberMcpLogin } from './mcp-login';
@@ -59,8 +60,17 @@ function authorizationApp() {
       .map((project) => `<option value="${escape(project.id)}">${escape(project.name)}</option>`)
       .join('');
     for (const [name, value] of consent.headers) c.header(name, value);
+    const preference = getCookie(c, 'pufu_lens_theme');
+    const themeAttribute =
+      preference === 'light' || preference === 'dark' ? ` data-theme="${preference}"` : '';
     return c.html(
-      `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP連携の許可 | Pufu Lens</title><style>body{font-family:system-ui,sans-serif;line-height:1.8;color:#252c32;background:#f8f9fa;margin:0;padding:24px}main{max-width:560px;margin:32px auto;background:white;padding:28px;border:1px solid #dce1e5;border-radius:16px}h1{font-size:24px}.permission{display:block;margin:12px 0}input,select,button{font:inherit}select{display:block;width:100%;padding:10px;margin:8px 0 20px}button{padding:10px 20px;cursor:pointer;margin:8px 8px 0 0}p{overflow-wrap:anywhere}small{display:block}</style></head><body><main><p>Pufu Lens · MCP連携</p><h1>${escape(details.clientName)}との連携を許可</h1><p>${escape(principal.user.name)}として接続します。</p><p>${details.clientDomain ? `クライアントのドメイン: ${escape(details.clientDomain)}` : 'クライアント名は接続元が登録した名称です。'}<br>認可結果の送信先: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? '<p>このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。</p>' : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset><legend>許可する操作</legend>${scopes}</fieldset><p><label for="project">アクセスを許可するプロジェクト</label><select id="project" name="project_id"><option value="">すべてのプロジェクト</option>${projectOptions}</select><small>選択した範囲のデータが接続先で利用されます。</small></p><button name="decision" value="approve">連携を許可</button><button name="decision" value="deny">許可しない</button></form></main></body></html>`,
+      `<!doctype html><html lang="ja"${themeAttribute}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP連携の許可 | Pufu Lens</title><style>
+:root{color-scheme:light;--text:#252c32;--page:#f8f9fa;--card:#fff;--border:#b7c0cc}
+:root[data-theme="dark"]{color-scheme:dark;--text:#e5eaf3;--page:#101827;--card:#172033;--border:#667b98}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--text:#e5eaf3;--page:#101827;--card:#172033;--border:#667b98}}
+body{font-family:system-ui,sans-serif;line-height:1.8;color:var(--text);background:var(--page);margin:0;padding:24px}main{max-width:560px;margin:32px auto;background:var(--card);padding:28px;border:1px solid var(--border);border-radius:16px}h1{font-size:24px}.permission{display:block;margin:12px 0}input,select,button{font:inherit}select{display:block;width:100%;padding:10px;margin:8px 0 20px}button{padding:10px 20px;cursor:pointer;margin:8px 8px 0 0}p{overflow-wrap:anywhere}small{display:block}
+input,select,button{color:var(--text);background:var(--card);border:1px solid var(--border)}input[type="checkbox"]{accent-color:var(--text)}fieldset{border:1px solid var(--border)}
+</style></head><body><main><p>Pufu Lens · MCP連携</p><h1>${escape(details.clientName)}との連携を許可</h1><p>${escape(principal.user.name)}として接続します。</p><p>${details.clientDomain ? `クライアントのドメイン: ${escape(details.clientDomain)}` : 'クライアント名は接続元が登録した名称です。'}<br>認可結果の送信先: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? '<p>このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。</p>' : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset><legend>許可する操作</legend>${scopes}</fieldset><p><label for="project">アクセスを許可するプロジェクト</label><select id="project" name="project_id"><option value="">すべてのプロジェクト</option>${projectOptions}</select><small>選択した範囲のデータが接続先で利用されます。</small></p><button name="decision" value="approve">連携を許可</button><button name="decision" value="deny">許可しない</button></form></main></body></html>`,
     );
   });
   app.post('/oauth/authorize', async (c) => {
