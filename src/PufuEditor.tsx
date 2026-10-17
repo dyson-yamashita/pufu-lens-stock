@@ -3,6 +3,7 @@ import { ProjectScore, getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
 import { pufuScoreSchema, type Pufu } from '../shared/pufu';
 import { send } from './api';
+import { useTheme } from './theme';
 
 const canonical = (json: string) =>
   JSON.stringify(JSON.parse(json), (key, value) => (key === 'id' ? undefined : value));
@@ -19,6 +20,7 @@ export default function PufuEditor({
   pufu: Pufu;
   onGuard: (guard: (() => boolean) | null) => void;
 }) {
+  const { theme } = useTheme();
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1000px)').matches);
   const [revision, setRevision] = useState(pufu.revision);
   const [phases, setPhases] = useState(pufu.phases);
@@ -211,6 +213,7 @@ export default function PufuEditor({
             mobile={mobile}
             textSize="base"
             feedback={feedback}
+            dark={theme === 'dark'}
             border={!mobile}
           />
         </div>

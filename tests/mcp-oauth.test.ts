@@ -44,6 +44,7 @@ describe('MCP OAuth連携', () => {
       user?: string;
       decision?: string;
       noCookie?: boolean;
+      theme?: string;
     } = {},
   ) {
     const registered = await request('/oauth/register', {
@@ -71,10 +72,18 @@ describe('MCP OAuth連携', () => {
       code_challenge_method: 'S256',
       resource: `${app.env.APP_URL}/mcp`,
     });
-    const page = await request(`/oauth/authorize?${params}`, { headers: session });
+    const page = await request(`/oauth/authorize?${params}`, {
+      headers: {
+        ...session,
+        Cookie: `${session.Cookie}${options.theme ? `; pufu_lens_theme=${options.theme}` : ''}`,
+      },
+    });
     expect(page.status).toBe(200);
     const html = await page.text();
     const { document } = parseHTML(html);
+    expect(document.documentElement.getAttribute('data-theme')).toBe(
+      options.theme === 'dark' || options.theme === 'light' ? options.theme : null,
+    );
     expect(document.querySelector('h1')?.textContent).toContain('<ChatGPT>');
     expect(document.querySelector('ChatGPT')).toBeNull();
     const handle = /name="handle" value="([^"]+)"/.exec(html)![1];
@@ -124,6 +133,13 @@ describe('MCP OAuth連携', () => {
     expect(response.status).toBe(401);
     expect(response.headers.get('WWW-Authenticate')).toContain('resource_metadata');
   });
+  it.each(['light', 'dark', 'system', 'invalid'])(
+    '許可画面にブラウザの表示設定を反映し、明暗以外はOSに従う（%s）',
+    async (theme) => {
+      const auth = await authorize({ theme, decision: 'deny' });
+      expect(auth.approve.status).toBe(302);
+    },
+  );
   it('同意・PKCEでトークンを発行し、本人だけが連携を一覧・失効できる', async () => {
     const auth = await authorize({ project: 'alice-project' });
     expect(auth.approve.status).toBe(302);

@@ -9,6 +9,9 @@
   -webkit-font-smoothing: antialiased;
   --primary: #233b63;
   --primary-hover: #182c4d;
+  --button: #233b63;
+  --button-hover: #182c4d;
+  --on-button: #fff;
   --text: #26354d;
   --muted: #586981;
   --placeholder: #6b778b;
@@ -27,6 +30,52 @@
   --context-label-bg: #fff0df;
   --context-label-text: #9a4712;
   --danger: #a13232;
+  --danger-hover: #761d1d;
+  --error-text: #9c4a36;
+  --error-bg: #fff0eb;
+  --error-border: #ebd0c4;
+  --failed-text: #a3493f;
+  --failed-bg: #fbeeea;
+  --pending-text: #7a5925;
+  --pending-bg: #f8f0df;
+  --overlay: #172b485b;
+  --shadow: #15243d30;
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --primary: #b3cdf3;
+  --primary-hover: #d2e2fa;
+  --button: #a9c8f5;
+  --button-hover: #c4dcff;
+  --on-button: #10213a;
+  --text: #e5eaf3;
+  --muted: #afbdd2;
+  --placeholder: #99aac2;
+  --border: #36445c;
+  --card: #172033;
+  --page: #101827;
+  --wash: #202e44;
+  --sidebar: #141e30;
+  --selected: #2a3f5e;
+  --field-border: #667b98;
+  --accent: #b3c9e7;
+  --focus: #a9c8f5;
+  --favorite-outline: #a5b5cc;
+  --favorite-border: #f6c945;
+  --context-label-bg: #3d2d20;
+  --context-label-text: #ffd0a3;
+  --danger: #ffb4b4;
+  --danger-hover: #ffd4d4;
+  --error-text: #ffc7b8;
+  --error-bg: #3b2528;
+  --error-border: #8e5a57;
+  --failed-text: #ffc1b8;
+  --failed-bg: #40272d;
+  --pending-text: #f4d69c;
+  --pending-bg: #3b3222;
+  --overlay: #030812b3;
+  --shadow: #0008;
 }
 * {
   box-sizing: border-box;
@@ -81,7 +130,7 @@ select:where(:not(.pufu-editor-root *)) {
   min-height: 46px;
   border: 1px solid var(--field-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--card);
   padding: 11px 13px;
   color: var(--text);
 }
@@ -132,14 +181,14 @@ p {
   white-space: nowrap;
 }
 .primary {
-  background: var(--primary);
-  color: #fff;
+  background: var(--button);
+  color: var(--on-button);
 }
 .primary:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--button-hover);
 }
 .secondary {
-  background: #fff;
+  background: var(--card);
   border-color: var(--field-border);
 }
 .secondary:hover:not(:disabled) {
@@ -153,7 +202,7 @@ p {
   padding-left: 0;
 }
 .danger-text:hover {
-  color: #761d1d;
+  color: var(--danger-hover);
 }
 .icon-button {
   min-height: 44px;
@@ -173,7 +222,7 @@ p {
 }
 .icon-button.bordered {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
 }
 .spin {
   animation: rotate 1.1s linear infinite;
@@ -546,10 +595,10 @@ p {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--on-button);
 }
 .project-memory-toggle input:checked {
-  background: var(--primary);
+  background: var(--button);
 }
 .project-memory-toggle input:checked::before {
   transform: translateX(18px);
@@ -594,6 +643,51 @@ p {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
+}
+.appearance-settings {
+  margin-top: 24px;
+}
+.appearance-settings h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.theme-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 12px;
+  padding: 0;
+  border: 0;
+}
+.theme-options legend {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.theme-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.theme-options label:has(input:checked) {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--wash);
+}
+.theme-options input {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--primary);
 }
 .profile-identity {
   display: flex;
@@ -673,7 +767,7 @@ p {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 3px;
-  background: #fff;
+  background: var(--card);
   flex: 1;
   color: var(--muted);
   min-width: 0;
@@ -730,7 +824,7 @@ p {
   gap: 17px;
 }
 .article-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 18px 18px 0;
@@ -782,14 +876,14 @@ p {
   background: var(--wash);
 }
 .status-failed {
-  color: #a3493f;
-  background: #fbeeea;
+  color: var(--failed-text);
+  background: var(--failed-bg);
 }
 .status-queued,
 .status-extracting,
 .status-summarizing {
-  color: #9a7538;
-  background: #f8f0df;
+  color: var(--pending-text);
+  background: var(--pending-bg);
 }
 .status-dot {
   height: 4px;
@@ -1085,7 +1179,7 @@ p {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  background: #fff;
+  background: var(--card);
   border: 1px dashed var(--border);
   border-radius: 10px;
   gap: 13px;
@@ -1125,9 +1219,9 @@ p {
   margin-bottom: 18px;
 }
 .error-banner {
-  background: #fff0eb;
-  border-color: #ebd0c4;
-  color: #9c4a36;
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error-text);
   justify-content: space-between;
 }
 .memory-page {
@@ -1255,11 +1349,11 @@ p {
   width: min(510px, calc(100% - 32px));
   max-height: calc(100dvh - 48px);
   color: var(--text);
-  box-shadow: 0 20px 80px #15243d30;
+  box-shadow: 0 20px 80px var(--shadow);
   overflow-y: auto;
 }
 .dialog::backdrop {
-  background: #172b485b;
+  background: var(--overlay);
   backdrop-filter: blur(3px);
 }
 .dialog-wide {
@@ -1344,10 +1438,10 @@ p {
   margin-right: auto;
 }
 .form-error {
-  color: #a43e2d;
+  color: var(--error-text);
   font-size: 12px;
   line-height: 1.8;
-  background: #fbedeb;
+  background: var(--error-bg);
   border-radius: 5px;
   padding: 10px;
   margin: 15px 0;
@@ -1687,7 +1781,7 @@ p {
   overflow-wrap: anywhere;
 }
 .connect-guide {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 29px;
@@ -1826,7 +1920,7 @@ p {
   justify-content: center;
   gap: 15px;
   padding: 35px;
-  background: #fff;
+  background: var(--card);
   border: 1px dashed var(--border);
   border-radius: 10px;
   color: var(--muted);
@@ -1837,7 +1931,7 @@ p {
   gap: 15px;
   align-items: center;
   padding: 20px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 10px;
@@ -2009,7 +2103,7 @@ p {
   width: 340px;
   margin: 84px auto 0;
   padding: 30px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 13px;
   transform: rotate(-5deg);
@@ -2245,7 +2339,7 @@ p {
     position: fixed;
     inset: 0;
     z-index: 19;
-    background: #172b4855;
+    background: var(--overlay);
   }
   .workspace {
     margin-left: 0;
