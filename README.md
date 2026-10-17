@@ -59,7 +59,7 @@ pnpm run check
 pnpm audit
 ```
 
-`check` は型チェック・lint・テスト・整形チェック・ビルドを実行します。変更は最新のmainから作成したブランチで行います。検証と `/review` を完了してからPRを作成します。
+`check` は型チェック・lint・テスト・整形チェック・ビルドを実行します。変更は最新のmainから作成したブランチで行います。検証と [requesting-code-review](.agents/skills/requesting-code-review/SKILL.md) による独立エージェントのレビューを完了してからPRを作成します。
 
 設定値の例は [.dev.vars.example](.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
