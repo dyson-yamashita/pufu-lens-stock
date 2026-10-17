@@ -2,8 +2,17 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { ArrowLeft, LoaderCircle, RefreshCw } from 'lucide-react';
 import type { Pufu } from '../shared/pufu';
 import { api, send } from './api';
+import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
 
-const PufuEditor = lazy(() => import('./PufuEditor'));
+const PufuEditor = lazy(async () => {
+  try {
+    const editor = await import('./PufuEditor');
+    clearPufuEditorLoadRetry();
+    return editor;
+  } catch {
+    return { default: PufuEditorLoadError };
+  }
+});
 export default function PufuPage({
   id,
   onQuestion,

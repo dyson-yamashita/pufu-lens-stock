@@ -245,6 +245,12 @@ URL・テキストとも `project_id` は省略できます。指定時は本人
 
 ## 記事取得の範囲
 
+YouTubeの動画URLは通常の記事抽出と分け、YouTube Data API v3の `videos.list(part=snippet)` からタイトル・説明文・チャンネル名・サムネイルを取得します。管理者が設定したWorkers Secret `YOUTUBE_API_KEY` を固定のGoogle APIホストにだけ送り、リダイレクトは追跡しません。通常URL・`youtu.be`・モバイル・YouTube Music・Shorts・ライブ・埋め込みURLに対応します。再生リスト・チャンネルURLは対象外です。
+
+説明文が200文字未満・空の場合も取得成功として保存します。要約には説明文を含む動画情報を使い、動画本編・音声・字幕は取得しません。専用の生成指示で取得範囲を明示し、情報が少ない場合に通常の記事要約の字数目安を強制しません。詳細画面に取得範囲・チャンネル名・サムネイルを表示し、「取得した動画情報」タブから保存内容を確認できます。API未設定・利用上限・取得不可の場合もURLとエラーを保持し、既存の再試行・本文補完を利用できます。
+
+`0019_youtube_metadata.sql` で記事に任意の `youtube_json` を追加し、取得元・サムネイル・説明文の有無を保存します。ストック一覧・詳細・記事参照APIは `youtube`（通常記事・テキストは `null`）として返します。入力本文を使用した場合は動画API由来の情報を解除し、入力本文と混同しません。[APIキーの設定手順](../README.md#youtube動画のストック)を参照してください。
+
 対象は、ログインせず読める公開HTML・テキスト記事です。HTTP(S)以外、内部・予約アドレス、認証情報入りURL、標準外ポートを拒否します。DNSのA・AAAAの全回答と各リダイレクト先を検査し、取得時にアプリのCookieやBearerトークンを送りません。
 
 通常はHTMLを取得してReadabilityで本文を抽出します。本文が不足する場合はBrowser Runを使用します。ブラウザのHTTP要求も検証付き取得を通し、POST、ダウンロード、Service Worker、WebSocketを許可しません。ログイン・ペイウォール・アクセス制限の回避は行いません。ページ上の任意の対話操作には対応していません。
@@ -450,7 +456,7 @@ pnpm run check
 
 このリポジトリには [Superpowers](https://github.com/obra/superpowers) v7.0.0の15スキルと、既存コード向けの最小限のテストを作る `pragmatic-testing` を `.agents/skills/` に同梱しています。`pragmatic-testing` は指定された本文のまま保存しています。
 
-[AGENTS.md](../AGENTS.md) に開始時の読み込みとスキルの使い分けを記載しています。 PR作成前に `/review` で変更全体をレビューし、必要な修正後は検証とレビューを再実行します。Superpowersの取り込み元コミット・スキル一覧は [.agents/superpowers-source.json](../.agents/superpowers-source.json)、MITライセンスは [.agents/SUPERPOWERS-LICENSE](../.agents/SUPERPOWERS-LICENSE) にあります。補助スクリプトを含むスキルの原文を維持するため、`.agents/skills/` はアプリ用のESLint・Prettierの対象外です。
+[AGENTS.md](../AGENTS.md) に開始時の読み込みとスキルの使い分けを記載しています。PR作成前に [requesting-code-review](../.agents/skills/requesting-code-review/SKILL.md) を使い、独立したレビュー担当エージェントが変更全体を確認します。対応が必要な指摘を修正した後は、必要な検証と再レビューを実施します。Superpowersの取り込み元コミット・スキル一覧は [.agents/superpowers-source.json](../.agents/superpowers-source.json)、MITライセンスは [.agents/SUPERPOWERS-LICENSE](../.agents/SUPERPOWERS-LICENSE) にあります。補助スクリプトを含むスキルの原文を維持するため、`.agents/skills/` はアプリ用のESLint・Prettierの対象外です。
 
 ## ソース構成
 

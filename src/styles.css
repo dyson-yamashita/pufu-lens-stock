@@ -371,6 +371,11 @@ p {
   min-width: 0;
 }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--page);
+  transition: transform 0.18s ease;
   min-height: 71px;
   display: flex;
   align-items: center;
@@ -379,16 +384,22 @@ p {
   border-bottom: 1px solid var(--border);
   padding: 0 40px;
 }
+.topbar.is-hidden:not(:has(:focus-visible)) {
+  transform: translateY(-100%);
+}
 .breadcrumb {
+  min-width: 0;
   font-size: 12px;
   letter-spacing: 0.03em;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .breadcrumb a {
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
   min-height: 44px;
+  max-width: 100%;
 }
 .breadcrumb .brand-mark {
   width: 28px;
@@ -1339,6 +1350,17 @@ p {
   font-size: 22px;
   line-height: 1.7;
   margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.youtube-thumbnail {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--wash);
+}
+.youtube-source > p {
   overflow-wrap: anywhere;
 }
 .original-link {

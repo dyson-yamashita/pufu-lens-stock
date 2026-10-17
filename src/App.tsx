@@ -56,6 +56,7 @@ import PufuPage from './PufuPage';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
+import ScrollHeader from './ScrollHeader';
 
 type MemoryResponse = {
   memory: Memory | null;
@@ -595,12 +596,18 @@ export default function App() {
           : route.view === 'mcp'
             ? '外部連携'
             : route.view === 'shortcuts'
-              ? 'いつもの共有メニューから。'
+              ? 'ショートカット連携'
               : route.view === 'memory'
                 ? selected
                   ? `${selected.name}のメモリ`
                   : 'あなたのメモリ'
                 : (selected?.name ?? 'すべてのストック');
+  const questionListProject = projects.find(
+    (project) => project.id === questionListContext.projectId,
+  );
+  const questionListHeading = questionListProject
+    ? `${questionListProject.name}の問い`
+    : 'すべての問い';
   const allCount = projects.reduce((count, project) => count + project.count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -745,7 +752,7 @@ export default function App() {
         </div>
       </aside>
       <main className="workspace" inert={isMobile && mobileNav}>
-        <div className="topbar">
+        <ScrollHeader autoHide={isMobile}>
           {!sidebarOpen && (
             <button
               id="sidebar-toggle"
@@ -777,46 +784,39 @@ export default function App() {
                   height="28"
                 />
               )}
-              マイライブラリ
+              トップ
             </a>{' '}
             <span aria-hidden="true">/</span>{' '}
             {route.projectId && route.view !== 'stocks' && (
               <>
-                <a href={`#project/${encodeURIComponent(route.projectId)}`}>プロジェクト</a>{' '}
+                <a href={`#project/${encodeURIComponent(route.projectId)}`}>
+                  {selected?.name ?? 'プロジェクト'}
+                </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
               </>
             )}
             {questionFlow ? (
               <>
-                <a href={questionListContext.hash}>問い</a> <span aria-hidden="true">/</span>{' '}
+                <a href={questionListContext.hash}>{questionListHeading}</a>{' '}
+                <span aria-hidden="true">/</span>{' '}
                 <a
                   href={`#${route.view}/${encodeURIComponent(route.detailId!)}`}
                   aria-current="page"
                 >
-                  {route.view === 'pufu' ? 'プ譜' : route.view === 'resolve' ? '課題' : '詳細'}
+                  {route.view === 'pufu'
+                    ? 'プ譜'
+                    : route.view === 'resolve'
+                      ? '課題からプ譜を作成'
+                      : '問いの詳細'}
                 </a>
               </>
             ) : (
               <a href={window.location.hash || '#'} aria-current="page">
-                {route.view === 'questions'
-                  ? '問い'
-                  : route.view === 'settings'
-                    ? '設定'
-                    : route.view === 'profile'
-                      ? 'プロフィール'
-                      : route.view === 'mcp'
-                        ? '外部連携'
-                        : route.view === 'shortcuts'
-                          ? 'ショートカット連携'
-                          : route.view === 'memory'
-                            ? 'メモリ'
-                            : route.projectId
-                              ? 'プロジェクト'
-                              : 'すべてのストック'}
+                {heading}
               </a>
             )}
           </nav>
-        </div>
+        </ScrollHeader>
         {config.demo && (
           <div className="demo-banner">
             <BookOpen size={15} aria-hidden="true" />
@@ -1458,7 +1458,7 @@ function MemoryPanel({
                   <MemoryKnowledge text={item.text}>
                     {item.articleIds.slice(0, full ? 5 : 1).map((id, sourceIndex) => (
                       <button key={id} onClick={() => void onEvidence(id)}>
-                        根拠記事{item.articleIds.length > 1 ? ` ${sourceIndex + 1}` : ''}
+                        ストックした記事{item.articleIds.length > 1 ? ` ${sourceIndex + 1}` : ''}
                         <ArrowUpRight size={11} aria-hidden="true" />
                       </button>
                     ))}
@@ -1878,6 +1878,26 @@ function StockDetail({
         )}
       </div>
       <h3>{stock.title}</h3>
+      {stock.youtube && (
+        <div className="youtube-source">
+          {stock.youtube.thumbnailUrl && (
+            <img
+              className="youtube-thumbnail"
+              src={stock.youtube.thumbnailUrl}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          )}
+          {stock.youtube.channelTitle && <p>{stock.youtube.channelTitle}</p>}
+          <p className="local-model-note">
+            {stock.youtube.hasDescription
+              ? 'タイトル・説明文をもとに要約・問いを作成します。'
+              : '説明文がないため、タイトル・チャンネル名のみをもとに要約・問いを作成します。'}
+            動画本編・字幕は取得していません。
+          </p>
+        </div>
+      )}
       <div className="stock-detail-links">
         {stock.source_type === 'url' && (
           <a
@@ -1886,7 +1906,7 @@ function StockDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            元の記事を開く
+            {stock.youtube ? '元の動画を開く' : '元の記事を開く'}
             <ExternalLink size={14} aria-hidden="true" />
           </a>
         )}
@@ -1909,7 +1929,14 @@ function StockDetail({
           ['summary', '要約'],
           ['question', '問い'],
           ['note', 'メモ・保存先'],
-          ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
+          [
+            'content',
+            stock.youtube
+              ? '取得した動画情報'
+              : stock.source_type === 'text'
+                ? '入力した本文'
+                : '取得した本文',
+          ],
         ].map(([value, label]) => (
           <button
             key={value}
@@ -1926,7 +1953,7 @@ function StockDetail({
           {stock.summary ? (
             <>
               <p>{stock.summary.overview}</p>
-              <h4>この記事の要点</h4>
+              <h4>{stock.youtube ? '取得した動画情報の要点' : 'この記事の要点'}</h4>
               <ul>
                 {stock.summary.keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>
