@@ -92,7 +92,7 @@ const headerLabels: Record<Route['view'], string> = {
   pufu: 'プ譜',
 };
 const globalHeaderLabels: Partial<Record<Route['view'], string>> = {
-  stocks: 'すべての記事',
+  stocks: 'すべてのストック',
   questions: 'すべての問い',
   memory: 'あなたのメモリ',
 };
@@ -668,7 +668,7 @@ export default function App() {
             }}
           >
             <Layers size={19} aria-hidden="true" />
-            すべての記事<span className="nav-count">{allCount}</span>
+            すべてのストック<span className="nav-count">{allCount}</span>
           </button>
           <button
             className={`nav-item ${(route.view === 'questions' && !route.projectId) || questionFlow ? 'active' : ''}`}
@@ -919,10 +919,10 @@ export default function App() {
           {(route.view === 'stocks' ||
             route.view === 'questions' ||
             route.view === 'settings' ||
-            (route.view === 'memory' && route.projectId)) && (
+            route.view === 'memory') && (
             <div
               className={`detail-tabs library-tabs${route.projectId ? ' project-tabs' : ''}`}
-              aria-label={route.projectId ? 'プロジェクトの表示内容' : 'ストックの表示内容'}
+              aria-label={route.projectId ? 'プロジェクトの表示内容' : '全体の表示内容'}
             >
               <button
                 className={route.view === 'stocks' ? 'active' : ''}
@@ -940,25 +940,23 @@ export default function App() {
                 <CircleHelp size={16} aria-hidden="true" />
                 問い
               </button>
+              <button
+                className={route.view === 'memory' ? 'active' : ''}
+                aria-pressed={route.view === 'memory'}
+                onClick={() => navigate('memory', route.projectId)}
+              >
+                <Sparkles size={16} aria-hidden="true" />
+                メモリ
+              </button>
               {route.projectId && (
-                <>
-                  <button
-                    className={route.view === 'memory' ? 'active' : ''}
-                    aria-pressed={route.view === 'memory'}
-                    onClick={() => navigate('memory', route.projectId)}
-                  >
-                    <Sparkles size={16} aria-hidden="true" />
-                    メモリ
-                  </button>
-                  <button
-                    className={route.view === 'settings' ? 'active' : ''}
-                    aria-pressed={route.view === 'settings'}
-                    onClick={() => navigate('settings', route.projectId)}
-                  >
-                    <Settings size={16} aria-hidden="true" />
-                    設定
-                  </button>
-                </>
+                <button
+                  className={route.view === 'settings' ? 'active' : ''}
+                  aria-pressed={route.view === 'settings'}
+                  onClick={() => navigate('settings', route.projectId)}
+                >
+                  <Settings size={16} aria-hidden="true" />
+                  設定
+                </button>
               )}
             </div>
           )}
