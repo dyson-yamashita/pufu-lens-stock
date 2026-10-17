@@ -91,6 +91,11 @@ const headerLabels: Record<Route['view'], string> = {
   resolve: 'プ譜を作成',
   pufu: 'プ譜',
 };
+const globalHeaderLabels: Partial<Record<Route['view'], string>> = {
+  stocks: 'すべての記事',
+  questions: 'すべての問い',
+  memory: 'あなたのメモリ',
+};
 type ModalState =
   | { type: 'project'; project?: Project }
   | { type: 'save' }
@@ -622,6 +627,9 @@ export default function App() {
     : 'すべての問い';
   const headerProjectId = questionFlow ? questionListContext.projectId : route.projectId;
   const headerProject = questionFlow ? questionListProject : selected;
+  const headerLabel = headerProjectId
+    ? headerLabels[route.view]
+    : (globalHeaderLabels[route.view] ?? headerLabels[route.view]);
   const allCount = projects.reduce((count, project) => count + project.count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -818,19 +826,19 @@ export default function App() {
             {questionFlow ? (
               <>
                 <a href={questionListContext.hash} title={questionListHeading}>
-                  問い
+                  {headerProjectId ? '問い' : 'すべての問い'}
                 </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
                 <a
                   href={`#${route.view}/${encodeURIComponent(route.detailId!)}`}
                   aria-current="page"
                 >
-                  {headerLabels[route.view]}
+                  {headerLabel}
                 </a>
               </>
             ) : (
               <a href={window.location.hash || '#'} aria-current="page">
-                {headerLabels[route.view]}
+                {headerLabel}
               </a>
             )}
           </nav>
