@@ -388,15 +388,18 @@ p {
   transform: translateY(-100%);
 }
 .breadcrumb {
+  min-width: 0;
   font-size: 12px;
   letter-spacing: 0.03em;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .breadcrumb a {
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
   min-height: 44px;
+  max-width: 100%;
 }
 .breadcrumb .brand-mark {
   width: 28px;
