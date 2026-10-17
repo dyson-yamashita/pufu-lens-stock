@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readdir } from 'node:fs/promises';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
 import { loadMemoryInputs } from '../server/memory';
 import type { Job } from '../server/env';
@@ -105,7 +106,9 @@ describe('プロジェクトごとのユーザーメモリ設定', () => {
   it('移行時に既存のプロジェクトを保持し、設定をオンで初期化する', async () => {
     await app.dispose();
     app = await testApp({
-      migrations: ['0001_initial.sql', '0003_user_profiles.sql'],
+      migrations: (await readdir(new URL('../migrations/', import.meta.url)))
+        .filter((filename) => filename.endsWith('.sql') && filename < '0018')
+        .sort(),
       projectMemoryMigration: false,
     });
     const before = await app.env.DB.prepare('SELECT * FROM projects ORDER BY id').all();

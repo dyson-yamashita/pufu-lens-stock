@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp } from './helpers';
 import { memorySaveStatement } from '../server/db';
 import { hash } from '../server/security';
+import type { Project } from '../shared/domain';
 
 describe('認証と保存API（実際のSQLite）', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -103,6 +104,62 @@ describe('認証と保存API（実際のSQLite）', () => {
       projects: { id: string }[];
     };
     expect(remaining.projects.map((project) => project.id)).not.toContain(id);
+  });
+  it('問いの種類や状態を問わずプロジェクトごとに数え、ストック数を重複させない', async () => {
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO projects (id,user_id,name) VALUES ('empty-project','alice','空のプロジェクト')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO articles (id,user_id,canonical_url,source_url,title,domain,status) VALUES ('a1','alice','https://example.com/1','https://example.com/1','記事1','example.com','ready'), ('a2','alice','https://example.com/2','https://example.com/2','記事2','example.com','ready')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO stocks (id,user_id,project_id,article_id) VALUES ('s1','alice','alice-project','a1'), ('s2','alice','alice-project','a2')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO questions (id,project_id,stock_id,text,source,status) VALUES ('q1','alice-project','s1','AIの問い','ai','ready'), ('q2','alice-project','s2',NULL,'ai','failed'), ('q3','alice-project',NULL,'独立した問い','user','ready'), ('q4','alice-second',NULL,'別プロジェクトの問い','user','ready'), ('q5','bob-project',NULL,'他の人の問い','user','ready')",
+      ),
+    ]);
+    const list = async () =>
+      ((await (await app.request('/api/v1/projects')).json()) as { projects: Project[] }).projects;
+    const projects = await list();
+    expect(projects.find((p) => p.id === 'alice-project')).toMatchObject({
+      count: 2,
+      ready_count: 2,
+      question_count: 3,
+    });
+    expect(projects.find((p) => p.id === 'alice-second')).toMatchObject({ question_count: 1 });
+    expect(projects.find((p) => p.id === 'empty-project')).toMatchObject({ question_count: 0 });
+    expect(projects.some((p) => p.id === 'bob-project')).toBe(false);
+    const all = (await (await app.request('/api/v1/questions')).json()) as { total: number };
+    expect(projects.reduce((sum, project) => sum + project.question_count, 0)).toBe(all.total);
+    expect((await app.request('/api/v1/questions/q3', { method: 'DELETE' })).status).toBe(200);
+    expect((await list()).find((p) => p.id === 'alice-project')?.question_count).toBe(2);
+  });
+  it('問いの件数も本人とトークンのプロジェクト制限内だけを返す', async () => {
+    await app.env.DB.prepare(
+      "INSERT INTO questions (id,project_id,text,source,status) VALUES ('q1','alice-project','問い1','user','ready'), ('q2','alice-project','問い2','user','ready'), ('q3','alice-second','問い3','user','ready'), ('q4','bob-project','問い4','user','ready')",
+    ).run();
+    const { token } = (await (
+      await app.request('/api/v1/tokens', {
+        method: 'POST',
+        body: { name: '件数の検証', project_id: 'alice-second' },
+      })
+    ).json()) as { token: string };
+    const result = (await (
+      await app.request('/api/v1/projects', {
+        headers: { Authorization: `Bearer ${token}`, Cookie: '', Origin: '' },
+      })
+    ).json()) as { projects: Project[] };
+    expect(result.projects).toEqual([
+      expect.objectContaining({ id: 'alice-second', question_count: 1 }),
+    ]);
+    const bob = (await (await app.request('/api/v1/projects', { user: 'bob' })).json()) as {
+      projects: Project[];
+    };
+    expect(bob.projects).toEqual([
+      expect.objectContaining({ id: 'bob-project', question_count: 1 }),
+    ]);
   });
   it.each(['PATCH', 'DELETE'])('他ユーザーのプロジェクトを%sで変更できない', async (method) => {
     const before = await (await app.request('/api/v1/projects', { user: 'bob' })).json();

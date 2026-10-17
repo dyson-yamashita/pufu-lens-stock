@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { readdir } from 'node:fs/promises';
 import { applyMigration, testApp } from './helpers';
 import type { TokenInfo } from '../shared/domain';
 
@@ -92,7 +93,11 @@ describe('ショートカット用トークンの有効期間', () => {
   });
 
   it('移行時に既存トークンの全情報と認証・失効状態を保持する', async () => {
-    app = await testApp({ migrations: ['0001_initial.sql', '0003_user_profiles.sql'] });
+    app = await testApp({
+      migrations: (await readdir(new URL('../migrations/', import.meta.url)))
+        .filter((filename) => filename.endsWith('.sql') && filename !== '0002_unlimited_tokens.sql')
+        .sort(),
+    });
     const existing: { id: string; token: string }[] = [];
     for (const name of ['有効', '期限切れ', '失効済み']) {
       const created = await app.request('/api/v1/tokens', {
