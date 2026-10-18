@@ -2203,13 +2203,6 @@ p {
   bottom: 85px;
   background: #566b87;
 }
-.login-page > footer {
-  padding: 27px;
-  border-top: 1px solid var(--border);
-  text-align: center;
-  font-size: 10px;
-  color: var(--muted);
-}
 @media (min-width: 1600px) {
   .page-body {
     padding-top: 45px;
@@ -2451,9 +2444,6 @@ p {
   }
   .login-features {
     margin-top: 25px;
-  }
-  .login-page > footer {
-    font-size: 9px;
   }
   .token-row {
     padding: 17px;
