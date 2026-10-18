@@ -60,6 +60,7 @@ beforeEach(() => {
     value: { search: '', hash: '', hostname: 'example.com', href: 'https://example.com' },
   });
   vi.stubGlobal('requestAnimationFrame', vi.fn());
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
   vi.stubGlobal(
     'ResizeObserver',
     class {

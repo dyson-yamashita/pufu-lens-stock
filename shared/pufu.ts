@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ArticleSummary, MemoryData } from './domain';
 
-export const pufuEditorVersion = '0.9.14';
+export const pufuEditorVersion = '0.9.15';
 const nodeId = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 const comment = z.strictObject({
   color: z.enum(['blue', 'green', 'red']),
