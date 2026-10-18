@@ -2022,6 +2022,9 @@ p {
   gap: 24px;
 }
 .login-header-links .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 44px;
   font-size: 12px;
   white-space: nowrap;
