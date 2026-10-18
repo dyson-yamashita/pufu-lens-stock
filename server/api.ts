@@ -1,4 +1,5 @@
 import { encryptToken } from './x';
+import { publicProjectsApp, publicationApp } from './public-projects';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
@@ -96,6 +97,7 @@ export function createApp(trustedPrincipal?: Principal) {
     c.header('Cache-Control', 'no-store');
     await next();
   });
+  app.route('/api/public', publicProjectsApp());
   app.get('/api/config', (c) =>
     c.json({
       demo: isDemoOrigin(c.env, new URL(c.req.url).origin),
@@ -135,6 +137,7 @@ export function createApp(trustedPrincipal?: Principal) {
       throw new HTTPException(403, { message: 'このトークンには操作の権限がありません。' });
     await next();
   });
+  app.route('/api/v1/projects', publicationApp());
   app.get('/api/v1/integrations/x', async (c) => {
     const row = await c.env.DB.prepare(
       "SELECT updated_at FROM external_integrations WHERE user_id = ? AND provider = 'x'",
