@@ -2012,6 +2012,16 @@ p {
   color: var(--muted);
   font-size: 11px;
 }
+.login-header-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.login-header-links .text-link {
+  min-height: 44px;
+  font-size: 12px;
+  white-space: nowrap;
+}
 .login-main {
   max-width: 1320px;
   margin: 60px auto 85px;
@@ -3356,4 +3366,103 @@ textarea::placeholder {
 
 .public-question-detail .question-card-footer {
   min-height: 44px;
+}
+
+.manual-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+.manual-start {
+  padding: 22px 26px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--wash);
+}
+.manual-start h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+.manual-main :is(ol, ul) {
+  padding-left: 24px;
+  margin: 0;
+}
+.manual-main :is(p, li, dd) {
+  font-size: 14px;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.manual-main li + li {
+  margin-top: 8px;
+}
+.manual-toc {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 20px;
+  padding: 20px 0;
+  margin-bottom: 8px;
+}
+.manual-toc a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--primary);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.manual-section {
+  padding: 28px 0;
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 20px;
+}
+.manual-section h2 {
+  font-size: 20px;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+.manual-section p:last-child {
+  margin-bottom: 0;
+}
+.manual-note {
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: var(--wash);
+  color: var(--muted);
+}
+.manual-help {
+  margin-bottom: 0;
+}
+.manual-help dt {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.manual-help dd {
+  margin: 0 0 20px;
+}
+.manual-back-top {
+  min-height: 44px;
+  margin-top: 12px;
+}
+.manual-return {
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .manual-main {
+    padding: 28px 20px 40px;
+  }
+  .manual-start {
+    padding: 20px;
+  }
+  .manual-toc {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .manual-section {
+    padding: 24px 0;
+  }
 }

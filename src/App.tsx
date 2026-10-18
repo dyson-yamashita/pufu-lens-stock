@@ -211,7 +211,13 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
     <div className="login-page">
       <header>
         <Brand />
-        <span className="login-caption">読む。集める。つながる。</span>
+        <div className="login-header-links">
+          <span className="login-caption">読む。集める。つながる。</span>
+          <a className="text-link" href="/manual">
+            <BookOpen size={17} aria-hidden="true" />
+            マニュアル
+          </a>
+        </div>
       </header>
       <main className="login-main">
         <div className="login-copy">
@@ -722,6 +728,17 @@ export default function App() {
           </button>
         </nav>
         <div className="sidebar-bottom">
+          <a
+            className="nav-item"
+            href="/manual"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="ユーザーマニュアル（新しいタブで開く）"
+          >
+            <BookOpen size={18} aria-hidden="true" />
+            ユーザーマニュアル
+            <ExternalLink size={14} aria-hidden="true" />
+          </a>
           <button
             className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
             aria-current={route.view === 'profile' ? 'page' : undefined}
