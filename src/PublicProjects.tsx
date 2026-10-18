@@ -118,7 +118,7 @@ export function PublicProjectDirectory() {
                   <Globe size={13} aria-hidden="true" />
                   公開・閲覧のみ
                 </span>
-                <h3>{project.name}</h3>
+                <h3 title={project.name}>{project.name}</h3>
                 <p>
                   {project.public_description ||
                     '集めたストックと、そこから生まれた問いを公開しています。'}
