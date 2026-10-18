@@ -737,7 +737,6 @@ export default function App() {
           >
             <BookOpen size={18} aria-hidden="true" />
             ユーザーマニュアル
-            <ExternalLink size={14} aria-hidden="true" />
           </a>
           <button
             className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
