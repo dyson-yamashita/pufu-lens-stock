@@ -3455,9 +3455,6 @@ textarea::placeholder {
   min-height: 44px;
   margin-top: 12px;
 }
-.manual-return {
-  color: var(--muted);
-}
 @media (max-width: 760px) {
   .manual-main {
     padding: 28px 20px 40px;

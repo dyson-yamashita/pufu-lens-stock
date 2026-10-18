@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUp, BookOpen } from 'lucide-react';
+import { ArrowUp, BookOpen } from 'lucide-react';
 
 const sections = [
   {
@@ -134,12 +134,11 @@ export default function UserManual() {
     <div className="public-page manual-page">
       <header className="public-header">
         <a href="/" className="brand">
-          <img src="/pufu-lens-logo.png" alt="" width="38" height="38" />
+          <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
           <span>Pufu Lens</span>
         </a>
         <a href="/" className="text-link">
-          <ArrowLeft size={16} aria-hidden="true" />
-          トップへ
+          トップへ戻る
         </a>
       </header>
       <main className="manual-main">
@@ -183,11 +182,6 @@ export default function UserManual() {
           <ArrowUp size={16} aria-hidden="true" />
           ページの先頭へ
         </a>
-        <p className="manual-return">
-          <a className="text-link" href="/">
-            Pufu Lensを開く <ArrowRight size={14} aria-hidden="true" />
-          </a>
-        </p>
       </main>
     </div>
   );
