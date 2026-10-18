@@ -178,7 +178,7 @@ describe('問いからプ譜を生成・編集・保存する', () => {
       status: 'queued',
       score: null,
       task: '要約を確実に完了できる状態をつくる。',
-      editor_version: '0.9.14',
+      editor_version: '0.9.15',
     });
     expect(waiting.context).toMatchObject({
       question: { id: 'question', text: '失敗しても処理を完了するには？' },
