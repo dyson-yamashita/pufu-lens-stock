@@ -311,7 +311,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
         </div>
       </main>
       <PublicProjectDirectory />
-      <footer>自分のペースで集める、あなただけの知識の棚。</footer>
     </div>
   );
 }
