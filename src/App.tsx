@@ -1117,7 +1117,7 @@ export default function App() {
                     {[
                       ['all', 'すべて'],
                       ['web', 'web'],
-                      ['user', 'ユーザー'],
+                      ['user', 'テキスト'],
                       ['favorites', 'お気に入り'],
                     ].map(([value, label]) => (
                       <button
