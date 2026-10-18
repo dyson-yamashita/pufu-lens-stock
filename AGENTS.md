@@ -21,4 +21,5 @@
 - Superpowersのスキルと補助ファイルは `.agents/skills/` にあります。利用するスキルの `SKILL.md` を読み、そこから必要な参照先を確認してください。
 - スキル内の `superpowers:<名前>` は `.agents/skills/<名前>/SKILL.md` を指します。専用のスキル呼び出しツールがない場合は、そのファイルを直接読んで適用してください。
 - 既存コードにテストを追加・改善するときは [pragmatic-testing](.agents/skills/pragmatic-testing/SKILL.md) を使い、既存のテスト基盤を再利用して重要な振る舞いを最小限のテストで保護してください。
+- 機能を追加・変更・削除するときは [maintaining-user-manual](.agents/skills/maintaining-user-manual/SKILL.md) を使い、ユーザーマニュアルへの影響を判断してください。基本操作・利用条件・公開範囲や説明の正しさに影響する場合だけ更新し、文言・見た目の微調整や内部改善だけの場合は更新しないでください。
 - Superpowers由来のファイルは直接編集せず、更新時は取り込み元のコミットとライセンスを維持してください。取り込み情報は [.agents/superpowers-source.json](.agents/superpowers-source.json) にあります。
