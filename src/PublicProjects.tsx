@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Copy,
   ExternalLink,
+  Folder,
   Globe,
   Layers,
   LoaderCircle,
@@ -463,7 +464,15 @@ function PublicQuestionList({ root, page, onPageChange }: PublicListProps) {
     </>
   );
 }
-function PublicQuestionDetail({ root, id }: { root: string; id: string }) {
+function PublicQuestionDetail({
+  root,
+  id,
+  projectName,
+}: {
+  root: string;
+  id: string;
+  projectName: string;
+}) {
   const [page, setPage] = useState(1);
   const { data, error, reload } = useResource<{
     question: PublicQuestion;
@@ -474,34 +483,78 @@ function PublicQuestionDetail({ root, id }: { root: string; id: string }) {
   return !data ? (
     <ResourceState error={error} retry={reload} />
   ) : (
-    <section>
-      <a className="text-link" href="#questions">
+    <section className="question-detail-page public-question-detail" aria-label="問いの詳細">
+      <a className="back-link" href="#questions">
         <ArrowLeft size={16} aria-hidden="true" />
-        問いの一覧へ
+        問いの一覧に戻る
       </a>
-      <QuestionLabels
-        className="public-detail-labels"
-        question={{ source: data.question.source, has_pufu: data.question.pufu_count > 0 ? 1 : 0 }}
-      />
-      <h2 className="public-detail-title">{data.question.text}</h2>
-      <h3>問いから生まれたプ譜</h3>
-      <div className="public-content-grid">
-        {data.pufus.map((pufu) => (
-          <a
-            className="public-content-card"
-            key={pufu.id}
-            href={`#pufu/${encodeURIComponent(pufu.id)}`}
-          >
-            <h3>{pufu.task}</h3>
-            <p className="public-help">局面 {pufu.current_phase} · 閲覧のみ</p>
-            <span className="text-link">
-              プ譜を見る <ArrowRight size={16} aria-hidden="true" />
-            </span>
-          </a>
-        ))}
+      <header className="page-header">
+        <div>
+          <h2 className="page-title">問いの詳細</h2>
+          <p>問いを見つめ直し、次の一歩へ。</p>
+        </div>
+      </header>
+      <article className="question-detail-card">
+        <div className="question-detail-meta">
+          <QuestionLabels
+            question={{
+              source: data.question.source,
+              has_pufu: data.question.pufu_count > 0 ? 1 : 0,
+            }}
+          />
+          <span>
+            <Folder size={15} aria-hidden="true" />
+            {projectName}
+          </span>
+        </div>
+        <h3 className="question-text">{data.question.text}</h3>
+        {data.stock && (
+          <div className="question-detail-source">
+            <a href={`#stock/${encodeURIComponent(data.stock.id)}`}>
+              <BookOpen size={17} aria-hidden="true" />
+              <span>{data.stock.title}</span>
+              <ArrowRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+        )}
+        <div className="question-card-footer">
+          <time dateTime={data.question.created_at}>
+            {new Intl.DateTimeFormat('ja-JP', {
+              dateStyle: 'medium',
+              timeZone: 'Asia/Tokyo',
+            }).format(new Date(data.question.created_at))}
+          </time>
+        </div>
+      </article>
+      <div className="section-head pufu-list-heading">
+        <div>
+          <h3 className="section-title">この問いのプ譜</h3>
+          <p>課題ごとにまとめられた案を閲覧できます。</p>
+        </div>
+        <span className="result-count">{data.question.pufu_count}件</span>
       </div>
+      {data.pufus.length ? (
+        <div className="pufu-list">
+          {data.pufus.map((pufu) => (
+            <a
+              className="pufu-list-item"
+              key={pufu.id}
+              href={`#pufu/${encodeURIComponent(pufu.id)}`}
+            >
+              <span>
+                <strong>{pufu.task}</strong>
+                <small>局面 {pufu.current_phase} · 閲覧のみ</small>
+              </span>
+              <ArrowRight size={18} aria-hidden="true" />
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="pufu-empty">
+          <p>この問いのプ譜はまだありません。</p>
+        </div>
+      )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
-      {!data.pufus.length && <p className="public-message">公開できるプ譜はまだありません。</p>}
       {data.stock && (
         <>
           <h3 className="public-detail-title">ストックした記事</h3>
@@ -564,7 +617,12 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
       ) : match[1] === 'pufu' ? (
         <PublicPufuDetail root={root} id={match[2]} />
       ) : (
-        <PublicQuestionDetail key={match[2]} root={root} id={match[2]} />
+        <PublicQuestionDetail
+          key={match[2]}
+          root={root}
+          id={match[2]}
+          projectName={data?.project.name ?? ''}
+        />
       );
   else
     content =

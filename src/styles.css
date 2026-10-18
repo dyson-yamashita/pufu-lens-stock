@@ -529,7 +529,8 @@ p {
   flex: 1 1 300px;
   min-width: 0;
 }
-.page-header h1 {
+.page-header h1,
+.page-header .page-title {
   font-size: 28px;
   line-height: 1.45;
   font-weight: 600;
@@ -1584,6 +1585,7 @@ p {
   margin-top: auto;
 }
 .question-detail-source button:hover,
+.question-detail-source a:hover,
 .question-project:hover,
 .question-card-footer button:hover {
   color: var(--primary-hover);
@@ -1913,7 +1915,8 @@ p {
   gap: 18px;
   margin-bottom: 18px;
 }
-.section-head h2 {
+.section-head h2,
+.section-head .section-title {
   font-size: 18px;
   font-weight: 600;
 }
@@ -2261,7 +2264,8 @@ p {
     padding-left: 17px;
     padding-right: 17px;
   }
-  .page-header h1 {
+  .page-header h1,
+  .page-header .page-title {
     font-size: 25px;
   }
 }
@@ -2346,7 +2350,8 @@ p {
     flex-wrap: wrap;
     gap: 12px;
   }
-  .page-header h1 {
+  .page-header h1,
+  .page-header .page-title {
     font-size: 25px;
   }
   .page-header p {
@@ -2734,6 +2739,7 @@ textarea::placeholder {
   flex-shrink: 0;
 }
 .question-detail-card h2,
+.question-detail-card .question-text,
 .question-card .question-text {
   font-size: 23px;
   font-weight: 500;
@@ -2745,7 +2751,8 @@ textarea::placeholder {
 .question-detail-source {
   margin: 28px 0 18px;
 }
-.question-detail-source button {
+.question-detail-source button,
+.question-detail-source a {
   display: flex;
   align-items: flex-start;
   gap: 9px;
@@ -2955,6 +2962,7 @@ textarea::placeholder {
     padding: 22px;
   }
   .question-detail-card h2,
+  .question-detail-card .question-text,
   .question-card .question-text {
     font-size: 19px;
   }
@@ -3356,6 +3364,6 @@ textarea::placeholder {
   margin-top: 16px;
 }
 
-.public-detail-labels {
-  margin-top: 24px;
+.public-question-detail .question-card-footer {
+  min-height: 44px;
 }
