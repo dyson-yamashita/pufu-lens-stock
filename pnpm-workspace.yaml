@@ -9,3 +9,6 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
+
+patchedDependencies:
+  miniflare@4.20260730.0: patches/miniflare@4.20260730.0.patch

@@ -57,6 +57,7 @@ import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
 import ScrollHeader from './ScrollHeader';
+import { PublicProjectDirectory, ProjectPublicationSettings } from './PublicProjects';
 
 type MemoryResponse = {
   memory: Memory | null;
@@ -316,6 +317,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
           <span className="art-dot dot-two" />
         </div>
       </main>
+      <PublicProjectDirectory />
       <footer>自分のペースで集める、あなただけの知識の棚。</footer>
     </div>
   );
@@ -1562,111 +1564,114 @@ function ProjectForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
-    <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setBusy(true);
-        setError('');
-        try {
-          const data = await send<{ id: string }>(
-            project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
-            { name, description, include_in_user_memory: includeInUserMemory },
-            project ? 'PATCH' : 'POST',
-          );
-          onDone(project?.id ?? data.id);
-        } catch (e) {
-          setError((e as Error).message);
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      <p className="form-intro">
-        {project
-          ? 'プロジェクト名と概要を変更できます。内容はメモリの整理にも使われます。'
-          : '集めたいテーマに名前をつけましょう。目的を書くと、メモリの整理にも使われます。'}
-      </p>
-      <label htmlFor="project-name">プロジェクト名</label>
-      <input
-        id="project-name"
-        value={name}
-        disabled={busy}
-        onChange={(e) => setName(e.target.value)}
-        required
-        maxLength={80}
-        autoFocus
-        placeholder="例：次のアプリ開発"
-      />
-      <label htmlFor="project-description">
-        プロジェクト概要 <span className="optional">任意</span>
-      </label>
-      <textarea
-        id="project-description"
-        value={description}
-        disabled={busy}
-        onChange={(e) => setDescription(e.target.value)}
-        maxLength={1000}
-        rows={8}
-        placeholder={`以下について書いてみましょう。
+    <>
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          setBusy(true);
+          setError('');
+          try {
+            const data = await send<{ id: string }>(
+              project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
+              { name, description, include_in_user_memory: includeInUserMemory },
+              project ? 'PATCH' : 'POST',
+            );
+            onDone(project?.id ?? data.id);
+          } catch (e) {
+            setError((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <p className="form-intro">
+          {project
+            ? 'プロジェクト名と概要を変更できます。内容はメモリの整理にも使われます。'
+            : '集めたいテーマに名前をつけましょう。目的を書くと、メモリの整理にも使われます。'}
+        </p>
+        <label htmlFor="project-name">プロジェクト名</label>
+        <input
+          id="project-name"
+          value={name}
+          disabled={busy}
+          onChange={(e) => setName(e.target.value)}
+          required
+          maxLength={80}
+          autoFocus
+          placeholder="例：次のアプリ開発"
+        />
+        <label htmlFor="project-description">
+          プロジェクト概要 <span className="optional">任意</span>
+        </label>
+        <textarea
+          id="project-description"
+          value={description}
+          disabled={busy}
+          onChange={(e) => setDescription(e.target.value)}
+          maxLength={1000}
+          rows={8}
+          placeholder={`以下について書いてみましょう。
 
 ・実現したいこと、取り組む目的
 ・使える時間や予算
 ・利用できる技術や道具、活動環境
 ・競合する活動、気になる問題`}
-      />
-      <details className="project-advanced">
-        <summary>詳細設定</summary>
-        <label className="project-memory-toggle" htmlFor={userMemoryId}>
-          <span>ストック追加時にユーザーのメモリを更新する</span>
-          <input
-            id={userMemoryId}
-            type="checkbox"
-            role="switch"
-            checked={includeInUserMemory}
-            disabled={busy}
-            onChange={(event) => setIncludeInUserMemory(event.target.checked)}
-            aria-describedby={`${userMemoryId}-hint`}
-          />
-        </label>
-        <p id={`${userMemoryId}-hint`} className="project-memory-hint">
-          オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。
-          {project && '保存すると、既存のメモリにも変更を反映します。'}
-        </p>
-      </details>
-      <FormError error={error} />
-      <div className="form-actions">
-        {project && (
-          <button
-            type="button"
-            className="button danger-text"
-            disabled={busy}
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  'このプロジェクト内の記事・問い・プ譜を削除します。他のプロジェクトにも保存した記事は残ります。削除しますか？',
+        />
+        <details className="project-advanced">
+          <summary>詳細設定</summary>
+          <label className="project-memory-toggle" htmlFor={userMemoryId}>
+            <span>ストック追加時にユーザーのメモリを更新する</span>
+            <input
+              id={userMemoryId}
+              type="checkbox"
+              role="switch"
+              checked={includeInUserMemory}
+              disabled={busy}
+              onChange={(event) => setIncludeInUserMemory(event.target.checked)}
+              aria-describedby={`${userMemoryId}-hint`}
+            />
+          </label>
+          <p id={`${userMemoryId}-hint`} className="project-memory-hint">
+            オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。
+            {project && '保存すると、既存のメモリにも変更を反映します。'}
+          </p>
+        </details>
+        <FormError error={error} />
+        <div className="form-actions">
+          {project && (
+            <button
+              type="button"
+              className="button danger-text"
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    'このプロジェクト内の記事・問い・プ譜を削除します。他のプロジェクトにも保存した記事は残ります。削除しますか？',
+                  )
                 )
-              )
-                return;
-              setBusy(true);
-              try {
-                await api(`/api/v1/projects/${project.id}`, { method: 'DELETE' });
-                onDelete();
-              } catch (e) {
-                setError((e as Error).message);
-                setBusy(false);
-              }
-            }}
-          >
-            <Trash2 size={16} aria-hidden="true" />
-            削除
+                  return;
+                setBusy(true);
+                try {
+                  await api(`/api/v1/projects/${project.id}`, { method: 'DELETE' });
+                  onDelete();
+                } catch (e) {
+                  setError((e as Error).message);
+                  setBusy(false);
+                }
+              }}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              削除
+            </button>
+          )}
+          <button className="button primary" disabled={busy}>
+            {busy ? <Spinner /> : <Check size={17} aria-hidden="true" />}
+            {project ? '保存' : 'プロジェクトを作成'}
           </button>
-        )}
-        <button className="button primary" disabled={busy}>
-          {busy ? <Spinner /> : <Check size={17} aria-hidden="true" />}
-          {project ? '保存' : 'プロジェクトを作成'}
-        </button>
-      </div>
-    </form>
+        </div>
+      </form>
+      {project && <ProjectPublicationSettings key={project.id} projectId={project.id} />}
+    </>
   );
 }
 function SaveForm({
