@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useId, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,9 +22,23 @@ import type {
   PublicPufu,
   PublicPufuSummary,
 } from '../shared/public-project';
-import type { PufuScore } from '../shared/pufu';
 import { api, send } from './api';
 import QuestionLabels from './QuestionLabels';
+
+const PublicPufuScore = lazy(async () => {
+  try {
+    return await import('./PublicPufuScore');
+  } catch {
+    return {
+      default: () => (
+        <ResourceState
+          error="プ譜エディターを読み込めませんでした。再読み込みしてください。"
+          retry={() => window.location.reload()}
+        />
+      ),
+    };
+  }
+});
 
 function useResource<T>(path: string) {
   const [state, setState] = useState<{ path: string; data?: T; error?: string }>({ path });
@@ -503,70 +517,6 @@ function PublicQuestionDetail({ root, id }: { root: string; id: string }) {
     </section>
   );
 }
-const elementLabels: Record<keyof PufuScore['elements'], string> = {
-  people: '人員',
-  money: '予算',
-  time: '時間',
-  quality: '品質',
-  businessScheme: '商流・座組',
-  environment: '環境',
-  rival: '競合',
-  foreignEnemy: '外敵',
-};
-function ScoreNode({ label, node }: { label: string; node: PufuScore['gainingGoal'] }) {
-  return (
-    <section className="public-score-node">
-      <h4>{label}</h4>
-      <p>{node.text || '未記入'}</p>
-      {node.comment.text && (
-        <aside className={`public-score-comment ${node.comment.color}`}>
-          <strong>振り返り</strong>
-          <p>{node.comment.text}</p>
-        </aside>
-      )}
-    </section>
-  );
-}
-export function PublicScore({ score }: { score: PufuScore }) {
-  return (
-    <div className="public-score">
-      <div className="public-score-goals">
-        <ScoreNode label="獲得目標" node={score.gainingGoal} />
-        <ScoreNode label="勝利条件" node={score.winCondition} />
-      </div>
-      <h3>中間目的と施策</h3>
-      {score.purposes.length ? (
-        score.purposes.map((purpose, i) => (
-          <div className="public-score-purpose" key={purpose.uuid}>
-            <ScoreNode label={`中間目的 ${i + 1}`} node={purpose} />
-            <div className="public-score-measures">
-              {purpose.measures.map((measure, n) => (
-                <div className={`public-measure ${measure.color}`} key={measure.uuid}>
-                  <ScoreNode
-                    label={`施策 ${n + 1}${measure.progress === undefined ? '' : ` · ${measure.progress}%`}`}
-                    node={measure}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
-      ) : (
-        <p>未記入</p>
-      )}
-      <h3>8つの要素</h3>
-      <div className="public-score-elements">
-        {Object.entries(elementLabels).map(([key, label]) => (
-          <ScoreNode
-            key={key}
-            label={label}
-            node={score.elements[key as keyof typeof elementLabels]}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 function PublicPufuDetail({ root, id }: { root: string; id: string }) {
   const { data, error, reload } = useResource<{ pufu: PublicPufu }>(
     `${root}/pufus/${encodeURIComponent(id)}`,
@@ -585,7 +535,9 @@ function PublicPufuDetail({ root, id }: { root: string; id: string }) {
         最新の局面 {data.pufu.current_phase} ·{' '}
         {data.pufu.current_phase % 2 === 0 ? '振り返り' : 'プ譜'} · 閲覧のみ
       </p>
-      <PublicScore score={data.pufu.score} />
+      <Suspense fallback={<ResourceState retry={reload} />}>
+        <PublicPufuScore key={`${id}-${data.pufu.current_phase}`} score={data.pufu.score} />
+      </Suspense>
     </section>
   );
 }

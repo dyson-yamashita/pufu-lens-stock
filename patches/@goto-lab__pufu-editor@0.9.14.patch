@@ -1,0 +1,201 @@
+diff --git a/dist/components/Edges.js b/dist/components/Edges.js
+index b7f93e65202ee57468485f4931e2d8f3141067fc..aec0129472497573f849ae0a4beda292b614d58e 100644
+--- a/dist/components/Edges.js
++++ b/dist/components/Edges.js
+@@ -10,6 +10,9 @@ const short_uuid_1 = __importDefault(require("short-uuid"));
+ const userAgent = window.navigator.userAgent.toLowerCase();
+ const isSafari = !(userAgent.indexOf("chrome") != -1) && userAgent.indexOf("safari") != -1;
+ const Edges = ({ scoreKey, scores, action, preview = false, connectMeasureUuids, }) => {
++    const measureKey = (measure) => preview
++        ? JSON.stringify([measure.text, measure.color, measure.progress, measure.comment.text, measure.comment.color])
++        : measure.text;
+     const [viewBox, setViewBox] = (0, react_1.useState)("0 0 0 0");
+     const [edges, setEdges] = (0, react_1.useState)([]);
+     const ref = (0, react_1.useRef)(null);
+@@ -26,7 +29,7 @@ const Edges = ({ scoreKey, scores, action, preview = false, connectMeasureUuids,
+             observer.disconnect();
+             window.removeEventListener("resize", updateEdges);
+         };
+-    }, [scores, action]);
++    }, [scores, action, preview]);
+     const updateEdges = () => {
+         const dom = document.getElementById(`score-${scoreKey}`);
+         if (dom) {
+@@ -59,17 +62,17 @@ const Edges = ({ scoreKey, scores, action, preview = false, connectMeasureUuids,
+                     // connectMeasureUuidsが指定されている場合、右列の施策のみ線を描画
+                     if (connectMeasureUuids && !connectMeasureUuids.has(measure.uuid)) {
+                         purposeMapping.push({ measure: measure.uuid, purpose: purpose.uuid });
+-                        measureTexts.push(measure.text);
++                        measureTexts.push(measureKey(measure));
+                         return;
+                     }
+-                    if (measure.text && measureTexts.includes(measure.text)) {
++                    if (measure.text && measureTexts.includes(measureKey(measure))) {
+                         edges.push([
+                             `${scoreKey}-measure-${measure.uuid}`,
+                             `${scoreKey}-purpose-${purpose.uuid}`,
+                             "",
+                             "dashed",
+                         ]);
+-                        const index = measureTexts.indexOf(measure.text);
++                        const index = measureTexts.indexOf(measureKey(measure));
+                         if (purpose.uuid !== purposeMapping[index].purpose)
+                             edges.push([
+                                 `${scoreKey}-measure-${purposeMapping[index].measure}`,
+@@ -87,7 +90,7 @@ const Edges = ({ scoreKey, scores, action, preview = false, connectMeasureUuids,
+                         ]);
+                     }
+                     purposeMapping.push({ measure: measure.uuid, purpose: purpose.uuid });
+-                    measureTexts.push(measure.text);
++                    measureTexts.push(measureKey(measure));
+                 });
+             });
+         }
+diff --git a/dist/components/ProjectScore.js b/dist/components/ProjectScore.js
+index 2ac2958e4d701512755f9a0955dad0a31a409fd0..9a8bd6cb2c3f51b57b38223c01b357d17cef5318 100644
+--- a/dist/components/ProjectScore.js
++++ b/dist/components/ProjectScore.js
+@@ -21,6 +21,10 @@ const Edges_1 = require("./Edges");
+ const logger_1 = require("../lib/logger");
+ let state;
+ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false, dark = false, mobile = false, showProgress = false, lang = "ja", textSize = "small", width, border = true, }) => {
++    // Keep distinct feedback/progress visible when shared text is previewed.
++    const measureKey = (measure) => preview
++        ? JSON.stringify([measure.text, measure.color, measure.progress, measure.comment.text, measure.comment.color])
++        : measure.text;
+     const [scoreKey] = (0, react_1.useState)(uniqueKey ?? (0, store_1.createScoreKey)());
+     const scoreRef = (0, react_1.useRef)(null);
+     const [action, setAction] = (0, react_1.useState)(0);
+@@ -29,13 +33,13 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+     };
+     state = (0, hooks_1.useProjectScoreStoreEffect)(scoreKey, updateAction, initScore);
+     const { i18n } = (0, hooks_1.useI18Translation)(lang);
+-    const hideMeasure = (purposeIndex, measureIndex, text) => {
+-        if (preview && text) {
++    const hideMeasure = (purposeIndex, measureIndex, measure) => {
++        if (preview && measure.text) {
+             return state.scores[scoreKey].purposes
+                 .map((p, pIndex) => {
+                 return p.measures
+                     .map((m, mIndex) => {
+-                    if (m.text === text) {
++                    if (measureKey(m) === measureKey(measure)) {
+                         if (pIndex === purposeIndex && mIndex == measureIndex)
+                             return false;
+                         if (pIndex < purposeIndex)
+@@ -90,17 +94,17 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+         state.scores[scoreKey].purposes.forEach((p) => {
+             const seen = new Set();
+             p.measures.forEach((m) => {
+-                if (m.text && !seen.has(m.text)) {
+-                    seen.add(m.text);
+-                    textPurposeCount.set(m.text, (textPurposeCount.get(m.text) || 0) + 1);
++                if (m.text && !seen.has(measureKey(m))) {
++                    seen.add(measureKey(m));
++                    textPurposeCount.set(measureKey(m), (textPurposeCount.get(measureKey(m)) || 0) + 1);
+                 }
+             });
+         });
+-        const isSharedText = (text) => text && (textPurposeCount.get(text) || 0) > 1;
++        const isSharedText = (measure) => measure.text && (textPurposeCount.get(measureKey(measure)) || 0) > 1;
+         state.scores[scoreKey].purposes.forEach((p) => {
+             // 共有施策は常に右列（接続対象）
+             // 通常施策は2カラムグリッドの右列のみ接続対象
+-            const normalMeasures = p.measures.filter((m) => !isSharedText(m.text));
++            const normalMeasures = p.measures.filter((m) => !isSharedText(m));
+             const count = normalMeasures.length;
+             normalMeasures.forEach((m, idx) => {
+                 if (count <= 1 || idx % 2 === 1 || idx === count - 1) {
+@@ -109,13 +113,13 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+             });
+             // 共有施策は常に接続対象
+             p.measures.forEach((m) => {
+-                if (isSharedText(m.text)) {
++                if (isSharedText(m)) {
+                     uuids.add(m.uuid);
+                 }
+             });
+         });
+         return uuids;
+-    }, [scoreKey, isTwoColumn, action, state.scores]);
++    }, [scoreKey, isTwoColumn, action, state.scores, preview]);
+     const scoreStyle = (0, react_1.useMemo)(() => {
+         return width
+             ? {
+@@ -140,15 +144,15 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+                                         if (pIdx !== purposeIndex) {
+                                             p.measures.forEach((m) => {
+                                                 if (m.text)
+-                                                    otherTexts.add(m.text);
++                                                    otherTexts.add(measureKey(m));
+                                             });
+                                         }
+                                     });
+-                                    const isSharedMeasure = (text) => text && otherTexts.has(text);
++                                    const isSharedMeasure = (measure) => measure.text && otherTexts.has(measureKey(measure));
+                                     // 共有施策は最初のpurposeでのみ表示
+-                                    const isFirstPurposeForText = (text) => {
++                                    const isFirstPurposeForText = (measure) => {
+                                         for (const p of state.scores[scoreKey].purposes) {
+-                                            if (p.measures.some((m) => m.text === text))
++                                            if (p.measures.some((m) => measureKey(m) === measureKey(measure)))
+                                                 return p.uuid === purpose.uuid;
+                                         }
+                                         return false;
+@@ -164,13 +168,13 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+                                                     /* プレビュー+2カラム時: 通常施策は2カラム、共有施策は右寄せ */
+                                                     (0, jsx_runtime_1.jsx)("div", { className: "grid grid-cols-2 gap-x-2", children: (() => {
+                                                             const normalMeasures = purpose.measures
+-                                                                .filter((m) => !isSharedMeasure(m.text));
++                                                                .filter((m) => !isSharedMeasure(m));
+                                                             const items = [];
+                                                             let colPos = 0; // 現在のグリッド列位置（0=左, 1=右）
+                                                             let normalIdx = 0;
+                                                             purpose.measures.forEach((m) => {
+-                                                                const shared = isSharedMeasure(m.text);
+-                                                                if (shared && !isFirstPurposeForText(m.text))
++                                                                const shared = isSharedMeasure(m);
++                                                                if (shared && !isFirstPurposeForText(m))
+                                                                     return;
+                                                                 if (shared) {
+                                                                     // 共有施策は右列に配置。左列にいる場合のみスペーサー挿入
+@@ -197,7 +201,7 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+                                                             return items;
+                                                         })() })) : (
+                                                     /* 編集モードまたは1カラム時 */
+-                                                    (0, jsx_runtime_1.jsx)(react_sortablejs_1.ReactSortable, { className: `${isTwoColumn ? 'grid grid-cols-2 gap-x-2' : ''}`, list: purpose.measures.map((m) => ({
++                                                    (0, jsx_runtime_1.jsx)(react_sortablejs_1.ReactSortable, { disabled: preview, className: `${isTwoColumn ? 'grid grid-cols-2 gap-x-2' : ''}`, list: purpose.measures.map((m) => ({
+                                                             id: m.uuid,
+                                                             ...m,
+                                                         })), setList: (measures) => {
+@@ -211,10 +215,10 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+                                                             }
+                                                         }, animation: 150, delay: 2, filter: "textarea,input", preventOnFilter: false, children: (() => {
+                                                             const normalMeasures = purpose.measures
+-                                                                .filter((m) => !isSharedMeasure(m.text));
++                                                                .filter((m) => !isSharedMeasure(m));
+                                                             let normalIdx = 0;
+                                                             return purpose.measures.map((measure, measureIndex) => {
+-                                                                const shared = isTwoColumn && isSharedMeasure(measure.text);
++                                                                const shared = isTwoColumn && isSharedMeasure(measure);
+                                                                 let rightAlign = shared;
+                                                                 if (!shared && isTwoColumn) {
+                                                                     const isLastNormal = normalIdx === normalMeasures.length - 1;
+@@ -223,7 +227,7 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+                                                                         rightAlign = true;
+                                                                     normalIdx++;
+                                                                 }
+-                                                                return ((0, jsx_runtime_1.jsx)("div", { className: `pb-1 ${rightAlign ? 'col-start-2' : ''}`, onClick: updateAction, onBlur: updateAction, children: (0, jsx_runtime_1.jsx)(Measure_1.Measure, { scoreKey: scoreKey, measure: measure, feedback: feedback, preview: preview, dark: dark, mobile: mobile, showProgress: showProgress, i18n: i18n, textSize: textSize, hidden: hideMeasure(purposeIndex, measureIndex, measure.text), onChange: (measure) => {
++                                                                return ((0, jsx_runtime_1.jsx)("div", { className: `pb-1 ${rightAlign ? 'col-start-2' : ''}`, onClick: updateAction, onBlur: updateAction, children: (0, jsx_runtime_1.jsx)(Measure_1.Measure, { scoreKey: scoreKey, measure: measure, feedback: feedback, preview: preview, dark: dark, mobile: mobile, showProgress: showProgress, i18n: i18n, textSize: textSize, hidden: hideMeasure(purposeIndex, measureIndex, measure), onChange: (measure) => {
+                                                                             state.setMeasure(scoreKey, purpose.uuid, measure);
+                                                                             updateAction();
+                                                                         }, onDelete: (measure) => {
+@@ -265,7 +269,7 @@ const ProjectScore = ({ initScore, uniqueKey, feedback = false, preview = false,
+                                         state.setWinCondition(scoreKey, objective);
+                                     } }), mobile && (0, jsx_runtime_1.jsx)(Spacer, {}), (0, jsx_runtime_1.jsx)(ObjectiveBox_1.ObjectiveBox, { scoreKey: scoreKey, goal: state.scores[scoreKey].gainingGoal, label: "GainingGoal", feedback: feedback, preview: preview, dark: dark, mobile: mobile, i18n: i18n, textSize: textSize, onChange: (objective) => {
+                                         state.setGainingGoal(scoreKey, objective);
+-                                    } })] })] }), mobile && ((0, jsx_runtime_1.jsx)(EightElements_1.EightElements, { scoreKey: scoreKey, elements: state.scores[scoreKey].elements, feedback: feedback, mobile: mobile, dark: dark, i18n: i18n, textSize: textSize, border: border, onChange: (elements) => {
++                                    } })] })] }), mobile && ((0, jsx_runtime_1.jsx)(EightElements_1.EightElements, { scoreKey: scoreKey, elements: state.scores[scoreKey].elements, feedback: feedback, preview: preview, mobile: mobile, dark: dark, i18n: i18n, textSize: textSize, border: border, onChange: (elements) => {
+                         state.setEightElements(scoreKey, elements);
+                     } }))] })) : ((0, jsx_runtime_1.jsx)(ScoreLoading, { i18n: i18n })) }));
+ };
