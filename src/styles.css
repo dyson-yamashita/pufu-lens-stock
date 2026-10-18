@@ -257,6 +257,15 @@ p {
   flex-direction: column;
   gap: 24px;
 }
+.boot .brand {
+  gap: 14px;
+  font-size: 30px;
+}
+.boot .brand-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
 .boot p {
   font-size: 14px;
   color: var(--muted);
