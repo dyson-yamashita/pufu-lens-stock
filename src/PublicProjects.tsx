@@ -17,12 +17,14 @@ import type {
   PublicList,
   PublicProject,
   PublicStock,
+  PublicStockDetail,
   PublicQuestion,
   PublicPufu,
   PublicPufuSummary,
 } from '../shared/public-project';
 import type { PufuScore } from '../shared/pufu';
 import { api, send } from './api';
+import QuestionLabels from './QuestionLabels';
 
 function useResource<T>(path: string) {
   const [state, setState] = useState<{ path: string; data?: T; error?: string }>({ path });
@@ -94,11 +96,7 @@ export function PublicProjectDirectory() {
   return (
     <section className="public-directory" aria-labelledby="public-directory-heading">
       <div className="public-section-heading">
-        <div>
-          <p className="eyebrow">OPEN COLLECTIONS</p>
-          <h2 id="public-directory-heading">公開プロジェクト</h2>
-        </div>
-        <Globe size={26} aria-hidden="true" />
+        <h2 id="public-directory-heading">公開プロジェクト</h2>
       </div>
       <p className="public-lead">
         誰かの関心から、次のアイデアへ。ストックと問い、その先のプ譜をのぞいてみませんか。
@@ -116,9 +114,9 @@ export function PublicProjectDirectory() {
               >
                 <span className="public-badge">
                   <Globe size={13} aria-hidden="true" />
-                  公開・閲覧のみ
+                  公開
                 </span>
-                <h3>{project.name}</h3>
+                <h3 title={project.name}>{project.name}</h3>
                 <p>
                   {project.public_description ||
                     '集めたストックと、そこから生まれた問いを公開しています。'}
@@ -299,10 +297,23 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
     </form>
   );
 }
-function StockCard({ stock }: { stock: PublicStock }) {
-  const href = stock.source_url && /^https?:\/\//i.test(stock.source_url) ? stock.source_url : null;
+function StockTopics({ stock }: { stock: PublicStock }) {
   return (
-    <article className="public-content-card">
+    stock.summary && (
+      <div className="public-topics">
+        {stock.summary.topics.map((topic, i) => (
+          <span key={i}>{topic}</span>
+        ))}
+      </div>
+    )
+  );
+}
+function StockCard({ stock }: { stock: PublicStock }) {
+  return (
+    <a
+      className="public-content-card public-stock-card"
+      href={`#stock/${encodeURIComponent(stock.id)}`}
+    >
       <p className="public-meta">
         <BookOpen size={16} aria-hidden="true" />
         {stock.domain || 'テキスト'}
@@ -310,23 +321,43 @@ function StockCard({ stock }: { stock: PublicStock }) {
       </p>
       <h3>{stock.title}</h3>
       <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
+      <StockTopics stock={stock} />
+      <div className="public-card-footer">
+        <span>ストックの詳細を見る</span>
+        <ArrowRight size={18} aria-hidden="true" />
+      </div>
+    </a>
+  );
+}
+function StockDetails({
+  stock,
+  heading: Heading = 'h3',
+}: {
+  stock: PublicStock;
+  heading?: 'h3' | 'h4';
+}) {
+  const href = stock.source_url && /^https?:\/\//i.test(stock.source_url) ? stock.source_url : null;
+  const PointsHeading = Heading === 'h4' ? 'h5' : 'h4';
+  return (
+    <article className="public-content-card public-stock-detail">
+      <p className="public-meta">
+        <BookOpen size={16} aria-hidden="true" />
+        {stock.domain || 'テキスト'}
+        <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
+      </p>
+      <Heading className="public-stock-title">{stock.title}</Heading>
+      <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
       {stock.summary && (
-        <>
-          <details>
-            <summary>要点を見る</summary>
-            <ul>
-              {stock.summary.keyPoints.map((point, i) => (
-                <li key={i}>{point}</li>
-              ))}
-            </ul>
-          </details>
-          <div className="public-topics">
-            {stock.summary.topics.map((topic, i) => (
-              <span key={i}>{topic}</span>
+        <section className="public-stock-points" aria-label="要点">
+          <PointsHeading>要点</PointsHeading>
+          <ul>
+            {stock.summary.keyPoints.map((point, i) => (
+              <li key={i}>{point}</li>
             ))}
-          </div>
-        </>
+          </ul>
+        </section>
       )}
+      <StockTopics stock={stock} />
       {href && (
         <a className="text-link" href={href} target="_blank" rel="noreferrer">
           元の記事を開く <ExternalLink size={14} aria-hidden="true" />
@@ -335,8 +366,54 @@ function StockCard({ stock }: { stock: PublicStock }) {
     </article>
   );
 }
-function PublicStockList({ root }: { root: string }) {
+function PublicQuestionCard({ question }: { question: PublicQuestion }) {
+  return (
+    <a
+      className="public-content-card public-question-card"
+      href={`#question/${encodeURIComponent(question.id)}`}
+    >
+      <QuestionLabels
+        question={{ source: question.source, has_pufu: question.pufu_count > 0 ? 1 : 0 }}
+      />
+      <h3>{question.text}</h3>
+      {question.article_title && <p className="public-help">{question.article_title}</p>}
+      <div className="public-card-footer">
+        <span>{question.pufu_count ? `${question.pufu_count}件のプ譜` : '問いの詳細を見る'}</span>
+        <ArrowRight size={18} aria-hidden="true" />
+      </div>
+    </a>
+  );
+}
+function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
   const [page, setPage] = useState(1);
+  const { data, error, reload } = useResource<PublicStockDetail>(
+    `${root}/stocks/${encodeURIComponent(id)}?page=${page}`,
+  );
+  return !data ? (
+    <ResourceState error={error} retry={reload} />
+  ) : (
+    <section aria-label="ストックの詳細">
+      <a className="text-link" href="#stocks">
+        <ArrowLeft size={16} aria-hidden="true" />
+        ストックの一覧へ
+      </a>
+      <h2 className="public-detail-title">ストックの詳細</h2>
+      <StockDetails stock={data.stock} />
+      <h3 className="public-detail-title">関連する問い</h3>
+      <div className="public-content-grid">
+        {data.questions.map((question) => (
+          <PublicQuestionCard key={question.id} question={question} />
+        ))}
+      </div>
+      {!data.questions.length && (
+        <p className="public-message">このストックには公開できる問いがまだありません。</p>
+      )}
+      <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
+    </section>
+  );
+}
+type PublicListProps = { root: string; page: number; onPageChange: (page: number) => void };
+function PublicStockList({ root, page, onPageChange }: PublicListProps) {
   const { data, error, reload } = useResource<PublicList<PublicStock>>(
     `${root}/stocks?page=${page}`,
   );
@@ -350,12 +427,11 @@ function PublicStockList({ root }: { root: string }) {
         ))}
       </div>
       {!data.items.length && <p className="public-message">ストックはまだありません。</p>}
-      <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
+      <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
     </>
   );
 }
-function PublicQuestionList({ root }: { root: string }) {
-  const [page, setPage] = useState(1);
+function PublicQuestionList({ root, page, onPageChange }: PublicListProps) {
   const { data, error, reload } = useResource<PublicList<PublicQuestion>>(
     `${root}/questions?page=${page}`,
   );
@@ -365,28 +441,11 @@ function PublicQuestionList({ root }: { root: string }) {
     <>
       <div className="public-content-grid">
         {data.items.map((question) => (
-          <a
-            className="public-content-card public-question-card"
-            key={question.id}
-            href={`#question/${encodeURIComponent(question.id)}`}
-          >
-            <p className="public-meta">
-              <CircleHelp size={16} aria-hidden="true" />
-              {question.source === 'ai' ? 'AIの問い' : 'ユーザーの問い'}
-            </p>
-            <h3>{question.text}</h3>
-            {question.article_title && <p className="public-help">{question.article_title}</p>}
-            <div className="public-card-footer">
-              <span>
-                {question.pufu_count ? `${question.pufu_count}件のプ譜` : '問いの詳細を見る'}
-              </span>
-              <ArrowRight size={18} aria-hidden="true" />
-            </div>
-          </a>
+          <PublicQuestionCard key={question.id} question={question} />
         ))}
       </div>
       {!data.items.length && <p className="public-message">公開できる問いはまだありません。</p>}
-      <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
+      <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
     </>
   );
 }
@@ -406,6 +465,10 @@ function PublicQuestionDetail({ root, id }: { root: string; id: string }) {
         <ArrowLeft size={16} aria-hidden="true" />
         問いの一覧へ
       </a>
+      <QuestionLabels
+        className="public-detail-labels"
+        question={{ source: data.question.source, has_pufu: data.question.pufu_count > 0 ? 1 : 0 }}
+      />
       <h2 className="public-detail-title">{data.question.text}</h2>
       <h3>問いから生まれたプ譜</h3>
       <div className="public-content-grid">
@@ -428,7 +491,13 @@ function PublicQuestionDetail({ root, id }: { root: string; id: string }) {
       {data.stock && (
         <>
           <h3 className="public-detail-title">ストックした記事</h3>
-          <StockCard stock={data.stock} />
+          <StockDetails stock={data.stock} heading="h4" />
+          <a
+            className="text-link public-detail-link"
+            href={`#stock/${encodeURIComponent(data.stock.id)}`}
+          >
+            ストックの詳細を見る <ArrowRight size={16} aria-hidden="true" />
+          </a>
         </>
       )}
     </section>
@@ -524,6 +593,8 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
   const root = `/api/public/projects/${encodeURIComponent(publicId)}`;
   const { data, error, reload } = useResource<{ project: PublicProject }>(root);
   const [hash, setHash] = useState(window.location.hash);
+  const [stockPage, setStockPage] = useState(1);
+  const [questionPage, setQuestionPage] = useState(1);
   useEffect(() => {
     const listener = () => {
       setHash(window.location.hash);
@@ -532,18 +603,24 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
     window.addEventListener('hashchange', listener);
     return () => window.removeEventListener('hashchange', listener);
   }, []);
-  const match = /^#(question|pufu)\/([^/]+)$/.exec(hash);
+  const match = /^#(stock|question|pufu)\/([^/]+)$/.exec(hash);
   let content: ReactNode;
   if (match)
     content =
-      match[1] === 'pufu' ? (
+      match[1] === 'stock' ? (
+        <PublicStockDetailPage key={match[2]} root={root} id={match[2]} />
+      ) : match[1] === 'pufu' ? (
         <PublicPufuDetail root={root} id={match[2]} />
       ) : (
         <PublicQuestionDetail key={match[2]} root={root} id={match[2]} />
       );
   else
     content =
-      hash === '#questions' ? <PublicQuestionList root={root} /> : <PublicStockList root={root} />;
+      hash === '#questions' ? (
+        <PublicQuestionList root={root} page={questionPage} onPageChange={setQuestionPage} />
+      ) : (
+        <PublicStockList root={root} page={stockPage} onPageChange={setStockPage} />
+      );
   return (
     <div className="public-page">
       <header className="public-header">
@@ -560,14 +637,19 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
           <>
             <span className="public-badge">
               <Globe size={14} aria-hidden="true" />
-              公開プロジェクト・閲覧のみ
+              公開
             </span>
             <h1>{data.project.name}</h1>
             {data.project.public_description && (
               <p className="public-lead">{data.project.public_description}</p>
             )}
             <nav className="public-tabs" aria-label="公開プロジェクト">
-              <a href="#stocks" aria-current={!match && hash !== '#questions' ? 'page' : undefined}>
+              <a
+                href="#stocks"
+                aria-current={
+                  match?.[1] === 'stock' || (!match && hash !== '#questions') ? 'page' : undefined
+                }
+              >
                 <Layers size={18} aria-hidden="true" />
                 ストック<span>{data.project.stock_count}</span>
               </a>

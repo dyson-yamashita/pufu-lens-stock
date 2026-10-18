@@ -44,3 +44,11 @@ export type PublicPufu = PublicPufuSummary & {
   score: PufuScore;
 };
 export type PublicList<T> = { items: T[]; total: number; page: number; has_more: boolean };
+
+export type PublicStockDetail = {
+  stock: PublicStock;
+  questions: PublicQuestion[];
+  total: number;
+  page: number;
+  has_more: boolean;
+};
