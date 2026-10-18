@@ -119,6 +119,10 @@ a {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
+/* ページ内リンクの移動先の本文には、操作部品用の枠を付けない。 */
+:where(header, section)[tabindex='-1']:focus {
+  outline: none;
+}
 button {
   border: 0;
   background: none;
