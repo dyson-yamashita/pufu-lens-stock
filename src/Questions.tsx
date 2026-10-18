@@ -242,6 +242,7 @@ export default function Questions({
       <div className="filter-row">
         <div className="filters" aria-label="問いのフィルター">
           {[
+            ['all', 'すべて'],
             ['ai', 'AI'],
             ['user', 'ユーザー'],
             ['favorites', 'お気に入り'],
