@@ -3289,64 +3289,8 @@ textarea::placeholder {
   font-size: 12px;
   border-top: 1px solid var(--border);
 }
-.public-score {
+.public-pufu-preview {
   margin-top: 28px;
-}
-.public-score h3 {
-  margin-top: 28px;
-  font-size: 16px;
-}
-.public-score-goals,
-.public-score-purpose,
-.public-score-elements {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin: 14px 0;
-}
-.public-score-node {
-  padding: 20px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  border-radius: 8px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.public-score-node h4 {
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.public-score-node p {
-  white-space: pre-wrap;
-  line-height: 1.85;
-  font-size: 14px;
-}
-.public-score-comment {
-  border-left: 3px solid var(--muted);
-  padding: 10px 14px;
-  margin-top: 20px;
-  background: var(--wash);
-  font-size: 12px;
-}
-.public-score-comment.blue,
-.public-measure.blue {
-  border-left-color: #738ebd;
-}
-.public-score-comment.green,
-.public-measure.green {
-  border-left-color: #509977;
-}
-.public-score-comment.red,
-.public-measure.red {
-  border-left-color: #bf7c83;
-}
-.public-measure.yellow {
-  border-left-color: #bb9d47;
-}
-.public-measure {
-  border-left: 4px solid var(--border);
-  margin-bottom: 12px;
 }
 @media (max-width: 760px) {
   .public-directory {
@@ -3354,10 +3298,7 @@ textarea::placeholder {
     padding: 30px 20px 0;
   }
   .public-project-grid,
-  .public-content-grid,
-  .public-score-goals,
-  .public-score-purpose,
-  .public-score-elements {
+  .public-content-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .public-header {

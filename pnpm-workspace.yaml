@@ -11,4 +11,5 @@ allowBuilds:
   workerd: true
 
 patchedDependencies:
+  '@goto-lab/pufu-editor@0.9.14': patches/@goto-lab__pufu-editor@0.9.14.patch
   miniflare@4.20260730.0: patches/miniflare@4.20260730.0.patch
