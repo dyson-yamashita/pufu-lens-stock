@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp } from './helpers';
 import type {
   Publication,
@@ -140,6 +140,7 @@ describe('公開プロジェクトの参照専用API', () => {
       '',
       root(key),
       `${root(key)}/stocks`,
+      `${root(key)}/stocks/stock`,
       `${root(key)}/questions`,
       `${root(key)}/questions/question`,
       `${root(key)}/pufus/pufu`,
@@ -178,10 +179,49 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(pufu.pufu.score.gainingGoal.text).toBe('公開する最新局面');
     expect(pufu.pufu.score.elements.people.comment.text).toBe('振り返り：公開する最新局面');
   });
+  it('ストック詳細は同じ保存先・ストックの完成した問いだけを返し、AI生成やジョブを起動しない', async () => {
+    const key = await publish();
+    const ai = vi.fn(async () => {
+      throw new Error('公開アクセスでAIを起動しない');
+    });
+    app.env.AI = { run: ai };
+    await app.env.DB.prepare(
+      "INSERT INTO questions (id,project_id,stock_id,source,text,status) VALUES ('manual-stock','alice-project','stock','user','自分の関連する問い','ready')",
+    ).run();
+    const response = await get(`${root(key)}/stocks/stock`);
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as {
+      stock: PublicStock;
+      questions: PublicQuestion[];
+      total: number;
+      has_more: boolean;
+    };
+    expect(data.stock.summary?.keyPoints).toEqual(['要点']);
+    expect(data.questions.map((q) => q.id).sort()).toEqual(['manual-stock', 'question']);
+    expect(data.questions.find((q) => q.id === 'question')).toMatchObject({
+      source: 'ai',
+      pufu_count: 1,
+    });
+    expect(data.total).toBe(2);
+    expect(data.has_more).toBe(false);
+    expect(ai).not.toHaveBeenCalled();
+    expect(app.env.ARTICLE_WORKFLOW!.create).not.toHaveBeenCalled();
+    expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM processing_jobs').first()).toEqual({
+      n: 0,
+    });
+    await app.env.DB.prepare("DELETE FROM questions WHERE stock_id='stock'").run();
+    expect(await (await get(`${root(key)}/stocks/stock`)).json()).toMatchObject({
+      questions: [],
+      total: 0,
+      has_more: false,
+    });
+  });
   it('公開URLから別のプロジェクトの問い・プ譜・生成途中の情報へアクセスできない', async () => {
     const key = await publish();
     const other = await publish('alice-second');
     for (const path of [
+      `${root(key)}/stocks/private-stock`,
+      `${root(other)}/stocks/stock`,
       `${root(key)}/questions/private-question`,
       `${root(key)}/pufus/private-pufu`,
       `${root(other)}/pufus/pufu`,
@@ -217,6 +257,7 @@ describe('公開プロジェクトの参照専用API', () => {
       for (const path of [
         root(key),
         `${root(key)}/stocks`,
+        `${root(key)}/stocks/stock`,
         `${root(key)}/questions/question`,
         `${root(key)}/pufus/pufu`,
       ]) {
@@ -240,6 +281,7 @@ describe('公開プロジェクトの参照専用API', () => {
     const paths = [
       root(key),
       `${root(key)}/stocks`,
+      `${root(key)}/stocks/stock`,
       `${root(key)}/questions`,
       `${root(key)}/questions/question`,
       `${root(key)}/pufus/pufu`,
@@ -260,6 +302,7 @@ describe('公開プロジェクトの参照専用API', () => {
     await app.env.DB.prepare("DELETE FROM stocks WHERE id='private-stock'").run();
     await app.env.DB.prepare("UPDATE stocks SET project_id='alice-second' WHERE id='stock'").run();
     expect((await get(`${root(key)}/pufus/pufu`)).status).toBe(404);
+    expect((await get(`${root(key)}/stocks/stock`)).status).toBe(404);
     expect(await (await get(root(key))).json()).toMatchObject({
       project: { stock_count: 0, question_count: 1 },
     });
@@ -284,7 +327,7 @@ describe('公開プロジェクトの参照専用API', () => {
           "INSERT INTO stocks (id,user_id,project_id,article_id) VALUES (?,'alice','alice-project',?)",
         ).bind(`page-stock-${i}`, `page-article-${i}`),
         app.env.DB.prepare(
-          "INSERT INTO questions (id,project_id,source,text,status) VALUES (?,'alice-project','user',?,'ready')",
+          "INSERT INTO questions (id,project_id,stock_id,source,text,status) VALUES (?,'alice-project','stock','user',?,'ready')",
         ).bind(`page-question-${i}`, `問い ${i}`),
         app.env.DB.prepare(
           "INSERT INTO pufu_scores (id,user_id,question_id,task,input_json,score_json,editor_version,status) VALUES (?,'alice','question',?,'{}',?,'0.9.14','ready')",
@@ -295,6 +338,7 @@ describe('公開プロジェクトの参照専用API', () => {
       ['stocks', 'items', 14],
       ['questions', 'items', 15],
       ['questions/question', 'pufus', 14],
+      ['stocks/stock', 'questions', 14],
     ] as const) {
       const first = (await (await get(`${root(key)}/${path}`)).json()) as Record<string, unknown>;
       const second = (await (await get(`${root(key)}/${path}?page=2`)).json()) as Record<

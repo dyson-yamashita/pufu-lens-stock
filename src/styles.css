@@ -2010,18 +2010,6 @@ p {
   gap: 55px;
   min-height: 460px;
 }
-.login-copy .eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 9px;
-  color: var(--muted);
-}
-.tiny-line {
-  width: 22px;
-  height: 1px;
-  background: #92a4bf;
-}
 .login-copy h1 {
   font-size: clamp(35px, 3.5vw, 51px);
   line-height: 1.65;
@@ -2108,20 +2096,6 @@ p {
   border-radius: 13px;
   transform: rotate(-5deg);
 }
-.art-domain {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: var(--muted);
-}
-.art-domain > span {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  background: var(--selected);
-}
 .art-article h3 {
   font-size: 17px;
   font-weight: 500;
@@ -2170,11 +2144,6 @@ p {
   color: var(--accent);
   padding: 11px;
   border-radius: 11px;
-}
-.art-memory small {
-  font-size: 7px;
-  letter-spacing: 1px;
-  color: var(--muted);
 }
 .art-memory h3 {
   font-size: 12px;
@@ -3037,11 +3006,6 @@ textarea::placeholder {
   justify-content: space-between;
   gap: 20px;
 }
-.public-section-heading .eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  color: var(--muted);
-}
 .public-section-heading h2 {
   display: flex;
   align-items: center;
@@ -3288,14 +3252,6 @@ textarea::placeholder {
   line-height: 1.9;
   white-space: pre-wrap;
 }
-.public-content-card details {
-  font-size: 13px;
-  line-height: 1.9;
-  margin: 20px 0;
-}
-.public-content-card summary {
-  cursor: pointer;
-}
 .public-content-card ul {
   padding-left: 20px;
 }
@@ -3413,4 +3369,43 @@ textarea::placeholder {
   .publication-settings .form-actions {
     flex-wrap: wrap;
   }
+}
+
+.public-stock-card {
+  display: flex;
+  flex-direction: column;
+}
+.public-stock-card:hover {
+  border-color: var(--muted);
+  background: var(--wash);
+}
+.public-stock-card .public-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.public-stock-detail .public-stock-title {
+  margin: 18px 0 12px;
+  font-size: 20px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.public-stock-points {
+  margin-top: 24px;
+  line-height: 1.9;
+}
+.public-stock-points h4,
+.public-stock-points h5 {
+  font-size: 16px;
+}
+.public-stock-points li + li {
+  margin-top: 8px;
+}
+.public-detail-link {
+  margin-top: 16px;
+}
+
+.public-detail-labels {
+  margin-top: 24px;
 }

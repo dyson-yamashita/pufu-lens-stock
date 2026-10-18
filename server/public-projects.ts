@@ -96,6 +96,29 @@ export function publicProjectsApp() {
       has_more: page * limit < total,
     });
   });
+  app.get('/projects/:key/stocks/:id', async (c) => {
+    const { page, limit, offset } = pageOptions(c.req.query('page'));
+    const [stocks, questions, count] = await c.env.DB.batch<Record<string, unknown>>([
+      c.env.DB.prepare(
+        `SELECT ${stockColumns} FROM ${stockJoins} WHERE ${publicWhere} AND s.id=?`,
+      ).bind(c.req.param('key'), c.req.param('id')),
+      c.env.DB.prepare(
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND s.id=? AND q.status='ready' ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
+      ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
+      c.env.DB.prepare(
+        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id WHERE ${publicWhere} AND s.id=? AND q.status='ready'`,
+      ).bind(c.req.param('key'), c.req.param('id')),
+    ]);
+    if (!stocks.results.length) throw notFound();
+    const total = Number(count.results[0].total);
+    return c.json({
+      stock: stock(stocks.results[0] as Parameters<typeof stock>[0]),
+      questions: questions.results as PublicQuestion[],
+      total,
+      page,
+      has_more: page * limit < total,
+    });
+  });
   app.get('/projects/:key/questions', async (c) => {
     const { page, limit, offset } = pageOptions(c.req.query('page'));
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([

@@ -215,9 +215,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
       </header>
       <main className="login-main">
         <div className="login-copy">
-          <div className="eyebrow">
-            <span className="tiny-line" /> A HOME FOR YOUR CURIOSITY
-          </div>
           <h1>
             集めた知識を、
             <br />
@@ -287,9 +284,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             読んだ先に、つながりがある。
           </div>
           <div className="art-article">
-            <div className="art-domain">
-              <span /> STOCKED ARTICLE
-            </div>
             <h3>
               明日のアイデアにつながる、
               <br />
@@ -307,7 +301,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
               <Sparkles size={21} />
             </div>
             <div>
-              <small>YOUR MEMORY</small>
               <h3>関心と知識が、少しずつ育つ。</h3>
               <p>保存した記事から、テーマと論点を整理。</p>
             </div>

@@ -1,0 +1,150 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { act, createElement } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { parseHTML } from 'linkedom';
+import PublicProjectPage from '../src/PublicProjects';
+import { api } from '../src/api';
+
+vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
+const stock = {
+  id: 'stock',
+  title: 'ストックのタイトル',
+  source_url: 'https://example.com/a',
+  domain: 'example.com',
+  created_at: '2026-10-18',
+  summary: { overview: '記事の要約', keyPoints: ['詳細で確認する記事の要点'], topics: ['テーマ'] },
+};
+const aiQuestion = {
+  id: 'ai',
+  text: 'AIが生成した問い',
+  source: 'ai',
+  stock_id: 'stock',
+  article_title: stock.title,
+  created_at: '2026-10-18',
+  pufu_count: 1,
+};
+const userQuestion = {
+  ...aiQuestion,
+  id: 'user',
+  text: '自分の問い',
+  source: 'user',
+  pufu_count: 0,
+};
+let root: Root;
+let document: Document;
+beforeEach(() => {
+  const dom = parseHTML('<html><body><div id="root"></div></body></html>');
+  document = dom.document as unknown as Document;
+  vi.stubGlobal('window', dom.window);
+  vi.stubGlobal('document', document);
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  Object.defineProperty(window, 'location', { configurable: true, value: { hash: '#stocks' } });
+  Object.defineProperty(window, 'scrollTo', { configurable: true, value: vi.fn() });
+  vi.mocked(api).mockImplementation(async (path) => {
+    const url = new URL(path, 'https://example.com');
+    if (url.pathname === '/api/public/projects/project')
+      return {
+        project: {
+          public_id: 'project',
+          name: '公開プロジェクト',
+          public_description: '',
+          stock_count: 1,
+          question_count: 2,
+        },
+      };
+    if (url.pathname.endsWith('/stocks/stock'))
+      return { stock, questions: [aiQuestion, userQuestion], page: 1, total: 2, has_more: false };
+    if (url.pathname.endsWith('/stocks'))
+      return { items: [stock], total: 1, page: 1, has_more: false };
+    if (url.pathname.endsWith('/questions/ai'))
+      return {
+        question: aiQuestion,
+        stock,
+        pufus: [
+          { id: 'pufu', task: '問いから考える課題', current_phase: 1, updated_at: '2026-10-18' },
+        ],
+        has_more: false,
+      };
+    if (url.pathname.endsWith('/questions'))
+      return { items: [aiQuestion, userQuestion], total: 2, page: 1, has_more: false };
+    throw new Error('想定外の取得先: ' + path);
+  });
+  root = createRoot(document.getElementById('root')!);
+});
+afterEach(async () => {
+  await act(async () => root.unmount());
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+async function render(hash = '#stocks') {
+  window.location.hash = hash;
+  await act(async () => {
+    root.render(createElement(PublicProjectPage, { publicId: 'project' }));
+  });
+}
+async function navigate(hash: string) {
+  await act(async () => {
+    window.location.hash = hash;
+    window.dispatchEvent(new window.Event('hashchange'));
+  });
+}
+it('一覧のストックは詳細へのリンクで、要点は詳細で関連する問いとともに表示する', async () => {
+  await render();
+  const card = document.querySelector('.public-stock-card');
+  expect(card?.tagName).toBe('A');
+  expect(card?.getAttribute('href')).toBe('#stock/stock');
+  expect(document.body.textContent).not.toContain('要点を見る');
+  expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
+  expect(card?.querySelector('a,details')).toBeNull();
+  await navigate('#stock/stock');
+  expect(document.body.textContent).toContain('詳細で確認する記事の要点');
+  expect(document.body.textContent).toContain('関連する問い');
+  expect(document.querySelector('a[href="#question/ai"]')?.textContent).toContain(
+    'AIが生成した問い',
+  );
+  expect(document.querySelector('.question-labels')?.textContent).toContain('プ譜');
+  expect(document.querySelector('a[href="https://example.com/a"]')?.getAttribute('target')).toBe(
+    '_blank',
+  );
+  expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
+});
+it('問い一覧にはAI・プ譜のラベルを表示し、要点は問いの詳細に表示する', async () => {
+  await render('#questions');
+  const cards = document.querySelectorAll('.public-question-card');
+  expect(cards[0].querySelector('.question-labels')?.textContent).toBe('AIプ譜');
+  expect(cards[1].querySelector('.question-labels')?.textContent).toBe('ユーザー');
+  expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
+  expect(document.body.textContent).not.toContain('要点を見る');
+  await navigate('#question/ai');
+  expect(document.body.textContent).toContain('詳細で確認する記事の要点');
+  expect(document.body.textContent).toContain('問いから考える課題');
+  expect(document.querySelector('.question-labels')?.textContent).toBe('AIプ譜');
+});
+it.each([
+  ['#stocks', '#stock/stock', 'stocks'],
+  ['#questions', '#question/ai', 'questions'],
+])('一覧 %s の2ページ目から詳細を開いて戻ると同じページを表示する', async (list, detail, path) => {
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (url, options) => {
+    const parsed = new URL(url, 'https://example.com');
+    if (parsed.pathname === `/api/public/projects/project/${path}`) {
+      const page = Number(parsed.searchParams.get('page'));
+      return {
+        items: path === 'stocks' ? [stock] : [aiQuestion],
+        page,
+        total: 13,
+        has_more: page === 1,
+      };
+    }
+    return load(url, options);
+  });
+  await render(list);
+  const next = document.querySelectorAll<HTMLButtonElement>('.public-pagination button')[1];
+  await act(async () => next.click());
+  expect(document.querySelector('.public-pagination')?.textContent).toContain('2ページ');
+  await navigate(detail);
+  expect(document.querySelector('.public-pagination')).toBeNull();
+  await navigate(list);
+  expect(document.querySelector('.public-pagination')?.textContent).toContain('2ページ');
+  expect(vi.mocked(api).mock.calls.at(-1)?.[0]).toBe(`/api/public/projects/project/${path}?page=2`);
+});
