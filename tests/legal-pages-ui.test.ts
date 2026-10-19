@@ -20,20 +20,27 @@ it.each([
   ['/privacy/', 'プライバシーポリシー'],
   ['/terms', '利用規約'],
   ['/terms/', '利用規約'],
-])('%s を認証付きアプリから独立して表示し、目次から本文を参照できる', async (pathname, title) => {
-  vi.stubGlobal('window', { location: { pathname, hash: '' } });
-  vi.stubGlobal('document', parseHTML('<div id="root"></div>').document);
-  await import('../src/main');
-  const { document } = parseHTML(renderToStaticMarkup(render.mock.calls[0][0]));
-  expect(document.querySelector('h1')?.textContent).toBe(title);
-  expect(document.body.textContent).not.toContain('認証付きアプリ');
-  const tocLinks = [...document.querySelectorAll('nav[aria-label="目次"] a')];
-  expect(tocLinks.length).toBeGreaterThan(0);
-  for (const link of tocLinks) {
-    const section = document.querySelector(link.getAttribute('href')!);
-    expect(section?.querySelector('h2')?.textContent).toBe(link.textContent);
-  }
-  for (const path of ['/', '/privacy', '/terms']) {
-    expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
-  }
-});
+])(
+  '%s を認証付きアプリから独立して表示し、利用規約だけに目次を表示する',
+  async (pathname, title) => {
+    vi.stubGlobal('window', { location: { pathname, hash: '' } });
+    vi.stubGlobal('document', parseHTML('<div id="root"></div>').document);
+    await import('../src/main');
+    const { document } = parseHTML(renderToStaticMarkup(render.mock.calls[0][0]));
+    expect(document.querySelector('h1')?.textContent).toBe(title);
+    expect(document.body.textContent).not.toContain('認証付きアプリ');
+    const tocLinks = [...document.querySelectorAll('nav[aria-label="目次"] a')];
+    if (pathname.startsWith('/privacy')) {
+      expect(document.querySelector('nav[aria-label="目次"]')).toBeNull();
+    } else {
+      expect(tocLinks.length).toBeGreaterThan(0);
+    }
+    for (const link of tocLinks) {
+      const section = document.querySelector(link.getAttribute('href')!);
+      expect(section?.querySelector('h2')?.textContent).toBe(link.textContent);
+    }
+    for (const path of ['/', '/privacy', '/terms']) {
+      expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
+    }
+  },
+);
