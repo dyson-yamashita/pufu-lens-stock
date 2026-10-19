@@ -792,7 +792,6 @@ export default function App() {
             <Layers size={18} aria-hidden="true" />
             外部連携
           </button>
-          <LegalLinks newTab />
           <div className="user-row">
             <div className="avatar">{user.name.slice(0, 1)}</div>
             <div className="user-info">
@@ -1124,7 +1123,7 @@ export default function App() {
               />
             </div>
           ) : (
-            <div className="content-layout">
+            <div className={route.projectId ? 'content-layout' : undefined}>
               <section className="stock-section" aria-label="保存した記事">
                 <SearchField
                   label="記事を検索"
@@ -1237,32 +1236,30 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                <div className="library-footer">
-                  <span>
-                    <Bookmark size={13} aria-hidden="true" />
-                    保存した記事は、いつでも読み返せます。
-                  </span>
-                  <span>PUFU LENS</span>
-                </div>
+                <footer className="library-footer">
+                  <LegalLinks newTab />
+                </footer>
               </section>
-              <aside className="memory-aside">
-                <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
-                <div className="shortcut-tip">
-                  <h3>
-                    <ArrowDownToLine size={19} aria-hidden="true" />
-                    見つけた、そのときに。
-                  </h3>
-                  <p>
-                    iPhoneの共有メニューから、
-                    <br />
-                    記事をそのままストック。
-                  </p>
-                  <button onClick={() => navigate('shortcuts')}>
-                    ショートカットを設定
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </button>
-                </div>
-              </aside>
+              {route.projectId && (
+                <aside className="memory-aside">
+                  <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
+                  <div className="shortcut-tip">
+                    <h3>
+                      <ArrowDownToLine size={19} aria-hidden="true" />
+                      見つけた、そのときに。
+                    </h3>
+                    <p>
+                      iPhoneの共有メニューから、
+                      <br />
+                      記事をそのままストック。
+                    </p>
+                    <button onClick={() => navigate('shortcuts')}>
+                      ショートカットを設定
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                </aside>
+              )}
             </div>
           )}
         </div>
