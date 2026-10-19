@@ -47,7 +47,8 @@ import type {
   User,
 } from '../shared/domain';
 import { stockInputSchema, stockTextLimit } from '../shared/domain';
-import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
+import { isYouTubeUrl, youtubeDisplayTitle } from '../shared/youtube';
+import YouTubePlayer from './YouTubePlayer';
 import { api, ApiError, createRequestId, send } from './api';
 import Profile from './Profile';
 import Questions, { StockQuestion } from './Questions';
@@ -1302,7 +1303,7 @@ export default function App() {
             onDone={(duplicate, youtube) =>
               completed(
                 youtube
-                  ? youtubeUnavailableMessage
+                  ? 'YouTubeのURLを保存しました。'
                   : duplicate
                     ? 'この記事はすでに保存されています。'
                     : '記事を保存しました。要約と問いを自動で生成します。',
@@ -1365,6 +1366,7 @@ function ArticleCard({
   onFavorite: () => void;
   favoriteBusy: boolean;
 }) {
+  const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
   return (
     <article className="article-card">
       <div className="article-meta">
@@ -1378,7 +1380,7 @@ function ArticleCard({
         <span className="domain truncate">
           {stock.source_type === 'text' ? 'テキスト' : stock.domain.replace('www.', '')}
         </span>
-        {stock.status !== 'ready' && (
+        {stock.status !== 'ready' && !youtube && (
           <span className={`status status-${stock.status}`}>
             {stock.status !== 'failed' && <span className="status-dot" />}
             {statusLabels[stock.status]}
@@ -1388,15 +1390,17 @@ function ArticleCard({
       <div className="article-content">
         <h2 className="article-title">
           <button type="button" className="article-open" onClick={onOpen}>
-            {stock.title}
+            {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
           </button>
         </h2>
         <p className="article-summary">
-          {stock.summary?.overview ??
-            stock.error ??
-            (stock.source_type === 'text'
-              ? '保存したテキストから、要点をまとめています。'
-              : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。')}
+          {youtube
+            ? 'YouTubeのリンクを保存しています。詳細から動画や元のページを開けます。'
+            : (stock.summary?.overview ??
+              stock.error ??
+              (stock.source_type === 'text'
+                ? '保存したテキストから、要点をまとめています。'
+                : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。'))}
         </p>
       </div>
       <div className="article-tags">
@@ -1921,7 +1925,8 @@ function StockDetail({
   onRename: (stock: Stock, title: string) => Promise<void>;
 }) {
   const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
-  const [tab, setTab] = useState<string>(initialTab);
+  const displayTitle = youtube ? youtubeDisplayTitle(stock.title) : stock.title;
+  const [tab, setTab] = useState<string>(youtube ? 'summary' : initialTab);
   const [note, setNote] = useState(stock.note);
   const [projectId, setProjectId] = useState(stock.project_id);
   const [content, setContent] = useState<string | null | undefined>();
@@ -1929,7 +1934,7 @@ function StockDetail({
   const [supplemental, setSupplemental] = useState('');
   const [error, setError] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
-  const [title, setTitle] = useState(stock.title);
+  const [title, setTitle] = useState(displayTitle);
   const [titleError, setTitleError] = useState('');
   const titleInput = useRef<HTMLInputElement>(null);
   const titleButton = useRef<HTMLButtonElement>(null);
@@ -1962,7 +1967,7 @@ function StockDetail({
     <div className="stock-detail">
       <div className="detail-domain">
         {stock.source_type === 'text' ? 'テキスト' : stock.domain}{' '}
-        {stock.status !== 'ready' && (
+        {stock.status !== 'ready' && !youtube && (
           <span className={`status status-${stock.status}`}>{statusLabels[stock.status]}</span>
         )}
       </div>
@@ -2020,7 +2025,7 @@ function StockDetail({
         </form>
       ) : (
         <div className="stock-detail-title">
-          <h3>{stock.title}</h3>
+          <h3>{displayTitle}</h3>
           <button
             ref={titleButton}
             type="button"
@@ -2029,7 +2034,7 @@ function StockDetail({
             title="タイトルを編集"
             disabled={busy}
             onClick={() => {
-              setTitle(stock.title);
+              setTitle(displayTitle);
               setTitleError('');
               setEditingTitle(true);
             }}
@@ -2046,7 +2051,7 @@ function StockDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            {youtube ? '元の動画を開く' : '元の記事を開く'}
+            {youtube ? 'YouTubeで開く' : '元の記事を開く'}
             <ExternalLink size={14} aria-hidden="true" />
           </a>
         )}
@@ -2065,12 +2070,18 @@ function StockDetail({
         />
       </div>
       <div className="detail-tabs" aria-label="記事の表示内容">
-        {[
-          ['summary', '要約'],
-          ['question', '問い'],
-          ['note', 'メモ・保存先'],
-          ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
-        ].map(([value, label]) => (
+        {(youtube
+          ? [
+              ['summary', '動画'],
+              ['note', 'メモ・保存先'],
+            ]
+          : [
+              ['summary', '要約'],
+              ['question', '問い'],
+              ['note', 'メモ・保存先'],
+              ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
+            ]
+        ).map(([value, label]) => (
           <button
             key={value}
             aria-pressed={tab === value}
@@ -2083,7 +2094,9 @@ function StockDetail({
       </div>
       {tab === 'summary' ? (
         <div className="detail-summary">
-          {stock.summary ? (
+          {youtube ? (
+            <YouTubePlayer url={stock.source_url} />
+          ) : stock.summary ? (
             <>
               <p>{stock.summary.overview}</p>
               <h4>この記事の要点</h4>
@@ -2104,11 +2117,7 @@ function StockDetail({
               ) : null}
             </>
           ) : (
-            <p>
-              {youtube
-                ? youtubeUnavailableMessage
-                : (stock.error ?? '要約を生成しています。少しお待ちください。')}
-            </p>
+            <p>{stock.error ?? '要約を生成しています。少しお待ちください。'}</p>
           )}
           {stock.status === 'failed' && !youtube && (
             <>
@@ -2157,11 +2166,7 @@ function StockDetail({
           )}
         </div>
       ) : tab === 'question' ? (
-        youtube ? (
-          <p>{youtubeUnavailableMessage}</p>
-        ) : (
-          <StockQuestion stockId={stock.id} onQuestion={onQuestion} />
-        )
+        <StockQuestion stockId={stock.id} onQuestion={onQuestion} />
       ) : tab === 'content' ? (
         content === undefined ? (
           <p className="content-loading">
