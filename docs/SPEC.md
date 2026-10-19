@@ -206,7 +206,7 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
    pnpm exec wrangler kv namespace create OAUTH_KV --env production
    ```
 
-2. 返されたIDを本番ビルドの環境変数 `OAUTH_KV_ID` に設定します。GitHub Actionsでは `production` EnvironmentのVariablesに登録します。`wrangler.jsonc` のKV IDはゼロのプレースホルダーのままにします。ローカル開発もこのプレースホルダーでローカルKVを使えます。
+2. 返されたIDを本番ビルドの環境変数 `OAUTH_KV_ID` に設定します。GitHub Actionsでは `production` EnvironmentのSecretsに登録します。`wrangler.jsonc` のKV IDはゼロのプレースホルダーのままにします。ローカル開発もこのプレースホルダーでローカルKVを使えます。
 3. `APP_URL` を末尾スラッシュなしの本番HTTPSオリジンに合わせます。既存GoogleログインのClient ID・Secretとコールバック設定を使います。MCPクライアントにGoogleのトークンやセッションCookieを渡す必要はありません。
 4. [本番設定の手順](#cloudflareの本番設定)に従い、環境変数を指定して本番ビルド後にマイグレーション・デプロイを実行します。MCPには `0016_independent_questions.sql` 以降が必要です。0016は既存の問い・お気に入り・プ譜・局面を保全し、移行後も旧Workerのストック指定による問い生成を受け付けます。
 
@@ -381,11 +381,11 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
 
 OAuth同意画面の「アプリのドメイン」には、次のURLを登録できます。ポリシーページはログイン不要で、トップページ・アプリ内メニュー・マニュアルから参照できます。
 
-| 項目                           | 本番URL                                                  |
-| ------------------------------ | -------------------------------------------------------- |
-| アプリケーションのホームページ | `https://pufu-lens-stock.halu-works.workers.dev`         |
-| プライバシーポリシー           | `https://pufu-lens-stock.halu-works.workers.dev/privacy` |
-| 利用規約                       | `https://pufu-lens-stock.halu-works.workers.dev/terms`   |
+| 項目                           | 本番URL             |
+| ------------------------------ | ------------------- |
+| アプリケーションのホームページ | `<APP_URL>`         |
+| プライバシーポリシー           | `<APP_URL>/privacy` |
+| 利用規約                       | `<APP_URL>/terms`   |
 
 本文の編集元は `src/LegalPage.tsx` です。運営者表記は「Pufu Lens 運営者」、問い合わせ先はGoogleログイン同意画面のユーザーサポート窓口としています。Google Cloud側のアプリ名・サポートメール・ドメイン設定を実際の運用と一致させてください。
 
@@ -452,13 +452,15 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 | `CLOUDFLARE_API_TOKEN`  | この本番アカウントに範囲を限定したデプロイ用トークン |
 | `CLOUDFLARE_ACCOUNT_ID` | 本番Worker・D1・R2を所有するアカウントID             |
 
-同じ `production` Environmentの **Variables** に次の3つを登録してください。Workflowはこれらを本番ビルドにだけ渡します。未設定・不正値ならビルドで停止し、本番DBやWorkerは変更しません。
+同じ `production` Environmentの **Secrets** に次の3つを登録してください。Workflowはこれらを本番ビルドにだけ渡します。未設定・不正値ならビルドで停止し、本番DBやWorkerは変更しません。
 
-| Environment variable | 内容                     |
-| -------------------- | ------------------------ |
-| `APP_URL`            | 実際のHTTPSオリジン      |
-| `D1_DATABASE_ID`     | 本番D1データベースのUUID |
-| `OAUTH_KV_ID`        | 本番OAuth KVの32桁ID     |
+| Environment secret | 内容                     |
+| ------------------ | ------------------------ |
+| `APP_URL`          | 実際のHTTPSオリジン      |
+| `D1_DATABASE_ID`   | 本番D1データベースのUUID |
+| `OAUTH_KV_ID`      | 本番OAuth KVの32桁ID     |
+
+これら3つは認証情報ではありませんが、Actionsログで登録値をマスクするためSecretsで管理します。同名のVariablesから移す場合は、Secretsへの登録を確認してからVariablesを削除してください。マスクは変換後の値や過去のログ・Git履歴まで隠すものではありません。
 
 APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/) の「Edit Cloudflare Workers」テンプレートを基に作成し、このアプリが利用するリソースの権限だけを付けてください。D1マイグレーションにはアカウントの **D1: Edit** が必要です。既存のR2・AIなどのバインディングに必要な参照権限を維持し、別アカウント、不要なゾーン、Global API Keyへのアクセスは与えないでください。
 
@@ -484,8 +486,8 @@ gh api repos/{owner}/{repo}/rulesets
 実行順は次のとおりです。
 
 1. [共通の検証ワークフロー](../.github/workflows/validate.yml) をSecretsなしで実行します。型チェック・lint・整形チェック・ビルド・依存監査のジョブと、Vitestの全テストを2分割したジョブを並列実行します。各ジョブで `pnpm install --frozen-lockfile` を行い、テストの内容・分離設定・実行対象は変えません。片方のテストが失敗しても残りの分割は実行し、すべての検証が成功した場合だけ従来の必須チェック `Check` が成功します。失敗・キャンセル・スキップは成功扱いにしません。並列化により同時に使うランナー数は増えます。ローカルの `pnpm run check` は従来どおり全検証を実行します。
-2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。本番ビルドにだけEnvironment variablesの `APP_URL`、`D1_DATABASE_ID`、`OAUTH_KV_ID` を渡します。
-3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
+2. デプロイジョブの `pnpm install --frozen-lockfile` はSecretsを渡さず実行します。`pnpm run build:production` にだけEnvironment secretsの `APP_URL`、`D1_DATABASE_ID`、`OAUTH_KV_ID` を渡します。Cloudflareのデプロイ認証情報やGoogle OAuthのSecretはビルドに渡しません。
+3. 最後のステップだけに `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` のSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
 依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。開発用のWranglerも明示的な依存として固定しています。
 

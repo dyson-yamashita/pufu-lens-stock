@@ -69,7 +69,7 @@ pnpm audit
 
 設定値の例は [.dev.vars.example](.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
-本番URLはビルド時の環境変数 `APP_URL`、D1・OAuth KVの実IDは `D1_DATABASE_ID`・`OAUTH_KV_ID` で指定します。GitHub Actionsでは `production` EnvironmentのVariablesに設定してください。`wrangler.jsonc` の本番URL・IDはダミーで、必須値が未設定または不正なら本番ビルドは停止します。[本番設定の手順](docs/SPEC.md#cloudflareの本番設定)を参照してください。
+本番URLはビルド時の環境変数 `APP_URL`、D1・OAuth KVの実IDは `D1_DATABASE_ID`・`OAUTH_KV_ID` で指定します。GitHub Actionsでは `production` EnvironmentのSecretsに設定してください。`wrangler.jsonc` の本番URL・IDはダミーで、必須値が未設定または不正なら本番ビルドは停止します。[本番設定の手順](docs/SPEC.md#cloudflareの本番設定)を参照してください。
 
 ## X連携
 

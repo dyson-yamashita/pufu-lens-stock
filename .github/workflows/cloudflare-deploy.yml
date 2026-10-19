@@ -62,12 +62,12 @@ jobs:
           cache: false
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-      # Build without deployment credentials or Google OAuth secrets.
+      # Mask production URL/IDs via GitHub Secrets; deployment credentials stay in the final step.
       - name: Build production
         env:
-          APP_URL: ${{ vars.APP_URL }}
-          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
-          OAUTH_KV_ID: ${{ vars.OAUTH_KV_ID }}
+          APP_URL: ${{ secrets.APP_URL }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          OAUTH_KV_ID: ${{ secrets.OAUTH_KV_ID }}
         run: pnpm run build:production
       - name: Migrate D1 and deploy Worker
         env:

@@ -4,7 +4,7 @@
 
 **Goal:** 本番URLを追跡ファイルから除き、環境変数 `APP_URL` で指定する。
 
-**Architecture:** `wrangler.jsonc` は `https://app.example.invalid` を例示値とする。ViteのCloudflare設定フックで本番ビルド時だけ `APP_URL` を検証し、生成されるWorker設定のvarsに注入する。GitHub Actionsはproduction Environment variableからビルドへ渡す。
+**Architecture:** `wrangler.jsonc` は `https://app.example.invalid` を例示値とする。ViteのCloudflare設定フックで本番ビルド時だけ `APP_URL` を検証し、生成されるWorker設定のvarsに注入する。GitHub Actionsはproduction Environment secretsからビルドへ渡す。
 
 **Tech Stack:** TypeScript、Vite、Cloudflare Vite plugin、Vitest、GitHub Actions。
 
@@ -55,3 +55,13 @@
 - 独立レビューで初回構築のKV作成手順を補い、Rulesetには必須CIチェックが含まれないことを明記。再レビューで要対応の指摘なし。
 - GitHubのproduction Environmentへ既存のURL・D1・KVの値を登録済み。Rulesetの実適用はGitHubのプラン制限により未完了。
 - `codex review --base origin/main` は要修正の指摘なし。設定テスト19件・型チェック・差分の空白チェックもレビュー内で成功。
+
+## Environment secretsへの移行
+
+- APP_URL・D1_DATABASE_ID・OAUTH_KV_IDをproduction Environment secretsへ移し、Workflowの参照をsecretsへ変更する。
+- Secrets登録後に同名Variablesを削除し、README・SPECの運用手順を更新する。認証情報は従来どおり最後のデプロイステップに限定する。
+- 最新mainを取り込んだ差分全体を独立レビューし、既存PR #55へ反映する。本番デプロイ・マージは行わない。
+
+- 3つのSecretsの登録成功と名前の存在を確認し、同名Variablesを削除済み。値は出力しない方法で移行した。
+- 型・lint・format・actionlint・設定テスト19件・通常ビルド成功。利用者の操作は変わらず、ユーザーマニュアル更新は不要。
+- 独立レビューで最新main由来の実URL表記3件を検出・置換し、追跡対象ファイルの実URL・ID残存なしを確認。再レビューは要修正指摘なし。
