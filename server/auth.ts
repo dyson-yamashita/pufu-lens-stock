@@ -111,10 +111,7 @@ export async function googleCallback(c: Context<AppEnv>) {
   }
 }
 export function assertSameOrigin(c: Context<AppEnv>) {
-  const requestOrigin = new URL(c.req.url).origin;
-  const expectedOrigin = isDemoOrigin(c.env, requestOrigin)
-    ? requestOrigin
-    : new URL(c.env.APP_URL).origin;
+  const expectedOrigin = new URL(c.req.url).origin;
   if (c.req.header('Origin') !== expectedOrigin)
     throw new HTTPException(403, { message: 'この操作はアプリの画面から実行してください。' });
 }

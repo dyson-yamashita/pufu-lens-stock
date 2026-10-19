@@ -31,6 +31,30 @@ describe('ストックのタイトル編集', () => {
   const detail = async (id: string) =>
     ((await (await app.request(`/api/v1/stocks/${id}`)).json()) as { stock: Stock }).stock;
 
+  it('設定上のURLと異なる公開ホストでも、同一Originからだけタイトルを保存できる', async () => {
+    app.env.APP_URL = 'https://app.example.com';
+    const origin = 'https://stock.example.workers.dev';
+    const response = await rename('web-stock', '公開ホストから変更したタイトル', {
+      host: origin,
+      headers: { Origin: origin, Cookie: '__Host-stock_session=alice-session' },
+    });
+    expect(await response.json()).toEqual({
+      id: 'web-stock',
+      title: '公開ホストから変更したタイトル',
+    });
+    expect(response.status).toBe(200);
+    for (const otherOrigin of ['', 'null', 'https://evil.example.com', app.env.APP_URL]) {
+      expect(
+        (
+          await rename('web-stock', '拒否する変更', {
+            host: origin,
+            headers: { Origin: otherOrigin, Cookie: '__Host-stock_session=alice-session' },
+          })
+        ).status,
+      ).toBe(403);
+    }
+  });
+
   it('URL・テキストの編集結果を保存し、一覧・詳細・問いと検索へ反映する', async () => {
     for (const id of ['web-stock', 'text-stock']) {
       expect(await (await rename(id, '  編集したタイトル100%  ')).json()).toEqual({

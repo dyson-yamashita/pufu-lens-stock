@@ -226,7 +226,7 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
 
 ## API
 
-`/api/v1` は認証必須です。WebのCookie認証での変更操作には、`APP_URL` と一致する `Origin` が必要です。Bearer認証ではCookieに依存しません。
+`/api/v1` は認証必須です。WebのCookie認証での変更操作には、実際のリクエスト先のオリジンと一致する `Origin` が必要です。`Origin` の欠落・`null`・異なるサイトからの変更を拒否します。Bearer認証ではCookieに依存しません。
 
 | メソッド・パス                    | 用途                                   | Bearer |
 | --------------------------------- | -------------------------------------- | ------ |
