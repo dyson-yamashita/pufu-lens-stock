@@ -125,14 +125,7 @@ export type Project = {
   created_at: string;
   question_count: number;
 };
-export type YouTubeMetadata = {
-  videoId: string;
-  channelTitle: string;
-  thumbnailUrl: string | null;
-  hasDescription: boolean;
-};
 export type Stock = {
-  youtube?: YouTubeMetadata | null;
   id: string;
   is_favorite: 0 | 1;
   article_id: string;

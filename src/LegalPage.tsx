@@ -45,6 +45,7 @@ const privacySections: Section[] = [
         <li>
           <strong>記事の取得情報と生成結果：</strong>
           保存したURLから取得した本文・タイトルなどと、AIが作成する要約・要点・トピック・問い・メモリ・プ譜を保存します。
+          YouTubeのURLを追加しても、そのコンテンツは取得・記録しません。URL・利用者が記入したメモと、記録できない旨の案内を保存します。
         </li>
         <li>
           <strong>外部連携・利用状況：</strong>
@@ -98,11 +99,6 @@ const privacySections: Section[] = [
             をご確認ください。
           </li>
           <li>
-            <strong>YouTube：</strong>YouTube API
-            Servicesを使用し、保存された動画URLのタイトル・説明文・チャンネル名・サムネイルなどを取得します。
-            動画本編・字幕・利用者の視聴履歴は取得しません。サムネイルを表示する際は、ブラウザからYouTubeの画像サーバーへ接続します。
-          </li>
-          <li>
             <strong>X：</strong>
             利用者が登録した認証トークンをXのAPIに送信し、指定された投稿を取得します。
             Xによる取り扱いは<a href="https://x.com/ja/privacy">Xのプライバシーポリシー</a>
@@ -146,7 +142,7 @@ const privacySections: Section[] = [
         </p>
         <p>
           ページの配信、Google
-          FontsのフォントやYouTubeの画像の読み込み、外部リンクの利用時には、IPアドレスやブラウザ情報などが各配信先に送信されることがあります。
+          Fontsのフォントの読み込み、外部リンクの利用時には、IPアドレスやブラウザ情報などが各配信先に送信されることがあります。
           Cloudflareなどの基盤サービスは、安全な配信や障害対応のため通信ログを取り扱います。
           本サービスに広告配信や広告目的のアクセス解析は組み込んでいません。
         </p>
@@ -176,9 +172,6 @@ const privacySections: Section[] = [
             Googleとの連携は
             <a href="https://myaccount.google.com/connections">Googleアカウントの接続管理</a>
             から解除できます。Google連携の解除やログアウトは、本サービスに保存したデータの削除を意味しません。
-          </li>
-          <li>
-            YouTube由来のストックを削除しても、YouTube上の動画やGoogle側のデータは削除されません。
           </li>
           <li>
             アカウント情報の削除など、画面から行えない開示・訂正・削除・利用停止は、末尾の窓口へご連絡ください。
@@ -231,6 +224,7 @@ const termsSections: Section[] = [
     content: (
       <p>
         本サービスは、記事やテキストのストック、プロジェクトごとの整理、AIによる要約・問い・メモリ・プ譜の生成、プロジェクトの公開、外部サービスとの連携を提供します。
+        YouTubeのURLからコンテンツを取得・記録する機能は提供しません。YouTubeのURLを追加すると、URL・メモと記録できない旨の案内を残し、この追加による要約・問い・メモリの生成は行いません。
         機能によってGoogleログイン、外部サービスの設定や利用権限が必要です。
         利用件数・AI処理などには制限があり、外部サービスの仕様や稼働状況によって利用できない場合があります。
         通信費や、利用者が契約する外部サービスの費用は利用者が負担します。
@@ -302,9 +296,6 @@ const termsSections: Section[] = [
       <>
         <p>
           Google、Cloudflare、X、ChatGPTなどの外部サービスの利用には、それぞれの利用条件が適用されます。
-          本サービスはYouTube API Servicesを利用しており、利用者はYouTube関連機能の利用にあたり
-          <a href="https://www.youtube.com/t/terms">YouTubeの利用規約</a>
-          にも同意するものとします。
         </p>
         <p>
           外部サービスの変更・停止・制限により、本サービスの一部を利用できなくなる場合があります。

@@ -13,7 +13,3 @@ GOOGLE_CLIENT_SECRET=
 # X APIトークン保存用AES-256キー（64文字の16進数）。本番はWrangler Secretへ設定。
 # 値をGitへ追加しないでください。未設定時は登録を受け付けません。
 INTEGRATION_ENCRYPTION_KEY=
-
-# YouTubeのタイトル・説明文の取得用。YouTube Data API v3を有効化したAPIキー。
-# 本番はWrangler Secretへ登録してください。空欄でも他の機能は動作します。
-YOUTUBE_API_KEY=

@@ -1,8 +1,7 @@
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 import { fetchXPost, xPostId } from './x';
-import { fetchYouTubeVideo, youtubeVideoId } from './youtube';
-import type { YouTubeMetadata } from '../shared/domain';
+import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import type { Env } from './env';
 import { assertPublicDestination, validateUrl } from './security';
 
@@ -95,6 +94,7 @@ async function renderHtml(env: Env, url: string): Promise<string> {
 export async function fetchPublic(value: string): Promise<{ response: Response; url: URL }> {
   let url = validateUrl(value);
   for (let redirects = 0; redirects <= 5; redirects++) {
+    if (isYouTubeUrl(url.href)) throw new Error(youtubeUnavailableMessage);
     await assertPublicDestination(url);
     // アプリのCookieやBearerトークンは取得先に一切渡さない。
     const response = await fetch(url, {
@@ -121,9 +121,7 @@ export async function fetchArticle(
   env: Env,
   value: string,
   userId?: string,
-): Promise<{ title: string; text: string; youtube?: YouTubeMetadata }> {
-  const videoId = youtubeVideoId(validateUrl(value).href);
-  if (videoId) return fetchYouTubeVideo(env, videoId);
+): Promise<{ title: string; text: string }> {
   const postId = xPostId(validateUrl(value).href);
   if (postId) {
     if (!userId) throw new Error('Xの取得にはユーザー認証が必要です。');

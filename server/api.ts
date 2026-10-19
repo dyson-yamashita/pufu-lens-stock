@@ -1,3 +1,4 @@
+import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import { encryptToken } from './x';
 import { publicProjectsApp, publicationApp } from './public-projects';
 import { Hono } from 'hono';
@@ -304,8 +305,8 @@ export function createApp(trustedPrincipal?: Principal) {
     ];
     const columns =
       detail === 'compact'
-        ? "s.id, s.project_id, p.name AS project_name, s.created_at, a.title, a.status, substr(json_extract(a.summary_json, '$.overview'), 1, 201) AS summary_excerpt"
-        : 's.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model';
+        ? "s.id, s.project_id, p.name AS project_name, s.created_at, a.title, a.status, CASE WHEN a.status != 'failed' THEN substr(json_extract(a.summary_json, '$.overview'), 1, 201) END AS summary_excerpt"
+        : 's.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model';
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
         `SELECT ${columns} FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at ${direction}, s.id ${direction} LIMIT ? OFFSET ?`,
@@ -330,11 +331,11 @@ export function createApp(trustedPrincipal?: Principal) {
           summary_truncated: truncated,
         };
       }
-      const { summary_json, youtube_json, ...stock } = row;
+      const { summary_json, ...stock } = row;
       return {
         ...stock,
-        summary: summary_json ? JSON.parse(String(summary_json)) : null,
-        youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
+        summary:
+          stock.status !== 'failed' && summary_json ? JSON.parse(String(summary_json)) : null,
       };
     });
     const total = Number(totals.results[0].count);
@@ -357,10 +358,13 @@ export function createApp(trustedPrincipal?: Principal) {
     const projectId = data.project_id ?? tokenProjectId;
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const source = data.type === 'url' ? validateUrl(data.url) : null;
+    const youtube = source !== null && isYouTubeUrl(source.href);
     const title =
       data.type === 'text'
         ? data.title || data.text.split('\n', 1)[0].trim().slice(0, 80)
-        : source!.hostname;
+        : youtube
+          ? 'YouTube（記録不可）'
+          : source!.hostname;
     const canonical =
       data.type === 'text'
         ? `text:${await hash(JSON.stringify([title, data.text]))}`
@@ -379,6 +383,11 @@ export function createApp(trustedPrincipal?: Principal) {
         message:
           'Idempotency-Keyは128文字以内の英数字・ハイフン・アンダースコアで指定してください。',
       });
+    // 旧記事の本文・要約を削除せず、同URLの再保存も記録不可に切り替える。
+    const unavailableArticle = () =>
+      c.env.DB.prepare(
+        "UPDATE articles SET title = ?, status = 'failed', error = ?, updated_at = ? WHERE user_id = ? AND canonical_url = ?",
+      ).bind(title, youtubeUnavailableMessage, now(), user.id, canonical);
     const replay = async () => {
       if (!key) return null;
       const previous = await c.env.DB.prepare(
@@ -395,6 +404,7 @@ export function createApp(trustedPrincipal?: Principal) {
         throw new HTTPException(409, {
           message: 'この保存は削除済みです。新しいIdempotency-Keyで送信してください。',
         });
+      if (youtube) await unavailableArticle().run();
       return c.json({ id: previous.stock_id, duplicate: true }, 200);
     };
     const existingResponse = await replay();
@@ -413,7 +423,7 @@ export function createApp(trustedPrincipal?: Principal) {
     const articleId = crypto.randomUUID();
     const statements = [
       c.env.DB.prepare(
-        'INSERT OR IGNORE INTO articles (id, user_id, canonical_url, source_url, title, domain, source_type, input_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR IGNORE INTO articles (id, user_id, canonical_url, source_url, title, domain, source_type, input_text, status, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       ).bind(
         articleId,
         user.id,
@@ -422,8 +432,11 @@ export function createApp(trustedPrincipal?: Principal) {
         title,
         source?.hostname ?? '',
         data.type,
-        data.type === 'text' ? data.text : (data.supplemental_text ?? null),
+        data.type === 'text' ? data.text : youtube ? null : (data.supplemental_text ?? null),
+        youtube ? 'failed' : 'queued',
+        youtube ? youtubeUnavailableMessage : null,
       ),
+      ...(youtube ? [unavailableArticle()] : []),
       c.env.DB.prepare(
         "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE user_id = ? AND canonical_url = ? AND status = 'queued'",
       ).bind(user.id, canonical),
@@ -436,8 +449,12 @@ export function createApp(trustedPrincipal?: Principal) {
         c.env.DB.prepare(
           'INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note) SELECT ?, ?, ?, id, ? FROM articles WHERE user_id = ? AND canonical_url = ?',
         ).bind(stockId, user.id, project.id, data.note, user.id, canonical),
-        ...dirtyMemoryStatements(c.env, user.id, [project.id], stockId),
-        ...queueQuestionStatements(c.env, stockId),
+        ...(!youtube
+          ? [
+              ...dirtyMemoryStatements(c.env, user.id, [project.id], stockId),
+              ...queueQuestionStatements(c.env, stockId),
+            ]
+          : []),
       );
     }
     if (key)
@@ -468,30 +485,32 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/articles/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
     if (!row)
       throw new HTTPException(404, { message: '根拠の記事は削除済み、または見つかりません。' });
-    const { summary_json, youtube_json, ...stock } = row;
+    const { summary_json, ...stock } = row;
     return c.json({
       stock: {
         ...stock,
-        summary: summary_json ? JSON.parse(String(summary_json)) : null,
-        youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
+        summary:
+          stock.status !== 'failed' && summary_json ? JSON.parse(String(summary_json)) : null,
       },
     });
   });
   async function ownedStock(c: import('hono').Context<AppEnv>) {
     const stock = await c.env.DB.prepare(
-      'SELECT s.id, s.project_id, s.article_id, a.status, a.generation, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.project_id, s.article_id, a.source_type, a.source_url, a.status, a.generation, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<{
         id: string;
         project_id: string;
         article_id: string;
+        source_type: 'url' | 'text';
+        source_url: string;
         status: string;
         generation: number;
         content_key: string | null;
@@ -825,17 +844,17 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/stocks/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.youtube_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
     if (!row) throw new HTTPException(404, { message: '記事が見つかりません。' });
-    const { summary_json, youtube_json, ...stock } = row;
+    const { summary_json, ...stock } = row;
     return c.json({
       stock: {
         ...stock,
-        summary: summary_json ? JSON.parse(String(summary_json)) : null,
-        youtube: youtube_json ? JSON.parse(String(youtube_json)) : null,
+        summary:
+          stock.status !== 'failed' && summary_json ? JSON.parse(String(summary_json)) : null,
       },
     });
   });
@@ -888,6 +907,8 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/stocks/:id/content', async (c) => {
     const stock = await ownedStock(c);
+    if (stock.source_type === 'url' && isYouTubeUrl(stock.source_url))
+      return c.json({ content: null });
     const object = stock.content_key ? await c.env.CONTENT.get(stock.content_key) : null;
     return c.json({ content: object ? await object.text() : stock.input_text });
   });
@@ -928,6 +949,8 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.post('/api/v1/stocks/:id/retry', async (c) => {
     const stock = await ownedStock(c);
+    if (stock.source_type === 'url' && isYouTubeUrl(stock.source_url))
+      throw new HTTPException(409, { message: youtubeUnavailableMessage });
     const raw = await c.req.text();
     const parsed = z
       .strictObject({ supplemental_text: z.string().trim().min(1).max(20000).optional() })

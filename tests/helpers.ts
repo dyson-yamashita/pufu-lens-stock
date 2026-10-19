@@ -53,9 +53,6 @@ export async function testApp(
     !migrations.includes('0018_project_user_memory.sql')
   )
     await applyMigration(DB, '0018_project_user_memory.sql');
-  // 既存の移行テストでも現在のストックAPIが参照する任意メタデータ列を用意する。
-  if (!migrations.includes('0019_youtube_metadata.sql'))
-    await applyMigration(DB, '0019_youtube_metadata.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),
