@@ -1,6 +1,7 @@
 {
   "name": "pufu-lens-stock",
   "version": "0.1.0",
+  "license": "BSD-3-Clause",
   "private": true,
   "type": "module",
   "engines": {
@@ -21,7 +22,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run format:check && pnpm run build",
     "db:migrate:local": "wrangler d1 migrations apply stock-db --local",
-    "db:migrate:production": "wrangler d1 migrations apply stock-db --remote --env production",
+    "db:migrate:production": "wrangler d1 migrations apply stock-db --remote --env production --config dist/pufu_lens_stock/wrangler.json",
     "deploy": "pnpm run build:production && wrangler deploy --env production"
   },
   "dependencies": {

@@ -1,0 +1,53 @@
+import { describe, expect, it } from 'vitest';
+import { productionAppUrl, productionResourceIds } from '../scripts/production-config';
+
+describe('production APP_URL', () => {
+  it('normalizes an HTTPS origin for OAuth callback URL concatenation', () => {
+    expect(productionAppUrl('https://Stock.example.com/')).toBe('https://stock.example.com');
+    expect(productionAppUrl('https://stock.example.com:8443')).toBe(
+      'https://stock.example.com:8443',
+    );
+  });
+
+  it.each([
+    undefined,
+    '',
+    'not-a-url',
+    'http://stock.example.com',
+    'https://app.example.invalid',
+    'https://localhost',
+    'https://demo.localhost',
+    'https://user:password@stock.example.com',
+    'https://stock.example.com/app',
+    'https://stock.example.com/?token=private',
+    'https://stock.example.com/#fragment',
+  ])('rejects an unusable production origin without echoing its value: %s', (value) => {
+    expect(() => productionAppUrl(value)).toThrow('APP_URL');
+    if (value) expect(() => productionAppUrl(value)).not.toThrow(value);
+  });
+});
+
+describe('production resource IDs', () => {
+  const valid = {
+    D1_DATABASE_ID: '11111111-1111-4111-8111-111111111111',
+    OAUTH_KV_ID: '11111111111111111111111111111111',
+  };
+
+  it('keeps the configured D1 and OAuth KV IDs', () => {
+    expect(productionResourceIds(valid)).toEqual({
+      databaseId: '11111111-1111-4111-8111-111111111111',
+      oauthKvId: '11111111111111111111111111111111',
+    });
+  });
+
+  it.each<[keyof typeof valid, string | undefined]>([
+    ['D1_DATABASE_ID', undefined],
+    ['D1_DATABASE_ID', 'not-a-database-id'],
+    ['D1_DATABASE_ID', '00000000-0000-0000-0000-000000000000'],
+    ['OAUTH_KV_ID', undefined],
+    ['OAUTH_KV_ID', 'not-a-namespace-id'],
+    ['OAUTH_KV_ID', '00000000000000000000000000000000'],
+  ])('rejects missing, malformed or placeholder %s before deployment', (name, value) => {
+    expect(() => productionResourceIds({ ...valid, [name]: value })).toThrow(name);
+  });
+});

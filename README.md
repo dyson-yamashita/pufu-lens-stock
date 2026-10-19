@@ -1,5 +1,7 @@
 # Pufu Lens Stock
 
+独自ソースコードのライセンスは [BSD-3-Clause](LICENSE) です。第三者コードは各提供元のライセンスに従います：[Pufu editor（BSD-3-Clause）](public/licenses/pufu-editor.txt)、[Superpowers（MIT）](.agents/SUPERPOWERS-LICENSE)、[Miniflareパッチ（MIT）](patches/LICENSE-MIT)。
+
 気になった記事や自分のメモを集め、問いを深め、行動につなげるためのアプリです。
 
 Web・Xの投稿・YouTube動画のURLやテキストをプロジェクトごとにストックすると、AIが要約と問いを生成します。集めた情報から関心や知識を「メモリ」に整理し、問いを解決するための「プ譜（プロジェクト譜）」を作成・編集できます。
@@ -52,6 +54,8 @@ MCPでの接続URL・権限設定・本番準備は、[MCP連携の説明](docs/
 | Cloudflareの構築・GitHub Actionsによるデプロイ | [本番環境の設定](docs/SPEC.md#cloudflareの本番設定)     |
 | ブランチ・PR・開発スキルの使い方               | [作業ルール](AGENTS.md)                                 |
 
+mainへの直接push禁止は、[GitHub Rulesetの適用手順](docs/SPEC.md#mainへの直接pushを禁止する)を参照してください。PRのマージだけでは有効になりません。
+
 ## 開発する
 
 React / Viteの画面と、Cloudflare Workers・D1・R2・Workflows・Workers AIで構成しています。プ譜エディターは `@goto-lab/pufu-editor` を直接組み込んでいます。
@@ -65,7 +69,7 @@ pnpm audit
 
 設定値の例は [.dev.vars.example](.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
-本番URLはビルド時の環境変数 `APP_URL` で指定します。GitHub Actionsでは `production` EnvironmentのVariablesに設定してください。`wrangler.jsonc` の本番URLはダミーで、`APP_URL` が未設定または不正なら本番ビルドは停止します。[本番設定の手順](docs/SPEC.md#cloudflareの本番設定)を参照してください。
+本番URLはビルド時の環境変数 `APP_URL`、D1・OAuth KVの実IDは `D1_DATABASE_ID`・`OAUTH_KV_ID` で指定します。GitHub Actionsでは `production` EnvironmentのVariablesに設定してください。`wrangler.jsonc` の本番URL・IDはダミーで、必須値が未設定または不正なら本番ビルドは停止します。[本番設定の手順](docs/SPEC.md#cloudflareの本番設定)を参照してください。
 
 ## X連携
 
