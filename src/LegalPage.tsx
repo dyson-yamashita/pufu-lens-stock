@@ -100,7 +100,7 @@ const privacySections: Section[] = [
           </li>
           <li>
             <strong>YouTube：</strong>
-            動画URLの詳細画面では、プライバシー強化モードの埋め込みプレーヤーを表示します。プレーヤーの読み込み・再生時には、ブラウザからYouTubeへ接続し、IPアドレス・ブラウザ情報・接続元サイトの情報などがGoogleに送信されます。
+            動画URLの一覧・詳細画面では、プライバシー強化モードの埋め込みプレーヤーを表示します。サムネイルを含むプレーヤーの読み込み・再生時には、ブラウザからYouTubeへ接続し、IPアドレス・ブラウザ情報・接続元サイトの情報などがGoogleに送信されます。
             Googleによる情報の取り扱いは
             <a href="https://policies.google.com/privacy">Googleのプライバシーポリシー</a>
             をご確認ください。

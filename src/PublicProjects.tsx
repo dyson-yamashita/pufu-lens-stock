@@ -327,28 +327,36 @@ function StockTopics({ stock }: { stock: PublicStock }) {
 }
 function StockCard({ stock }: { stock: PublicStock }) {
   const youtube = Boolean(stock.source_url && isYouTubeUrl(stock.source_url));
+  const href = `#stock/${encodeURIComponent(stock.id)}`;
+  const Card = youtube ? 'article' : 'a';
+  const Footer = youtube ? 'a' : 'div';
   return (
-    <a
-      className="public-content-card public-stock-card"
-      href={`#stock/${encodeURIComponent(stock.id)}`}
-    >
+    <Card className="public-content-card public-stock-card" href={youtube ? undefined : href}>
       <p className="public-meta">
         <BookOpen size={16} aria-hidden="true" />
         {stock.domain || 'テキスト'}
         <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
       </p>
-      <h3>{youtube ? youtubeDisplayTitle(stock.title) : stock.title}</h3>
-      <p className="public-summary">
-        {youtube
-          ? 'YouTubeのリンクを保存しています。'
-          : stock.summary?.overview || '要約はまだありません。'}
-      </p>
+      <h3>
+        {youtube ? (
+          <a className="public-stock-title-link" href={href}>
+            {youtubeDisplayTitle(stock.title)}
+          </a>
+        ) : (
+          stock.title
+        )}
+      </h3>
+      {youtube ? (
+        <YouTubePlayer url={stock.source_url!} />
+      ) : (
+        <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
+      )}
       <StockTopics stock={stock} />
-      <div className="public-card-footer">
+      <Footer className="public-card-footer" href={youtube ? href : undefined}>
         <span>ストックの詳細を見る</span>
         <ArrowRight size={18} aria-hidden="true" />
-      </div>
-    </a>
+      </Footer>
+    </Card>
   );
 }
 function StockDetails({

@@ -2295,7 +2295,7 @@ p {
     margin-top: 0;
   }
   .article-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   }
   .page-header {
     align-items: flex-start;
@@ -3345,6 +3345,14 @@ textarea::placeholder {
 .public-stock-card {
   display: flex;
   flex-direction: column;
+}
+.public-stock-card a {
+  color: inherit;
+  text-decoration: none;
+}
+.public-stock-title-link {
+  display: block;
+  min-height: 44px;
 }
 .public-stock-card:hover {
   border-color: var(--muted);

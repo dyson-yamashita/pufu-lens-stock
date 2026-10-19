@@ -1205,6 +1205,7 @@ export default function App() {
                       <ArticleCard
                         key={stock.id}
                         stock={stock}
+                        previewVisible={!modal}
                         onOpen={() => setModal({ type: 'stock', stock })}
                         favoriteBusy={savingStockFavorites.includes(stock.id)}
                         onFavorite={() => {
@@ -1357,11 +1358,13 @@ export default function App() {
 }
 function ArticleCard({
   stock,
+  previewVisible,
   onOpen,
   onFavorite,
   favoriteBusy,
 }: {
   stock: Stock;
+  previewVisible: boolean;
   onOpen: () => void;
   onFavorite: () => void;
   favoriteBusy: boolean;
@@ -1393,16 +1396,22 @@ function ArticleCard({
             {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
           </button>
         </h2>
-        <p className="article-summary">
-          {youtube
-            ? 'YouTubeのリンクを保存しています。詳細から動画や元のページを開けます。'
-            : (stock.summary?.overview ??
+        {!youtube && (
+          <p className="article-summary">
+            {stock.summary?.overview ??
               stock.error ??
               (stock.source_type === 'text'
                 ? '保存したテキストから、要点をまとめています。'
-                : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。'))}
-        </p>
+                : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。')}
+          </p>
+        )}
       </div>
+      {youtube &&
+        (previewVisible ? (
+          <YouTubePlayer url={stock.source_url} />
+        ) : (
+          <div className="youtube-player" aria-hidden="true" />
+        ))}
       <div className="article-tags">
         {stock.summary?.topics.slice(0, 3).map((topic) => (
           <span key={topic}>{topic}</span>

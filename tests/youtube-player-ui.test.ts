@@ -112,6 +112,19 @@ async function openStock() {
   expect(button).not.toBeNull();
   await act(async () => button.click());
 }
+it('一覧に自動再生しない公式プレーヤーを表示し、タイトルから詳細を開ける', async () => {
+  await act(async () => root.render(createElement(App)));
+  const card = document.querySelector('.article-card')!;
+  expect(card.querySelector('iframe')?.getAttribute('src')).toBe(
+    'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE',
+  );
+  expect(card.querySelector('iframe')?.getAttribute('loading')).toBe('lazy');
+  expect(card.querySelector('iframe')?.closest('a,button')).toBeNull();
+  await act(async () => card.querySelector<HTMLButtonElement>('.article-open')!.click());
+  expect(document.querySelector('.stock-detail')).not.toBeNull();
+  expect(document.querySelector('.stock-detail iframe')).not.toBeNull();
+  expect(card.querySelector('iframe')).toBeNull();
+});
 it('保存済みYouTubeストックも記録不可表示から動画プレーヤーに置き換え、編集とリンクを残す', async () => {
   await openStock();
   const detail = document.querySelector('.stock-detail')!;
@@ -181,10 +194,15 @@ it('YouTubeに似た別ドメインの記事は埋め込まず従来の要約・
   expect(document.querySelector('#retry-content')).not.toBeNull();
   expect(document.querySelector('.stock-detail .detail-tabs')?.textContent).toContain('要約');
 });
-it('公開ストックの詳細にも同じプレーヤーを表示し、一覧では埋め込まない', async () => {
+it('公開ストックの一覧にもプレーヤーを表示し、独立したリンクから詳細を開ける', async () => {
   window.location.hash = '#stocks';
   await act(async () => root.render(createElement(PublicProjectPage, { publicId: 'project' })));
-  expect(document.querySelector('iframe')).toBeNull();
+  const card = document.querySelector('.public-stock-card')!;
+  expect(card.querySelector('iframe')?.getAttribute('src')).toBe(
+    'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE',
+  );
+  expect(card.querySelector('iframe')?.closest('a,button')).toBeNull();
+  expect(card.querySelector('a')?.getAttribute('href')).toBe('#stock/youtube-stock');
   expect(document.querySelector('.public-stock-card h3')?.textContent).toBe('YouTube');
   await act(async () => {
     window.location.hash = '#stock/youtube-stock';
