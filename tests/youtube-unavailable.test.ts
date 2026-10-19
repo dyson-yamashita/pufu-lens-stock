@@ -47,6 +47,7 @@ describe('YouTubeは外部取得せず記録不可を案内する', () => {
         };
         expect(stock).toMatchObject({
           source_url: url,
+          title: 'YouTube',
           status: 'failed',
           note: 'あとで見る',
           summary: null,
@@ -173,7 +174,7 @@ describe('YouTubeは外部取得せず記録不可を案内する', () => {
             stock: Stock;
           };
           expect(stock).toMatchObject({
-            title: 'YouTube（記録不可）',
+            title: 'YouTube',
             status: 'failed',
             summary: null,
           });
@@ -187,8 +188,8 @@ describe('YouTubeは外部取得せず記録不可を案内する', () => {
         }
         expect(await (await app.request('/api/v1/stocks?detail=compact')).json()).toMatchObject({
           stocks: [
-            { title: 'YouTube（記録不可）', summary_excerpt: null, status: 'failed' },
-            { title: 'YouTube（記録不可）', summary_excerpt: null, status: 'failed' },
+            { title: 'YouTube', summary_excerpt: null, status: 'failed' },
+            { title: 'YouTube', summary_excerpt: null, status: 'failed' },
           ],
         });
         const publication = (await (
@@ -201,7 +202,7 @@ describe('YouTubeは外部取得せず記録不可を案内する', () => {
           await (
             await app.request(`/api/public/projects/${publication.publication.public_id}/stocks`)
           ).json(),
-        ).toMatchObject({ items: [{ title: 'YouTube（記録不可）', summary: null }] });
+        ).toMatchObject({ items: [{ title: 'YouTube', summary: null }] });
         await restoreLegacy();
         expect(await (await app.request('/api/v1/stocks', options)).json()).toMatchObject({
           id,

@@ -25,6 +25,8 @@ import type {
 } from '../shared/public-project';
 import { api, send } from './api';
 import QuestionLabels from './QuestionLabels';
+import YouTubePlayer from './YouTubePlayer';
+import { isYouTubeUrl, youtubeDisplayTitle } from '../shared/youtube';
 
 const PublicPufuScore = lazy(async () => {
   try {
@@ -324,6 +326,7 @@ function StockTopics({ stock }: { stock: PublicStock }) {
   );
 }
 function StockCard({ stock }: { stock: PublicStock }) {
+  const youtube = Boolean(stock.source_url && isYouTubeUrl(stock.source_url));
   return (
     <a
       className="public-content-card public-stock-card"
@@ -334,8 +337,12 @@ function StockCard({ stock }: { stock: PublicStock }) {
         {stock.domain || 'テキスト'}
         <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
       </p>
-      <h3>{stock.title}</h3>
-      <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
+      <h3>{youtube ? youtubeDisplayTitle(stock.title) : stock.title}</h3>
+      <p className="public-summary">
+        {youtube
+          ? 'YouTubeのリンクを保存しています。'
+          : stock.summary?.overview || '要約はまだありません。'}
+      </p>
       <StockTopics stock={stock} />
       <div className="public-card-footer">
         <span>ストックの詳細を見る</span>
@@ -352,6 +359,7 @@ function StockDetails({
   heading?: 'h3' | 'h4';
 }) {
   const href = stock.source_url && /^https?:\/\//i.test(stock.source_url) ? stock.source_url : null;
+  const youtube = Boolean(href && isYouTubeUrl(href));
   const PointsHeading = Heading === 'h4' ? 'h5' : 'h4';
   return (
     <article className="public-content-card public-stock-detail">
@@ -360,9 +368,15 @@ function StockDetails({
         {stock.domain || 'テキスト'}
         <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
       </p>
-      <Heading className="public-stock-title">{stock.title}</Heading>
-      <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
-      {stock.summary && (
+      <Heading className="public-stock-title">
+        {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
+      </Heading>
+      {youtube ? (
+        <YouTubePlayer url={href!} />
+      ) : (
+        <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
+      )}
+      {!youtube && stock.summary && (
         <section className="public-stock-points" aria-label="要点">
           <PointsHeading>要点</PointsHeading>
           <ul>
@@ -375,7 +389,8 @@ function StockDetails({
       <StockTopics stock={stock} />
       {href && (
         <a className="text-link" href={href} target="_blank" rel="noreferrer">
-          元の記事を開く <ExternalLink size={14} aria-hidden="true" />
+          {youtube ? 'YouTubeで開く' : '元の記事を開く'}{' '}
+          <ExternalLink size={14} aria-hidden="true" />
         </a>
       )}
     </article>

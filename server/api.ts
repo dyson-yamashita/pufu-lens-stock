@@ -363,7 +363,7 @@ export function createApp(trustedPrincipal?: Principal) {
       data.type === 'text'
         ? data.title || data.text.split('\n', 1)[0].trim().slice(0, 80)
         : youtube
-          ? 'YouTube（記録不可）'
+          ? 'YouTube'
           : source!.hostname;
     const canonical =
       data.type === 'text'
