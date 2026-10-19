@@ -206,9 +206,9 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
    pnpm exec wrangler kv namespace create OAUTH_KV --env production
    ```
 
-2. 返されたIDを `wrangler.jsonc` の `env.production` に `"kv_namespaces": [{ "binding": "OAUTH_KV", "id": "作成したKVのID" }]` として追加します。本番KVが未設定の間はMCPの接続・認可APIが503となり、既存機能は利用できます。ローカル開発ではトップレベルの32桁ゼロのプレースホルダーでローカルKVを使えます。
+2. 返されたIDを本番ビルドの環境変数 `OAUTH_KV_ID` に設定します。GitHub Actionsでは `production` EnvironmentのVariablesに登録します。`wrangler.jsonc` のKV IDはゼロのプレースホルダーのままにします。ローカル開発もこのプレースホルダーでローカルKVを使えます。
 3. `APP_URL` を末尾スラッシュなしの本番HTTPSオリジンに合わせます。既存GoogleログインのClient ID・Secretとコールバック設定を使います。MCPクライアントにGoogleのトークンやセッションCookieを渡す必要はありません。
-4. 新Workerの公開前に `pnpm run db:migrate:production` で `0016_independent_questions.sql` まで適用し、`pnpm run deploy` で公開します。0016は既存の問い・お気に入り・プ譜・局面を保全し、移行後も旧Workerのストック指定による問い生成を受け付けます。
+4. [本番設定の手順](#cloudflareの本番設定)に従い、環境変数を指定して本番ビルド後にマイグレーション・デプロイを実行します。MCPには `0016_independent_questions.sql` 以降が必要です。0016は既存の問い・お気に入り・プ譜・局面を保全し、移行後も旧Workerのストック指定による問い生成を受け付けます。
 
 `global_fetch_strictly_public` と、静的配信よりWorkerを先に処理する `/mcp`・`/oauth/*`・`/.well-known/*` のルートは設定済みです。通常の本番反映はmainの更新を受けたGitHub ActionsがDB移行とWorker公開を順に実行します。
 
@@ -372,10 +372,10 @@ pnpm run dev:lan
 
 Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーション」として作成し、以下を設定します。
 
-| 設定            | ローカル                                         | 本番                                                                      |
-| --------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
-| アプリのURL     | `http://localhost:5173`                          | `https://pufu-lens-stock.halu-works.workers.dev`                          |
-| リダイレクトURI | `http://localhost:5173/api/auth/google/callback` | `https://pufu-lens-stock.halu-works.workers.dev/api/auth/google/callback` |
+| 設定            | ローカル                                         | 本番                                 |
+| --------------- | ------------------------------------------------ | ------------------------------------ |
+| アプリのURL     | `http://localhost:5173`                          | `APP_URL` に指定したHTTPSオリジン    |
+| リダイレクトURI | `http://localhost:5173/api/auth/google/callback` | `<APP_URL>/api/auth/google/callback` |
 
 スコープは `openid email profile` のみです。Googleの `sub` とアプリのユーザーIDを関連付けます。Googleのアクセストークンやリフレッシュトークンは保存しません。
 
@@ -395,19 +395,20 @@ OAuth同意画面の「アプリのドメイン」には、次のURLを登録で
 
 ## Cloudflareの本番設定
 
-本番URLは [pufu-lens-stock.halu-works.workers.dev](https://pufu-lens-stock.halu-works.workers.dev) です。以下は環境を新しく構築する場合の手順です。既存環境ではリソースを重複作成せず、設定と未適用マイグレーションを確認してください。
+本番URLはビルド時の環境変数 `APP_URL` で指定します。以下は環境を新しく構築する場合の手順です。既存環境ではリソースを重複作成せず、設定と未適用マイグレーションを確認してください。
 
-1. Cloudflareアカウントへログインし、D1と非公開R2バケットを作成します。
+1. Cloudflareアカウントへログインし、D1・非公開R2バケット・OAuth用KVを作成します。
 
    ```sh
    pnpm exec wrangler login
    pnpm exec wrangler d1 create stock-db
    pnpm exec wrangler r2 bucket create pufu-lens-stock-content
+   pnpm exec wrangler kv namespace create OAUTH_KV --env production
    ```
 
 2. `wrangler.jsonc` の `env.production` を編集します。
-   - `d1_databases[].database_id` を、作成したD1のIDに置き換えます。
-   - `APP_URL` は、設定済みの `https://pufu-lens-stock.halu-works.workers.dev` を使用します。
+   - D1・KVのIDはゼロのプレースホルダーのままにします。環境変数 `D1_DATABASE_ID`、`OAUTH_KV_ID` に実際のIDを設定すると、本番ビルドで生成設定へ注入されます。
+   - `vars.APP_URL` の `https://app.example.invalid` はダミー値のままにします。本番ビルド時にプロセス環境変数 `APP_URL` から生成設定へ注入します。
    - 独自ドメインを使う場合はCloudflareのWorkerのルート／カスタムドメインを設定します。
    - `LOCAL_DEMO_ENABLED` は `false` のままにします。
    - R2は公開アクセスを有効にしません。
@@ -419,12 +420,20 @@ OAuth同意画面の「アプリのドメイン」には、次のURLを登録で
    pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET --env production
    ```
 
-4. マイグレーション適用とデプロイを実行します。
+4. 環境変数 `APP_URL` に実際のHTTPSオリジンを設定して、本番ビルドを先に検証し、マイグレーション適用とデプロイを実行します。
 
    ```sh
+   export APP_URL="https://your-app.your-account.workers.dev" # 実際のURLに置き換える
+   export D1_DATABASE_ID="実際のD1データベースUUID"
+   export OAUTH_KV_ID="実際のOAuth KVの32桁ID"
+   pnpm run build:production
    pnpm run db:migrate:production
-   pnpm run deploy
+   pnpm exec wrangler deploy --env production
    ```
+
+`APP_URL` はパス・クエリ・フラグメント・認証情報を含まないHTTPSオリジンにします。末尾の `/` は除去されます。未設定、不正なURL、localhost、`.invalid` のダミー値では本番ビルドを停止します。`.dev.vars.production` の値は本番ビルドへ自動注入されません。`pnpm run deploy` も同じ環境変数が必要です。通常の `pnpm run build` とローカル開発には不要です。D1・KVも未設定・不正形式・ゼロのIDでは本番ビルドを停止します。生成された `dist` はGit管理対象外です。`db:migrate:production` は本番ビルドが生成した `dist/pufu_lens_stock/wrangler.json` を明示的に使うため、先に本番ビルドを成功させてください。
+
+この設定はアプリのURL設定であり、Cloudflareのドメイン割り当てやGoogle側のOAuth設定は変更しません。URLは秘密情報として扱いません。Git履歴やActionsのログなどから既存URLが見える場合があります。
 
 Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生します。標準のモデルは `@cf/qwen/qwen3-30b-a3b-fp8` で、`AI_MODEL` から変更できます。モデルは、[仕様に示すJSON形式](#非同期処理とデータ整合性)を返せるテキスト生成モデルを指定してください。
 
@@ -443,14 +452,39 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 | `CLOUDFLARE_API_TOKEN`  | この本番アカウントに範囲を限定したデプロイ用トークン |
 | `CLOUDFLARE_ACCOUNT_ID` | 本番Worker・D1・R2を所有するアカウントID             |
 
+同じ `production` Environmentの **Variables** に次の3つを登録してください。Workflowはこれらを本番ビルドにだけ渡します。未設定・不正値ならビルドで停止し、本番DBやWorkerは変更しません。
+
+| Environment variable | 内容                     |
+| -------------------- | ------------------------ |
+| `APP_URL`            | 実際のHTTPSオリジン      |
+| `D1_DATABASE_ID`     | 本番D1データベースのUUID |
+| `OAUTH_KV_ID`        | 本番OAuth KVの32桁ID     |
+
 APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/) の「Edit Cloudflare Workers」テンプレートを基に作成し、このアプリが利用するリソースの権限だけを付けてください。D1マイグレーションにはアカウントの **D1: Edit** が必要です。既存のR2・AIなどのバインディングに必要な参照権限を維持し、別アカウント、不要なゾーン、Global API Keyへのアクセスは与えないでください。
 
 `production` の **Deployment branches and tags** は **Selected branches and tags → Branch: main** に制限してください。マージ後すぐの自動実行にする場合はRequired reviewersを設定しません。GitHubのmainブランチ保護・RulesetでPR経由の変更と `Check` の成功を要求し、ワークフローや依存関係を含む変更をレビューしてください。ワークフロー内の条件だけでは、mainへ悪意ある変更を書き込める管理者からSecretsを保護できません。
 
+### mainへの直接pushを禁止する
+
+GitHubのRulesetは、PRのマージだけでは有効になりません。設定定義は [.github/main-ruleset.json](../.github/main-ruleset.json) にあります。`main` への更新にはPRを必須とし、force pushとブランチ削除を禁止します。管理者を含めてルールのバイパスを許可しません。個人で運用できるよう、他者による承認の必須件数は0件です。
+
+この定義は直接pushの禁止を対象とし、必須ステータスチェックは含みません。上記の `Check` 成功もマージ条件にする場合は、GitHubでそのチェックを追加設定してください。
+
+管理権限のあるアカウントで、リポジトリのルートから適用します。既存の同名Rulesetがある場合は新規作成せず、そのルールを更新してください。
+
+```sh
+gh api --method POST repos/{owner}/{repo}/rulesets --input .github/main-ruleset.json
+gh api repos/{owner}/{repo}/rulesets
+```
+
+[GitHubの提供条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)により、Freeの非公開リポジトリでは利用できません。対応プランを使うか、公開化した後で適用します。設定ファイルの追加やローカルのGitフックだけでは、サーバー側の直接pushを禁止できません。適用後はSettingsのRulesetsで有効状態、対象 `main`、バイパスなしを確認してください。
+
+### 自動デプロイの実行順
+
 実行順は次のとおりです。
 
 1. [共通の検証ワークフロー](../.github/workflows/validate.yml) をSecretsなしで実行します。型チェック・lint・整形チェック・ビルド・依存監査のジョブと、Vitestの全テストを2分割したジョブを並列実行します。各ジョブで `pnpm install --frozen-lockfile` を行い、テストの内容・分離設定・実行対象は変えません。片方のテストが失敗しても残りの分割は実行し、すべての検証が成功した場合だけ従来の必須チェック `Check` が成功します。失敗・キャンセル・スキップは成功扱いにしません。並列化により同時に使うランナー数は増えます。ローカルの `pnpm run check` は従来どおり全検証を実行します。
-2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。
+2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。本番ビルドにだけEnvironment variablesの `APP_URL`、`D1_DATABASE_ID`、`OAUTH_KV_ID` を渡します。
 3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
 依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。開発用のWranglerも明示的な依存として固定しています。

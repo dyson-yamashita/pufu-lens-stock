@@ -45,7 +45,6 @@ jobs:
     timeout-minutes: 20
     environment:
       name: production
-      url: https://pufu-lens-stock.halu-works.workers.dev
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,6 +64,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       # Build without deployment credentials or Google OAuth secrets.
       - name: Build production
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          OAUTH_KV_ID: ${{ vars.OAUTH_KV_ID }}
         run: pnpm run build:production
       - name: Migrate D1 and deploy Worker
         env:
@@ -75,5 +78,5 @@ jobs:
             echo '::error::production EnvironmentにCLOUDFLARE_API_TOKENとCLOUDFLARE_ACCOUNT_IDを登録してください。'
             exit 1
           fi
-          pnpm exec wrangler d1 migrations apply stock-db --remote --env production --config wrangler.jsonc
+          pnpm run db:migrate:production
           pnpm exec wrangler deploy --env production
