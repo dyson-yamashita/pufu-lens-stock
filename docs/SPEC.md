@@ -374,10 +374,10 @@ pnpm run dev:lan
 
 Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーション」として作成し、以下を設定します。
 
-| 設定            | ローカル                                         | 本番                                                                      |
-| --------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
-| アプリのURL     | `http://localhost:5173`                          | `https://pufu-lens-stock.halu-works.workers.dev`                          |
-| リダイレクトURI | `http://localhost:5173/api/auth/google/callback` | `https://pufu-lens-stock.halu-works.workers.dev/api/auth/google/callback` |
+| 設定            | ローカル                                         | 本番                                 |
+| --------------- | ------------------------------------------------ | ------------------------------------ |
+| アプリのURL     | `http://localhost:5173`                          | `APP_URL` に指定したHTTPSオリジン    |
+| リダイレクトURI | `http://localhost:5173/api/auth/google/callback` | `<APP_URL>/api/auth/google/callback` |
 
 スコープは `openid email profile` のみです。Googleの `sub` とアプリのユーザーIDを関連付けます。Googleのアクセストークンやリフレッシュトークンは保存しません。
 
@@ -387,7 +387,7 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
 
 ## Cloudflareの本番設定
 
-本番URLは [pufu-lens-stock.halu-works.workers.dev](https://pufu-lens-stock.halu-works.workers.dev) です。以下は環境を新しく構築する場合の手順です。既存環境ではリソースを重複作成せず、設定と未適用マイグレーションを確認してください。
+本番URLはビルド時の環境変数 `APP_URL` で指定します。以下は環境を新しく構築する場合の手順です。既存環境ではリソースを重複作成せず、設定と未適用マイグレーションを確認してください。
 
 1. Cloudflareアカウントへログインし、D1と非公開R2バケットを作成します。
 
@@ -399,7 +399,7 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
 
 2. `wrangler.jsonc` の `env.production` を編集します。
    - `d1_databases[].database_id` を、作成したD1のIDに置き換えます。
-   - `APP_URL` は、設定済みの `https://pufu-lens-stock.halu-works.workers.dev` を使用します。
+   - `vars.APP_URL` の `https://app.example.invalid` はダミー値のままにします。本番ビルド時にプロセス環境変数 `APP_URL` から生成設定へ注入します。
    - 独自ドメインを使う場合はCloudflareのWorkerのルート／カスタムドメインを設定します。
    - `LOCAL_DEMO_ENABLED` は `false` のままにします。
    - R2は公開アクセスを有効にしません。
@@ -411,12 +411,18 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
    pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET --env production
    ```
 
-4. マイグレーション適用とデプロイを実行します。
+4. 環境変数 `APP_URL` に実際のHTTPSオリジンを設定して、本番ビルドを先に検証し、マイグレーション適用とデプロイを実行します。
 
    ```sh
+   export APP_URL="https://your-app.your-account.workers.dev" # 実際のURLに置き換える
+   pnpm run build:production
    pnpm run db:migrate:production
-   pnpm run deploy
+   pnpm exec wrangler deploy --env production
    ```
+
+`APP_URL` はパス・クエリ・フラグメント・認証情報を含まないHTTPSオリジンにします。末尾の `/` は除去されます。未設定、不正なURL、localhost、`.invalid` のダミー値では本番ビルドを停止します。`.dev.vars.production` の値は本番ビルドへ自動注入されません。`pnpm run deploy` も同じ環境変数が必要です。通常の `pnpm run build` とローカル開発には不要です。生成された `dist` はGit管理対象外です。
+
+この設定はアプリのURL設定であり、Cloudflareのドメイン割り当てやGoogle側のOAuth設定は変更しません。URLは秘密情報として扱いません。Git履歴やActionsのログなどから既存URLが見える場合があります。
 
 Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生します。標準のモデルは `@cf/qwen/qwen3-30b-a3b-fp8` で、`AI_MODEL` から変更できます。モデルは、[仕様に示すJSON形式](#非同期処理とデータ整合性)を返せるテキスト生成モデルを指定してください。
 
@@ -435,6 +441,8 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 | `CLOUDFLARE_API_TOKEN`  | この本番アカウントに範囲を限定したデプロイ用トークン |
 | `CLOUDFLARE_ACCOUNT_ID` | 本番Worker・D1・R2を所有するアカウントID             |
 
+同じ `production` Environmentの **Variables** に `APP_URL` を追加し、実際のHTTPSオリジンを登録してください。Workflowはこの値を本番ビルドにだけ渡します。未設定・不正値ならビルドで停止し、本番DBやWorkerは変更しません。
+
 APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/) の「Edit Cloudflare Workers」テンプレートを基に作成し、このアプリが利用するリソースの権限だけを付けてください。D1マイグレーションにはアカウントの **D1: Edit** が必要です。既存のR2・AIなどのバインディングに必要な参照権限を維持し、別アカウント、不要なゾーン、Global API Keyへのアクセスは与えないでください。
 
 `production` の **Deployment branches and tags** は **Selected branches and tags → Branch: main** に制限してください。マージ後すぐの自動実行にする場合はRequired reviewersを設定しません。GitHubのmainブランチ保護・RulesetでPR経由の変更と `Check` の成功を要求し、ワークフローや依存関係を含む変更をレビューしてください。ワークフロー内の条件だけでは、mainへ悪意ある変更を書き込める管理者からSecretsを保護できません。
@@ -442,7 +450,7 @@ APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflar
 実行順は次のとおりです。
 
 1. [共通の検証ワークフロー](../.github/workflows/validate.yml) をSecretsなしで実行します。型チェック・lint・整形チェック・ビルド・依存監査のジョブと、Vitestの全テストを2分割したジョブを並列実行します。各ジョブで `pnpm install --frozen-lockfile` を行い、テストの内容・分離設定・実行対象は変えません。片方のテストが失敗しても残りの分割は実行し、すべての検証が成功した場合だけ従来の必須チェック `Check` が成功します。失敗・キャンセル・スキップは成功扱いにしません。並列化により同時に使うランナー数は増えます。ローカルの `pnpm run check` は従来どおり全検証を実行します。
-2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。
+2. デプロイジョブでも `pnpm install --frozen-lockfile` と `pnpm run build:production` はSecretsを渡さず実行します。本番ビルドにだけEnvironment variableの `APP_URL` を渡します。
 3. 最後のステップだけに上記2つのSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
 依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。開発用のWranglerも明示的な依存として固定しています。

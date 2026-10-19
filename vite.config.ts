@@ -4,12 +4,15 @@ import { cloudflare } from '@cloudflare/vite-plugin';
 import prefixSelector from 'postcss-prefix-selector';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
+import { productionAppUrl } from './scripts/production-app-url';
 
 export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     cloudflare({
       config: (config) => {
+        if (command === 'build' && process.env.CLOUDFLARE_ENV === 'production')
+          return { vars: { ...config.vars, APP_URL: productionAppUrl(process.env.APP_URL) } };
         if (command !== 'serve' || config.ai) return;
         const envFile = process.env.CLOUDFLARE_ENV
           ? `.dev.vars.${process.env.CLOUDFLARE_ENV}`

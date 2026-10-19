@@ -65,6 +65,8 @@ pnpm audit
 
 設定値の例は [.dev.vars.example](.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
+本番URLはビルド時の環境変数 `APP_URL` で指定します。GitHub Actionsでは `production` EnvironmentのVariablesに設定してください。`wrangler.jsonc` の本番URLはダミーで、`APP_URL` が未設定または不正なら本番ビルドは停止します。[本番設定の手順](docs/SPEC.md#cloudflareの本番設定)を参照してください。
+
 ## X連携
 
 「外部連携」からX公式APIの **Bearer Token** を登録・更新・削除できます。従来のMCP接続も同じ画面から利用できます。Xの開発者契約・読み取り権限・利用枠が必要です。登録時は保存のみ行い、実際の投稿取得で認証を確認します。
