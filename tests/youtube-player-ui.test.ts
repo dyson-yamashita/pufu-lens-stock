@@ -112,6 +112,20 @@ async function openStock() {
   expect(button).not.toBeNull();
   await act(async () => button.click());
 }
+it('一覧は静止画像だけを読み込み、画像が表示できない場合も詳細から再生できる', async () => {
+  await act(async () => root.render(createElement(App)));
+  const image = document.querySelector<HTMLImageElement>('.youtube-thumbnail-image')!;
+  expect(image?.getAttribute('src')).toBe('https://i.ytimg.com/vi/M7lc1UVf-VE/mqdefault.jpg');
+  expect(image.getAttribute('loading')).toBe('lazy');
+  expect(document.querySelector('iframe')).toBeNull();
+  await act(async () => image.dispatchEvent(new window.Event('error')));
+  const button = document.querySelector<HTMLButtonElement>('.youtube-thumbnail')!;
+  expect(button.textContent).toContain('サムネイルを表示できません');
+  await act(async () => button.click());
+  expect(document.querySelector('.stock-detail iframe')?.getAttribute('src')).toBe(
+    'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE',
+  );
+});
 it('保存済みYouTubeストックも記録不可表示から動画プレーヤーに置き換え、編集とリンクを残す', async () => {
   await openStock();
   const detail = document.querySelector('.stock-detail')!;
@@ -185,6 +199,9 @@ it('公開ストックの詳細にも同じプレーヤーを表示し、一覧�
   window.location.hash = '#stocks';
   await act(async () => root.render(createElement(PublicProjectPage, { publicId: 'project' })));
   expect(document.querySelector('iframe')).toBeNull();
+  expect(document.querySelector('.public-stock-card img')?.getAttribute('src')).toBe(
+    'https://i.ytimg.com/vi/M7lc1UVf-VE/mqdefault.jpg',
+  );
   expect(document.querySelector('.public-stock-card h3')?.textContent).toBe('YouTube');
   await act(async () => {
     window.location.hash = '#stock/youtube-stock';

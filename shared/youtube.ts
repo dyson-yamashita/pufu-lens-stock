@@ -2,7 +2,12 @@ export const youtubeUnavailableMessage =
   'YouTubeのコンテンツは記録できません。URLのみストックに残します。';
 
 export function isYouTubeUrl(value: string): boolean {
-  const host = new URL(value).hostname.replace(/\.$/, '');
+  let host: string;
+  try {
+    host = new URL(value).hostname.replace(/\.$/, '');
+  } catch {
+    return false;
+  }
   return ['youtube.com', 'youtu.be', 'youtube-nocookie.com'].some(
     (domain) => host === domain || host.endsWith(`.${domain}`),
   );
@@ -37,4 +42,9 @@ export function youtubeEmbedUrl(value: string): string | null {
 
 export function youtubeDisplayTitle(title: string): string {
   return title === 'YouTube（記録不可）' ? 'YouTube' : title;
+}
+
+export function youtubeThumbnailUrl(value: string): string | null {
+  const id = youtubeEmbedUrl(value)?.split('/').at(-1);
+  return id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
 }

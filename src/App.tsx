@@ -49,6 +49,7 @@ import type {
 import { stockInputSchema, stockTextLimit } from '../shared/domain';
 import { isYouTubeUrl, youtubeDisplayTitle } from '../shared/youtube';
 import YouTubePlayer from './YouTubePlayer';
+import YouTubeThumbnail from './YouTubeThumbnail';
 import { api, ApiError, createRequestId, send } from './api';
 import Profile from './Profile';
 import Questions, { StockQuestion } from './Questions';
@@ -1403,6 +1404,16 @@ function ArticleCard({
                 : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。'))}
         </p>
       </div>
+      {youtube && (
+        <button
+          type="button"
+          className="youtube-thumbnail"
+          aria-label={`${youtubeDisplayTitle(stock.title)}の詳細を開く`}
+          onClick={onOpen}
+        >
+          <YouTubeThumbnail url={stock.source_url} />
+        </button>
+      )}
       <div className="article-tags">
         {stock.summary?.topics.slice(0, 3).map((topic) => (
           <span key={topic}>{topic}</span>

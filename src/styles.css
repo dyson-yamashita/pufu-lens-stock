@@ -1484,6 +1484,27 @@ p {
   border: 0;
   border-radius: 8px;
 }
+.youtube-thumbnail {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 15px;
+}
+.youtube-thumbnail-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.youtube-thumbnail-fallback {
+  display: block;
+  padding: 24px 12px;
+  color: var(--muted);
+  background: var(--wash);
+  border-radius: 8px;
+}
 .original-link {
   display: inline-flex;
   align-items: center;
