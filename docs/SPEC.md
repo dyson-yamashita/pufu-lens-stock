@@ -381,6 +381,16 @@ Google Cloud ConsoleでOAuthクライアントを「ウェブアプリケーシ�
 
 スコープは `openid email profile` のみです。Googleの `sub` とアプリのユーザーIDを関連付けます。Googleのアクセストークンやリフレッシュトークンは保存しません。
 
+OAuth同意画面の「アプリのドメイン」には、次のURLを登録できます。ポリシーページはログイン不要で、トップページ・アプリ内メニュー・マニュアルから参照できます。
+
+| 項目                           | 本番URL                                                  |
+| ------------------------------ | -------------------------------------------------------- |
+| アプリケーションのホームページ | `https://pufu-lens-stock.halu-works.workers.dev`         |
+| プライバシーポリシー           | `https://pufu-lens-stock.halu-works.workers.dev/privacy` |
+| 利用規約                       | `https://pufu-lens-stock.halu-works.workers.dev/terms`   |
+
+本文の編集元は `src/LegalPage.tsx` です。運営者表記は「Pufu Lens 運営者」、問い合わせ先はGoogleログイン同意画面のユーザーサポート窓口としています。Google Cloud側のアプリ名・サポートメール・ドメイン設定を実際の運用と一致させてください。
+
 ローカルでは `.dev.vars` の `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` を設定して開発サーバーを再起動します。本番ではWorkerのSecretとして登録します。認証ライブラリはWorkersに対応した `openid-client` を使用しています。
 
 本番用のClient IDとClient Secretは、Git管理対象外の `.dev.vars.production` に記入できます。Google Cloud Consoleでは「承認済みのリダイレクトURI」に上記の本番URIを登録してください。Google側はURIの完全一致を要求します。[GoogleのOpenID Connect仕様](https://developers.google.com/identity/openid-connect/openid-connect#authenticatingtheuser)

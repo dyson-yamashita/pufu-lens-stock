@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ArrowUp, BookOpen } from 'lucide-react';
+import LegalLinks from './LegalLinks';
 
 const sections = [
   {
@@ -154,7 +155,10 @@ export default function UserManual() {
             まずは、ここから
           </h2>
           <ol>
-            <li>Googleでログインし、サイドメニューからプロジェクトを追加します。</li>
+            <li>
+              <a href="/terms">利用規約</a>と<a href="/privacy">プライバシーポリシー</a>
+              を確認して同意のうえ、Googleでログインし、サイドメニューからプロジェクトを追加します。
+            </li>
             <li>気になった記事のURLや、自分のテキストをストックします。</li>
             <li>問いを選び、プ譜で解決の案を考えてみましょう。</li>
           </ol>
@@ -182,6 +186,7 @@ export default function UserManual() {
           <ArrowUp size={16} aria-hidden="true" />
           ページの先頭へ
         </a>
+        <LegalLinks />
       </main>
     </div>
   );

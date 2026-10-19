@@ -3455,6 +3455,49 @@ textarea::placeholder {
   min-height: 44px;
   margin-top: 12px;
 }
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+}
+.legal-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.legal-links a:hover {
+  color: var(--primary);
+}
+.login-legal {
+  margin: 16px 0;
+}
+.login-copy .login-legal p {
+  margin: 0;
+  font-size: 13px;
+}
+.login-footer {
+  border-top: 1px solid var(--border);
+  padding: 20px 7vw;
+}
+.sidebar-bottom .legal-links {
+  gap: 0 12px;
+  margin-top: 12px;
+}
+.legal-main :is(p, li) {
+  font-size: 16px;
+}
+.legal-main .page-header p {
+  font-size: 14px;
+}
+.legal-main .manual-section a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 @media (max-width: 760px) {
   .manual-main {
     padding: 28px 20px 40px;
