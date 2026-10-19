@@ -9,6 +9,7 @@ import {
   jobFailureStatements,
 } from './db';
 import { fetchArticle } from './ingest';
+import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import {
   buildMemory,
   updateMemory,
@@ -163,6 +164,8 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         return row;
       });
       if (!article) return;
+      if (article.source_type === 'url' && isYouTubeUrl(article.source_url))
+        throw new Error(youtubeUnavailableMessage);
       const key = `${job.user_id}/${article.id}/${job.revision}.txt`;
       const title = await step.do('fetch-and-store-content', retry, async () => {
         const current = await this.env.DB.prepare(
@@ -174,22 +177,15 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         if (article.source_type === 'text' && !article.input_text)
           throw new Error('保存したテキスト本文が見つかりません。');
         const content = article.input_text
-          ? { title: article.title, text: article.input_text!, youtube: undefined }
+          ? { title: article.title, text: article.input_text }
           : await fetchArticle(this.env, article.source_url, job.user_id);
         await this.env.CONTENT.put(key, content.text, {
           httpMetadata: { contentType: 'text/plain; charset=utf-8' },
         });
         const statements = [
           this.env.DB.prepare(
-            "UPDATE articles SET title = ?, content_key = ?, youtube_json = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
-          ).bind(
-            content.title,
-            key,
-            content.youtube ? JSON.stringify(content.youtube) : null,
-            now(),
-            article.id,
-            job.revision,
-          ),
+            "UPDATE articles SET title = ?, content_key = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
+          ).bind(content.title, key, now(), article.id, job.revision),
         ];
         if (current.content_key && current.content_key !== key) {
           statements.push(
@@ -222,17 +218,8 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         if (!content) throw new Error('保存した本文が見つかりません。');
         return content.text();
       });
-      const youtube = await step.do('read-youtube-source', () =>
-        this.env.DB.prepare('SELECT youtube_json FROM articles WHERE id = ? AND generation = ?')
-          .bind(article.id, job.revision)
-          .first<string>('youtube_json'),
-      );
-      const summary = await summarize(
-        this.env,
-        title,
-        text,
-        (name, operation) => aiStep(this.env, job, step, name, operation),
-        youtube ? 'youtube' : 'article',
+      const summary = await summarize(this.env, title, text, (name, operation) =>
+        aiStep(this.env, job, step, name, operation),
       );
       await step.do('commit-summary', async () => {
         const current = await this.env.DB.prepare(

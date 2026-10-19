@@ -18,7 +18,8 @@ const notFound = () =>
 const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
   (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND q.status='ready') AS question_count`;
-const stockColumns = 's.id,a.title,a.source_url,a.domain,s.created_at,a.summary_json';
+const stockColumns =
+  "s.id,a.title,a.source_url,a.domain,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
 const stockJoins =
   'stocks s JOIN projects p ON p.id=s.project_id JOIN articles a ON a.id=s.article_id';
 const questionColumns = `q.id,q.text,q.source,q.stock_id,a.title AS article_title,q.created_at,

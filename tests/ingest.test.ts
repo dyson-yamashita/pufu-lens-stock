@@ -67,6 +67,28 @@ describe('公開記事の取得', () => {
     },
   );
 
+  it('YouTubeへのリダイレクト先には接続しない', async () => {
+    const requests = mockNetwork(
+      () =>
+        new Response(null, { status: 302, headers: { Location: 'https://youtu.be/dQw4w9WgXcQ' } }),
+    );
+    await expect(fetchArticle(env, 'https://example.com/start')).rejects.toThrow(
+      /YouTube.*記録できません/,
+    );
+    expect(requests).toEqual(['https://example.com/start']);
+  });
+
+  it.each(['youtube.com.example.com', 'notyoutube.com'])(
+    'YouTubeに似た別ドメインの公開記事は取得する: %s',
+    async (host) => {
+      mockNetwork(() => new Response(articleText, { headers: { 'Content-Type': 'text/plain' } }));
+      expect(await fetchArticle(env, `https://${host}/story`)).toEqual({
+        title: host,
+        text: articleText,
+      });
+    },
+  );
+
   it.each([true, false])(
     '2MBを超えるページを拒否する（Content-Lengthあり: %s）',
     async (declared) => {

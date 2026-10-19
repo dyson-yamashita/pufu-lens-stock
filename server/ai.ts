@@ -87,7 +87,6 @@ export async function summarize(
   title: string,
   text: string,
   call: AiCall<ArticleSummary> = directCall,
-  source: 'article' | 'youtube' = 'article',
 ): Promise<ArticleSummary> {
   if (isDemo(env) && !env.AI) {
     const sentences = text
@@ -103,9 +102,7 @@ export async function summarize(
     });
   }
   const instruction =
-    (source === 'youtube'
-      ? '入力はYouTubeのタイトル・説明文のみで、動画本編・字幕は未取得です。提供された情報だけを短いoverview、1〜5個のkeyPoints、1〜6個の短いtopicsに整理してください。動画を視聴したように書かず、説明文にない内容を補わないでください。情報が少ない場合は短くまとめ、取得範囲を明示してください。'
-      : '記事の主張を300〜600字程度のoverview、3〜5個のkeyPoints、2〜6個の短いtopicsに整理してください。原文の主張と確認済みの事実を区別します。') +
+    '記事の主張を300〜600字程度のoverview、3〜5個のkeyPoints、2〜6個の短いtopicsに整理してください。原文の主張と確認済みの事実を区別します。' +
     'JSON形式: {"overview":"...","keyPoints":["..."],"topics":["..."]}。';
   const textChunks = text.match(/[\s\S]{1,10000}/g) ?? [text];
   let summaries: ArticleSummary[] = [];

@@ -46,6 +46,7 @@ import type {
   User,
 } from '../shared/domain';
 import { stockInputSchema, stockTextLimit } from '../shared/domain';
+import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import { api, ApiError, createRequestId, send } from './api';
 import Profile from './Profile';
 import Questions, { StockQuestion } from './Questions';
@@ -1279,11 +1280,13 @@ export default function App() {
           <SaveForm
             projects={projects}
             projectId={listProjectId}
-            onDone={(duplicate) =>
+            onDone={(duplicate, youtube) =>
               completed(
-                duplicate
-                  ? 'この記事はすでに保存されています。'
-                  : '記事を保存しました。要約と問いを自動で生成します。',
+                youtube
+                  ? youtubeUnavailableMessage
+                  : duplicate
+                    ? 'この記事はすでに保存されています。'
+                    : '記事を保存しました。要約と問いを自動で生成します。',
               )
             }
           />
@@ -1698,7 +1701,7 @@ function SaveForm({
 }: {
   projects: Project[];
   projectId: string | null;
-  onDone: (duplicate: boolean) => void;
+  onDone: (duplicate: boolean, youtube: boolean) => void;
 }) {
   const [type, setType] = useState<'url' | 'text'>('url');
   const [url, setUrl] = useState('');
@@ -1740,7 +1743,7 @@ function SaveForm({
             headers: { 'Idempotency-Key': key.current },
             body: JSON.stringify(parsed.data),
           });
-          onDone(result.duplicate);
+          onDone(result.duplicate, parsed.data.type === 'url' && isYouTubeUrl(parsed.data.url));
         } catch (e) {
           setError((e as Error).message);
           if ((e as ApiError).status === 409) key.current = createRequestId();
@@ -1895,6 +1898,7 @@ function StockDetail({
   onFavorite: (stock: Stock) => Promise<void>;
   favoriteBusy: boolean;
 }) {
+  const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
   const [tab, setTab] = useState<string>(initialTab);
   const [note, setNote] = useState(stock.note);
   const [projectId, setProjectId] = useState(stock.project_id);
@@ -1925,26 +1929,6 @@ function StockDetail({
         )}
       </div>
       <h3>{stock.title}</h3>
-      {stock.youtube && (
-        <div className="youtube-source">
-          {stock.youtube.thumbnailUrl && (
-            <img
-              className="youtube-thumbnail"
-              src={stock.youtube.thumbnailUrl}
-              alt=""
-              loading="lazy"
-              referrerPolicy="no-referrer"
-            />
-          )}
-          {stock.youtube.channelTitle && <p>{stock.youtube.channelTitle}</p>}
-          <p className="local-model-note">
-            {stock.youtube.hasDescription
-              ? 'タイトル・説明文をもとに要約・問いを作成します。'
-              : '説明文がないため、タイトル・チャンネル名のみをもとに要約・問いを作成します。'}
-            動画本編・字幕は取得していません。
-          </p>
-        </div>
-      )}
       <div className="stock-detail-links">
         {stock.source_type === 'url' && (
           <a
@@ -1953,7 +1937,7 @@ function StockDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            {stock.youtube ? '元の動画を開く' : '元の記事を開く'}
+            {youtube ? '元の動画を開く' : '元の記事を開く'}
             <ExternalLink size={14} aria-hidden="true" />
           </a>
         )}
@@ -1976,14 +1960,7 @@ function StockDetail({
           ['summary', '要約'],
           ['question', '問い'],
           ['note', 'メモ・保存先'],
-          [
-            'content',
-            stock.youtube
-              ? '取得した動画情報'
-              : stock.source_type === 'text'
-                ? '入力した本文'
-                : '取得した本文',
-          ],
+          ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
         ].map(([value, label]) => (
           <button
             key={value}
@@ -2000,7 +1977,7 @@ function StockDetail({
           {stock.summary ? (
             <>
               <p>{stock.summary.overview}</p>
-              <h4>{stock.youtube ? '取得した動画情報の要点' : 'この記事の要点'}</h4>
+              <h4>この記事の要点</h4>
               <ul>
                 {stock.summary.keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>
@@ -2018,9 +1995,13 @@ function StockDetail({
               ) : null}
             </>
           ) : (
-            <p>{stock.error ?? '要約を生成しています。少しお待ちください。'}</p>
+            <p>
+              {youtube
+                ? youtubeUnavailableMessage
+                : (stock.error ?? '要約を生成しています。少しお待ちください。')}
+            </p>
           )}
-          {stock.status === 'failed' && (
+          {stock.status === 'failed' && !youtube && (
             <>
               {stock.source_type === 'url' && (
                 <>
@@ -2067,7 +2048,11 @@ function StockDetail({
           )}
         </div>
       ) : tab === 'question' ? (
-        <StockQuestion stockId={stock.id} onQuestion={onQuestion} />
+        youtube ? (
+          <p>{youtubeUnavailableMessage}</p>
+        ) : (
+          <StockQuestion stockId={stock.id} onQuestion={onQuestion} />
+        )
       ) : tab === 'content' ? (
         content === undefined ? (
           <p className="content-loading">
