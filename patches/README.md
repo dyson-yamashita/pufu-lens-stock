@@ -2,6 +2,8 @@
 
 `miniflare@4.20260730.0.patch` は、Cloudflare公式の[修正 #15552](https://github.com/cloudflare/workers-sdk/pull/15552)を安定版Miniflare 4へ適用します。
 
+上流のマージコミットは `6f3d7b58b1f6cd036aca3e5946807bba37776065` です。このパッチに含む上流由来のコードにはMIT Licenseが適用されます。同コミットの [LICENSE-MIT](https://github.com/cloudflare/workers-sdk/blob/6f3d7b58b1f6cd036aca3e5946807bba37776065/LICENSE-MIT) を [LICENSE-MIT](LICENSE-MIT) に変更せず同梱しています。再配布時も著作権表示と許諾文を保持してください。
+
 古い実装では、前リクエストの遅延した通知で次の待機が解除されると、応答を受け取る前に `message?.id === id` の検証が失敗します。CIではD1の初期化中に発生しました。通知の値をリクエストごとの世代番号にし、対象の応答が届くまで待機する、上流と同じ修正です。
 
 `pnpm-workspace.yaml` の `patchedDependencies` とロックファイルで登録しているため、通常の `pnpm install --frozen-lockfile` で適用されます。テストのスキップ・再試行・並列数の削減は行いません。
