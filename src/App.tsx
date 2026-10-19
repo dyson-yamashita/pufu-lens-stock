@@ -57,6 +57,7 @@ import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
 import ScrollHeader from './ScrollHeader';
+import LegalLinks from './LegalLinks';
 import { PublicProjectDirectory, ProjectPublicationSettings } from './PublicProjects';
 
 type MemoryResponse = {
@@ -251,6 +252,10 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
                 : 'ログインの準備中です。管理者にお問い合わせください。'}
             </p>
           )}
+          <div className="login-legal">
+            <p>利用開始前に、以下をご確認・ご同意ください。</p>
+            <LegalLinks />
+          </div>
           {config.demo && (
             <button
               className="button secondary demo-login"
@@ -317,6 +322,9 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
         </div>
       </main>
       <PublicProjectDirectory />
+      <footer className="login-footer">
+        <LegalLinks />
+      </footer>
     </div>
   );
 }
@@ -761,6 +769,7 @@ export default function App() {
             <Layers size={18} aria-hidden="true" />
             外部連携
           </button>
+          <LegalLinks newTab />
           <div className="user-row">
             <div className="avatar">{user.name.slice(0, 1)}</div>
             <div className="user-info">
