@@ -985,21 +985,7 @@ p {
   font-size: 8px;
 }
 .library-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  font-size: 8px;
-  color: var(--muted);
   margin-top: 27px;
-}
-.library-footer span:first-child {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.library-footer span:last-child {
-  letter-spacing: 1.5px;
 }
 .pagination {
   display: flex;
@@ -2563,9 +2549,6 @@ p {
   .login-caption {
     display: none;
   }
-  .library-footer span:last-child {
-    display: none;
-  }
   .new-project {
     min-height: 44px;
   }
@@ -2600,7 +2583,6 @@ p {
   font-size: 13px;
 }
 .memory-foot,
-.library-footer,
 .user-info span {
   font-size: 10px;
 }
@@ -2618,7 +2600,6 @@ p {
 .new-project,
 .nav-section,
 .filters button,
-.library-footer,
 .detail-domain,
 .detail-footer,
 .guide-header p,
@@ -3471,10 +3452,6 @@ textarea::placeholder {
 .login-footer {
   border-top: 1px solid var(--border);
   padding: 20px 7vw;
-}
-.sidebar-bottom .legal-links {
-  gap: 0 12px;
-  margin-top: 12px;
 }
 .legal-main :is(p, li) {
   font-size: 16px;

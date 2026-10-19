@@ -770,7 +770,6 @@ export default function App() {
             <Layers size={18} aria-hidden="true" />
             外部連携
           </button>
-          <LegalLinks newTab />
           <div className="user-row">
             <div className="avatar">{user.name.slice(0, 1)}</div>
             <div className="user-info">
@@ -1215,13 +1214,9 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                <div className="library-footer">
-                  <span>
-                    <Bookmark size={13} aria-hidden="true" />
-                    保存した記事は、いつでも読み返せます。
-                  </span>
-                  <span>PUFU LENS</span>
-                </div>
+                <footer className="library-footer">
+                  <LegalLinks newTab />
+                </footer>
               </section>
               <aside className="memory-aside">
                 <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
