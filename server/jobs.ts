@@ -1,6 +1,7 @@
 import type { Env, Job } from './env';
 import { admitJob, retryAt } from './usage';
 import { now, queueQuestionJobStatement, jobFailureStatements } from './db';
+import { cleanupDeletedAccounts } from './account';
 import { MAX_ATTEMPTS, MAX_WAIT_MS, stopWaitingJob, deferJob } from './job-retries';
 
 export async function dispatchJobs(env: Env): Promise<void> {
@@ -66,6 +67,7 @@ export async function dispatchJobs(env: Env): Promise<void> {
   }
 }
 export async function scheduledMaintenance(env: Env): Promise<void> {
+  await cleanupDeletedAccounts(env);
   // 結果の保存前にWorkerが終了した場合、同じAIを再発行せず失敗として回復する。
   // 実行中Workflowの枠は期限だけで解放しない。終端状態も確認する。
   const uncertain = await env.DB.prepare(

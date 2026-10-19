@@ -31,14 +31,17 @@ describe('同じWi-Fiからのローカルデモ', () => {
     const headers = { Origin: lanOrigin, Cookie: cookie.split(';')[0] };
     const identity = await app.request('/api/v1/me', { host: lanOrigin, headers });
     expect(identity.status).toBe(200);
-    expect(await identity.json()).toMatchObject({ demo: true, user: { id: 'local-demo-user' } });
+    expect(await identity.json()).toMatchObject({ demo: true, user: { id: expect.any(String) } });
+    const { projects } = (await (
+      await app.request('/api/v1/projects', { host: lanOrigin, headers })
+    ).json()) as { projects: { id: string }[] };
     expect(
       (
         await app.request('/api/v1/stocks', {
           method: 'POST',
           host: lanOrigin,
           headers,
-          body: { project_id: 'demo-cloudflare', url: 'https://example.com/from-phone' },
+          body: { project_id: projects[0].id, url: 'https://example.com/from-phone' },
         })
       ).status,
     ).toBe(202);

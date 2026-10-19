@@ -761,6 +761,40 @@ p {
 .profile-card [aria-invalid='true'] {
   border-color: var(--danger);
 }
+.account-deletion {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.account-deletion h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.account-deletion > p,
+.account-deletion-description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+}
+.account-deletion > p {
+  margin-bottom: 12px;
+}
+.account-deletion-description ul {
+  padding-left: 22px;
+  margin: 12px 0;
+}
+.account-deletion-description p + p {
+  margin-top: 8px;
+}
+.withdrawal-notice {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--wash);
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  margin-top: 20px;
+}
 .content-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 292px;

@@ -1,11 +1,20 @@
 import type { Env } from './env';
 import type { ArticleSummary } from '../shared/domain';
 
-export async function seedDemo(env: Env): Promise<boolean> {
+export async function seedDemo(env: Env) {
+  const proposedId = `local-demo-${crypto.randomUUID()}`;
   const inserted = await env.DB.prepare(
-    "INSERT OR IGNORE INTO users (id, google_sub, name, email) VALUES ('local-demo-user', 'local-demo', 'デモユーザー', 'demo@localhost')",
-  ).run();
-  if (!inserted.meta.changes) return false;
+    "INSERT OR IGNORE INTO users (id, google_sub, name, email) VALUES (?, 'local-demo', 'デモユーザー', 'demo@localhost')",
+  )
+    .bind(proposedId)
+    .run();
+  const user = await env.DB.prepare("SELECT id FROM users WHERE google_sub = 'local-demo'").first<{
+    id: string;
+  }>();
+  const userId = user!.id;
+  if (!inserted.meta.changes) return { created: false, userId, projectIds: [] };
+  // 再登録時はR2プレフィックスとWorkflow対象のIDも新しくし、旧削除処理と分離する。
+  const projectIds = [`demo-cloudflare-${userId}`, `demo-product-${userId}`];
   const samples: {
     id: string;
     project: string;
@@ -86,16 +95,17 @@ export async function seedDemo(env: Env): Promise<boolean> {
   ];
   await env.DB.batch([
     env.DB.prepare(
-      "INSERT INTO projects (id, user_id, name, description) VALUES ('demo-cloudflare', 'local-demo-user', 'Cloudflareでつくる', 'Cloudflareで小さく始め、確実に動くアプリを設計する。')",
-    ),
+      "INSERT INTO projects (id, user_id, name, description) VALUES (?, ?, 'Cloudflareでつくる', 'Cloudflareで小さく始め、確実に動くアプリを設計する。')",
+    ).bind(projectIds[0], userId),
     env.DB.prepare(
-      "INSERT INTO projects (id, user_id, name, description) VALUES ('demo-product', 'local-demo-user', '日々のインプット', '読みたい記事を無理なく集め、知識をつなげる体験を考える。')",
-    ),
+      "INSERT INTO projects (id, user_id, name, description) VALUES (?, ?, '日々のインプット', '読みたい記事を無理なく集め、知識をつなげる体験を考える。')",
+    ).bind(projectIds[1], userId),
     ...samples.flatMap((sample) => [
       env.DB.prepare(
-        "INSERT INTO articles (id, user_id, canonical_url, source_url, title, domain, status, summary_json, model, created_at) VALUES (?, 'local-demo-user', ?, ?, ?, ?, 'ready', ?, 'demo-fixture', ?)",
+        "INSERT INTO articles (id, user_id, canonical_url, source_url, title, domain, status, summary_json, model, created_at) VALUES (?, ?, ?, ?, ?, ?, 'ready', ?, 'demo-fixture', ?)",
       ).bind(
-        sample.id,
+        `${sample.id}-${userId}`,
+        userId,
         sample.url,
         sample.url,
         sample.title,
@@ -104,15 +114,16 @@ export async function seedDemo(env: Env): Promise<boolean> {
         new Date(Date.now() - sample.days * 86400000).toISOString(),
       ),
       env.DB.prepare(
-        "INSERT INTO stocks (id, user_id, project_id, article_id, note, created_at) VALUES (?, 'local-demo-user', ?, ?, ?, ?)",
+        'INSERT INTO stocks (id, user_id, project_id, article_id, note, created_at) VALUES (?, ?, ?, ?, ?, ?)',
       ).bind(
-        `stock-${sample.id}`,
-        sample.project,
-        sample.id,
+        `stock-${sample.id}-${userId}`,
+        userId,
+        `${sample.project}-${userId}`,
+        `${sample.id}-${userId}`,
         sample.note,
         new Date(Date.now() - sample.days * 86400000).toISOString(),
       ),
     ]),
   ]);
-  return true;
+  return { created: true, userId, projectIds };
 }
