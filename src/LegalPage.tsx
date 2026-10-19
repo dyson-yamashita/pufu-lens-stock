@@ -398,15 +398,6 @@ export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
             </p>
           </div>
         </header>
-        {page === 'terms' && (
-          <nav className="manual-toc" aria-label="目次">
-            {sections.map((section) => (
-              <a key={section.id} href={`#${section.id}`}>
-                {section.title}
-              </a>
-            ))}
-          </nav>
-        )}
         {sections.map((section) => (
           <section
             className="manual-section"
