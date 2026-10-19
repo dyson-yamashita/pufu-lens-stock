@@ -247,6 +247,7 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
 | `POST /stocks/:id/question/retry` | 生成失敗した問いの再試行               | —      |
 | `PATCH・DELETE /stocks/:id`       | メモ・所属の更新、保存の削除           | —      |
 | `PATCH /stocks/:id/favorite`      | ストックのお気に入りを登録・解除       | —      |
+| `PATCH /stocks/:id/title`         | ストックのタイトルを編集               | —      |
 | `POST /stocks/:id/retry`          | 失敗した取得・要約の再試行             | —      |
 | `GET /stocks/:id/content`         | 取得本文・入力テキストの閲覧           | —      |
 | `GET /articles/:id`               | メモリの根拠記事を開く                 | —      |
@@ -258,6 +259,8 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
 `GET /stocks` は `project_id`、`q`、`source`（`all / web / user`）、`favorite`（`true` のときお気に入りのみ）、`page` を受け付け、既定は24件ずつ返します。`limit`（1〜24）、`sort_by=created_at`、`order=asc / desc`、`detail=compact / full` も指定でき、HTTP APIの既定は `full`・新しい順です。`source=web` は `source_type=url`、`source=user` は `source_type=text` に対応します。APIでは `status`（`all / ready / processing / failed`）も併用できます。`GET /memory` は `project_id` を省略するとユーザーメモリです。
 
 ストックも日付横のスターでお気に入りを登録・解除でき、選択中は黄色で表示します。記事の詳細画面からも変更でき、一覧の「お気に入り」で絞り込めます。`PATCH /stocks/:id/favorite` に `{ "is_favorite": true }` または `false` を送り、保存した `id` と `is_favorite`（`0 / 1`）を返します。本人のWebセッションだけが変更でき、再読み込み・要約の再試行・保存先の移動でも保持します。同じ記事を別のプロジェクトに保存した場合や、記事に紐づく問いのお気に入りとは独立しています。
+
+詳細画面のタイトル右の鉛筆から編集し、「保存」で確定、「キャンセル」またはEscapeで取り消せます。`PATCH /stocks/:id/title` は `{ "title": "新しいタイトル" }` を受け付け、前後の空白を除いた1〜200文字のタイトルと `id` を返します。本人のWebセッションだけが変更でき、一覧・詳細・問いの参照タイトル・MCP一覧・公開ページと検索に反映します。編集内容はストックごとに保持し、記事の再取得や別プロジェクトの同じ記事には影響しません。Worker更新前に `0021_stock_titles.sql` を適用してください。
 
 `POST /stocks` のURL保存は `{ "type": "url", "project_id": "保存先ID", "url": "https://...", "note": "任意のメモ" }` です。`type` を省略した従来のショートカットのリクエストもURLとして受け付けます。テキスト保存は次の形式で、URLは送信しません。
 

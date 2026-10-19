@@ -1469,11 +1469,26 @@ p {
   color: var(--muted);
   margin-top: 20px;
 }
-.stock-detail > h3 {
+.stock-detail-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+}
+.stock-detail-title h3 {
+  min-width: 0;
   font-size: 22px;
   line-height: 1.7;
-  margin: 12px 0;
+  margin: 0;
   overflow-wrap: anywhere;
+}
+.stock-title-form {
+  margin: 12px 0;
+}
+.stock-title-form .form-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 .original-link {
   display: inline-flex;
@@ -2504,7 +2519,7 @@ p {
   .dialog-head h2 {
     font-size: 17px;
   }
-  .stock-detail > h3 {
+  .stock-detail-title h3 {
     font-size: 19px;
   }
   .detail-tabs button {
