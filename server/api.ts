@@ -449,12 +449,10 @@ export function createApp(trustedPrincipal?: Principal) {
         c.env.DB.prepare(
           'INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note) SELECT ?, ?, ?, id, ? FROM articles WHERE user_id = ? AND canonical_url = ?',
         ).bind(stockId, user.id, project.id, data.note, user.id, canonical),
-        ...(!youtube
-          ? [
-              ...dirtyMemoryStatements(c.env, user.id, [project.id], stockId),
-              ...queueQuestionStatements(c.env, stockId),
-            ]
+        ...(!youtube || data.note.trim()
+          ? dirtyMemoryStatements(c.env, user.id, [project.id], stockId)
           : []),
+        ...(!youtube ? queueQuestionStatements(c.env, stockId) : []),
       );
     }
     if (key)
@@ -502,13 +500,14 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   async function ownedStock(c: import('hono').Context<AppEnv>) {
     const stock = await c.env.DB.prepare(
-      'SELECT s.id, s.project_id, s.article_id, a.source_type, a.source_url, a.status, a.generation, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.project_id, s.article_id, s.note, a.source_type, a.source_url, a.status, a.generation, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<{
         id: string;
         project_id: string;
         article_id: string;
+        note: string;
         source_type: 'url' | 'text';
         source_url: string;
         status: string;
@@ -941,7 +940,11 @@ export function createApp(trustedPrincipal?: Principal) {
       c.env.DB.prepare(
         'UPDATE stocks SET note = ?, project_id = ? WHERE id = ? AND user_id = ?',
       ).bind(data.note, data.project_id, stock.id, user.id),
-      ...dirtyMemoryStatements(c.env, user.id, [...new Set([stock.project_id, data.project_id])]),
+      ...(!(stock.source_type === 'url' && isYouTubeUrl(stock.source_url)) ||
+      stock.note.trim() ||
+      data.note.trim()
+        ? dirtyMemoryStatements(c.env, user.id, [...new Set([stock.project_id, data.project_id])])
+        : []),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true });
@@ -952,7 +955,9 @@ export function createApp(trustedPrincipal?: Principal) {
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM stocks WHERE id = ? AND user_id = ?').bind(stock.id, user.id),
       ...orphanCleanupStatements(c.env, user.id),
-      ...dirtyMemoryStatements(c.env, user.id, [stock.project_id]),
+      ...(!(stock.source_type === 'url' && isYouTubeUrl(stock.source_url)) || stock.note.trim()
+        ? dirtyMemoryStatements(c.env, user.id, [stock.project_id])
+        : []),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true });

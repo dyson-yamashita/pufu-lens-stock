@@ -32,7 +32,7 @@ describe('YouTubeは外部取得せず記録不可を案内する', () => {
   });
 
   it.each([undefined, '補完した動画の説明です。'])(
-    'URLと記録不可の理由を残し、本文・要約・問い・メモリの処理を作らない（補完: %s）',
+    '動画の処理を作らず、利用者のメモだけメモリ更新の対象にする（補完: %s）',
     async (supplemental_text) => {
       const app = await testApp();
       try {
@@ -59,10 +59,14 @@ describe('YouTubeは外部取得せず記録不可を案内する', () => {
         expect(
           await app.env.DB.prepare('SELECT input_text, content_key FROM articles').first(),
         ).toEqual({ input_text: null, content_key: null });
-        for (const table of ['processing_jobs', 'questions'])
-          expect(await app.env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first()).toEqual({
-            n: 0,
-          });
+        expect(
+          await app.env.DB.prepare('SELECT kind FROM processing_jobs ORDER BY kind').all(),
+        ).toMatchObject({
+          results: [{ kind: 'project_memory' }, { kind: 'user_memory' }],
+        });
+        expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM questions').first()).toEqual({
+          n: 0,
+        });
         expect(await (await app.request('/api/v1/stocks')).json()).toMatchObject({
           stocks: [{ id, status: 'failed', error: stock.error }],
         });

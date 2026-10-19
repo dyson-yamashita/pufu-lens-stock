@@ -1,4 +1,5 @@
 import type { MemoryData, MemoryCoverage } from '../shared/domain';
+import { isYouTubeUrl } from '../shared/youtube';
 import type { Source } from './ai';
 import type { Env } from './env';
 import { hash } from './security';
@@ -8,28 +9,33 @@ export type MemoryInput = { source: Source; hash: string };
 export const memoryId = (userId: string, projectId: string | null) =>
   projectId ? `project-${projectId}` : `user-${userId}`;
 
-export async function loadMemoryInputs(
+export async function loadMemoryInputPage(
   env: Env,
   userId: string,
   projectId: string | null,
   page?: number,
-): Promise<MemoryInput[]> {
+): Promise<{ inputs: MemoryInput[]; waitingCount: number; hasMore: boolean }> {
   const rows = await env.DB.prepare(
-    `SELECT a.id, a.title, a.summary_json,
+    `SELECT a.id, a.title, a.summary_json, a.source_type, a.source_url, a.status,
       json_group_array(json_object('projectId',p.id,'name',p.name,'note',s.note,'savedAt',s.created_at)) AS memberships
     FROM articles a JOIN stocks s ON s.article_id=a.id JOIN projects p ON p.id=s.project_id
-    WHERE a.user_id=? AND a.status='ready' AND ((? IS NULL AND p.include_in_user_memory=1) OR s.project_id=?)
+    WHERE a.user_id=? AND ((? IS NULL AND p.include_in_user_memory=1) OR s.project_id=?)
     GROUP BY a.id ORDER BY a.id ${page === undefined ? '' : 'LIMIT 25 OFFSET ?'}`,
   )
     .bind(userId, projectId, projectId, ...(page === undefined ? [] : [page * 25]))
     .all<{
       id: string;
       title: string;
-      summary_json: string;
+      summary_json: string | null;
+      source_type: string;
+      source_url: string;
+      status: string;
       memberships: string;
     }>();
-  return Promise.all(
+  let waitingCount = 0;
+  const inputs = await Promise.all(
     rows.results.map(async (row) => {
+      const youtube = row.source_type === 'url' && isYouTubeUrl(row.source_url);
       const memberships = (
         JSON.parse(row.memberships) as {
           projectId: string;
@@ -37,18 +43,39 @@ export async function loadMemoryInputs(
           note: string;
           savedAt: string;
         }[]
-      ).sort((a, b) => a.projectId.localeCompare(b.projectId));
+      )
+        .filter((item) => !youtube || item.note.trim())
+        .sort((a, b) => a.projectId.localeCompare(b.projectId));
+      if (!memberships.length) return null;
+      if (!youtube && row.status !== 'ready') {
+        waitingCount++;
+        return null;
+      }
+      const note = [...new Set(memberships.map((item) => item.note))].sort().join(',');
       const source: Source = {
         articleId: row.id,
-        title: row.title,
-        summary: JSON.parse(row.summary_json),
-        note: [...new Set(memberships.map((item) => item.note))].sort().join(','),
+        title: youtube ? 'YouTube' : row.title,
+        // 動画情報・旧要約は参照せず、利用者のメモだけを既存の入力形式に載せる。
+        summary: youtube
+          ? { overview: '利用者が記入したメモ', keyPoints: [note.slice(0, 500)], topics: [] }
+          : JSON.parse(row.summary_json!),
+        note,
         project: [...new Set(memberships.map((item) => item.name))].sort().join(','),
         savedAt: memberships.map((item) => item.savedAt).sort()[0],
       };
       return { source, hash: await hash(JSON.stringify({ source, memberships })) };
     }),
   );
+  return {
+    inputs: inputs.filter((input) => input !== null),
+    waitingCount,
+    // 除外後の件数で終端判定すると、後続ページのメモを取りこぼす。
+    hasMore: page !== undefined && rows.results.length === 25,
+  };
+}
+
+export async function loadMemoryInputs(env: Env, userId: string, projectId: string | null) {
+  return (await loadMemoryInputPage(env, userId, projectId)).inputs;
 }
 
 export async function memoryUpdateState(
@@ -115,18 +142,13 @@ export async function memoryCoverage(
 ): Promise<MemoryCoverage> {
   // HTTPの読み取りは一括取得し、記事数に比例するDB往復を避ける。
   // Workflowからはpageを指定し、永続化するページのサイズを制限する。
-  const inputs = await loadMemoryInputs(env, userId, projectId);
+  const { inputs, waitingCount } = await loadMemoryInputPage(env, userId, projectId);
   const state = await memoryUpdateState(env, userId, projectId, context, inputs);
-  const row = await env.DB.prepare(
-    'SELECT COUNT(DISTINCT s.article_id) AS count FROM stocks s JOIN projects p ON p.id=s.project_id WHERE s.user_id=? AND ((? IS NULL AND p.include_in_user_memory=1) OR s.project_id=?)',
-  )
-    .bind(userId, projectId, projectId)
-    .first<{ count: number }>();
   return {
     ready_count: inputs.length,
     reflected_count: state.reflectedCount,
     pending_count: inputs.length - state.reflectedCount,
-    waiting_count: Math.max(0, row!.count - inputs.length),
+    waiting_count: waitingCount,
     full_rebuild_reason: state.fullReason,
   };
 }

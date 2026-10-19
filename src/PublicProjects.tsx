@@ -26,6 +26,7 @@ import type {
 import { api, send } from './api';
 import QuestionLabels from './QuestionLabels';
 import YouTubePlayer from './YouTubePlayer';
+import YouTubeThumbnail from './YouTubeThumbnail';
 import { isYouTubeUrl, youtubeDisplayTitle } from '../shared/youtube';
 
 const PublicPufuScore = lazy(async () => {
@@ -338,6 +339,7 @@ function StockCard({ stock }: { stock: PublicStock }) {
         <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
       </p>
       <h3>{youtube ? youtubeDisplayTitle(stock.title) : stock.title}</h3>
+      {youtube && <YouTubeThumbnail url={stock.source_url!} />}
       <p className="public-summary">
         {youtube
           ? 'YouTubeのリンクを保存しています。'
