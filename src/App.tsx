@@ -206,6 +206,7 @@ function FormError({ error }: { error: string }) {
   ) : null;
 }
 function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<void> }) {
+  const withdrawn = new URLSearchParams(window.location.search).get('withdrawn');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(
     new URLSearchParams(window.location.search).has('login_error')
@@ -278,6 +279,15 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             >
               {busy ? <Spinner /> : <BookOpen size={18} aria-hidden="true" />}ローカルデモを開く
             </button>
+          )}
+          {['complete', 'pending'].includes(withdrawn ?? '') && (
+            <p className="withdrawal-notice" role="status">
+              {withdrawn === 'pending'
+                ? config.demo
+                  ? '退会しました。残りのデモデータは、次回デモ開始時にも削除を進めます。'
+                  : '退会しました。残りのデータの削除は自動で継続します。'
+                : '退会が完了し、登録したデータを削除しました。'}
+            </p>
           )}
           <FormError error={error} />
           <div className="login-features">

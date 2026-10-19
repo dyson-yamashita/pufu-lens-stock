@@ -7,7 +7,7 @@ export const allMcpScopes = [
   'questions:read',
   'questions:write',
 ];
-export async function mcpToken(
+export async function mcpTokens(
   app: Awaited<ReturnType<typeof testApp>>,
   projectId: string | null = null,
   scopes = allMcpScopes,
@@ -21,6 +21,7 @@ export async function mcpToken(
       client_name: 'MCP integration test',
       redirect_uris: ['https://chatgpt.com/callback'],
       token_endpoint_auth_method: 'none',
+      grant_types: ['authorization_code', 'refresh_token'],
     }),
   });
   const { client_id } = (await registered.json()) as { client_id: string };
@@ -68,5 +69,12 @@ export async function mcpToken(
     }),
   });
   if (!exchange.ok) throw new Error(await exchange.text());
-  return ((await exchange.json()) as { access_token: string }).access_token;
+  return {
+    ...((await exchange.json()) as { access_token: string; refresh_token?: string }),
+    client_id,
+  };
+}
+
+export async function mcpToken(...args: Parameters<typeof mcpTokens>) {
+  return (await mcpTokens(...args)).access_token;
 }

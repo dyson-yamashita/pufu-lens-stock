@@ -19,6 +19,7 @@ import type { AppEnv, Env, Principal } from './env';
 import { isDemoOrigin } from './env';
 import {
   authenticate,
+  clearSessionCookies,
   demoLogin,
   googleCallback,
   googleConfigured,
@@ -28,6 +29,7 @@ import {
 import { canonicalUrl, hash, randomSecret, validateUrl } from './security';
 import { dirtyMemoryStatements, now, orphanCleanupStatements, queueQuestionStatements } from './db';
 import { dispatchJobs } from './jobs';
+import { cleanupAccount, requestAccountDeletion } from './account';
 import { reserveOperation, assertOperation, retryAt } from './usage';
 import { memoryCoverage, memoryId } from './memory';
 import {
@@ -199,6 +201,13 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ user });
   });
   app.post('/api/v1/logout', logout);
+  app.delete('/api/v1/me', async (c) => {
+    const userId = c.get('principal').user.id;
+    await requestAccountDeletion(c.env, userId);
+    clearSessionCookies(c);
+    const complete = await cleanupAccount(c.env, userId);
+    return c.json({ ok: true, cleanup_pending: !complete }, complete ? 200 : 202);
+  });
   app.get('/api/v1/projects', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
     const result = await c.env.DB.prepare(

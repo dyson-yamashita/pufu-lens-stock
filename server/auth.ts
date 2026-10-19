@@ -8,6 +8,7 @@ import { hash, randomSecret } from './security';
 import { now, dirtyMemoryStatements, queueQuestionStatements } from './db';
 import { seedDemo } from './demo';
 import { consumeMcpLogin } from './mcp-login';
+import { cleanupDeletedAccounts } from './account';
 
 const cookieName = (c: Context<AppEnv>) =>
   new URL(c.env.APP_URL).protocol === 'https:' ? '__Host-stock_session' : 'stock_session';
@@ -121,13 +122,15 @@ export function assertSameOrigin(c: Context<AppEnv>) {
 export async function demoLogin(c: Context<AppEnv>) {
   if (!isDemoOrigin(c.env, new URL(c.req.url).origin)) throw new HTTPException(404);
   assertSameOrigin(c);
-  const created = await seedDemo(c.env);
-  if (created)
+  // ローカルでCronを実行していない場合も、前回の退会の後処理を進める。
+  await cleanupDeletedAccounts(c.env);
+  const demo = await seedDemo(c.env);
+  if (demo.created)
     await c.env.DB.batch([
-      ...dirtyMemoryStatements(c.env, 'local-demo-user', ['demo-cloudflare', 'demo-product']),
+      ...dirtyMemoryStatements(c.env, demo.userId, demo.projectIds),
       ...queueQuestionStatements(c.env),
     ]);
-  await createSession(c, 'local-demo-user');
+  await createSession(c, demo.userId);
   return c.json({ ok: true });
 }
 export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
@@ -185,6 +188,10 @@ export async function logout(c: Context<AppEnv>) {
     await c.env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?')
       .bind(await hash(cookie))
       .run();
-  deleteCookie(c, cookieName(c), cookieOptions(c));
+  clearSessionCookies(c);
   return c.json({ ok: true });
+}
+export function clearSessionCookies(c: Context<AppEnv>) {
+  deleteCookie(c, cookieName(c), cookieOptions(c));
+  deleteCookie(c, oauthCookie(c), cookieOptions(c));
 }

@@ -12,6 +12,7 @@ import { authenticate } from './auth';
 import { rememberMcpLogin } from './mcp-login';
 import { hash } from './security';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
+import { cleanupIfAccountDeleted } from './account';
 
 export type McpGrantProps = { userId: string; projectId: string | null };
 export type McpContext = OAuthResourceContext<McpGrantProps>;
@@ -115,6 +116,8 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
       },
       props: { userId: principal.user.id, projectId } satisfies McpGrantProps,
     });
+    if (await cleanupIfAccountDeleted(c.env, principal.user.id))
+      throw new HTTPException(401, { message: '退会済みのアカウントでは連携できません。' });
     approved.headers.set('Location', redirectTo);
     return new Response(null, { status: 302, headers: approved.headers });
   });
@@ -181,29 +184,48 @@ export function createMcpOAuthProvider(
   },
   fallback: typeof mcpAuthorizationApp,
 ) {
-  return new OAuthProvider<Env>({
-    apiRoute: '/mcp',
-    apiHandler,
-    authorizeEndpoint: '/oauth/authorize',
-    tokenEndpoint: '/oauth/token',
-    clientRegistrationEndpoint: '/oauth/register',
-    clientRegistrationTTL: undefined,
-    clientIdMetadataDocumentEnabled: true,
-    scopesSupported: Object.keys(mcpScopes),
-    requiredScopes: Object.keys(mcpScopes),
-    accessTokenTTL: 3600,
-    refreshTokenTTL: 30 * 86400,
-    tokenExchangeCallback: async ({ scope }) => ({
-      refreshTokenTTL: scope.includes('offline_access') ? 30 * 86400 : 0,
-    }),
-    resourceMetadata: { resource: `${env.APP_URL}/mcp`, authorization_servers: [env.APP_URL] },
-    defaultHandler: {
-      fetch(request, bindings, ctx) {
-        const path = new URL(request.url).pathname;
-        return path.startsWith('/oauth/') || path.startsWith('/api/v1/mcp/')
-          ? mcpAuthorizationApp.fetch(request, bindings, ctx)
-          : fallback.fetch(request, bindings, ctx);
-      },
+  return {
+    async fetch(request: Request, bindings: Env, ctx: ExecutionContext): Promise<Response> {
+      let exchangeUserId: string | undefined;
+      const provider = new OAuthProvider<Env>({
+        apiRoute: '/mcp',
+        apiHandler,
+        authorizeEndpoint: '/oauth/authorize',
+        tokenEndpoint: '/oauth/token',
+        clientRegistrationEndpoint: '/oauth/register',
+        clientRegistrationTTL: undefined,
+        clientIdMetadataDocumentEnabled: true,
+        scopesSupported: Object.keys(mcpScopes),
+        requiredScopes: Object.keys(mcpScopes),
+        accessTokenTTL: 3600,
+        refreshTokenTTL: 30 * 86400,
+        tokenExchangeCallback: async ({ scope, userId }) => {
+          exchangeUserId = userId;
+          return { refreshTokenTTL: scope.includes('offline_access') ? 30 * 86400 : 0 };
+        },
+        resourceMetadata: { resource: `${env.APP_URL}/mcp`, authorization_servers: [env.APP_URL] },
+        defaultHandler: {
+          fetch(request, bindings, ctx) {
+            const path = new URL(request.url).pathname;
+            return path.startsWith('/oauth/') || path.startsWith('/api/v1/mcp/')
+              ? mcpAuthorizationApp.fetch(request, bindings, ctx)
+              : fallback.fetch(request, bindings, ctx);
+          },
+        },
+      });
+      let deleted = false;
+      let response: Response;
+      try {
+        response = await provider.fetch(request, bindings, ctx);
+      } finally {
+        if (exchangeUserId) deleted = await cleanupIfAccountDeleted(bindings, exchangeUserId);
+      }
+      if (deleted)
+        return Response.json(
+          { error: 'invalid_grant', error_description: '退会済みのアカウントでは連携できません。' },
+          { status: 400, headers: { 'Cache-Control': 'no-store' } },
+        );
+      return response;
     },
-  });
+  };
 }
