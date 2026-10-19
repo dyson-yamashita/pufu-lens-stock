@@ -19,10 +19,10 @@ const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
   (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND q.status='ready') AS question_count`;
 const stockColumns =
-  "s.id,a.title,a.source_url,a.domain,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
+  "s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
 const stockJoins =
   'stocks s JOIN projects p ON p.id=s.project_id JOIN articles a ON a.id=s.article_id';
-const questionColumns = `q.id,q.text,q.source,q.stock_id,a.title AS article_title,q.created_at,
+const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.title) AS article_title,q.created_at,
   (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.question_id=q.id AND pf.user_id=p.user_id AND pf.status='ready') AS pufu_count`;
 const questionJoins =
   'questions q JOIN projects p ON p.id=q.project_id LEFT JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id';

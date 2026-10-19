@@ -53,6 +53,9 @@ export async function testApp(
     !migrations.includes('0018_project_user_memory.sql')
   )
     await applyMigration(DB, '0018_project_user_memory.sql');
+  // 旧スキーマの移行テストでも、現在のAPIが参照する表示用タイトル列を用意する。
+  if (!migrations.includes('0021_stock_titles.sql'))
+    await applyMigration(DB, '0021_stock_titles.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),

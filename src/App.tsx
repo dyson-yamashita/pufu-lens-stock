@@ -27,6 +27,7 @@ import {
   LoaderCircle,
   LogOut,
   Menu,
+  Pencil,
   Plus,
   RefreshCw,
   Settings,
@@ -349,7 +350,7 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [savingStockFavorites, setSavingStockFavorites] = useState<string[]>([]);
-  const stockFavoriteVersion = useRef(0);
+  const stockMutationVersion = useRef(0);
   const [memoryResponse, setMemoryResponse] = useState<MemoryResponse>({
     memory: null,
     pending: false,
@@ -479,7 +480,7 @@ export default function App() {
     const load = async () => {
       if (inFlight) return;
       inFlight = true;
-      const version = stockFavoriteVersion.current;
+      const version = stockMutationVersion.current;
       const params = new URLSearchParams({
         q: search,
         source: stockSource === 'favorites' ? 'all' : stockSource,
@@ -503,7 +504,7 @@ export default function App() {
         ]);
         if (!controller.signal.aborted) {
           setProjects(projectData.projects);
-          if (version === stockFavoriteVersion.current) {
+          if (version === stockMutationVersion.current) {
             setStocks(stockData.stocks);
             setTotal(stockData.total);
             if (page > 1 && page > Math.max(1, Math.ceil(stockData.total / 24)))
@@ -554,7 +555,7 @@ export default function App() {
     reload();
   };
   const toggleStockFavorite = async (stock: Stock) => {
-    stockFavoriteVersion.current += 1;
+    stockMutationVersion.current += 1;
     setSavingStockFavorites((ids) => [...ids, stock.id]);
     setError('');
     try {
@@ -574,8 +575,29 @@ export default function App() {
           : current,
       );
     } finally {
-      stockFavoriteVersion.current += 1;
+      stockMutationVersion.current += 1;
       setSavingStockFavorites((ids) => ids.filter((id) => id !== stock.id));
+      reload();
+    }
+  };
+  const renameStock = async (stock: Stock, title: string) => {
+    stockMutationVersion.current += 1;
+    try {
+      const result = await send<Pick<Stock, 'id' | 'title'>>(
+        `/api/v1/stocks/${encodeURIComponent(stock.id)}/title`,
+        { title },
+        'PATCH',
+      );
+      setStocks((items) =>
+        items.map((item) => (item.id === result.id ? { ...item, title: result.title } : item)),
+      );
+      setModal((current) =>
+        current?.type === 'stock' && current.stock.id === result.id
+          ? { ...current, stock: { ...current.stock, title: result.title } }
+          : current,
+      );
+    } finally {
+      stockMutationVersion.current += 1;
       reload();
     }
   };
@@ -1317,6 +1339,7 @@ export default function App() {
             onQuestion={openQuestion}
             favoriteBusy={savingStockFavorites.includes(modal.stock.id)}
             onFavorite={toggleStockFavorite}
+            onRename={renameStock}
           />
         </Modal>
       )}
@@ -1889,6 +1912,7 @@ function StockDetail({
   onQuestion,
   onFavorite,
   favoriteBusy,
+  onRename,
 }: {
   stock: Stock;
   projects: Project[];
@@ -1897,6 +1921,7 @@ function StockDetail({
   onQuestion: (id: string) => void;
   onFavorite: (stock: Stock) => Promise<void>;
   favoriteBusy: boolean;
+  onRename: (stock: Stock, title: string) => Promise<void>;
 }) {
   const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
   const [tab, setTab] = useState<string>(initialTab);
@@ -1906,6 +1931,22 @@ function StockDetail({
   const [busy, setBusy] = useState(false);
   const [supplemental, setSupplemental] = useState('');
   const [error, setError] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [title, setTitle] = useState(stock.title);
+  const [titleError, setTitleError] = useState('');
+  const titleInput = useRef<HTMLInputElement>(null);
+  const titleButton = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    if (editingTitle) {
+      titleInput.current?.focus();
+      titleInput.current?.select();
+    }
+  }, [editingTitle]);
+  const finishEditingTitle = () => {
+    setEditingTitle(false);
+    window.requestAnimationFrame(() => titleButton.current?.focus());
+  };
   useEffect(() => {
     let active = true;
     if (tab === 'content' && content === undefined)
@@ -1928,7 +1969,78 @@ function StockDetail({
           <span className={`status status-${stock.status}`}>{statusLabels[stock.status]}</span>
         )}
       </div>
-      <h3>{stock.title}</h3>
+      {editingTitle ? (
+        <form
+          className="stock-title-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setBusy(true);
+            setTitleError('');
+            try {
+              await onRename(stock, title.trim());
+              finishEditingTitle();
+            } catch (e) {
+              setTitleError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!busy) finishEditingTitle();
+            }
+          }}
+        >
+          <label htmlFor={titleId}>タイトル</label>
+          <input
+            ref={titleInput}
+            id={titleId}
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            maxLength={200}
+            required
+            disabled={busy}
+            aria-invalid={!!titleError}
+          />
+          <FormError error={titleError} />
+          <div className="form-actions">
+            <button
+              type="button"
+              className="button secondary"
+              disabled={busy}
+              onClick={finishEditingTitle}
+            >
+              キャンセル
+            </button>
+            <button className="button primary" disabled={busy || !title.trim()}>
+              {busy ? <Spinner /> : <Check size={16} aria-hidden="true" />}
+              {busy ? '保存中…' : '保存'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="stock-detail-title">
+          <h3>{stock.title}</h3>
+          <button
+            ref={titleButton}
+            type="button"
+            className="icon-button"
+            aria-label="タイトルを編集"
+            title="タイトルを編集"
+            disabled={busy}
+            onClick={() => {
+              setTitle(stock.title);
+              setTitleError('');
+              setEditingTitle(true);
+            }}
+          >
+            <Pencil size={18} aria-hidden="true" />
+          </button>
+        </div>
+      )}
       <div className="stock-detail-links">
         {stock.source_type === 'url' && (
           <a

@@ -49,7 +49,7 @@ const projectSchema = z.object({
   include_in_user_memory: z.boolean().optional(),
 });
 const questionColumns =
-  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, a.title AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu";
+  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, COALESCE(s.title, a.title) AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu";
 const questionJoins =
   'questions q JOIN projects p ON p.id = q.project_id LEFT JOIN stocks s ON s.id = q.stock_id LEFT JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
@@ -288,7 +288,7 @@ export function createApp(trustedPrincipal?: Principal) {
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Number(c.req.query('page')) || 1));
     const where =
-      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (a.title LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status = ?) AND (? = 'all' OR a.source_type = ?)" +
+      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (COALESCE(s.title, a.title) LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status = ?) AND (? = 'all' OR a.source_type = ?)" +
       (favorite === 'true' ? ' AND s.is_favorite = 1' : '');
     const params = [
       user.id,
@@ -305,8 +305,8 @@ export function createApp(trustedPrincipal?: Principal) {
     ];
     const columns =
       detail === 'compact'
-        ? "s.id, s.project_id, p.name AS project_name, s.created_at, a.title, a.status, CASE WHEN a.status != 'failed' THEN substr(json_extract(a.summary_json, '$.overview'), 1, 201) END AS summary_excerpt"
-        : 's.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model';
+        ? "s.id, s.project_id, p.name AS project_name, s.created_at, COALESCE(s.title, a.title) AS title, a.status, CASE WHEN a.status != 'failed' THEN substr(json_extract(a.summary_json, '$.overview'), 1, 201) END AS summary_excerpt"
+        : 's.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model';
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
         `SELECT ${columns} FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at ${direction}, s.id ${direction} LIMIT ? OFFSET ?`,
@@ -485,7 +485,7 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/articles/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
@@ -770,7 +770,7 @@ export function createApp(trustedPrincipal?: Principal) {
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
     const where =
-      "p.user_id = ? AND (? IS NULL OR q.project_id = ?) AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
+      "p.user_id = ? AND (? IS NULL OR q.project_id = ?) AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(s.title, a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
       (favorite === 'true' ? ' AND q.is_favorite = 1' : '');
     const params = [
       user.id,
@@ -844,7 +844,7 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/stocks/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, a.title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
@@ -865,6 +865,16 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(Number(data.is_favorite), c.req.param('id'), c.get('principal').user.id)
       .first<Pick<Stock, 'id' | 'is_favorite'>>();
+    if (!stock) throw new HTTPException(404, { message: '記事が見つかりません。' });
+    return c.json(stock);
+  });
+  app.patch('/api/v1/stocks/:id/title', async (c) => {
+    const data = await body(c, z.strictObject({ title: z.string().trim().min(1).max(200) }));
+    const stock = await c.env.DB.prepare(
+      'UPDATE stocks SET title = ? WHERE id = ? AND user_id = ? RETURNING id, title',
+    )
+      .bind(data.title, c.req.param('id'), c.get('principal').user.id)
+      .first<Pick<Stock, 'id' | 'title'>>();
     if (!stock) throw new HTTPException(404, { message: '記事が見つかりません。' });
     return c.json(stock);
   });
