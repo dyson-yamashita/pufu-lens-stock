@@ -220,6 +220,10 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
 
 `global_fetch_strictly_public` と、静的配信よりWorkerを先に処理する `/mcp`・`/oauth/*`・`/.well-known/*` のルートは設定済みです。通常の本番反映はmainの更新を受けたGitHub ActionsがDB移行とWorker公開を順に実行します。
 
+`POST /oauth/register` の事前登録は、Cloudflareの `OAUTH_REGISTRATION_RATE_LIMITER` で接続元IPごとに1分10回までに制限します。超過時は登録を保存せず `429` と `Retry-After: 60` を返します。Cloudflareが付ける `CF-Connecting-IP` のハッシュをキーにし、`X-Forwarded-For` などの自己申告は使いません。IPがないローカル要求は共通の枠を使います。バインディングが未設定・障害の場合は `503` にし、制限を迂回して登録を続けません。レート制限はCloudflareの拠点ごとの近似制限で、全拠点を厳密に合算するものではありません。
+
+修正後に作成される動的登録の保存期限は90日です。有効期間の半分を過ぎた登録は、トークンの取得・更新に成功するとSDKが90日へ延長します。変更前の期限なしレコードには遡及適用しません。ログイン・同意・トークン更新・MCPの利用には登録回数制限を適用しません。`wrangler.jsonc` の通常環境と本番環境にレート制限のバインディングを設定しており、追加のSecretやDB移行は不要です。
+
 ### ChatGPTから接続
 
 利用アカウント・ワークスペースでカスタムMCPが許可されていることを確認してください。[ChatGPT Plugins](https://chatgpt.com/plugins) で「Add custom MCP server」を選び、接続URL `https://実際のホスト/mcp` を登録してOAuthで接続します。Googleログイン後、Pufu Lensの認可画面で接続元・送信先・操作権限・対象プロジェクトを確認して許可します。接続したプラグインを会話で選択して利用します。[OpenAI公式の接続手順](https://developers.openai.com/plugins/deploy/connect-chatgpt)

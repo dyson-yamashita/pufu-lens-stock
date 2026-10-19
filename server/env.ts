@@ -6,6 +6,7 @@ export interface Env {
   DB: D1Database;
   CONTENT: R2Bucket;
   OAUTH_KV?: KVNamespace;
+  OAUTH_REGISTRATION_RATE_LIMITER?: RateLimit;
   OAUTH_PROVIDER?: OAuthHelpers;
   ARTICLE_WORKFLOW: Workflow<{ jobId: string }>;
   MEMORY_WORKFLOW: Workflow<{ jobId: string }>;
