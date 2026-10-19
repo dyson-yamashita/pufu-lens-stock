@@ -1101,7 +1101,7 @@ export default function App() {
               />
             </div>
           ) : (
-            <div className="content-layout">
+            <div className={route.projectId ? 'content-layout' : undefined}>
               <section className="stock-section" aria-label="保存した記事">
                 <SearchField
                   label="記事を検索"
@@ -1218,24 +1218,26 @@ export default function App() {
                   <LegalLinks newTab />
                 </footer>
               </section>
-              <aside className="memory-aside">
-                <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
-                <div className="shortcut-tip">
-                  <h3>
-                    <ArrowDownToLine size={19} aria-hidden="true" />
-                    見つけた、そのときに。
-                  </h3>
-                  <p>
-                    iPhoneの共有メニューから、
-                    <br />
-                    記事をそのままストック。
-                  </p>
-                  <button onClick={() => navigate('shortcuts')}>
-                    ショートカットを設定
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </button>
-                </div>
-              </aside>
+              {route.projectId && (
+                <aside className="memory-aside">
+                  <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
+                  <div className="shortcut-tip">
+                    <h3>
+                      <ArrowDownToLine size={19} aria-hidden="true" />
+                      見つけた、そのときに。
+                    </h3>
+                    <p>
+                      iPhoneの共有メニューから、
+                      <br />
+                      記事をそのままストック。
+                    </p>
+                    <button onClick={() => navigate('shortcuts')}>
+                      ショートカットを設定
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                </aside>
+              )}
             </div>
           )}
         </div>
