@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import worker from '../server/index';
 import { testApp } from './helpers';
 import { mcpToken } from './mcp-helpers';
+import { searchBindings } from './search-helpers';
+import { syncSearchIndex } from '../server/search-index';
 
 type Result = {
   result: {
@@ -73,6 +75,36 @@ describe('MCPによるストックと問いの取得・追加', () => {
       ).bind(`stock-${name}`, owner, projectId, name, 'メモだけの検索語', savedAt),
     ]);
   }
+
+  it('ハイブリッド検索でもOAuthの読み取り権限と保存先の制限を維持する', async () => {
+    const bindings = searchBindings(app.env);
+    await seedStock('hybrid', '2026-10-20T00:00:00.000Z');
+    await seedStock('outside', '2026-10-20T00:00:00.000Z', 'alice', 'alice-second');
+    await syncSearchIndex(app.env);
+    const token = await mcpToken(app, 'alice-project');
+    const response = (
+      await call(token, 'list_stocks', { q: '語句にない関連情報', mode: 'hybrid', limit: 1 })
+    ).result;
+    expect(response.isError).not.toBe(true);
+    expect(response.structuredContent).toMatchObject({
+      stocks: [{ id: 'stock-hybrid' }],
+      total: 1,
+      search: { requested_mode: 'hybrid', mode: 'hybrid' },
+      sort_by: 'relevance',
+    });
+    bindings.run.mockClear();
+    const denied = (
+      await call(token, 'list_stocks', { q: '関連', mode: 'semantic', project_id: 'alice-second' })
+    ).result;
+    expect(denied.isError).toBe(true);
+    expect(denied.structuredContent.status).toBe(403);
+    expect(bindings.run).not.toHaveBeenCalled();
+    const noRead = await mcpToken(app, 'alice-project', ['questions:read']);
+    expect((await call(noRead, 'list_stocks', { q: '関連', mode: 'hybrid' })).result.isError).toBe(
+      true,
+    );
+    expect(bindings.run).not.toHaveBeenCalled();
+  });
 
   it('既定の一覧は短い抜粋だけを返し、必要な詳細と本文は明示して取得できる', async () => {
     await seedStock('only', '2026-10-17T00:00:00.000Z');

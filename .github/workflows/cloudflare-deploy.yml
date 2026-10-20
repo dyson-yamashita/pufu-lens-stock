@@ -68,6 +68,7 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           OAUTH_KV_ID: ${{ secrets.OAUTH_KV_ID }}
+          VECTORIZE_INDEX_NAME: ${{ vars.VECTORIZE_INDEX_NAME }}
         run: pnpm run build:production
       - name: Migrate D1 and deploy Worker
         env:

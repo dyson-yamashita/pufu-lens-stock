@@ -11,7 +11,11 @@ import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
 import type { McpContext } from './mcp-oauth';
-import { stockInputSchema, stockListOptionsSchema } from '../shared/domain';
+import {
+  stockInputSchema,
+  stockListOptionsSchema,
+  stockSearchOptionsSchema,
+} from '../shared/domain';
 
 const id = z.string().min(1).max(100);
 const filters = {
@@ -155,10 +159,17 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'ストック検索',
       description:
-        'タイトル・要約・メモで検索します（本文は検索対象外）。既定はID・タイトル・要約の抜粋・保存先・保存日時・状態だけの軽量一覧です。抜粋に検索語がない場合もget_stockで詳細を確認できます。statusは記事の取得・要約の状態です。sourceのwebはURL、userはテキストです。',
+        'タイトル・要約・メモで検索します（本文は検索対象外）。modeはkeyword（既定）、semantic（意味）、hybrid（語句と意味を統合）。意味検索は関連度順で候補各100件の範囲を返します。hybridの未設定・障害・上限時はkeywordへ戻りsearch.fallback_reasonを返します。search.modeで実際の方式を確認してください。既定は抜粋だけの軽量一覧で、詳細はget_stockを使います。statusは記事の取得・要約状態、sourceのwebはURL、userはテキストです。',
       inputSchema: z.object({
         ...filters,
         ...stockListOptionsSchema.shape,
+        ...stockSearchOptionsSchema.shape,
+        mode: stockSearchOptionsSchema.shape.mode.describe(
+          'keywordは部分一致。semanticは意味の近さ、hybridは両方をRRF統合します。空のqはkeyword一覧。意味検索の索引は保存・編集後に非同期更新されます。',
+        ),
+        min_score: stockSearchOptionsSchema.shape.min_score.describe(
+          '意味検索の最小類似度（0〜1、既定0.35）。高いほど意味の近い候補に絞ります。',
+        ),
         q: filters.q.describe(
           'タイトル・要約（要点・トピックを含む）・メモを検索。本文は検索しません。',
         ),
@@ -169,7 +180,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
           'ストックの保存日時。記事や動画の公開日時ではありません。',
         ),
         order: stockListOptionsSchema.shape.order.describe(
-          'descは新しい順、ascは古い順。同時刻はID順で安定させます。',
+          'keywordではdescは新しい順、ascは古い順。semantic/hybridは関連度順を優先します。',
         ),
         detail: stockListOptionsSchema.shape.detail
           .unwrap()

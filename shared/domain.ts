@@ -12,6 +12,10 @@ export const stockListOptionsSchema = z.object({
   order: z.enum(['asc', 'desc']).default('desc'),
   detail: z.enum(['compact', 'full']).default('full'),
 });
+export const stockSearchOptionsSchema = z.object({
+  mode: z.enum(['keyword', 'semantic', 'hybrid']).default('keyword'),
+  min_score: z.number().min(0).max(1).default(0.35),
+});
 export const stockTextLimit = 20000;
 const stockFields = {
   project_id: z.string().min(1).max(100).optional(),
