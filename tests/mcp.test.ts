@@ -173,7 +173,21 @@ describe('MCPによるストックと問いの取得・追加', () => {
       '89504e470d0a1a0a',
     );
     expect(JSON.stringify(result.structuredContent)).not.toContain(image!.data!);
-    expect(JSON.stringify(result)).not.toContain('/pufu-images/');
+    expect(JSON.stringify(result)).not.toContain('/mcp-pufu-images/');
+    const imageUrl = String(result.structuredContent.image_url);
+    expect(imageUrl).toMatch(/^http:\/\/localhost:5173\/api\/pufu-images\/[A-Za-z0-9_-]{43}\.png$/);
+    const anonymous = { headers: { Cookie: '', Origin: '' } };
+    const preview = await app.request(new URL(imageUrl).pathname, anonymous);
+    expect(preview.status).toBe(200);
+    expect(Buffer.from(await preview.arrayBuffer())).toEqual(Buffer.from(image!.data!, 'base64'));
+    const downloadUrl = new URL(String(result.structuredContent.download_url));
+    const download = await app.request(downloadUrl.pathname + downloadUrl.search, anonymous);
+    expect(download.headers.get('Content-Disposition')).toContain('attachment');
+    expect(
+      result.content?.some(
+        (item) => item.type === 'text' && item.text.includes(`![プ譜](${imageUrl})`),
+      ),
+    ).toBe(true);
     expect(JSON.stringify(result)).not.toContain('SECRET_');
     expect(await snapshot()).toEqual(before);
     expect(render).toHaveBeenCalledTimes(1);
@@ -642,6 +656,9 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'list_questions',
       'list_stocks',
     ]);
+    expect(listed.result.tools?.find((tool) => tool.name === 'get_pufu_image')).toMatchObject({
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+    });
     expect(listed.result.tools?.find((tool) => tool.name === 'get_pufu')).toMatchObject({
       annotations: { readOnlyHint: true },
       securitySchemes: [{ type: 'oauth2', scopes: ['questions:read'] }],

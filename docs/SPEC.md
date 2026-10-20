@@ -42,7 +42,7 @@ Web記事や入力テキストを保存し、要約・問い・メモリ・プ�
 | React / Vite              | 日本語のWeb画面とビルド                          |
 | Cloudflare Workers / Hono | Web配信、認証、API                               |
 | D1                        | ユーザー・ストック・問い・プ譜・メモリ・利用履歴 |
-| 非公開R2                  | 記事の本文                                       |
+| 非公開R2                  | 記事の本文、MCP画像の期限付き配信用PNG           |
 | Workflows / Cron          | 取得・生成の非同期実行、再試行と未起動処理の回復 |
 | Workers AI                | 要約、問い、メモリ、プ譜の生成                   |
 | Browser Run / Readability | 通常取得で本文が不足するページへの対応、本文抽出 |
@@ -181,9 +181,13 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 
 `get_question` は問いと紐づくプ譜の一覧 `pufus` を返します。取得するプ譜の `pufus[].id` を選び、`get_pufu` または `get_pufu_image` に、必須の `question_id` と任意の `pufu_id` を指定します。複数登録されていても保存済みIDで選べます。閲覧権限は既存の `questions:read` を使い、問いとプ譜の紐づき、本人と認可されたプロジェクトをサーバー側で確認します。
 
-`get_pufu_image` はリクエストのたびに、指定したプ譜の最新局面からPNGをその場で生成します。MCPの `content` 内に `type: "image", mimeType: "image/png", data: "Base64文字列"` の画像要素を返し、structuredContentにはプ譜ID・幅・高さ・バイト数・局面・更新番号等のメタデータだけを返します。PNGのBase64をJSONにも重複させません。ツール説明では、接続先にBase64のデコードとユーザーへの画像表示を案内します。直接表示できない環境ではPNGファイルへ保存し、回答本文に画像プレビューとダウンロードリンクを提示するよう案内します。サーバー側で画像保存や公開リンクの発行は行いません。
+`get_pufu_image` はリクエストのたびに、指定したプ譜の最新局面からPNGをその場で生成します。MCPの `content` 内に `type: "image", mimeType: "image/png", data: "Base64文字列"` の画像要素を返し、structuredContentにはプ譜ID・幅・高さ・バイト数・局面・更新番号等と、`image_url`・`download_url`・`expires_at` を返します。PNGのBase64をJSONにも重複させません。ツール説明とテキスト要素では、回答本文に画像URLのMarkdownプレビューとダウンロードリンクを提示するよう案内します。URL発行の上限・一時障害時は `image_url_error` とBase64画像を返し、PNGファイルへの保存を案内します。未作成の場合はURLも発行しません。Base64へのフォールバック時も元データを再確認し、更新・削除競合やDB障害で現在の権限を確認できない場合はエラーとして画像を返しません。
 
-プ譜の作成・保存・局面追加時には画像を生成しません。画像や生成状態をDB/R2に保存せず、CronやWorkflowによる準備も行いません。画像取得ではAI・ブラウザを使わず、保存済みの本文・コメント・更新日時を変更しません。初期化済みのWASMと日本語フォントだけを再利用し、完成画像をキャッシュしません。
+画像URLは `GET /api/pufu-images/:token.png`、ダウンロードURLは同じURLの `?download=1` です。ログインや認証ヘッダーを持たないチャットの画像プロキシも取得できます。URLを知る人が閲覧できる期限付きの権限で、有効期限は発行から1時間です。256ビットの乱数を使い、DBにはそのハッシュだけを保存します。発行元はサーバーの `APP_URL` です。本番ではHTTPSのURLを設定してください。GET/HEADは `image/png`、`Cache-Control: no-store`、`Referrer-Policy: no-referrer`、外部画像表示用の `Cross-Origin-Resource-Policy: cross-origin`・`Access-Control-Allow-Origin: *`、`X-Robots-Tag: noindex, nofollow, noarchive` を返します。ダウンロード時は `Content-Disposition: attachment` です。リンクを知る人が取得済みの画像やチャット側の保存画像を後から回収することはできません。
+
+MCPで生成したPNGだけを非公開R2のユーザー配下に一時保存し、D1の `pufu_image_links` に期限・所有者・問い/プ譜ID・プロジェクト・局面・更新番号を登録します。保存完了後にリンクを有効化します。未完了分を含めユーザーあたり同時50件までとし、PNG 2MiBの既存上限と合わせて保存量を制限します。アクセス時は期限と現在の所有権・プロジェクト・処理状態・局面・更新番号をD1で再確認し、期限切れ、移動、更新、削除、退会後は404です。期限切れ判定は削除処理と独立して行います。既存の毎分Cronで期限切れ画像と登録情報を最大100件ずつ削除し、削除に失敗した場合は次回再試行します。退会時のユーザー配下R2削除にも含めます。
+
+プ譜の作成・保存・局面追加時には画像を生成しません。画像取得ではAI・ブラウザを使わず、保存済みの本文・コメント・更新日時を変更しません。認証済みPNG APIは毎回生成し、一時保存しません。MCPの画像URLへのアクセスは保存済みPNGを返すだけで、画像生成・AI・Workflowを起動しません。画像の準備をCronやWorkflowへ依頼することもありません。
 
 認証済みAPIは `GET /api/v1/questions/:question_id/pufu/:pufu_id`（JSON）と `GET /api/v1/questions/:question_id/pufu/:pufu_id/image`（PNG）です。両方とも `Cache-Control: no-store` とし、PNGは `Content-Type: image/png` で返します。本人の認可範囲だけを取得し、公開設定だけでは他ユーザーのMCPに公開しません。指定したIDが存在しない・別の問いに紐づく場合は404、作成未完了（queued/generating/failed）は409です。別の完成済みプ譜へ置き換えて返しません。描画中の削除・別の問いや認可範囲外への移動は404、対象プ譜の更新競合は409として古い画像を返しません。描画中に同じ問いへ別の新しいプ譜が追加されても、指定したプ譜の取得は継続できます。APIキー・入力コンテキストも返しません。
 
@@ -191,7 +195,7 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 
 PNGはresvg WASM、日本語フォントは同梱の静的アセットを使います。文章合計30,000 UTF-16コード単位、600万画素、PNG 2MiBが上限です。上限超過は413、描画できない制御文字等は422、WASM/フォントの一時障害は503を返し、黙って切り詰めません。保存JSONの破損は既存のJSON取得と同じく500です。画像生成に失敗しても保存済みのプ譜は維持し、次のリクエストで再生成できます。Workers AIの利用枠は消費しません。
 
-追加のDB migrationやSecretは不要です。ViteビルドしたWorkerと静的アセット（`fonts/pufu-jp.otf` を含む）を一緒に反映してください。`ASSETS` bindingは設定済みです。
+Worker更新前に `0025_pufu_image_links.sql` を適用してください。追加のSecretやbindingは不要です。既存の非公開 `CONTENT` R2とD1を使います。ViteビルドしたWorkerと静的アセット（`fonts/pufu-jp.otf` を含む）を一緒に反映してください。`ASSETS` bindingは設定済みです。
 
 ```json
 { "question_id": "保存した問いのID", "pufu_id": "get_questionのpufusから選んだID" }

@@ -11,6 +11,7 @@ import { Buffer } from 'node:buffer';
 import { HTTPException } from 'hono/http-exception';
 import { generateQuestionPufuImage } from './pufu-images';
 import { readQuestionPufu } from './pufu-read';
+import { issuePufuImageLink } from './pufu-image-links';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -313,9 +314,9 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜画像取得',
       description:
-        '指定した問いのプ譜から、そのリクエスト時にPNG画像を生成して返します。pufu_idで取得するプ譜を選びます。PNGはcontent内のtype: image、mimeType: image/pngの要素のdataにBase64文字列として返します。Base64をデコードして画像をユーザーに表示してください。直接表示できない環境ではPNGファイルに保存し、回答本文に画像プレビューとダウンロードリンクを提示してください。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
+        '指定した問いのプ譜からリクエスト時にPNGを生成します。pufu_idで取得先を選びます。image_urlを回答本文にMarkdown画像として表示し、download_urlへのリンクも提示してください。リンクはURLを知る人が1時間閲覧でき、期限切れ・元のプ譜の更新や削除後は再取得が必要です。PNGはcontent内のtype: image、mimeType: image/pngのdataにもBase64文字列で返します。URLが使えない環境ではBase64をデコードしてPNGへ保存し、プレビューとダウンロードリンクを提示してください。URL発行に失敗した場合はimage_url_errorを確認してください。AIを使わず、保存済みのプ譜は更新しません。JSONが必要な場合はget_pufuを使います。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
       inputSchema: pufuSelection,
-      annotations: read,
+      annotations: { ...read, readOnlyHint: false, idempotentHint: false },
       _meta: security('questions:read'),
     },
     async ({ question_id, pufu_id }) => {
@@ -323,13 +324,20 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       const output = await run('questions:read', async () => {
         const image = await generateQuestionPufuImage(env, principal, question_id, pufu_id);
         if (image.png) png = Buffer.from(image.png).toString('base64');
-        return image.metadata;
+        return { ...image.metadata, ...(await issuePufuImageLink(env, principal, image)) };
       });
       if (png && !output.isError)
         output.content = [
           ...(output.content ?? []),
           { type: 'image', mimeType: 'image/png', data: png },
         ];
+      const metadata = output.structuredContent as
+        { image_url?: string; download_url?: string; expires_at?: string } | undefined;
+      if (metadata?.image_url && metadata.download_url)
+        output.content.push({
+          type: 'text',
+          text: `取得した画像を回答本文に表示してください。\n![プ譜](${metadata.image_url})\n[PNGをダウンロード](${metadata.download_url})\nリンクの有効期限: ${metadata.expires_at}`,
+        });
       return output;
     },
   );
