@@ -16,7 +16,7 @@ describe('同じWi-Fiからのローカルデモ', () => {
 
   it('許可したLANアドレスからログインし、セッションで取得と保存ができる', async () => {
     const config = await app.request('/api/config', { host: lanOrigin });
-    expect(((await config.json()) as { demo: boolean }).demo).toBe(true);
+    expect(await config.json()).toMatchObject({ demo: true, appUrl: lanOrigin });
     const login = await app.request('/api/auth/demo', {
       method: 'POST',
       host: lanOrigin,

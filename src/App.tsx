@@ -1111,6 +1111,7 @@ export default function App() {
             <McpConnections />
           ) : route.view === 'shortcuts' ? (
             <Shortcuts
+              baseUrl={config?.appUrl ?? window.location.origin}
               projects={projects}
               tokens={tokens}
               onCreate={() => setModal({ type: 'token' })}
@@ -2258,20 +2259,31 @@ function StockDetail({
   );
 }
 function Shortcuts({
+  baseUrl,
   projects,
   tokens,
   onCreate,
   onRevoke,
 }: {
+  baseUrl: string;
   projects: Project[];
   tokens: TokenInfo[];
   onCreate: () => void;
   onRevoke: (id: string) => Promise<void>;
 }) {
-  const base = window.location.origin;
+  const base = baseUrl;
+  const [projectId, setProjectId] = useState('');
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
-  const example = JSON.stringify({ url: 'ショートカットの入力URL', note: '' }, null, 2);
+  const example = JSON.stringify(
+    {
+      url: '手順03で取得した記事URL（マジック変数）',
+      ...(projectId ? { project_id: projectId } : {}),
+      note: '',
+    },
+    null,
+    2,
+  );
   return (
     <div className="shortcuts-page">
       <section className="connect-guide">
@@ -2280,7 +2292,7 @@ function Shortcuts({
             <ArrowDownToLine size={23} aria-hidden="true" />
           </span>
           <div>
-            <h2>Safariから、3つのステップで。</h2>
+            <h2>共有メニューから、記事をストック。</h2>
             <p>記事を読んでいる途中でも、共有メニューから保存できます。</p>
           </div>
         </div>
@@ -2297,23 +2309,68 @@ function Shortcuts({
           <li>
             <span>02</span>
             <div>
-              <h3>ショートカットの共有メニューを有効にする</h3>
+              <h3>共有シートからURLを受け取る</h3>
               <p>
-                入力を「URL」にし、共有シートに表示します。保存先を選ぶ場合は、GETでプロジェクト一覧を取得し、選んだIDをJSON本文のproject_idに指定します。
+                iPhoneの「ショートカット」アプリで「＋」から作成し、詳細で「共有シートに表示」をオンにします。受け取る種類は「URL」と「SafariのWebページ」を選びます。
               </p>
-              <code>{base}/api/v1/projects</code>
+              <p>
+                先頭に「共有シートから…を受け取る」と表示されます。名前は「Pufu
+                Lens共有」などにします。
+              </p>
             </div>
           </li>
           <li>
             <span>03</span>
             <div>
+              <h3>「入力からURLを取得」を追加する</h3>
+              <p>
+                アクションを追加して「URLを取得」を検索し、入力に「ショートカットの入力」を指定します。共有された記事からURLを取り出すためのアクションです。
+              </p>
+              <p>
+                記事は1件ずつ共有します。複数のURLがある場合は「リストから項目を取得」で最初の項目を選びます。
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>04</span>
+            <div>
               <h3>「URLの内容を取得」でPOSTする</h3>
               <p>
-                以下のURLへ、AuthorizationヘッダーとJSON本文を設定して送信します。トークンを記事のURLへ送信しないでください。
+                次に「URLの内容を取得」を追加し、URL欄には下の保存APIのURLを貼り付けます。詳細を開いて「方法」をPOST、「本文を要求」をJSONにし、下のヘッダと本文を設定します。
+              </p>
+              <p>
+                JSONのurl欄は「テキスト」型を選び、値には手順03で取得した記事URLのマジック変数（複数時は先頭の1件を選んだ結果）を指定します。設定例の説明文をそのまま入力しないでください。Authorizationには「Bearer
+                」に続けて発行したトークンを貼り付けます。
+              </p>
+              <p>
+                トークンの送信先は下の保存APIです。共有された記事のURLを「URLの内容を取得」の送信先に設定しないでください。
               </p>
               <p>
                 project_idは任意です。省略すると、プロジェクト限定トークンでは限定先に、限定なしトークンでは自分の全プロジェクトに保存します。限定先と異なるIDは指定できません。
               </p>
+              <label htmlFor="shortcut-project">設定例の保存先（任意）</label>
+              <select
+                id="shortcut-project"
+                value={projectId}
+                onChange={(event) => setProjectId(event.target.value)}
+              >
+                <option value="">指定しない（トークンの設定に従う）</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+              <p>
+                選ぶと、下のJSONに実際のプロジェクトIDを表示します。固定の保存先にする場合は、このIDもショートカットに設定してください。
+              </p>
+              <details>
+                <summary>ショートカットの実行時に保存先を選ぶ場合</summary>
+                <p>
+                  同じAuthorizationヘッダを付けて次のURLをGETし、返されたprojectsから名前を選び、そのidをproject_idに指定します。
+                </p>
+                <code>{base}/api/v1/projects</code>
+              </details>
             </div>
           </li>
         </ol>
@@ -2339,7 +2396,7 @@ function Shortcuts({
               {copied ? <Check size={15} /> : <Copy size={15} />}
             </button>
           </div>
-          <pre>
+          <pre id="shortcut-body-example">
             Authorization: Bearer &lt;発行したトークン&gt;{'\n'}Content-Type: application/json
             {'\n\n'}
             {example}

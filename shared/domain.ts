@@ -167,6 +167,7 @@ export type TokenInfo = {
 };
 export type Config = {
   demo: boolean;
+  appUrl: string;
   googleConfigured: boolean;
   aiEnabled: boolean;
   aiModel: string | null;

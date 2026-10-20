@@ -1871,6 +1871,10 @@ p {
   gap: 18px;
   margin-bottom: 24px;
 }
+.setup-steps li > div {
+  flex: 1;
+  min-width: 0;
+}
 .setup-steps li > span {
   display: flex;
   width: 27px;
