@@ -101,14 +101,17 @@ export function createApp(trustedPrincipal?: Principal) {
     await next();
   });
   app.route('/api/public', publicProjectsApp());
-  app.get('/api/config', (c) =>
-    c.json({
-      demo: isDemoOrigin(c.env, new URL(c.req.url).origin),
+  app.get('/api/config', (c) => {
+    const origin = new URL(c.req.url).origin;
+    const demo = isDemoOrigin(c.env, origin);
+    return c.json({
+      demo,
+      appUrl: demo ? origin : new URL(c.env.APP_URL).origin,
       googleConfigured: googleConfigured(c),
       aiEnabled: Boolean(c.env.AI),
       aiModel: c.env.AI ? c.env.AI_MODEL : null,
-    }),
-  );
+    });
+  });
   app.get('/api/auth/google', googleLogin);
   app.get('/api/auth/google/callback', googleCallback);
   app.post('/api/auth/demo', async (c) => {

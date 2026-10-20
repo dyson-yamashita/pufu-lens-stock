@@ -18,6 +18,7 @@ describe('ローカル画面のWorkers AI設定表示', () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
         demo: true,
+        appUrl: app.env.APP_URL,
         googleConfigured: false,
         aiEnabled: enabled,
         aiModel: enabled ? app.env.AI_MODEL : null,
@@ -25,4 +26,14 @@ describe('ローカル画面のWorkers AI設定表示', () => {
       expect(run).not.toHaveBeenCalled();
     },
   );
+
+  it('接続先URLは閲覧中のホストではなくサーバー設定のオリジンを返す', async () => {
+    app.env.APP_URL = 'https://configured.example.com/';
+    const response = await app.request('/api/config', {
+      host: 'https://viewer.example.net',
+      headers: { Cookie: '' },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ appUrl: 'https://configured.example.com' });
+  });
 });
