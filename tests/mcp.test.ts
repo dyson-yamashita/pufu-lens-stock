@@ -633,6 +633,38 @@ describe('MCPによるストックと問いの取得・追加', () => {
       (await call(token, 'list_questions', { q: '会話' })).result.structuredContent.total,
     ).toBe(1);
   });
+  it('全体一覧の非表示設定を反映し、プロジェクト指定・接続先限定では表示する', async () => {
+    await seedStock('hidden', '2026-10-20');
+    await seedStock('visible', '2026-10-19', 'alice', 'alice-second');
+    await app.env.DB.batch([
+      app.env.DB.prepare("UPDATE projects SET show_in_all_lists=0 WHERE id='alice-project'"),
+      app.env.DB.prepare(
+        "INSERT INTO questions(id,project_id,text,source,status) VALUES ('hidden-question','alice-project','隠す問い','user','ready'), ('visible-question','alice-second','表示する問い','user','ready')",
+      ),
+    ]);
+    const token = await mcpToken(app);
+    const scoped = await mcpToken(app, 'alice-project');
+    expect((await call(token, 'list_projects')).result.structuredContent.projects).toContainEqual(
+      expect.objectContaining({ id: 'alice-project', show_in_all_lists: false }),
+    );
+    for (const [tool, key, visibleId, hiddenId] of [
+      ['list_stocks', 'stocks', 'stock-visible', 'stock-hidden'],
+      ['list_questions', 'questions', 'visible-question', 'hidden-question'],
+    ]) {
+      expect((await call(token, tool)).result.structuredContent).toMatchObject({
+        [key]: [{ id: visibleId }],
+        total: 1,
+      });
+      for (const [selectedToken, args] of [
+        [token, { project_id: 'alice-project' }],
+        [scoped, {}],
+      ] as const)
+        expect((await call(selectedToken, tool, args)).result.structuredContent).toMatchObject({
+          [key]: [{ id: hiddenId }],
+          total: 1,
+        });
+    }
+  });
   it('ID指定・検索・追加のどれも許可プロジェクト外と他ユーザーを拒否する', async () => {
     const otherStock = await app.request('/api/v1/stocks', {
       method: 'POST',

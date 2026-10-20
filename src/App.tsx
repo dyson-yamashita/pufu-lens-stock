@@ -674,8 +674,12 @@ export default function App() {
   const headerLabel = headerProjectId
     ? headerLabels[route.view]
     : (globalHeaderLabels[route.view] ?? headerLabels[route.view]);
-  const allCount = projects.reduce((count, project) => count + project.count, 0);
-  const allQuestionCount = projects.reduce((count, project) => count + project.question_count, 0);
+  const listedProjects = projects.filter((project) => project.show_in_all_lists !== false);
+  const allCount = listedProjects.reduce((count, project) => count + project.count, 0);
+  const allQuestionCount = listedProjects.reduce(
+    (count, project) => count + project.question_count,
+    0,
+  );
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
       {isMobile && mobileNav && (
@@ -1613,7 +1617,11 @@ function ProjectForm({
   onDelete: () => void;
 }) {
   const [name, setName] = useState(project?.name ?? '');
+  const nameId = useId();
   const [description, setDescription] = useState(project?.description ?? '');
+  const descriptionId = useId();
+  const [showInAllLists, setShowInAllLists] = useState(project?.show_in_all_lists ?? true);
+  const listVisibilityId = useId();
   const [includeInUserMemory, setIncludeInUserMemory] = useState(
     project?.include_in_user_memory ?? true,
   );
@@ -1630,7 +1638,12 @@ function ProjectForm({
           try {
             const data = await send<{ id: string }>(
               project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
-              { name, description, include_in_user_memory: includeInUserMemory },
+              {
+                name,
+                description,
+                show_in_all_lists: showInAllLists,
+                include_in_user_memory: includeInUserMemory,
+              },
               project ? 'PATCH' : 'POST',
             );
             onDone(project?.id ?? data.id);
@@ -1646,9 +1659,9 @@ function ProjectForm({
             ? 'プロジェクト名と概要を変更できます。内容はメモリの整理にも使われます。'
             : '集めたいテーマに名前をつけましょう。目的を書くと、メモリの整理にも使われます。'}
         </p>
-        <label htmlFor="project-name">プロジェクト名</label>
+        <label htmlFor={nameId}>プロジェクト名</label>
         <input
-          id="project-name"
+          id={nameId}
           value={name}
           disabled={busy}
           onChange={(e) => setName(e.target.value)}
@@ -1657,11 +1670,11 @@ function ProjectForm({
           autoFocus
           placeholder="例：次のアプリ開発"
         />
-        <label htmlFor="project-description">
+        <label htmlFor={descriptionId}>
           プロジェクト概要 <span className="optional">任意</span>
         </label>
         <textarea
-          id="project-description"
+          id={descriptionId}
           value={description}
           disabled={busy}
           onChange={(e) => setDescription(e.target.value)}
@@ -1676,6 +1689,21 @@ function ProjectForm({
         />
         <details className="project-advanced">
           <summary>詳細設定</summary>
+          <label className="project-memory-toggle" htmlFor={listVisibilityId}>
+            <span>すべてのストックと問いの一覧に表示する</span>
+            <input
+              id={listVisibilityId}
+              type="checkbox"
+              role="switch"
+              checked={showInAllLists}
+              disabled={busy}
+              onChange={(event) => setShowInAllLists(event.target.checked)}
+              aria-describedby={`${listVisibilityId}-hint`}
+            />
+          </label>
+          <p id={`${listVisibilityId}-hint`} className="project-memory-hint">
+            オフにすると、このプロジェクトのストックと問いを全体の一覧から外します。プロジェクトを指定すると表示できます。メモリの更新設定や公開設定には影響しません。
+          </p>
           <label className="project-memory-toggle" htmlFor={userMemoryId}>
             <span>ストック追加時にユーザーのメモリを更新する</span>
             <input
