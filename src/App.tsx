@@ -1397,6 +1397,10 @@ function ArticleCard({
             {statusLabels[stock.status]}
           </span>
         )}
+        <span className="article-project">
+          <Folder size={13} aria-hidden="true" />
+          <span className="truncate">{stock.project_name}</span>
+        </span>
       </div>
       <div className="article-content">
         <h2 className="article-title">
@@ -1430,11 +1434,14 @@ function ArticleCard({
         ))}
       </div>
       <footer>
-        <span className="article-project">
-          <Folder size={13} aria-hidden="true" />
-          <span className="truncate">{stock.project_name}</span>
-        </span>
-        <time dateTime={stock.created_at}>{date(stock.created_at)}</time>
+        <time dateTime={stock.created_at}>
+          {new Intl.DateTimeFormat('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            timeZone: 'Asia/Tokyo',
+          }).format(new Date(stock.created_at))}
+        </time>
         <StockFavoriteButton stock={stock} busy={favoriteBusy} onClick={onFavorite} />
       </footer>
     </article>
