@@ -140,8 +140,9 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
             </button>
           </div>
         </form>
-        <section className="account-deletion" aria-labelledby="account-deletion-title">
-          <h3 id="account-deletion-title">退会</h3>
+        <details className="account-deletion">
+          <summary>退会するには？</summary>
+          <h3>退会</h3>
           <p>
             退会すると、プロフィールと登録したすべてのデータが削除されます。削除したデータは復元できません。
           </p>
@@ -154,7 +155,7 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
             <Trash2 size={17} aria-hidden="true" />
             退会する
           </button>
-        </section>
+        </details>
       </section>
       <ThemeSettings />
       {confirmDelete && <AccountDeleteDialog onCancel={() => setConfirmDelete(false)} />}
