@@ -308,7 +308,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜画像取得',
       description:
-        '指定した問いのプ譜から、そのリクエスト時にPNG画像を生成して返します。pufu_idで取得するプ譜を選びます。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
+        '指定した問いのプ譜から、そのリクエスト時にPNG画像を生成して返します。pufu_idで取得するプ譜を選びます。PNGはcontent内のtype: image、mimeType: image/pngの要素のdataにBase64文字列として返します。Base64をデコードして画像をユーザーに表示してください。直接表示できない環境ではPNGファイルに保存し、回答本文に画像プレビューとダウンロードリンクを提示してください。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
       inputSchema: pufuSelection,
       annotations: read,
       _meta: security('questions:read'),
