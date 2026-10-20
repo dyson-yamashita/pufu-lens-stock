@@ -766,10 +766,18 @@ p {
   padding-top: 24px;
   border-top: 1px solid var(--border);
 }
+.account-deletion > summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.account-deletion[open] > summary {
+  margin-bottom: 12px;
+}
 .account-deletion h3 {
   font-size: 16px;
   margin-bottom: 8px;
 }
+.account-deletion > summary,
 .account-deletion > p,
 .account-deletion-description {
   color: var(--muted);
