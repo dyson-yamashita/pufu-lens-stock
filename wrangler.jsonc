@@ -19,6 +19,13 @@
   ],
   "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
   "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
+  "ratelimits": [
+    {
+      "name": "OAUTH_REGISTRATION_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 },
+    },
+  ],
   "workflows": [
     { "binding": "ARTICLE_WORKFLOW", "name": "stock-article", "class_name": "ArticleWorkflow" },
     { "binding": "MEMORY_WORKFLOW", "name": "stock-memory", "class_name": "MemoryWorkflow" },
@@ -48,6 +55,13 @@
       ],
       "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
       "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
+      "ratelimits": [
+        {
+          "name": "OAUTH_REGISTRATION_RATE_LIMITER",
+          "namespace_id": "1001",
+          "simple": { "limit": 10, "period": 60 },
+        },
+      ],
       "ai": { "binding": "AI" },
       "browser": { "binding": "BROWSER" },
       "workflows": [

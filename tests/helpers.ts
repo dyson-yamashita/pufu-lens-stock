@@ -27,11 +27,20 @@ export async function testApp(
 ) {
   const runtime = new Miniflare({
     modules: true,
-    script: 'export default { fetch() { return new Response("test"); } }',
+    // RateLimitはNode側のRPCではなく、実際のWorker内で呼び出す。
+    script: `export default { async fetch(request, env) {
+      return Response.json(await env.OAUTH_REGISTRATION_RATE_LIMITER.limit(await request.json()));
+    } }`,
     compatibilityDate: '2026-07-30',
     d1Databases: { DB: 'test-database' },
     r2Buckets: { CONTENT: 'test-content' },
     kvNamespaces: { OAUTH_KV: 'test-oauth' },
+    ratelimits: {
+      OAUTH_REGISTRATION_RATE_LIMITER: {
+        namespace_id: '1001',
+        simple: { limit: 10, period: 60 },
+      },
+    },
   });
   const DB = (await runtime.getD1Database('DB')) as unknown as D1Database;
   const CONTENT = (await runtime.getR2Bucket('CONTENT')) as unknown as R2Bucket;
@@ -64,6 +73,15 @@ export async function testApp(
     DB,
     CONTENT,
     OAUTH_KV,
+    OAUTH_REGISTRATION_RATE_LIMITER: {
+      async limit(options: RateLimitOptions): Promise<RateLimitOutcome> {
+        const response = await runtime.dispatchFetch('http://localhost/', {
+          method: 'POST',
+          body: JSON.stringify(options),
+        });
+        return response.json() as Promise<RateLimitOutcome>;
+      },
+    },
     APP_URL: 'http://localhost:5173',
     LOCAL_DEMO_ENABLED: 'false',
     AI_MODEL: '@cf/qwen/qwen3-30b-a3b-fp8',

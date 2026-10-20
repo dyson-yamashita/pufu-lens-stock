@@ -186,6 +186,51 @@ export function createMcpOAuthProvider(
 ) {
   return {
     async fetch(request: Request, bindings: Env, ctx: ExecutionContext): Promise<Response> {
+      if (request.method === 'POST' && new URL(request.url).pathname === '/oauth/register') {
+        let status: 429 | 503 | undefined;
+        try {
+          if (!bindings.OAUTH_REGISTRATION_RATE_LIMITER) throw new Error('missing_limiter');
+          // Cloudflareが設定する接続元だけを使い、転送ヘッダーの自己申告は信用しない。
+          // ローカルなどIPがない要求も共通の枠で制限し、IP未指定での回避を防ぐ。
+          const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+          const { success } = await bindings.OAUTH_REGISTRATION_RATE_LIMITER.limit({
+            key: await hash(`mcp-register:${ip}`),
+          });
+          if (!success) status = 429;
+        } catch {
+          status = 503;
+        }
+        if (status) {
+          const origin = request.headers.get('Origin');
+          return Response.json(
+            {
+              error: 'temporarily_unavailable',
+              error_description:
+                status === 429
+                  ? '登録要求が多すぎます。1分ほど待ってから接続をやり直してください。'
+                  : '事前登録を一時的に利用できません。時間をおいて接続をやり直してください。',
+            },
+            {
+              status,
+              headers: {
+                'Cache-Control': 'no-store',
+                'Retry-After': '60',
+                // SDKによる通常の登録応答と同じCORS設定を、早期拒否にも付ける。
+                ...(origin
+                  ? {
+                      'Access-Control-Allow-Origin': origin,
+                      'Access-Control-Allow-Methods': '*',
+                      'Access-Control-Allow-Headers': 'Authorization, *',
+                      'Access-Control-Max-Age': '86400',
+                      'Access-Control-Expose-Headers': 'WWW-Authenticate, Retry-After',
+                      Vary: 'Origin',
+                    }
+                  : {}),
+              },
+            },
+          );
+        }
+      }
       let exchangeUserId: string | undefined;
       const provider = new OAuthProvider<Env>({
         apiRoute: '/mcp',
@@ -193,7 +238,7 @@ export function createMcpOAuthProvider(
         authorizeEndpoint: '/oauth/authorize',
         tokenEndpoint: '/oauth/token',
         clientRegistrationEndpoint: '/oauth/register',
-        clientRegistrationTTL: undefined,
+        clientRegistrationTTL: 90 * 86400,
         clientIdMetadataDocumentEnabled: true,
         scopesSupported: Object.keys(mcpScopes),
         requiredScopes: Object.keys(mcpScopes),
