@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { productionAppUrl, productionResourceIds } from '../scripts/production-config';
+import {
+  productionAppUrl,
+  productionResourceIds,
+  searchIndexName,
+} from '../scripts/production-config';
+
+describe('任意の検索インデックス名', () => {
+  it('未指定なら既存環境を維持し、設定済みの環境別名を使う', () => {
+    expect(searchIndexName(undefined)).toBeUndefined();
+    expect(searchIndexName('')).toBeUndefined();
+    expect(searchIndexName('pufu-search-production')).toBe('pufu-search-production');
+    expect(() => searchIndexName('https://private.example/secret')).toThrow('VECTORIZE_INDEX_NAME');
+    expect(() => searchIndexName('x'.repeat(65))).toThrow('VECTORIZE_INDEX_NAME');
+  });
+});
 
 describe('production APP_URL', () => {
   it('normalizes an HTTPS origin for OAuth callback URL concatenation', () => {

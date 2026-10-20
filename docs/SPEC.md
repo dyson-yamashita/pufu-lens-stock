@@ -195,6 +195,60 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
 
 一覧の外側には `stocks`、フィルター後の総件数 `total`、`page`、実際のページ幅 `pageSize`、次ページの有無 `has_more`、`sort_by`、`order`、`detail` を返します。並び順の値は検証してから固定のSQL句を選び、件数・offsetはバインドします。プロジェクト限定・他ユーザーの除外・読み取り権限は、compact／fullの両方に適用します。
 
+### 意味検索・ハイブリッド検索の設定
+
+`list_stocks` と本人用 `GET /api/v1/stocks` では `mode` に `keyword`（既定）、`semantic`、`hybrid` を指定できます。qがない場合は従来の一覧を返し、AIやVectorizeは呼び出しません。Web画面は引き続きkeywordを使い、問いの検索方式も変わりません。
+
+```json
+{ "q": "AIに開発を任せるときの品質管理", "mode": "hybrid", "limit": 5, "detail": "compact" }
+```
+
+semanticは意味の近さ、hybridはキーワード順位と意味検索順位のRRF（k=60）で並べます。この2方式では`order`/`sort_by`による保存日時順より関連度を優先し、応答は`sort_by: "relevance"`、`order: "desc"`です。`min_score`は0〜1、既定0.35で意味候補の最小類似度を調整します。初期値の検索精度は実データで評価してください。検索対象は現在のタイトル、正常な要約（概要/要点/トピック）、メモです。記事本文・入力テキストは対象外で、新たな要約生成も行いません。
+
+両方式は各検索の上位100候補の範囲で結果を返します。`total`/`has_more`は候補集合に対する値です。`search.total_scope: "candidates"`、`candidate_limit: 100`、`candidates_truncated`を確認してください。全件を列挙するときはkeywordを使います。`search.indexed_count`/`pending_count`は同じ所有者・プロジェクト・絞り込み範囲の索引状態です。保存・編集後の索引更新やVectorize内部の反映には時間がかかります。
+
+hybridが未設定・索引準備中・障害・利用上限で意味検索を実行できなければkeywordへ戻り、`search.mode`と`search.fallback_reason`（`not_configured`/`index_pending`/`service_error`/`rate_limited`）で明示します。semanticを明示した場合は503または429です。空のqは`empty_query`としてkeywordの一覧を返します。keywordの応答形式・正確な総件数・保存日時順は維持します。
+
+#### 管理者の準備
+
+既存環境は追加設定なしで動作します。有効化する場合だけ、Cloudflareで環境ごとにVectorize V2インデックスを作成してください。次は本番用の例で、開発用は別名を使用します。
+
+```sh
+pnpm exec wrangler vectorize create pufu-search-production --dimensions=1024 --metric=cosine
+pnpm exec wrangler vectorize create-metadata-index pufu-search-production --property-name=project_id --type=string
+```
+
+metadata indexは最初の登録より先に作成します。Workers AIは既存の`AI` bindingを使い、埋め込みには生成用Qwenとは別に`@cf/baai/bge-m3`を固定で使用します。APIキーをクライアントやMCPへ渡す必要はありません。
+
+- 本番ビルド時に`VECTORIZE_INDEX_NAME=pufu-search-production`を指定します。Viteが`SEARCH_INDEX` bindingを追加します。GitHub Actionsではproduction Environmentの**Variables**に同名を登録します。インデックスは事前に作成し、デプロイ資格情報にVectorizeの利用権限も必要です。
+- ローカルは`.dev.vars`の`WORKERS_AI_ENABLED=true`と、作成済みの開発用`VECTORIZE_INDEX_NAME`を設定して再起動します。AI/Vectorizeは実Cloudflareへ接続し料金対象です。未設定のローカル開発では接続しません。
+- `0023_stock_search.sql`をD1へ適用します。既存ストックも索引要求へ入ります。新規追加・タイトル/メモ/保存先の変更・記事要約の更新・削除はSQLトリガーで同期対象になります。既存の毎分Cronが1回最大10要求を処理します。
+- 検索embeddingは初期上限`AI_SEARCH_DAILY_LIMIT=100`回/ユーザー/直近24時間、索引embeddingは`AI_INDEX_DAILY_LIMIT=200`回です。既存のAI全体回数・同時実行枠も共有し、失敗も回数に含めます。大規模な初回索引は日をまたいで進む場合があります。各入力は最大8000文字に制限します。
+
+索引はVectorizeのユーザーnamespaceとproject_idフィルターを使い、結果はD1の現行索引ID・本人・現在のプロジェクト・全フィルターで再確認します。古い編集世代や削除済みの候補は検索から即時除外します。Vectorizeには本文・メモの平文をmetadataとして保存せず、埋め込みとプロジェクトIDだけを保存します。退会・プロジェクト削除時も外部削除要求を保持し、削除失敗はCronから再試行します。
+
+索引の進行確認（管理者用のD1 SQL）：
+
+```sql
+SELECT SUM(current=1 AND ready=1) AS indexed,
+       SUM(current=1 AND ready=0) AS pending,
+       SUM(current=0) AS cleanup_pending
+FROM stock_search_entries;
+```
+
+外部障害時は要求を残して再試行します。通常は約1分、利用枠待ちは約1時間後に再確認します。書き込みは送信前に`write_pending=1`を保存し、タイムアウト・中断後は同じ索引IDを再利用せず新しい要求に切り替えます。未確定の旧書き込みは、削除APIが成功しても追跡情報を残し、約1時間ごとに削除を続けます。遅れて完了を観測できた場合は、その後の削除が成功してから要求を除去します。Worker終了などで完了を観測できない場合、この最小限のID記録と削除再試行が残ります。`cleanup_pending`にはこの保留分も含みます。
+
+インデックスを作り直す場合や管理者が即座に再試行する場合は、接続設定を確認したうえで次を実行します。
+
+```sql
+UPDATE stock_search_entries SET ready=0,next_attempt_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+WHERE current=1;
+```
+
+索引設定を無効にすると意味検索は利用できなくなります。外部削除の後処理には`SEARCH_INDEX` bindingが必要なので、未完了の削除がある間はbindingとCronを維持してください。検索語・メモ・ベクトル・外部例外の詳細はログへ出しません。
+
+参考：[Vectorize client API](https://developers.cloudflare.com/vectorize/reference/client-api/)、[metadata filtering](https://developers.cloudflare.com/vectorize/reference/metadata-filtering/)、[BGE-M3](https://developers.cloudflare.com/workers-ai/models/bge-m3/)。
+
 ### 互換性と今回の改善範囲
 
 - MCPで従来の一覧項目が必要なクライアントは `detail: "full"` を指定します。`get_stock` は従来の詳細を返し、本文は `include_content: true` の場合だけ取得します。

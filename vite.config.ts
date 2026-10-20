@@ -4,13 +4,34 @@ import { cloudflare } from '@cloudflare/vite-plugin';
 import prefixSelector from 'postcss-prefix-selector';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
-import { productionAppUrl, productionResourceIds } from './scripts/production-config';
+import {
+  productionAppUrl,
+  productionResourceIds,
+  searchIndexName,
+} from './scripts/production-config';
 
 export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     cloudflare({
       config: (config) => {
+        const envFile = process.env.CLOUDFLARE_ENV
+          ? `.dev.vars.${process.env.CLOUDFLARE_ENV}`
+          : '.dev.vars';
+        const path = existsSync(envFile) ? envFile : '.dev.vars';
+        const vars =
+          command === 'serve' && existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {};
+        const indexName = searchIndexName(
+          process.env.VECTORIZE_INDEX_NAME ?? vars.VECTORIZE_INDEX_NAME,
+        );
+        if (indexName) {
+          config.vectorize ??= [];
+          config.vectorize.push({
+            binding: 'SEARCH_INDEX',
+            index_name: indexName,
+            ...(command === 'serve' ? { remote: true } : {}),
+          });
+        }
         if (command === 'build' && process.env.CLOUDFLARE_ENV === 'production') {
           const appUrl = productionAppUrl(process.env.APP_URL);
           const { databaseId, oauthKvId } = productionResourceIds(process.env);
@@ -25,11 +46,6 @@ export default defineConfig(({ command }) => ({
           return;
         }
         if (command !== 'serve' || config.ai) return;
-        const envFile = process.env.CLOUDFLARE_ENV
-          ? `.dev.vars.${process.env.CLOUDFLARE_ENV}`
-          : '.dev.vars';
-        const path = existsSync(envFile) ? envFile : '.dev.vars';
-        const vars = existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {};
         if ((process.env.WORKERS_AI_ENABLED ?? vars.WORKERS_AI_ENABLED) === 'true')
           return { ai: { binding: 'AI', remote: true } };
       },

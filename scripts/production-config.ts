@@ -17,6 +17,15 @@ export function productionAppUrl(value: string | undefined): string {
   return url.origin;
 }
 
+export function searchIndexName(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(value))
+    throw new Error(
+      'VECTORIZE_INDEX_NAMEには64文字以内の英数字・ハイフン・アンダースコアでインデックス名を設定してください。',
+    );
+  return value;
+}
+
 export function productionResourceIds(env: NodeJS.ProcessEnv) {
   const databaseId = env.D1_DATABASE_ID;
   const oauthKvId = env.OAUTH_KV_ID;

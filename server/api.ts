@@ -10,6 +10,7 @@ import {
   profileSchema,
   stockInputSchema,
   stockListOptionsSchema,
+  stockSearchOptionsSchema,
   userQuestionSchema,
   type Question,
   type Stock,
@@ -44,6 +45,8 @@ import {
   type MemorySnapshot,
 } from '../shared/pufu';
 import { queuePufuJob, initialPufuPhase } from './pufu';
+import { listStocks } from './stock-search';
+import { SearchError } from './search-ai';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -278,89 +281,51 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ ok: true });
   });
   app.get('/api/v1/stocks', async (c) => {
-    const { user } = c.get('principal');
-    const options = stockListOptionsSchema.safeParse({
+    const { user, tokenProjectId } = c.get('principal');
+    const options = stockListOptionsSchema.extend(stockSearchOptionsSchema.shape).safeParse({
       limit: c.req.query('limit') === undefined ? undefined : Number(c.req.query('limit')),
       sort_by: c.req.query('sort_by'),
       order: c.req.query('order'),
       detail: c.req.query('detail'),
+      mode: c.req.query('mode'),
+      min_score:
+        c.req.query('min_score') === undefined ? undefined : Number(c.req.query('min_score')),
     });
     if (!options.success)
-      throw new HTTPException(400, { message: '取得件数・並び順・表示形式を確認してください。' });
-    const { limit, sort_by, order, detail } = options.data;
-    const direction = order === 'asc' ? 'ASC' : 'DESC';
-    const projectId = c.req.query('project_id') || null;
+      throw new HTTPException(400, {
+        message: '取得件数・並び順・表示形式・検索方式を確認してください。',
+      });
+    const requested = c.req.query('project_id') || null;
+    if (tokenProjectId && requested && requested !== tokenProjectId) throw new HTTPException(403);
+    const projectId = tokenProjectId ?? requested;
     if (projectId) await ownedProject(c.env, user.id, projectId);
-    const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
     const status = c.req.query('status') ?? 'all';
-    if (!['all', 'ready', 'processing', 'failed'].includes(status)) throw new HTTPException(400);
     const source = c.req.query('source') ?? 'all';
-    if (!['all', 'web', 'user'].includes(source)) throw new HTTPException(400);
     const favorite = c.req.query('favorite') ?? 'false';
-    if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
-    const page = Math.max(1, Math.min(5000, Number(c.req.query('page')) || 1));
-    const where =
-      "s.user_id = ? AND (? IS NULL OR s.project_id = ?) AND (COALESCE(s.title, a.title) LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status = ?) AND (? = 'all' OR a.source_type = ?)" +
-      (favorite === 'true' ? ' AND s.is_favorite = 1' : '');
-    const params = [
-      user.id,
-      projectId,
-      projectId,
-      `%${query}%`,
-      `%${query}%`,
-      `%${query}%`,
-      status,
-      status,
-      status,
-      source,
-      source === 'web' ? 'url' : 'text',
-    ];
-    const columns =
-      detail === 'compact'
-        ? "s.id, s.project_id, p.name AS project_name, s.created_at, COALESCE(s.title, a.title) AS title, a.status, CASE WHEN a.status != 'failed' THEN substr(json_extract(a.summary_json, '$.overview'), 1, 201) END AS summary_excerpt"
-        : 's.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model';
-    const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
-      c.env.DB.prepare(
-        `SELECT ${columns} FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE ${where} ORDER BY s.created_at ${direction}, s.id ${direction} LIMIT ? OFFSET ?`,
-      ).bind(...params, limit, (page - 1) * limit),
-      c.env.DB.prepare(
-        `SELECT COUNT(*) AS count FROM stocks s JOIN articles a ON a.id = s.article_id WHERE ${where}`,
-      ).bind(...params),
-    ]);
-    const stocks = rows.results.map((row) => {
-      if (detail === 'compact') {
-        const { summary_excerpt, ...stock } = row;
-        const characters = typeof summary_excerpt === 'string' ? Array.from(summary_excerpt) : [];
-        const truncated = characters.length > 200;
-        return {
-          ...stock,
-          summary_excerpt:
-            typeof summary_excerpt === 'string'
-              ? truncated
-                ? characters.slice(0, 199).join('') + '…'
-                : summary_excerpt
-              : null,
-          summary_truncated: truncated,
-        };
-      }
-      const { summary_json, ...stock } = row;
-      return {
-        ...stock,
-        summary:
-          stock.status !== 'failed' && summary_json ? JSON.parse(String(summary_json)) : null,
-      };
-    });
-    const total = Number(totals.results[0].count);
-    return c.json({
-      stocks,
-      total,
-      page,
-      pageSize: limit,
-      has_more: page * limit < total,
-      sort_by,
-      order,
-      detail,
-    });
+    if (
+      !['all', 'ready', 'processing', 'failed'].includes(status) ||
+      !['all', 'web', 'user'].includes(source) ||
+      !['true', 'false'].includes(favorite)
+    )
+      throw new HTTPException(400);
+    try {
+      return c.json(
+        await listStocks(c.env, {
+          ...options.data,
+          userId: user.id,
+          projectId,
+          q: (c.req.query('q') ?? '').slice(0, 200),
+          status,
+          source,
+          favorite,
+          page: Math.max(1, Math.min(5000, Math.floor(Number(c.req.query('page')) || 1))),
+        }),
+      );
+    } catch (error) {
+      if (error instanceof SearchError)
+        return c.json({ error: error.message, search_error: error.reason }, error.status);
+      throw error;
+    }
   });
   app.post('/api/v1/stocks', async (c) => {
     const { user, tokenProjectId } = c.get('principal');

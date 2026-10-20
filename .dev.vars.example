@@ -3,6 +3,10 @@ LOCAL_DEMO_ENABLED=true
 # trueにすると、WranglerのCloudflare認証を使ってWorkers AIへ接続します。
 # 変更後は開発サーバーを再起動してください。
 WORKERS_AI_ENABLED=false
+# 意味検索を試す場合だけ、開発用Vectorizeの作成後に指定します。
+# VECTORIZE_INDEX_NAME=pufu-search-development
+# AI_SEARCH_DAILY_LIMIT=100
+# AI_INDEX_DAILY_LIMIT=200
 AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
 # 同じWi-Fiの端末で試す場合は、MacのプライベートIPv4アドレスを指定します。
 # LOCAL_DEMO_LAN_ORIGIN=http://192.168.1.10:5173

@@ -2,6 +2,10 @@ import type { User } from '../shared/domain';
 import ipaddr from 'ipaddr.js';
 import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider';
 
+export type EmbeddingAI = {
+  run(model: '@cf/baai/bge-m3', input: { text: string[]; truncate_inputs: true }): Promise<unknown>;
+};
+
 export interface Env {
   DB: D1Database;
   CONTENT: R2Bucket;
@@ -22,6 +26,7 @@ export interface Env {
     ): Promise<unknown>;
   };
   BROWSER?: Fetcher;
+  SEARCH_INDEX?: Pick<Vectorize, 'query' | 'upsert' | 'deleteByIds'>;
   APP_URL: string;
   LOCAL_DEMO_ENABLED?: string;
   LOCAL_DEMO_LAN_ORIGIN?: string;
@@ -36,6 +41,8 @@ export interface Env {
   AI_CONCURRENT_JOBS?: string;
   AI_CALL_DAILY_LIMIT?: string;
   AI_CONCURRENT_CALLS?: string;
+  AI_SEARCH_DAILY_LIMIT?: string;
+  AI_INDEX_DAILY_LIMIT?: string;
 }
 export type Principal = {
   user: User;
