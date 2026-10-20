@@ -1001,6 +1001,7 @@ p {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 7px;
   padding: 9px 0;
   margin-top: auto;
@@ -1012,7 +1013,12 @@ p {
   gap: 5px;
   align-items: center;
   min-width: 0;
-  flex: 1;
+  max-width: 50%;
+  margin-left: auto;
+  color: var(--muted);
+}
+.article-project svg {
+  flex-shrink: 0;
 }
 .article-card time {
   white-space: nowrap;
