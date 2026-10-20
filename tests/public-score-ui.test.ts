@@ -5,6 +5,7 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import { elementKeys, type PufuScore } from '../shared/pufu';
+import { testApp } from './helpers';
 
 const require = createRequire(import.meta.url);
 const editorRoot = dirname(require.resolve('@goto-lab/pufu-editor'));
@@ -188,4 +189,49 @@ it('通常の編集モードでは入力・追加・並べ替えを引き続き�
     .filter((sortable) => sortable !== undefined);
   expect(lists.length).toBeGreaterThan(0);
   expect(lists.every((sortable) => sortable.option('disabled') === false)).toBe(true);
+});
+
+it('読み取り専用の取得結果はEditorのJSON出力と一致し、そのまま再読み込みできる', async () => {
+  const app = await testApp();
+  try {
+    const { ProjectScore, getScoreJson, setScore } = require(
+      join(editorRoot, 'components/ProjectScore.js'),
+    ) as typeof import('@goto-lab/pufu-editor');
+    const key = 'mcp-export-roundtrip';
+    const input = structuredClone(score);
+    input.purposes[0].measures[0].progress = 0;
+    input.purposes[1].measures[0].progress = 100;
+    await act(async () =>
+      root.render(
+        createElement(ProjectScore, {
+          uniqueKey: key,
+          initScore: input,
+          mobile: true,
+        }),
+      ),
+    );
+    const exported = getScoreJson(key)!;
+    const created = await app.request('/api/v1/questions', {
+      method: 'POST',
+      body: { project_id: 'alice-project', text: 'Editorとの互換性' },
+    });
+    const { question } = (await created.json()) as { question: { id: string } };
+    await app.env.DB.prepare(
+      `INSERT INTO pufu_scores(id,user_id,question_id,task,input_json,score_json,editor_version,status)
+      VALUES('exported','alice',?,'課題','{}',?,'0.9.15','ready')`,
+    )
+      .bind(question.id, exported)
+      .run();
+    const response = await app.request(`/api/v1/questions/${question.id}/pufu`);
+    expect(response.status).toBe(200);
+    const { projectScore } = (await response.json()) as { projectScore: PufuScore };
+    expect(projectScore).toEqual(JSON.parse(exported));
+    await act(async () => setScore(key, JSON.stringify(projectScore)));
+    expect(JSON.parse(getScoreJson(key)!)).toEqual(projectScore);
+    expect(projectScore.purposes[0].measures[0].progress).toBe(0);
+    expect(projectScore.purposes[1].measures[0].progress).toBe(100);
+    expect(projectScore.purposes[0].measures[1]).not.toHaveProperty('progress');
+  } finally {
+    await app.dispose();
+  }
 });
