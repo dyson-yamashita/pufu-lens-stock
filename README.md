@@ -44,7 +44,7 @@ pnpm run dev
 ## 外部サービスとの連携
 
 - **iPhone** — 共有シートから記事を保存できます。[ショートカットの設定](docs/SPEC.md#iosショートカット)を参照してください。
-- **ChatGPTなど** — MCP連携でストックや問いを追加・検索できます。[MCP連携の説明](docs/SPEC.md#mcp連携chatgptなど)を参照してください。
+- **ChatGPTなど** — MCP連携でストックや問いを追加・検索し、保存済みのプ譜を取得できます。[MCP連携の説明](docs/SPEC.md#mcp連携chatgptなど)を参照してください。
 
 ### X連携
 

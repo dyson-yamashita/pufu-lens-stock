@@ -130,7 +130,7 @@ try {
       })
     ).serverInfo,
   );
-  assert.equal((await rpc('tools/list', {})).tools.length, 7);
+  assert.equal((await rpc('tools/list', {})).tools.length, 8);
   assert.deepEqual(
     (await call('list_projects')).structuredContent.projects.map((project) => project.id),
     [projectId],
@@ -180,6 +180,14 @@ try {
   });
   assert.ok(!question.isError, JSON.stringify(question));
   assert.equal(question.structuredContent.question.stock_id, null);
+  const pufu = await call('get_pufu', { question_id: question.structuredContent.question.id });
+  assert.ok(!pufu.isError);
+  assert.deepEqual(pufu.structuredContent, {
+    question_id: question.structuredContent.question.id,
+    project_id: projectId,
+    updated_at: null,
+    projectScore: null,
+  });
   assert.equal(
     (await call('get_question', { question_id: question.structuredContent.question.id }))
       .structuredContent.question.text,
@@ -204,7 +212,9 @@ try {
     (await fetch(`${base}/mcp`, { headers: { Authorization: `Bearer ${refreshedToken}` } })).status,
     401,
   );
-  console.log('MCPローカル検証成功: OAuth・7ツール・再送・独立した問い・トークン更新・連携解除');
+  console.log(
+    'MCPローカル検証成功: OAuth・8ツール・プ譜取得・再送・独立した問い・トークン更新・連携解除',
+  );
 } finally {
   if (grantId) await api(`/mcp/connections/${grantId}`, 'DELETE');
   if (projectId) await api(`/projects/${projectId}`, 'DELETE');
