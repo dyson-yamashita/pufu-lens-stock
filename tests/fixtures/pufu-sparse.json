@@ -1,0 +1,106 @@
+{
+  "gainingGoal": {
+    "uuid": "eb6f36ea-fd3d-4b0f-b7b7-d3bbdd451be0",
+    "text": "学びを続ける",
+    "comment": {
+      "color": "blue",
+      "text": ""
+    }
+  },
+  "winCondition": {
+    "uuid": "f026535e-8712-4eb3-821a-d7d53e3a07ba",
+    "text": "記事を一件試す",
+    "comment": {
+      "color": "blue",
+      "text": ""
+    }
+  },
+  "purposes": [
+    {
+      "uuid": "5d0a9fc4-e950-44e3-91e0-049085355315",
+      "text": "問いを一つ見つける",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      },
+      "measures": [
+        {
+          "uuid": "f71d2089-0bcc-4cf4-a481-b2fb377a3c73",
+          "text": "記事を読む",
+          "comment": {
+            "color": "blue",
+            "text": ""
+          },
+          "color": "white",
+          "progress": 0
+        }
+      ]
+    }
+  ],
+  "elements": {
+    "people": {
+      "uuid": "7e5be729-1dfc-487f-b982-4ed4484a7d0e",
+      "text": "自分",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "money": {
+      "uuid": "fe713037-a089-4325-a149-92fbb6175801",
+      "text": "",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "time": {
+      "uuid": "cf8adcb4-e3db-40cd-b78f-dcbc7a71fd4b",
+      "text": "十五分",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "quality": {
+      "uuid": "3b6337be-9834-42d6-be86-da58c1f14ae9",
+      "text": "",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "businessScheme": {
+      "uuid": "5336aa2a-7493-4e7c-854a-47e42c60b499",
+      "text": "",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "environment": {
+      "uuid": "0c3e7f49-8b8b-4466-8d21-7708ab0ba33c",
+      "text": "",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "rival": {
+      "uuid": "d6c1ad7d-ec18-4b32-92f6-2b2368817f64",
+      "text": "",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "foreignEnemy": {
+      "uuid": "b97e6026-427a-41c1-bce3-4cfdcf84c6b4",
+      "text": "",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    }
+  }
+}

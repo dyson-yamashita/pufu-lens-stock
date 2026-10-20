@@ -7,6 +7,9 @@ import {
 } from '@modelcontextprotocol/server';
 import { createMcpHandler } from 'agents/mcp/server';
 import { z } from 'zod';
+import { Buffer } from 'node:buffer';
+import { HTTPException } from 'hono/http-exception';
+import { generateQuestionPufuImage } from './pufu-images';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -114,7 +117,9 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       };
     try {
       return result(await operation());
-    } catch (error) {
+    } catch (caught) {
+      const error =
+        caught instanceof HTTPException ? new ToolError(caught.message, caught.status) : caught;
       if (!(error instanceof ToolError)) {
         console.error('MCP tool failed', error);
         return { ...result({ error: '処理に失敗しました。', status: 500 }), isError: true };
@@ -290,6 +295,31 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     },
     ({ question_id }) =>
       run('questions:read', () => invoke(`questions/${encodeURIComponent(question_id)}/pufu`)),
+  );
+  register(
+    'get_pufu_image',
+    {
+      title: 'プ譜画像取得',
+      description:
+        '指定した問いの最新の完成済みプ譜から、そのリクエスト時にPNG画像を生成して返します。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。not_createdは完成済みのプ譜がない状態です。',
+      inputSchema: z.object({ question_id: id }),
+      annotations: read,
+      _meta: security('questions:read'),
+    },
+    async ({ question_id }) => {
+      let png: string | undefined;
+      const output = await run('questions:read', async () => {
+        const image = await generateQuestionPufuImage(env, principal, question_id);
+        if (image.png) png = Buffer.from(image.png).toString('base64');
+        return image.metadata;
+      });
+      if (png && !output.isError)
+        output.content = [
+          ...(output.content ?? []),
+          { type: 'image', mimeType: 'image/png', data: png },
+        ];
+      return output;
+    },
   );
   register(
     'add_question',

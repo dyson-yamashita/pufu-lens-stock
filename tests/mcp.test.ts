@@ -6,12 +6,15 @@ import { testApp } from './helpers';
 import { mcpToken } from './mcp-helpers';
 import { searchBindings } from './search-helpers';
 import { syncSearchIndex } from '../server/search-index';
+import * as imageRenderer from '../server/pufu-renderer';
+import { readFile } from 'node:fs/promises';
+import imageScore from './fixtures/pufu-sparse.json';
 
 type Result = {
   result: {
     isError?: boolean;
     structuredContent: Record<string, unknown>;
-    content?: { type: string; text: string }[];
+    content?: { type: string; text: string; data?: string; mimeType?: string }[];
     tools?: { name: string; annotations: { readOnlyHint: boolean } }[];
   };
 };
@@ -129,6 +132,62 @@ describe('MCPによるストックと問いの取得・追加', () => {
       .run();
     return pufuId;
   }
+
+  it('プ譜画像をリクエスト時に1回生成し、PNGのimage contentだけに返す', async () => {
+    const token = await mcpToken(app, 'alice-project');
+    const question = (
+      await call(token, 'add_question', {
+        project_id: 'alice-project',
+        text: '画像で確認',
+        request_id: crypto.randomUUID(),
+      })
+    ).result.structuredContent.question as { id: string };
+    expect(
+      (await call(token, 'get_pufu_image', { question_id: question.id })).result.structuredContent,
+    ).toMatchObject({ status: 'not_created' });
+    await seedPufu(question.id, JSON.stringify(imageScore));
+    app.env.ASSETS = {
+      fetch: async () =>
+        new Response(await readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url))),
+    } as unknown as Fetcher;
+    const snapshot = () =>
+      app.env.DB.batch([
+        app.env.DB.prepare('SELECT * FROM pufu_scores'),
+        app.env.DB.prepare('SELECT * FROM pufu_phases'),
+        app.env.DB.prepare('SELECT * FROM processing_jobs'),
+      ]).then((results) => results.map((r) => r.results));
+    const before = await snapshot();
+    const render = vi.spyOn(imageRenderer, 'renderSavedPufu');
+    const run = vi.fn();
+    app.env.AI = { run };
+    const result = (await call(token, 'get_pufu_image', { question_id: question.id })).result;
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      status: 'ready',
+      mime_type: 'image/png',
+      phase: 1,
+    });
+    const image = result.content?.find((item) => item.type === 'image');
+    expect(image?.mimeType).toBe('image/png');
+    expect(Buffer.from(image!.data!, 'base64').subarray(0, 8).toString('hex')).toBe(
+      '89504e470d0a1a0a',
+    );
+    expect(JSON.stringify(result.structuredContent)).not.toContain(image!.data!);
+    expect(JSON.stringify(result)).not.toContain('/pufu-images/');
+    expect(JSON.stringify(result)).not.toContain('SECRET_');
+    expect(await snapshot()).toEqual(before);
+    expect(render).toHaveBeenCalledTimes(1);
+    render.mockRestore();
+    expect(run).not.toHaveBeenCalled();
+    const other = await mcpToken(app, 'alice-second');
+    expect(
+      (await call(other, 'get_pufu_image', { question_id: question.id })).result,
+    ).toMatchObject({ isError: true, structuredContent: { status: 404 } });
+    const noRead = await mcpToken(app, null, ['projects:read']);
+    expect(
+      (await call(noRead, 'get_pufu_image', { question_id: question.id })).result,
+    ).toMatchObject({ isError: true, structuredContent: { status: 403 } });
+  });
 
   it('問いIDから保存済みの最新局面をEditor形式のまま取得し、DB更新・生成を行わない', async () => {
     const token = await mcpToken(app, 'alice-project');
@@ -501,6 +560,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'add_question',
       'add_stock',
       'get_pufu',
+      'get_pufu_image',
       'get_question',
       'get_stock',
       'list_projects',

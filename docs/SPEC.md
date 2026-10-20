@@ -168,6 +168,7 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 | `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
 | `get_question`   | 問いの詳細と任意の関連ストックID                                                                               |
 | `get_pufu`       | 指定した問いの保存済みプ譜。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）            |
+| `get_pufu_image` | 指定した問いの最新の完成済みプ譜からリクエスト時にPNG画像を生成・取得（`questions:read`）                      |
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
 
 追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
@@ -175,6 +176,16 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 ### プ譜の取得
 
 `get_pufu` は `list_questions`／`get_question` と同じ問いIDを必須の `question_id` に指定します。閲覧権限は既存の `questions:read` を使い、本人と認可されたプロジェクトをサーバー側で確認します。
+
+`get_pufu_image` も同じ問いID・閲覧権限を使います。リクエストのたびに、保存済みの最新の完成済みプ譜からPNGをその場で生成します。MCPのimage contentとして `image/png` を返し、structuredContentには幅・高さ・バイト数・局面・更新番号等のメタデータだけを返します。PNGのbase64をJSONにも重複させません。`get_pufu` のJSON形式は変更しません。完成済みプ譜がない場合は `status: "not_created"` とし、画像を生成しません。
+
+プ譜の作成・保存・局面追加時には画像を生成しません。画像や生成状態をDB/R2に保存せず、CronやWorkflowによる準備も行いません。画像取得ではAI・ブラウザを使わず、保存済みの本文・コメント・更新日時を変更しません。初期化済みのWASMと日本語フォントだけを再利用し、完成画像をキャッシュしません。
+
+認証済みAPIは `GET /api/v1/questions/:id/pufu/image` です。生成したPNGを `Content-Type: image/png`、`Cache-Control: no-store` で返します。未作成時は `status: "not_created"` のJSONを返します。本人の認可範囲だけを描画し、公開設定だけでは他ユーザーのMCPに公開しません。描画中の削除・認可範囲外への移動は404、更新競合は409として古い画像を返しません。APIキー・入力コンテキストも返しません。
+
+PNGはresvg WASM、日本語フォントは同梱の静的アセットを使います。文章合計30,000 UTF-16コード単位、600万画素、PNG 2MiBが上限です。上限超過は413、描画できない制御文字等は422、WASM/フォントの一時障害は503を返し、黙って切り詰めません。保存JSONの破損は既存のJSON取得と同じく500です。画像生成に失敗しても保存済みのプ譜は維持し、次のリクエストで再生成できます。Workers AIの利用枠は消費しません。
+
+追加のDB migrationやSecretは不要です。ViteビルドしたWorkerと静的アセット（`fonts/pufu-jp.otf` を含む）を一緒に反映してください。`ASSETS` bindingは設定済みです。
 
 ```json
 { "question_id": "保存した問いのID" }

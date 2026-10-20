@@ -1,0 +1,16 @@
+{
+  "name": "@pufu-lens/pufu-image",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "BSD-3-Clause",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./model": "./src/model.ts"
+  },
+  "dependencies": {
+    "@resvg/resvg-wasm": "2.6.2",
+    "zod": "^4.0.0"
+  }
+}

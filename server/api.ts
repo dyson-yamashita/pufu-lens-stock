@@ -48,6 +48,7 @@ import { queuePufuJob, initialPufuPhase } from './pufu';
 import { listStocks } from './stock-search';
 import { SearchError } from './search-ai';
 import { readQuestionPufu } from './pufu-read';
+import { generateQuestionPufuImage } from './pufu-images';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -130,7 +131,7 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu)?)$/.test(
+          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu(?:\/image)?)?)$/.test(
             c.req.path,
           )) ||
         (c.req.method === 'POST' && ['/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
@@ -527,6 +528,11 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/questions/:id/pufu', async (c) =>
     c.json(await readQuestionPufu(c.env, c.get('principal'), c.req.param('id'))),
   );
+  app.get('/api/v1/questions/:id/pufu/image', async (c) => {
+    const image = await generateQuestionPufuImage(c.env, c.get('principal'), c.req.param('id'));
+    if (!image.png) return c.json(image.metadata);
+    return c.body(new Uint8Array(image.png), 200, { 'Content-Type': 'image/png' });
+  });
   app.delete('/api/v1/questions/:id', async (c) => {
     const question = await ownedQuestion(c);
     const { user } = c.get('principal');

@@ -1,4 +1,6 @@
 autoInstallPeers: true
+packages:
+  - packages/*
 
 overrides:
   undici: ^7.29.1

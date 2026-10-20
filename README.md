@@ -47,6 +47,8 @@ MCPでの接続URL・権限設定・本番準備は、[MCP連携の説明](docs/
 
 問いに紐づく保存済みプ譜は `get_pufu` に `question_id` を指定して取得できます。`projectScore` にPufu Editor互換のJSONオブジェクトを返し、閲覧には `questions:read` が必要です。[プ譜の取得](docs/SPEC.md#プ譜の取得)を参照してください。
 
+図として確認する場合は `get_pufu_image` に同じ `question_id` を指定します。リクエスト時に保存済みの最新のプ譜からPNGを生成します。AIは使わず、画像の事前生成やR2保存は行いません。画像生成ライブラリは [packages/pufu-image](packages/pufu-image/README.md) にあります。
+
 管理者がWorkers AI・Vectorizeの検索設定を有効にすると、`list_stocks` に `q` と `mode: "hybrid"` を指定して語句と意味を組み合わせて探せます。既定は従来の `keyword` です。検索結果の `search.mode` と `search.fallback_reason` で実際の方式を確認できます。[設定と既存データの索引作成](docs/SPEC.md#意味検索ハイブリッド検索の設定)を参照してください。
 
 ## ドキュメント
