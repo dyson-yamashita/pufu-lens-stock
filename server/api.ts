@@ -131,7 +131,7 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu(?:\/image)?)?)$/.test(
+          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
             c.req.path,
           )) ||
         (c.req.method === 'POST' && ['/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
@@ -532,6 +532,25 @@ export function createApp(trustedPrincipal?: Principal) {
     const image = await generateQuestionPufuImage(c.env, c.get('principal'), c.req.param('id'));
     if (!image.png) return c.json(image.metadata);
     return c.body(new Uint8Array(image.png), 200, { 'Content-Type': 'image/png' });
+  });
+  app.get('/api/v1/questions/:question_id/pufu/:pufu_id', async (c) =>
+    c.json(
+      await readQuestionPufu(
+        c.env,
+        c.get('principal'),
+        c.req.param('question_id'),
+        c.req.param('pufu_id'),
+      ),
+    ),
+  );
+  app.get('/api/v1/questions/:question_id/pufu/:pufu_id/image', async (c) => {
+    const image = await generateQuestionPufuImage(
+      c.env,
+      c.get('principal'),
+      c.req.param('question_id'),
+      c.req.param('pufu_id'),
+    );
+    return c.body(new Uint8Array(image.png!), 200, { 'Content-Type': 'image/png' });
   });
   app.delete('/api/v1/questions/:id', async (c) => {
     const question = await ownedQuestion(c);

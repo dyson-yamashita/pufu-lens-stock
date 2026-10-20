@@ -189,6 +189,81 @@ describe('MCPによるストックと問いの取得・追加', () => {
     ).toMatchObject({ isError: true, structuredContent: { status: 403 } });
   });
 
+  it('問い詳細のプ譜一覧からIDを選び、複数のプ譜のJSON・PNGを取得できる', async () => {
+    const token = await mcpToken(app, 'alice-project');
+    const create = async (text: string) =>
+      (
+        await call(token, 'add_question', {
+          project_id: 'alice-project',
+          text,
+          request_id: crypto.randomUUID(),
+        })
+      ).result.structuredContent.question as { id: string };
+    const question = await create('複数のプ譜を選ぶ');
+    const unrelated = await create('別の問い');
+    const original = score();
+    const newer = score();
+    newer.gainingGoal.text = '別のプ譜の目標';
+    await seedPufu(question.id, JSON.stringify(original), {
+      id: 'chosen-pufu',
+      createdAt: '2026-10-19',
+    });
+    await seedPufu(question.id, JSON.stringify(newer), {
+      id: 'newer-pufu',
+      createdAt: '2026-10-20',
+    });
+    const detail = (await call(token, 'get_question', { question_id: question.id })).result
+      .structuredContent;
+    expect(detail.pufus).toMatchObject([
+      { id: 'newer-pufu', status: 'ready' },
+      { id: 'chosen-pufu', status: 'ready' },
+    ]);
+    expect(JSON.stringify(detail)).not.toContain('SECRET_');
+    const selected = { question_id: question.id, pufu_id: 'chosen-pufu' };
+    const json = (await call(token, 'get_pufu', selected)).result;
+    expect(json.isError).not.toBe(true);
+    expect(json.structuredContent).toMatchObject({ ...selected, projectScore: original });
+    expect(
+      (await call(token, 'get_pufu', { ...selected, pufu_id: 'newer-pufu' })).result
+        .structuredContent,
+    ).toMatchObject({ pufu_id: 'newer-pufu', projectScore: newer });
+    app.env.ASSETS = {
+      fetch: async () =>
+        new Response(await readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url))),
+    } as unknown as Fetcher;
+    const render = vi.spyOn(imageRenderer, 'renderSavedPufu');
+    try {
+      const image = (await call(token, 'get_pufu_image', selected)).result;
+      expect(image.isError).not.toBe(true);
+      expect(image.structuredContent).toMatchObject({
+        ...selected,
+        status: 'ready',
+        mime_type: 'image/png',
+      });
+      expect(
+        image.content?.some((item) => item.type === 'image' && item.mimeType === 'image/png'),
+      ).toBe(true);
+      expect(render).toHaveBeenCalledExactlyOnceWith(app.env, original);
+      for (const tool of ['get_pufu', 'get_pufu_image']) {
+        expect(
+          (await call(token, tool, { ...selected, question_id: unrelated.id })).result,
+        ).toMatchObject({ isError: true, structuredContent: { status: 404 } });
+        for (const pufu_id of ['missing', 'image'])
+          expect((await call(token, tool, { ...selected, pufu_id })).result).toMatchObject({
+            isError: true,
+            structuredContent: { status: 404 },
+          });
+        const restricted = await mcpToken(app, 'alice-second');
+        expect((await call(restricted, tool, selected)).result).toMatchObject({
+          isError: true,
+          structuredContent: { status: 404 },
+        });
+      }
+      expect(render).toHaveBeenCalledTimes(1);
+    } finally {
+      render.mockRestore();
+    }
+  });
   it('問いIDから保存済みの最新局面をEditor形式のまま取得し、DB更新・生成を行わない', async () => {
     const token = await mcpToken(app, 'alice-project');
     const question = (

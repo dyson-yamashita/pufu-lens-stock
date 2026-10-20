@@ -10,10 +10,12 @@ export async function generateQuestionPufuImage(
   env: Env,
   principal: Principal,
   questionId: string,
+  pufuId?: string,
 ) {
-  const snapshot = await readQuestionPufuSnapshot(env, principal, questionId);
+  const snapshot = await readQuestionPufuSnapshot(env, principal, questionId, pufuId);
   const metadata = {
     question_id: questionId,
+    pufu_id: snapshot.pufuId,
     project_id: snapshot.pufu.project_id,
     updated_at: snapshot.pufu.updated_at,
     phase: snapshot.phase,
@@ -36,7 +38,7 @@ export async function generateQuestionPufuImage(
     throw new HTTPException(status, { message: error.message, cause: error });
   }
   // フォント待ちや描画中に削除・移動・更新された画像を返さない。
-  const latest = await readQuestionPufuSnapshot(env, principal, questionId);
+  const latest = await readQuestionPufuSnapshot(env, principal, questionId, pufuId);
   if (
     latest.pufuId !== snapshot.pufuId ||
     latest.phase !== snapshot.phase ||

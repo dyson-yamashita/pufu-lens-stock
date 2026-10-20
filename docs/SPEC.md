@@ -141,15 +141,17 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 
 ローカルデモでAIが未接続の場合は、問い・課題・メモリから定型の案を作成し、その旨を表示します。本物の生成にはWorkers AIバインディングが必要です。AIへの出力指示と検証はプ譜専用で、文章の案を生成させた後、UUIDと空のコメントをサーバーで補います。未確認の予算・担当者・期限を事実として埋めません。
 
-| メソッド・パス                     | 用途                                                                                                    |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/questions/:id`        | 問いの詳細と関連するプ譜の一覧                                                                          |
-| `GET /api/v1/questions/:id/pufu`   | 問いに紐づく最新の完成済みプ譜の最新局面を読み取り専用で取得。MCPでも利用可                             |
-| `POST /api/v1/questions/:id/pufus` | `{ task, request_id }` で生成受付。作成時202、同じUUIDでの再送200、異なる入力での再利用409              |
-| `GET /api/v1/pufus/:id`            | プ譜・状態・生成時の文脈と局面一覧 `phases`、最新局面番号 `current_phase` を取得                        |
-| `PATCH /api/v1/pufus/:id`          | `{ revision, phase, score }` で指定局面を保存。更新競合409、存在しない局面404。`phase` 省略時は最新局面 |
-| `POST /api/v1/pufus/:id/phases`    | `{ revision, phase, score }` で最新局面を保存して次局面を追加。201、更新競合409                         |
-| `POST /api/v1/pufus/:id/retry`     | 生成失敗の再試行                                                                                        |
+| メソッド・パス                                           | 用途                                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/questions/:id`                              | 問いの詳細と関連するプ譜の一覧                                                                          |
+| `GET /api/v1/questions/:id/pufu`                         | 問いに紐づく最新の完成済みプ譜の最新局面を読み取り専用で取得。MCPでも利用可                             |
+| `GET /api/v1/questions/:question_id/pufu/:pufu_id`       | 指定した問いに紐づくプ譜の最新局面をEditor互換JSONで取得。MCPでも利用可                                 |
+| `GET /api/v1/questions/:question_id/pufu/:pufu_id/image` | 指定したプ譜の最新局面からPNGをリクエスト時に生成。MCPでも利用可                                        |
+| `POST /api/v1/questions/:id/pufus`                       | `{ task, request_id }` で生成受付。作成時202、同じUUIDでの再送200、異なる入力での再利用409              |
+| `GET /api/v1/pufus/:id`                                  | プ譜・状態・生成時の文脈と局面一覧 `phases`、最新局面番号 `current_phase` を取得                        |
+| `PATCH /api/v1/pufus/:id`                                | `{ revision, phase, score }` で指定局面を保存。更新競合409、存在しない局面404。`phase` 省略時は最新局面 |
+| `POST /api/v1/pufus/:id/phases`                          | `{ revision, phase, score }` で最新局面を保存して次局面を追加。201、更新競合409                         |
+| `POST /api/v1/pufus/:id/retry`                           | 生成失敗の再試行                                                                                        |
 
 生成・編集・局面一覧のAPIは本人のWebセッションのみ利用でき、変更時は同一Originが必要です。問いIDによる読み取り専用の取得はMCPの許可範囲でも利用できます。課題は1,000文字まで。プ譜保存は256KiBまでで、各文章1,200文字、各コメント600文字、中間目的12件・各施策12件までを検証します。UUIDの重複と不正な色・進捗値も拒否します。
 
@@ -166,34 +168,36 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 | `get_stock`      | ストック詳細。`include_content: true` の場合だけ本文を20,000文字まで取得（超過時は `content_truncated: true`） |
 | `add_stock`      | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                               |
 | `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
-| `get_question`   | 問いの詳細と任意の関連ストックID                                                                               |
-| `get_pufu`       | 指定した問いの保存済みプ譜。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）            |
-| `get_pufu_image` | 指定した問いの最新の完成済みプ譜からリクエスト時にPNG画像を生成・取得（`questions:read`）                      |
+| `get_question`   | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                       |
+| `get_pufu`       | 問いID・プ譜IDで選んだプ譜の最新局面。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）  |
+| `get_pufu_image` | 問いID・プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                  |
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
 
 追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
 
 ### プ譜の取得
 
-`get_pufu` は `list_questions`／`get_question` と同じ問いIDを必須の `question_id` に指定します。閲覧権限は既存の `questions:read` を使い、本人と認可されたプロジェクトをサーバー側で確認します。
+`get_question` は問いと紐づくプ譜の一覧 `pufus` を返します。取得するプ譜の `pufus[].id` を選び、`get_pufu` または `get_pufu_image` に、必須の `question_id` と任意の `pufu_id` を指定します。複数登録されていても保存済みIDで選べます。閲覧権限は既存の `questions:read` を使い、問いとプ譜の紐づき、本人と認可されたプロジェクトをサーバー側で確認します。
 
-`get_pufu_image` も同じ問いID・閲覧権限を使います。リクエストのたびに、保存済みの最新の完成済みプ譜からPNGをその場で生成します。MCPのimage contentとして `image/png` を返し、structuredContentには幅・高さ・バイト数・局面・更新番号等のメタデータだけを返します。PNGのbase64をJSONにも重複させません。`get_pufu` のJSON形式は変更しません。完成済みプ譜がない場合は `status: "not_created"` とし、画像を生成しません。
+`get_pufu_image` はリクエストのたびに、指定したプ譜の最新局面からPNGをその場で生成します。MCPのimage contentとして `image/png` を返し、structuredContentにはプ譜ID・幅・高さ・バイト数・局面・更新番号等のメタデータだけを返します。PNGのbase64をJSONにも重複させません。
 
 プ譜の作成・保存・局面追加時には画像を生成しません。画像や生成状態をDB/R2に保存せず、CronやWorkflowによる準備も行いません。画像取得ではAI・ブラウザを使わず、保存済みの本文・コメント・更新日時を変更しません。初期化済みのWASMと日本語フォントだけを再利用し、完成画像をキャッシュしません。
 
-認証済みAPIは `GET /api/v1/questions/:id/pufu/image` です。生成したPNGを `Content-Type: image/png`、`Cache-Control: no-store` で返します。未作成時は `status: "not_created"` のJSONを返します。本人の認可範囲だけを描画し、公開設定だけでは他ユーザーのMCPに公開しません。描画中の削除・認可範囲外への移動は404、更新競合は409として古い画像を返しません。APIキー・入力コンテキストも返しません。
+認証済みAPIは `GET /api/v1/questions/:question_id/pufu/:pufu_id`（JSON）と `GET /api/v1/questions/:question_id/pufu/:pufu_id/image`（PNG）です。両方とも `Cache-Control: no-store` とし、PNGは `Content-Type: image/png` で返します。本人の認可範囲だけを取得し、公開設定だけでは他ユーザーのMCPに公開しません。指定したIDが存在しない・別の問いに紐づく場合は404、作成未完了（queued/generating/failed）は409です。別の完成済みプ譜へ置き換えて返しません。描画中の削除・別の問いや認可範囲外への移動は404、対象プ譜の更新競合は409として古い画像を返しません。描画中に同じ問いへ別の新しいプ譜が追加されても、指定したプ譜の取得は継続できます。APIキー・入力コンテキストも返しません。
+
+互換用に `/api/v1/questions/:question_id/pufu` と `/api/v1/questions/:question_id/pufu/image`、MCPの `pufu_id` 省略も残します。省略時は既存の一覧順（作成日時の降順、同時刻はID降順）で最新の完成済みプ譜を選びます。完成済みがない場合は、JSON取得が `projectScore: null`、画像取得が `status: "not_created"` となり、画像を生成しません。
 
 PNGはresvg WASM、日本語フォントは同梱の静的アセットを使います。文章合計30,000 UTF-16コード単位、600万画素、PNG 2MiBが上限です。上限超過は413、描画できない制御文字等は422、WASM/フォントの一時障害は503を返し、黙って切り詰めません。保存JSONの破損は既存のJSON取得と同じく500です。画像生成に失敗しても保存済みのプ譜は維持し、次のリクエストで再生成できます。Workers AIの利用枠は消費しません。
 
 追加のDB migrationやSecretは不要です。ViteビルドしたWorkerと静的アセット（`fonts/pufu-jp.otf` を含む）を一緒に反映してください。`ASSETS` bindingは設定済みです。
 
 ```json
-{ "question_id": "保存した問いのID" }
+{ "question_id": "保存した問いのID", "pufu_id": "get_questionのpufusから選んだID" }
 ```
 
-返却項目は `question_id`、`project_id`、`updated_at`、`projectScore` です。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.15` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
+返却項目は `question_id`、`pufu_id`、`project_id`、`updated_at`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.15` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
 
-1つの問いに複数のプ譜がある場合は、既存の一覧順（作成日時の降順、同時刻はID降順）で最新の `ready` のプ譜を選び、その最新局面を返します。`updated_at` は選んだプ譜の更新日時で、読み取れない日時は `null` です。完成済みのプ譜がない場合（未作成・生成中・生成失敗のみ）は `updated_at: null, projectScore: null` です。問いが存在しない・他人の問い・許可プロジェクト外は既存詳細取得と同じ404、scope不足は403です。
+`updated_at` は指定したプ譜の更新日時で、読み取れない日時は `null` です。問いが存在しない・他人の問い・許可プロジェクト外は既存詳細取得と同じ404、scope不足は403です。
 
 旧データの第1局面は、本体の保存済みJSONを移行せず参照します。第2局面以降の局面欠落、完成済みプ譜のJSON欠落・破損・形式不整合は500、保存済みJSONのUTF-8サイズが256KiBを超える場合は413を返します。エラーを未作成として扱わず、内容も切り詰めません。MCPの `content`／`structuredContent` は既存ツールと同じ組み立てです。
 
