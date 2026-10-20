@@ -5,7 +5,6 @@ import { isDemo } from './env';
 import { now, jobFailureStatements } from './db';
 import { invokeAi, aiStep, deferLimitedJob } from './usage';
 import { elementKeys, pufuScoreSchema, type PufuContext, type PufuScore } from '../shared/pufu';
-import { syncPufuImages } from './pufu-images';
 import type { WorkflowStep } from 'cloudflare:workers';
 
 const text = z.string().trim().min(1).max(1200);
@@ -175,13 +174,6 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
         ]);
       });
     }
-    await step.do('generate-pufu-image', async () => {
-      try {
-        await syncPufuImages(env, job.target_id);
-      } catch {
-        console.error('pufu_image_generation_pending');
-      }
-    });
     await step.do('finish-pufu-job', async () => {
       await env.DB.prepare(
         "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",

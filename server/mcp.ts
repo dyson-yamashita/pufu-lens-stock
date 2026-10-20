@@ -8,6 +8,8 @@ import {
 import { createMcpHandler } from 'agents/mcp/server';
 import { z } from 'zod';
 import { Buffer } from 'node:buffer';
+import { HTTPException } from 'hono/http-exception';
+import { generateQuestionPufuImage } from './pufu-images';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -115,7 +117,9 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       };
     try {
       return result(await operation());
-    } catch (error) {
+    } catch (caught) {
+      const error =
+        caught instanceof HTTPException ? new ToolError(caught.message, caught.status) : caught;
       if (!(error instanceof ToolError)) {
         console.error('MCP tool failed', error);
         return { ...result({ error: '処理に失敗しました。', status: 500 }), isError: true };
@@ -297,7 +301,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜画像取得',
       description:
-        '指定した問いの最新の完成済みプ譜をPNG画像で取得します。JSONが必要な場合はget_pufuを使います。画像の取得ではAIや描画処理を起動しません。statusがpendingなら生成中、failedなら画像生成失敗、not_createdならプ譜未作成です。',
+        '指定した問いの最新の完成済みプ譜から、そのリクエスト時にPNG画像を生成して返します。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。not_createdは完成済みのプ譜がない状態です。',
       inputSchema: z.object({ question_id: id }),
       annotations: read,
       _meta: security('questions:read'),
@@ -305,24 +309,9 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     async ({ question_id }) => {
       let png: string | undefined;
       const output = await run('questions:read', async () => {
-        const path = `questions/${encodeURIComponent(question_id)}/pufu/image`;
-        const metadata = await invoke(path);
-        if (metadata.status === 'ready') {
-          const response = await api.request(
-            `${env.APP_URL}/api/v1/${path}/content`,
-            {
-              headers: { 'If-Match': `"${metadata.image_id}"` },
-            },
-            env,
-            ctx,
-          );
-          if (!response.ok) {
-            const error = (await response.json()) as { error?: string };
-            throw new ToolError(error.error ?? '画像を取得できません。', response.status);
-          }
-          png = Buffer.from(await response.arrayBuffer()).toString('base64');
-        }
-        return metadata;
+        const image = await generateQuestionPufuImage(env, principal, question_id);
+        if (image.png) png = Buffer.from(image.png).toString('base64');
+        return image.metadata;
       });
       if (png && !output.isError)
         output.content = [

@@ -1,7 +1,6 @@
 import wasm from '@resvg/resvg-wasm/index_bg.wasm?module';
 import { initPufuWasm, renderPufuPng, PufuImageError } from '@pufu-lens/pufu-image';
 import type { Env } from './env';
-export const pufuImageVersion = '1';
 let font: Promise<Uint8Array> | undefined;
 export async function renderSavedPufu(env: Env, score: unknown) {
   if (!env.ASSETS)
@@ -17,9 +16,10 @@ export async function renderSavedPufu(env: Env, score: unknown) {
         );
       return new Uint8Array(await response.arrayBuffer());
     })
-    .catch((error) => {
+    .catch((cause) => {
       font = undefined;
-      throw error;
+      if (cause instanceof PufuImageError) throw cause;
+      throw new PufuImageError('FONT_UNAVAILABLE', '画像用フォントを取得できません。', { cause });
     });
   const [, bytes] = await Promise.all([
     initPufuWasm(wasm).catch((cause) => {

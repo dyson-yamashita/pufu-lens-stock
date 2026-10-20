@@ -5,7 +5,7 @@ import type { Env, Principal } from './env';
 // 既存の保存APIと同じ256KiB。切り詰めや、エディターによる補完は行わない。
 const maxScoreBytes = 262144;
 
-export async function readQuestionPufuRecord(env: Env, principal: Principal, questionId: string) {
+async function readQuestionPufuRecord(env: Env, principal: Principal, questionId: string) {
   const projectId = principal.tokenProjectId ?? null;
   // 問い・保存先の権限と選択する局面を同じ読み取りで確定する。
   const row = await env.DB.prepare(
@@ -33,7 +33,7 @@ export async function readQuestionPufuRecord(env: Env, principal: Principal, que
   if (!row) throw new HTTPException(404, { message: '問いが見つかりません。' });
   return row;
 }
-export async function readQuestionPufu(env: Env, principal: Principal, questionId: string) {
+export async function readQuestionPufuSnapshot(env: Env, principal: Principal, questionId: string) {
   const row = await readQuestionPufuRecord(env, principal, questionId);
   let projectScore: PufuScore | null = null;
   if (row.pufu_id) {
@@ -53,12 +53,20 @@ export async function readQuestionPufu(env: Env, principal: Principal, questionI
     }
   }
   return {
-    question_id: row.question_id,
-    project_id: row.project_id,
-    updated_at:
-      row.pufu_id && row.updated_at && Number.isFinite(Date.parse(row.updated_at))
-        ? row.updated_at
-        : null,
-    projectScore,
+    pufuId: row.pufu_id,
+    phase: row.current_phase,
+    revision: row.revision,
+    pufu: {
+      question_id: row.question_id,
+      project_id: row.project_id,
+      updated_at:
+        row.pufu_id && row.updated_at && Number.isFinite(Date.parse(row.updated_at))
+          ? row.updated_at
+          : null,
+      projectScore,
+    },
   };
+}
+export async function readQuestionPufu(env: Env, principal: Principal, questionId: string) {
+  return (await readQuestionPufuSnapshot(env, principal, questionId)).pufu;
 }
