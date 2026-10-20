@@ -2718,7 +2718,7 @@ p {
 .memory-empty p,
 .memory-disclaimer,
 .evidence-links button {
-  color: var(--accent);
+  color: var(--text);
 }
 .shortcut-tip p,
 .shortcut-tip button,
