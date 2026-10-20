@@ -47,6 +47,7 @@ import {
 import { queuePufuJob, initialPufuPhase } from './pufu';
 import { listStocks } from './stock-search';
 import { SearchError } from './search-ai';
+import { readQuestionPufu } from './pufu-read';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -129,7 +130,7 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+)$/.test(
+          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu)?)$/.test(
             c.req.path,
           )) ||
         (c.req.method === 'POST' && ['/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
@@ -523,6 +524,9 @@ export function createApp(trustedPrincipal?: Principal) {
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ question, pufus: pufus.results });
   });
+  app.get('/api/v1/questions/:id/pufu', async (c) =>
+    c.json(await readQuestionPufu(c.env, c.get('principal'), c.req.param('id'))),
+  );
   app.delete('/api/v1/questions/:id', async (c) => {
     const question = await ownedQuestion(c);
     const { user } = c.get('principal');

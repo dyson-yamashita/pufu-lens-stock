@@ -1,4 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ProjectScoreModel } from '@goto-lab/pufu-editor';
+import { elementKeys, type PufuScore } from '../shared/pufu';
 import worker from '../server/index';
 import { testApp } from './helpers';
 import { mcpToken } from './mcp-helpers';
@@ -75,6 +77,252 @@ describe('MCPによるストックと問いの取得・追加', () => {
       ).bind(`stock-${name}`, owner, projectId, name, 'メモだけの検索語', savedAt),
     ]);
   }
+
+  function score(): PufuScore & ProjectScoreModel {
+    const node = (text: string) => ({
+      uuid: crypto.randomUUID(),
+      text,
+      comment: { color: 'blue' as const, text: '保存済みのコメント\n改行も保持' },
+    });
+    return {
+      gainingGoal: node('獲得目標'),
+      winCondition: node('勝利条件'),
+      purposes: [
+        {
+          ...node('2番目という名前の最初の目的'),
+          measures: ['red', 'green', 'yellow', 'blue', 'white'].map((color, index) => ({
+            ...node(`施策${5 - index}`),
+            color: color as PufuScore['purposes'][number]['measures'][number]['color'],
+            comment: { color: index % 2 ? 'green' : 'red', text: `コメント${index}` },
+            ...(index === 0 ? { id: 'saved-id', progress: 0 } : {}),
+            ...(index === 1 ? { progress: 100 } : {}),
+            ...(index === 2 ? { progress: 42.5 } : {}),
+          })),
+        },
+        { ...node('1番目という名前の最後の目的'), measures: [] },
+      ],
+      elements: Object.fromEntries(
+        elementKeys.map((key) => [key, node(key)]),
+      ) as PufuScore['elements'],
+    };
+  }
+  async function seedPufu(
+    questionId: string,
+    json: string | null,
+    options: { id?: string; status?: string; phase?: number; createdAt?: string } = {},
+  ) {
+    const pufuId = options.id ?? crypto.randomUUID();
+    await app.env.DB.prepare(
+      `INSERT INTO pufu_scores(id,user_id,question_id,task,input_json,generated_json,score_json,
+      editor_version,status,current_phase,created_at,updated_at)
+      SELECT ?,p.user_id,q.id,'課題','{"userMemory":"SECRET_CONTEXT"}','SECRET_GENERATED',?,
+      '0.9.15',?,?,?,'2026-10-20T09:00:00Z' FROM questions q JOIN projects p ON p.id=q.project_id WHERE q.id=?`,
+    )
+      .bind(
+        pufuId,
+        json,
+        options.status ?? 'ready',
+        options.phase ?? 1,
+        options.createdAt ?? '2026-10-20T08:00:00Z',
+        questionId,
+      )
+      .run();
+    return pufuId;
+  }
+
+  it('問いIDから保存済みの最新局面をEditor形式のまま取得し、DB更新・生成を行わない', async () => {
+    const token = await mcpToken(app, 'alice-project');
+    const question = (
+      await call(token, 'add_question', {
+        project_id: 'alice-project',
+        text: '保存したプ譜をレビューしたい',
+        request_id: crypto.randomUUID(),
+      })
+    ).result.structuredContent.question as { id: string };
+    expect(
+      (await call(token, 'get_question', { question_id: question.id })).result.structuredContent
+        .question,
+    ).toMatchObject(question);
+    const questions = (await call(token, 'list_questions')).result.structuredContent.questions as {
+      id: string;
+    }[];
+    expect(questions.map((item) => item.id)).toContain(question.id);
+    await seedPufu(question.id, JSON.stringify(score()), { id: 'old', createdAt: '2026-10-19' });
+    const pufuId = await seedPufu(question.id, JSON.stringify(score()));
+    await seedPufu(question.id, null, { status: 'queued', createdAt: '2026-10-21' });
+    const saved = score();
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${pufuId}/phases`, {
+          method: 'POST',
+          body: { revision: 1, phase: 1, score: saved },
+        })
+      ).status,
+    ).toBe(201);
+    saved.purposes.reverse();
+    saved.purposes[1].measures.reverse();
+    expect(
+      (
+        await app.request(`/api/v1/pufus/${pufuId}`, {
+          method: 'PATCH',
+          body: { revision: 2, phase: 2, score: saved },
+        })
+      ).status,
+    ).toBe(200);
+    const snapshot = () =>
+      app.env.DB.batch<Record<string, unknown>>([
+        app.env.DB.prepare('SELECT * FROM pufu_scores ORDER BY id'),
+        app.env.DB.prepare('SELECT * FROM pufu_phases ORDER BY pufu_id,number'),
+        app.env.DB.prepare('SELECT * FROM processing_jobs ORDER BY id'),
+        app.env.DB.prepare('SELECT * FROM ai_calls ORDER BY id'),
+      ]).then((results) => results.map((item) => item.results));
+    const before = await snapshot();
+    const run = vi.fn();
+    app.env.AI = { run };
+    vi.mocked(app.env.ARTICLE_WORKFLOW.create).mockClear();
+    const response = (await call(token, 'get_pufu', { question_id: question.id })).result;
+    expect(response.isError).not.toBe(true);
+    expect(response.structuredContent).toEqual({
+      question_id: question.id,
+      project_id: 'alice-project',
+      updated_at: before[0].find((row) => row.id === pufuId)!.updated_at,
+      projectScore: saved,
+    });
+    expect(JSON.parse(response.content![0].text)).toEqual(response.structuredContent);
+    expect(JSON.stringify(response)).not.toContain('SECRET_');
+    expect(await snapshot()).toEqual(before);
+    expect(run).not.toHaveBeenCalled();
+    expect(app.env.ARTICLE_WORKFLOW.create).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, 'queued', 'generating', 'failed'])(
+    '完成したプ譜がない問いはnullを返す（状態: %s）',
+    async (status) => {
+      const question = await app.request('/api/v1/questions', {
+        method: 'POST',
+        body: { project_id: 'alice-project', text: '未作成' },
+      });
+      const questionId = ((await question.json()) as { question: { id: string } }).question.id;
+      if (status) await seedPufu(questionId, null, { status });
+      const token = await mcpToken(app, 'alice-project', ['questions:read']);
+      expect((await call(token, 'get_pufu', { question_id: questionId })).result).toMatchObject({
+        structuredContent: {
+          question_id: questionId,
+          project_id: 'alice-project',
+          updated_at: null,
+          projectScore: null,
+        },
+      });
+      expect(
+        (await app.env.DB.prepare('SELECT COUNT(*) AS count FROM pufu_phases').first())!.count,
+      ).toBe(0);
+    },
+  );
+
+  it('局面行が未作成の旧データも移行せず取得し、更新日時が不明ならnullを返す', async () => {
+    const created = await app.request('/api/v1/questions', {
+      method: 'POST',
+      body: { project_id: 'alice-project', text: '旧データ' },
+    });
+    const { question } = (await created.json()) as { question: { id: string } };
+    const saved = score();
+    const pufuId = await seedPufu(question.id, JSON.stringify(saved));
+    await app.env.DB.prepare('UPDATE pufu_scores SET updated_at=? WHERE id=?')
+      .bind('unknown', pufuId)
+      .run();
+    const response = await app.request(`/api/v1/questions/${question.id}/pufu`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      question_id: question.id,
+      project_id: 'alice-project',
+      updated_at: null,
+      projectScore: saved,
+    });
+    expect(await app.env.DB.prepare('SELECT COUNT(*) AS count FROM pufu_phases').first()).toEqual({
+      count: 0,
+    });
+    const token = await mcpToken(app, null, ['questions:read']);
+    expect(
+      (await call(token, 'get_pufu', { question_id: question.id })).result.structuredContent,
+    ).toMatchObject({ projectScore: saved, updated_at: null });
+  });
+
+  it('存在しない問い・許可外プロジェクト・他ユーザー・scope不足を既存方針で拒否する', async () => {
+    for (const project_id of ['alice-second', 'bob-project']) {
+      const owner = project_id === 'bob-project' ? 'bob' : 'alice';
+      const response = await app.request('/api/v1/questions', {
+        method: 'POST',
+        user: owner,
+        body: { project_id, text: '非公開' },
+      });
+      const { question } = (await response.json()) as { question: { id: string } };
+      await seedPufu(question.id, '{broken');
+      const token = await mcpToken(app, 'alice-project', ['questions:read']);
+      expect((await call(token, 'get_pufu', { question_id: question.id })).result).toMatchObject({
+        isError: true,
+        structuredContent: { status: 404 },
+      });
+    }
+    const token = await mcpToken(app, null, ['questions:read']);
+    expect((await call(token, 'get_pufu', { question_id: 'missing' })).result).toMatchObject({
+      isError: true,
+      structuredContent: { status: 404 },
+    });
+    const noRead = await mcpToken(app, null, ['stocks:read']);
+    expect((await call(noRead, 'get_pufu', { question_id: 'missing' })).result).toMatchObject({
+      isError: true,
+      structuredContent: { status: 403 },
+    });
+    for (const args of [{}, { question_id: '' }, { question_id: 1 }])
+      expect((await call(token, 'get_pufu', args)).result.isError).toBe(true);
+  });
+
+  it.each([
+    'broken-json',
+    'null',
+    'progress',
+    'unknown-field',
+    'missing-phase',
+    'missing-score',
+    'oversized',
+  ])('破損・不整合・サイズ超過をnullや切り詰めで隠さない: %s', async (kind) => {
+    const response = await app.request('/api/v1/questions', {
+      method: 'POST',
+      body: { project_id: 'alice-project', text: '形式検証' },
+    });
+    const { question } = (await response.json()) as { question: { id: string } };
+    const document: Record<string, unknown> = { ...score() };
+    if (kind === 'progress') (document as PufuScore).purposes[0].measures[0].progress = 101;
+    if (kind === 'unknown-field') document.risks = [];
+    if (kind === 'oversized') {
+      const purposes = Array.from({ length: 12 }, () => ({
+        ...score().purposes[0],
+        uuid: crypto.randomUUID(),
+        measures: Array.from({ length: 12 }, () => ({
+          ...score().purposes[0].measures[0],
+          uuid: crypto.randomUUID(),
+          id: 'saved',
+          text: 'あ'.repeat(1200),
+          comment: { color: 'blue', text: 'あ'.repeat(600) },
+        })),
+      }));
+      document.purposes = purposes;
+    }
+    const json =
+      kind === 'broken-json'
+        ? '{broken'
+        : kind === 'null'
+          ? 'null'
+          : kind === 'missing-score'
+            ? null
+            : JSON.stringify(document);
+    await seedPufu(question.id, json, { phase: kind === 'missing-phase' ? 2 : 1 });
+    const token = await mcpToken(app, null, ['questions:read']);
+    expect((await call(token, 'get_pufu', { question_id: question.id })).result).toMatchObject({
+      isError: true,
+      structuredContent: { status: kind === 'oversized' ? 413 : 500 },
+    });
+  });
 
   it('長い日本語のハイブリッド検索でもOAuthの読み取り権限と保存先の制限を維持する', async () => {
     const bindings = searchBindings(app.env);
@@ -252,12 +500,18 @@ describe('MCPによるストックと問いの取得・追加', () => {
     expect(listed.result.tools?.map((tool) => tool.name).sort()).toEqual([
       'add_question',
       'add_stock',
+      'get_pufu',
       'get_question',
       'get_stock',
       'list_projects',
       'list_questions',
       'list_stocks',
     ]);
+    expect(listed.result.tools?.find((tool) => tool.name === 'get_pufu')).toMatchObject({
+      annotations: { readOnlyHint: true },
+      securitySchemes: [{ type: 'oauth2', scopes: ['questions:read'] }],
+      inputSchema: { required: ['question_id'] },
+    });
     expect(
       listed.result.tools?.find((tool) => tool.name === 'get_stock')?.annotations.readOnlyHint,
     ).toBe(true);

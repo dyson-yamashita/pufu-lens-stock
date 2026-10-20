@@ -144,13 +144,14 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 | メソッド・パス                     | 用途                                                                                                    |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `GET /api/v1/questions/:id`        | 問いの詳細と関連するプ譜の一覧                                                                          |
+| `GET /api/v1/questions/:id/pufu`   | 問いに紐づく最新の完成済みプ譜の最新局面を読み取り専用で取得。MCPでも利用可                             |
 | `POST /api/v1/questions/:id/pufus` | `{ task, request_id }` で生成受付。作成時202、同じUUIDでの再送200、異なる入力での再利用409              |
 | `GET /api/v1/pufus/:id`            | プ譜・状態・生成時の文脈と局面一覧 `phases`、最新局面番号 `current_phase` を取得                        |
 | `PATCH /api/v1/pufus/:id`          | `{ revision, phase, score }` で指定局面を保存。更新競合409、存在しない局面404。`phase` 省略時は最新局面 |
 | `POST /api/v1/pufus/:id/phases`    | `{ revision, phase, score }` で最新局面を保存して次局面を追加。201、更新競合409                         |
 | `POST /api/v1/pufus/:id/retry`     | 生成失敗の再試行                                                                                        |
 
-これらのAPIは本人のWebセッションのみ利用でき、変更時は同一Originが必要です。課題は1,000文字まで。プ譜保存は256KiBまでで、各文章1,200文字、各コメント600文字、中間目的12件・各施策12件までを検証します。UUIDの重複と不正な色・進捗値も拒否します。
+生成・編集・局面一覧のAPIは本人のWebセッションのみ利用でき、変更時は同一Originが必要です。問いIDによる読み取り専用の取得はMCPの許可範囲でも利用できます。課題は1,000文字まで。プ譜保存は256KiBまでで、各文章1,200文字、各コメント600文字、中間目的12件・各施策12件までを検証します。UUIDの重複と不正な色・進捗値も拒否します。
 
 `pufu_scores` に原案・最新の編集結果・入力時点の問いとメモリのスナップショット（内容・更新番号）・モデル・エディターのバージョン、`pufu_phases` に各局面の編集結果を保持します。メモリが後で変わっても、生成した案の根拠を確認できます。プ譜の作成・編集・局面追加で既存のメモリは更新しません。ライセンス文は [pufu-editor.txt](../public/licenses/pufu-editor.txt) に同梱しています。
 
@@ -166,9 +167,26 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 | `add_stock`      | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                               |
 | `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
 | `get_question`   | 問いの詳細と任意の関連ストックID                                                                               |
+| `get_pufu`       | 指定した問いの保存済みプ譜。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）            |
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
 
 追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
+
+### プ譜の取得
+
+`get_pufu` は `list_questions`／`get_question` と同じ問いIDを必須の `question_id` に指定します。閲覧権限は既存の `questions:read` を使い、本人と認可されたプロジェクトをサーバー側で確認します。
+
+```json
+{ "question_id": "保存した問いのID" }
+```
+
+返却項目は `question_id`、`project_id`、`updated_at`、`projectScore` です。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.15` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
+
+1つの問いに複数のプ譜がある場合は、既存の一覧順（作成日時の降順、同時刻はID降順）で最新の `ready` のプ譜を選び、その最新局面を返します。`updated_at` は選んだプ譜の更新日時で、読み取れない日時は `null` です。完成済みのプ譜がない場合（未作成・生成中・生成失敗のみ）は `updated_at: null, projectScore: null` です。問いが存在しない・他人の問い・許可プロジェクト外は既存詳細取得と同じ404、scope不足は403です。
+
+旧データの第1局面は、本体の保存済みJSONを移行せず参照します。第2局面以降の局面欠落、完成済みプ譜のJSON欠落・破損・形式不整合は500、保存済みJSONのUTF-8サイズが256KiBを超える場合は413を返します。エラーを未作成として扱わず、内容も切り詰めません。MCPの `content`／`structuredContent` は既存ツールと同じ組み立てです。
+
+この取得処理はSELECTのみを実行し、プ譜・局面・更新日時を変更しません。ジョブの起動、AI呼び出し、要約・生成・編集は行いません。生成時のメモリや文脈、モデル、原案は返却しません。
 
 ### ストック一覧の取得量と検索範囲
 
@@ -288,7 +306,7 @@ WHERE current=1;
 
 ### ローカル検証
 
-`pnpm run dev` を起動し、別ターミナルで `pnpm run test:smoke:mcp` を実行します。ローカルデモに対してOAuth・7ツール・再送・独立した問い・更新・失効を検証し、検証用プロジェクトと連携を削除します。Workers AIを使わずに検証する場合は `WORKERS_AI_ENABLED=false pnpm run dev` としてください。
+`pnpm run dev` を起動し、別ターミナルで `pnpm run test:smoke:mcp` を実行します。ローカルデモに対してOAuth・8ツール・プ譜の取得・再送・独立した問い・更新・失効を検証し、検証用プロジェクトと連携を削除します。Workers AIを使わずに検証する場合は `WORKERS_AI_ENABLED=false pnpm run dev` としてください。
 
 クラウドから `localhost` には直接接続できません。ChatGPTでのローカル接続検証には適切なHTTPSトンネル等が必要です。本番準備後は本番HTTPS URLを使用してください。
 
