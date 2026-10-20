@@ -2348,22 +2348,6 @@ function Shortcuts({
               <p>
                 project_idは任意です。省略すると、プロジェクト限定トークンでは限定先に、限定なしトークンでは自分の全プロジェクトに保存します。限定先と異なるIDは指定できません。
               </p>
-              <label htmlFor="shortcut-project">設定例の保存先（任意）</label>
-              <select
-                id="shortcut-project"
-                value={projectId}
-                onChange={(event) => setProjectId(event.target.value)}
-              >
-                <option value="">指定しない（トークンの設定に従う）</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <p>
-                選ぶと、下のJSONに実際のプロジェクトIDを表示します。固定の保存先にする場合は、このIDもショートカットに設定してください。
-              </p>
               <details>
                 <summary>ショートカットの実行時に保存先を選ぶ場合</summary>
                 <p>
@@ -2403,6 +2387,22 @@ function Shortcuts({
           </pre>
         </div>
         <FormError error={copyError} />
+        <label htmlFor="shortcut-project">設定例の保存先（任意）</label>
+        <select
+          id="shortcut-project"
+          value={projectId}
+          onChange={(event) => setProjectId(event.target.value)}
+        >
+          <option value="">指定しない（トークンの設定に従う）</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+        <p className="guide-note">
+          選ぶと、上のJSONに実際のプロジェクトIDを表示します。固定の保存先にする場合は、このIDもショートカットに設定してください。
+        </p>
         <p className="guide-note">
           保存受付後はIDが返ります。要約とメモリの更新はアプリで確認できます。通信を再試行する場合は、同じIdempotency-Keyを付けてください。
         </p>
