@@ -64,7 +64,6 @@ import ScrollHeader from './ScrollHeader';
 import LegalLinks from './LegalLinks';
 import { PublicProjectDirectory, ProjectPublicationSettings } from './PublicProjects';
 import shortcutSetupImage from './assets/shortcut-setup.png';
-import shortcutInputFlowImage from './assets/shortcut-input-flow.png';
 
 type MemoryResponse = {
   memory: Memory | null;
@@ -2363,20 +2362,12 @@ function Shortcuts({
         <figure className="shortcut-setup-figure">
           <figcaption>ショートカットの設定イメージ</figcaption>
           <img
-            src={shortcutInputFlowImage}
-            width={1377}
-            height={1142}
-            loading="lazy"
-            decoding="async"
-            alt="共有シートでURL・SafariのWebページを受け取り、ショートカットの入力からURLを取得する設定例。"
-          />
-          <img
             src={shortcutSetupImage}
-            width={1024}
-            height={1536}
+            width={881}
+            height={1785}
             loading="lazy"
             decoding="async"
-            alt="「URLの内容を取得」の設定例。方法はPOST、ヘッダはAuthorizationにBearerと発行したトークン、Content-Typeにapplication/json。本文を要求はJSON、urlには「URL」のマジック変数を指定します。"
+            alt="共有シートでURL・SafariのWebページを受け取り、ショートカットの入力からURLを取得します。続く「URLの内容を取得」は方法POST、ヘッダはAuthorizationにBearerと発行したトークン、Content-Typeにapplication/json。本文を要求はJSON、urlには「URL」のマジック変数を指定する設定例です。"
           />
           <p>図の「保存APIのURL」には、次のURLを設定します。</p>
           <code>{base}/api/v1/stocks</code>
