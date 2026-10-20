@@ -1,0 +1,265 @@
+{
+  "gainingGoal": {
+    "uuid": "5430dcb1-f9f4-4a30-a5a3-19122cc5759d",
+    "text": "集めた情報を、自分の問いと次の行動に変え続ける",
+    "comment": {
+      "color": "blue",
+      "text": ""
+    }
+  },
+  "winCondition": {
+    "uuid": "b86168c4-d02d-48c1-8179-baeddef29ab3",
+    "text": "三つのテーマで記事を集め、それぞれ一つの実験まで進める",
+    "comment": {
+      "color": "green",
+      "text": "週ごとに少しずつ進める。"
+    }
+  },
+  "purposes": [
+    {
+      "uuid": "20e57c74-e457-4ae1-8141-0f987e8c0b1c",
+      "text": "関心に合う情報を継続して集める",
+      "comment": {
+        "color": "blue",
+        "text": "集める量より、後から使える状態を重視する。"
+      },
+      "measures": [
+        {
+          "uuid": "3c328dd5-6c7e-4b33-a0fc-fd529ec6f2c3",
+          "text": "関心のあるテーマを三つ書き出す",
+          "comment": {
+            "color": "blue",
+            "text": ""
+          },
+          "color": "white",
+          "progress": 0
+        },
+        {
+          "uuid": "c39f0401-fc55-4583-b12d-a0511f920922",
+          "text": "週に二回、気になった記事をストックする",
+          "comment": {
+            "color": "blue",
+            "text": "実行した内容と、次に変えたい点も残す。"
+          },
+          "color": "blue",
+          "progress": 25
+        },
+        {
+          "uuid": "d978e797-8696-4b68-893a-3f69b1344444",
+          "text": "似ている記事を同じプロジェクトに集める",
+          "comment": {
+            "color": "blue",
+            "text": ""
+          },
+          "color": "green",
+          "progress": 50
+        },
+        {
+          "uuid": "78bffd28-fd96-4cd3-99f7-1343541707f1",
+          "text": "要約と原文を照らし合わせる",
+          "comment": {
+            "color": "blue",
+            "text": ""
+          },
+          "color": "yellow",
+          "progress": 75
+        },
+        {
+          "uuid": "2ccdf7a9-1042-4120-b445-af847aa4070f",
+          "text": "読んだ理由をひとことメモする",
+          "comment": {
+            "color": "blue",
+            "text": "実行した内容と、次に変えたい点も残す。"
+          },
+          "color": "red",
+          "progress": 100
+        }
+      ]
+    },
+    {
+      "uuid": "f2730bbe-718f-4dbe-b634-c4aa82573f5d",
+      "text": "ストックから意味のある問いを育てる",
+      "comment": {
+        "color": "green",
+        "text": "AIの提案を自分の関心と照らし合わせる。"
+      },
+      "measures": [
+        {
+          "uuid": "cfe9b35f-7f88-434b-8d84-e2cc775b9b09",
+          "text": "記事から気になる主張を一つ選ぶ",
+          "comment": {
+            "color": "green",
+            "text": ""
+          },
+          "color": "blue",
+          "progress": 0
+        },
+        {
+          "uuid": "4f2e5f09-3ac7-4406-b118-f149559544fe",
+          "text": "違和感や疑問を自分の言葉にする",
+          "comment": {
+            "color": "green",
+            "text": "実行した内容と、次に変えたい点も残す。"
+          },
+          "color": "green",
+          "progress": 25
+        },
+        {
+          "uuid": "2ccaaa2e-0252-48f5-adb8-84d37ba2a841",
+          "text": "別の立場から問いを書き換える",
+          "comment": {
+            "color": "green",
+            "text": ""
+          },
+          "color": "yellow",
+          "progress": 50
+        },
+        {
+          "uuid": "c06c3f53-ac75-4679-8475-91f898c2ef8d",
+          "text": "二つの記事に共通する問いを探す",
+          "comment": {
+            "color": "green",
+            "text": ""
+          },
+          "color": "red"
+        },
+        {
+          "uuid": "5b61cb23-3464-462e-9af2-a0ccc9ffe434",
+          "text": "今週考えたい問いを一つ選ぶ",
+          "comment": {
+            "color": "green",
+            "text": "実行した内容と、次に変えたい点も残す。"
+          },
+          "color": "white",
+          "progress": 100
+        }
+      ]
+    },
+    {
+      "uuid": "016d5063-7de0-4648-acf5-9ec9d8e46934",
+      "text": "問いを小さな実験と次の行動につなげる",
+      "comment": {
+        "color": "red",
+        "text": "期待と違う結果でも、次の問いを残す。"
+      },
+      "measures": [
+        {
+          "uuid": "5a2b6adf-bf72-4b5a-a465-204817e9ee42",
+          "text": "試せることを十五分の作業に分ける",
+          "comment": {
+            "color": "red",
+            "text": ""
+          },
+          "color": "green",
+          "progress": 0
+        },
+        {
+          "uuid": "9f19c4e8-60e0-45fc-a7db-ca343055f0e9",
+          "text": "実行前に成功の目安を決める",
+          "comment": {
+            "color": "red",
+            "text": "実行した内容と、次に変えたい点も残す。"
+          },
+          "color": "yellow",
+          "progress": 25
+        },
+        {
+          "uuid": "ffc4e2bb-a6bf-4cb0-9672-558aaaddfcf4",
+          "text": "一つの施策を小さく実行する",
+          "comment": {
+            "color": "red",
+            "text": ""
+          },
+          "color": "red",
+          "progress": 50
+        },
+        {
+          "uuid": "a7a4780f-6134-4582-8c6c-95fbf6ded44d",
+          "text": "実行結果と気づきを記録する",
+          "comment": {
+            "color": "red",
+            "text": ""
+          },
+          "color": "white",
+          "progress": 75
+        },
+        {
+          "uuid": "117700bc-7f17-4208-b390-ae278891e963",
+          "text": "次に試すことを決めてプ譜を更新する",
+          "comment": {
+            "color": "red",
+            "text": "実行した内容と、次に変えたい点も残す。"
+          },
+          "color": "blue",
+          "progress": 100
+        }
+      ]
+    }
+  ],
+  "elements": {
+    "people": {
+      "uuid": "388dd27a-ad4c-41ff-a9c6-975c394d85be",
+      "text": "自分と相談相手一名",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "money": {
+      "uuid": "eb8f6e96-787c-46d0-a854-c707c95fa0bb",
+      "text": "月額予算の範囲で試す",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "time": {
+      "uuid": "f9ae1ad5-720c-4380-81e1-0b78b95cfbe1",
+      "text": "一日十五分・四週間",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "quality": {
+      "uuid": "f9e64f49-1bc2-4c02-b850-b5ef66df75c2",
+      "text": "原文とメモを追跡できる",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "businessScheme": {
+      "uuid": "d11cc1c2-69c1-40d7-abf1-412d37736786",
+      "text": "学びを仕事と日常に還元する",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "environment": {
+      "uuid": "27ce7ba6-8550-4929-9654-282d4c1b4544",
+      "text": "スマートフォンとPC",
+      "comment": {
+        "color": "blue",
+        "text": "思いついたときに記録できるようにする。"
+      }
+    },
+    "rival": {
+      "uuid": "a8f2c132-6dd9-46cb-bb84-022bbb5d7a8a",
+      "text": "既存のメモとブックマーク",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    },
+    "foreignEnemy": {
+      "uuid": "2a0f2861-7974-4a2a-ae45-238355bf95a5",
+      "text": "集めるだけで振り返らない状態",
+      "comment": {
+        "color": "blue",
+        "text": ""
+      }
+    }
+  }
+}

@@ -5,12 +5,12 @@ import type { Env, Principal } from './env';
 // 既存の保存APIと同じ256KiB。切り詰めや、エディターによる補完は行わない。
 const maxScoreBytes = 262144;
 
-export async function readQuestionPufu(env: Env, principal: Principal, questionId: string) {
+export async function readQuestionPufuRecord(env: Env, principal: Principal, questionId: string) {
   const projectId = principal.tokenProjectId ?? null;
   // 問い・保存先の権限と選択する局面を同じ読み取りで確定する。
   const row = await env.DB.prepare(
     `SELECT q.id AS question_id,q.project_id,pf.id AS pufu_id,pf.current_phase,
-      pf.score_json,ph.score_json AS phase_score_json,pf.updated_at
+      pf.score_json,ph.score_json AS phase_score_json,pf.updated_at,pf.revision
     FROM questions q JOIN projects p ON p.id=q.project_id
     LEFT JOIN pufu_scores pf ON pf.id=(
       SELECT id FROM pufu_scores WHERE question_id=q.id AND user_id=p.user_id AND status='ready'
@@ -28,8 +28,13 @@ export async function readQuestionPufu(env: Env, principal: Principal, questionI
       score_json: string | null;
       phase_score_json: string | null;
       updated_at: string | null;
+      revision: number | null;
     }>();
   if (!row) throw new HTTPException(404, { message: '問いが見つかりません。' });
+  return row;
+}
+export async function readQuestionPufu(env: Env, principal: Principal, questionId: string) {
+  const row = await readQuestionPufuRecord(env, principal, questionId);
   let projectScore: PufuScore | null = null;
   if (row.pufu_id) {
     // 第1局面は旧データの移行処理と同じく本体を参照し、局面行を作成・更新しない。

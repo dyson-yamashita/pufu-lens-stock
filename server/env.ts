@@ -9,6 +9,7 @@ export type EmbeddingAI = {
 export interface Env {
   DB: D1Database;
   CONTENT: R2Bucket;
+  ASSETS?: Fetcher;
   OAUTH_KV?: KVNamespace;
   OAUTH_REGISTRATION_RATE_LIMITER?: RateLimit;
   OAUTH_PROVIDER?: OAuthHelpers;

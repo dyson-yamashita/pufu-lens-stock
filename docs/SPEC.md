@@ -168,6 +168,7 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 | `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
 | `get_question`   | 問いの詳細と任意の関連ストックID                                                                               |
 | `get_pufu`       | 指定した問いの保存済みプ譜。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）            |
+| `get_pufu_image` | 指定した問いの最新の完成済みプ譜の保存済みPNG画像を取得（`questions:read`）                                    |
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
 
 追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
@@ -175,6 +176,16 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 ### プ譜の取得
 
 `get_pufu` は `list_questions`／`get_question` と同じ問いIDを必須の `question_id` に指定します。閲覧権限は既存の `questions:read` を使い、本人と認可されたプロジェクトをサーバー側で確認します。
+
+`get_pufu_image` も同じ問いID・閲覧権限を使います。`status: "ready"` ならMCPのimage contentとして `image/png` を返し、structuredContentには画像ID・幅・高さ・バイト数・局面・更新番号等だけを返します。PNGのbase64をJSONにも重複させません。`get_pufu` のJSON形式は変更しません。`not_created` は完成済みプ譜なし、`pending` は画像の生成待ち、`failed` は画像生成失敗です。破損したプ譜JSONや保存済みPNG欠落はエラーとし、未作成と混同しません。
+
+画像はプ譜の生成完了、保存、局面追加後に非同期で作成し、R2へ保存します。既存の完成済みプ譜もmigrationとCronで順次準備します。取得時には描画・AI・ブラウザ・ジョブ起動を行いません。最新局面だけを図にし、本文・コメントの省略やAIによる書き換えは行いません。画像生成失敗でもプ譜本体の保存・JSON取得は維持します。
+
+認証済みAPIは `GET /api/v1/questions/:id/pufu/image`（メタデータ）と同配下 `/content`（PNG）です。レスポンスは `Cache-Control: no-store`。PNGは画像IDのETagを返し、`If-Match` で更新競合を検出できます。本人の認可範囲だけを返し、公開プロジェクト設定で他ユーザーのMCPに公開されることはありません。R2キー・APIキー・入力コンテキストは返しません。
+
+更新・削除した画像はD1のoutboxを残してR2から回収します。リース切れ後の再生成は別キーを使い、削除後に遅れて書き込みが完了しても削除要求を保持します。PNGはライブラリのresvg WASMで描画し、日本語フォントは同梱の静的アセットを使います。文章合計30,000 UTF-16コード単位、600万画素、PNG 2MiBが上限で、超過は `failed` と理由を返し切り詰めません。1回の保守は最大2エントリーです。取得・生成でWorkers AIの利用枠は消費しません。
+
+Worker更新前に `0024_pufu_images.sql` を適用し、ViteビルドしたWorkerと静的アセット（`fonts/pufu-jp.otf` を含む）を一緒に反映してください。`ASSETS` bindingは設定済みで、追加のSecretは不要です。
 
 ```json
 { "question_id": "保存した問いのID" }
