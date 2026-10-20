@@ -1185,41 +1185,6 @@ p {
   width: 8px;
   background: #536f97;
 }
-.shortcut-tip {
-  background: var(--wash);
-  border-radius: 10px;
-  padding: 21px;
-  margin-top: 18px;
-}
-.shortcut-tip h3 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-}
-.shortcut-tip h3 svg {
-  flex-shrink: 0;
-}
-.shortcut-tip p {
-  font-size: 10px;
-  line-height: 1.9;
-  color: var(--accent);
-  margin: 8px 0 13px;
-}
-.shortcut-tip button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 10px;
-  color: var(--accent);
-  min-height: 34px;
-  padding: 0;
-}
-.shortcut-tip button:hover {
-  color: var(--primary);
-}
 .empty-state {
   padding: 70px 25px;
   display: flex;
@@ -2355,13 +2320,7 @@ p {
     grid-template-columns: 1fr;
   }
   .memory-aside {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    align-items: start;
-  }
-  .shortcut-tip {
-    margin-top: 0;
+    display: none;
   }
   .article-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2498,13 +2457,6 @@ p {
   .memory-foot {
     font-size: 10px;
   }
-  .shortcut-tip p,
-  .shortcut-tip button {
-    font-size: 11px;
-  }
-  .shortcut-tip button {
-    min-height: 44px;
-  }
   .full-memory {
     padding: 24px;
   }
@@ -2573,9 +2525,6 @@ p {
   }
   .article-meta {
     margin-bottom: 15px;
-  }
-  .memory-aside {
-    grid-template-columns: 1fr;
   }
   .filters {
     gap: 0;
@@ -2676,9 +2625,7 @@ p {
   font-size: 10px;
 }
 .memory-caption,
-.memory-block h3,
-.shortcut-tip p,
-.shortcut-tip button {
+.memory-block h3 {
   font-size: 12px;
 }
 .memory-block li {
@@ -2722,8 +2669,6 @@ p {
 .evidence-links button {
   color: var(--text);
 }
-.shortcut-tip p,
-.shortcut-tip button,
 .local-model-note {
   color: var(--accent);
 }
