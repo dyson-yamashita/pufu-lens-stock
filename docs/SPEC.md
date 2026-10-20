@@ -203,6 +203,8 @@ compactの各ストックは `id`、`title`、`project_id`、`project_name`、`c
 { "q": "AIに開発を任せるときの品質管理", "mode": "hybrid", "limit": 5, "detail": "compact" }
 ```
 
+`q`は最大200文字で、日本語の長い検索文も使用できます。部分一致では英字の大文字・小文字を区別せず、`%`・`_`も通常の文字として検索します。D1のLIKEパターンの50バイト制限を受けない方式を使い、検索文をバイト数で切り詰めません。
+
 semanticは意味の近さ、hybridはキーワード順位と意味検索順位のRRF（k=60）で並べます。この2方式では`order`/`sort_by`による保存日時順より関連度を優先し、応答は`sort_by: "relevance"`、`order: "desc"`です。`min_score`は0〜1、既定0.35で意味候補の最小類似度を調整します。初期値の検索精度は実データで評価してください。検索対象は現在のタイトル、正常な要約（概要/要点/トピック）、メモです。記事本文・入力テキストは対象外で、新たな要約生成も行いません。
 
 両方式は各検索の上位100候補の範囲で結果を返します。`total`/`has_more`は候補集合に対する値です。`search.total_scope: "candidates"`、`candidate_limit: 100`、`candidates_truncated`を確認してください。全件を列挙するときはkeywordを使います。`search.indexed_count`/`pending_count`は同じ所有者・プロジェクト・絞り込み範囲の索引状態です。保存・編集後の索引更新やVectorize内部の反映には時間がかかります。

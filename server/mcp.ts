@@ -171,7 +171,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
           '意味検索の最小類似度（0〜1、既定0.35）。高いほど意味の近い候補に絞ります。',
         ),
         q: filters.q.describe(
-          'タイトル・要約（要点・トピックを含む）・メモを検索。本文は検索しません。',
+          '最大200文字。タイトル・要約（要点・トピックを含む）・メモを検索。本文は検索しません。',
         ),
         limit: stockListOptionsSchema.shape.limit.describe(
           '1〜24件。最新の1件はlimit: 1を指定します。',

@@ -67,6 +67,46 @@ describe('実D1を使うハイブリッド検索と索引同期', () => {
     return id;
   }
 
+  it.each(['keyword', 'semantic', 'hybrid'])(
+    '200文字の日本語を切り詰めずに検索できる: %s',
+    async (mode) => {
+      const q = 'あ'.repeat(199) + '末';
+      const match = await searchStock(app, 'long-match', { title: q + 'の資料' });
+      await searchStock(app, 'long-miss', { title: 'あ'.repeat(200) });
+      await syncSearchIndex(app.env);
+      bindings.query.mockResolvedValue({
+        matches: [{ id: await searchEntry(app.env, match), score: 0.9 }],
+        count: 1,
+      });
+
+      const result = await data(new URLSearchParams({ q, mode, detail: 'compact' }).toString());
+
+      expect(result.stocks.map((stock) => stock.id)).toEqual([match]);
+      expect(result.total).toBe(1);
+    },
+  );
+
+  it.each(['title', 'note', 'summary'])(
+    '部分一致は英字の大小を区別せず、記号を文字として扱う: %s',
+    async (field) => {
+      const text = '前後 ai%_\\設計 の資料';
+      const match = await searchStock(app, 'literal-match', {
+        ...(field === 'title' ? { title: text } : {}),
+        ...(field === 'note' ? { note: text } : {}),
+      });
+      if (field === 'summary')
+        await app.env.DB.prepare('UPDATE articles SET summary_json=? WHERE id=?')
+          .bind(JSON.stringify({ overview: text }), 'literal-match')
+          .run();
+      await searchStock(app, 'literal-miss', { title: '前後 aixy設計 の資料' });
+
+      const result = await data(new URLSearchParams({ q: 'AI%_' }).toString());
+
+      expect(result.stocks.map((stock) => stock.id)).toEqual([match]);
+      expect(result.total).toBe(1);
+    },
+  );
+
   it('keywordと空のqはAIもVectorizeも呼ばず、索引は本文を含まない', async () => {
     await indexed();
     expect(bindings.run.mock.calls[0][0]).toBe('@cf/baai/bge-m3');
