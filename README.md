@@ -45,9 +45,11 @@ MCPのストック一覧は、既定でID・タイトル・要約の抜粋など
 
 MCPでの接続URL・権限設定・本番準備は、[MCP連携の説明](docs/SPEC.md#mcp連携chatgptなど)を参照してください。
 
-問いに紐づく保存済みプ譜は `get_pufu` に `question_id` を指定して取得できます。`projectScore` にPufu Editor互換のJSONオブジェクトを返し、閲覧には `questions:read` が必要です。[プ譜の取得](docs/SPEC.md#プ譜の取得)を参照してください。
+問いに紐づく保存済みプ譜は `get_question` が返す `pufus[].id` から選び、`get_pufu` に `question_id` と `pufu_id` を指定して取得できます。`projectScore` にPufu Editor互換のJSONオブジェクトを返し、閲覧には `questions:read` が必要です。[プ譜の取得](docs/SPEC.md#プ譜の取得)を参照してください。
 
-図として確認する場合は `get_pufu_image` に同じ `question_id` を指定します。リクエスト時に保存済みの最新のプ譜からPNGを生成します。AIは使わず、画像の事前生成やR2保存は行いません。画像生成ライブラリは [packages/pufu-image](packages/pufu-image/README.md) にあります。
+図として確認する場合は `get_pufu_image` に同じ `question_id` と `pufu_id` を指定します。リクエスト時に指定したプ譜の最新局面からPNGを生成します。APIは `GET /api/v1/questions/:question_id/pufu/:pufu_id`（JSON）と、その末尾に `/image` を付けたURL（PNG）です。問いIDだけの呼び出しは互換用に残し、最新の完成済みプ譜を選びます。AIは使わず、画像の事前生成やR2保存は行いません。画像生成ライブラリは [packages/pufu-image](packages/pufu-image/README.md) にあります。
+
+MCPのPNGは `content` 内の画像要素（`type: "image", mimeType: "image/png"`）の `data` にBase64文字列として返します。接続先でデコードして表示し、直接表示できない場合はPNGファイルへ保存して画像プレビューとダウンロードリンクを提示するよう、ツール説明で案内します。
 
 管理者がWorkers AI・Vectorizeの検索設定を有効にすると、`list_stocks` に `q` と `mode: "hybrid"` を指定して語句と意味を組み合わせて探せます。既定は従来の `keyword` です。検索結果の `search.mode` と `search.fallback_reason` で実際の方式を確認できます。[設定と既存データの索引作成](docs/SPEC.md#意味検索ハイブリッド検索の設定)を参照してください。
 

@@ -8,7 +8,9 @@ import score from './fixtures/pufu-sparse.json';
 const font = readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url));
 describe('プ譜画像をリクエスト時に生成する', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
-  const imagePath = '/api/v1/questions/image-question/pufu/image';
+  const pufuPath = '/api/v1/questions/image-question/pufu/image-pufu';
+  const imagePath = `${pufuPath}/image`;
+  const legacyImagePath = '/api/v1/questions/image-question/pufu/image';
   beforeEach(async () => {
     app = await testApp();
     app.env.ASSETS = { fetch: async () => new Response(await font) } as unknown as Fetcher;
@@ -33,6 +35,77 @@ describe('プ譜画像をリクエスト時に生成する', () => {
       app.env.DB.prepare('SELECT * FROM processing_jobs'),
       app.env.DB.prepare('SELECT * FROM ai_calls'),
     ]).then((results) => results.map((result) => result.results));
+  it('複数のプ譜から指定したIDのJSON・画像を取得し、互換URLは最新を返す', async () => {
+    const newer = structuredClone(score);
+    newer.gainingGoal.text = '新しく作成した別のプ譜';
+    await app.env.DB.prepare(
+      `INSERT INTO pufu_scores(id,user_id,question_id,task,input_json,score_json,editor_version,status,created_at)
+        VALUES('newer-pufu','alice','image-question','newer','{}',?,'0.9.15','ready','2030-01-01')`,
+    )
+      .bind(JSON.stringify(newer))
+      .run();
+    const before = await snapshot();
+    const render = vi.spyOn(renderer, 'renderSavedPufu');
+    for (const [id, saved] of [
+      ['image-pufu', score],
+      ['newer-pufu', newer],
+    ] as const) {
+      const path = `/api/v1/questions/image-question/pufu/${id}`;
+      const response = await app.request(path);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(await response.json()).toMatchObject({
+        question_id: 'image-question',
+        pufu_id: id,
+        project_id: 'alice-project',
+        projectScore: saved,
+      });
+      expect((await app.request(`${path}/image`)).status).toBe(200);
+      expect(render).toHaveBeenLastCalledWith(app.env, saved);
+    }
+    expect(await (await app.request('/api/v1/questions/image-question/pufu')).json()).toMatchObject(
+      { projectScore: newer },
+    );
+    expect((await app.request(legacyImagePath)).status).toBe(200);
+    expect(render).toHaveBeenCalledTimes(3);
+    expect(render).toHaveBeenLastCalledWith(app.env, newer);
+    expect(await snapshot()).toEqual(before);
+  });
+  it('別の問い・別ユーザーのプ譜や存在しないIDは404にして描画しない', async () => {
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO questions(id,project_id,text,source,status) VALUES('other-question','alice-project','別の問い','user','ready'),('bob-question','bob-project','Bobの問い','user','ready')",
+      ),
+      app.env.DB.prepare(
+        `INSERT INTO pufu_scores(id,user_id,question_id,task,input_json,score_json,editor_version,status) VALUES
+          ('other-pufu','alice','other-question','other','{}',?,'0.9.15','ready'),
+          ('bob-pufu','bob','bob-question','bob','{}',?,'0.9.15','ready')`,
+      ).bind(JSON.stringify(score), JSON.stringify(score)),
+    ]);
+    const render = vi.spyOn(renderer, 'renderSavedPufu');
+    for (const id of ['other-pufu', 'bob-pufu', 'missing'])
+      for (const suffix of ['', '/image'])
+        expect(
+          (await app.request(`/api/v1/questions/image-question/pufu/${id}${suffix}`)).status,
+        ).toBe(404);
+    expect((await app.request(pufuPath, { user: 'bob' })).status).toBe(404);
+    expect((await app.request(pufuPath, { user: 'missing' })).status).toBe(401);
+    expect(render).not.toHaveBeenCalled();
+  });
+  it.each(['queued', 'generating', 'failed'])(
+    '作成未完了のID指定は409を返す: %s',
+    async (status) => {
+      await app.env.DB.prepare("UPDATE pufu_scores SET status=? WHERE id='image-pufu'")
+        .bind(status)
+        .run();
+      const render = vi.spyOn(renderer, 'renderSavedPufu');
+      const before = await snapshot();
+      expect((await app.request(pufuPath)).status).toBe(409);
+      expect((await app.request(imagePath)).status).toBe(409);
+      expect(render).not.toHaveBeenCalled();
+      expect(await snapshot()).toEqual(before);
+    },
+  );
   it('毎回1回だけ生成し、DB/R2を更新せずAIやWorkflowを起動しない', async () => {
     const render = vi.spyOn(renderer, 'renderSavedPufu');
     const run = vi.fn();
@@ -82,20 +155,21 @@ describe('プ譜画像をリクエスト時に生成する', () => {
   it('権限不足・存在しない問いでは描画しない', async () => {
     const render = vi.spyOn(renderer, 'renderSavedPufu');
     expect((await app.request(imagePath, { user: 'bob' })).status).toBe(404);
-    expect((await app.request('/api/v1/questions/missing/pufu/image')).status).toBe(404);
+    expect((await app.request('/api/v1/questions/missing/pufu/image-pufu/image')).status).toBe(404);
     expect((await app.request(imagePath, { user: 'missing' })).status).toBe(401);
     expect(render).not.toHaveBeenCalled();
   });
   it('未作成は明示し、画像を生成しない', async () => {
     const render = vi.spyOn(renderer, 'renderSavedPufu');
     await app.env.DB.prepare("DELETE FROM pufu_scores WHERE id='image-pufu'").run();
-    const response = await app.request(imagePath);
+    const response = await app.request(legacyImagePath);
     expect(await response.json()).toMatchObject({
       status: 'not_created',
       phase: null,
       revision: null,
     });
     expect(render).not.toHaveBeenCalled();
+    expect((await app.request(imagePath)).status).toBe(404);
   });
   it('過大な画像は413を返し、保存済みプ譜を変更しない', async () => {
     const huge = structuredClone(score);
@@ -136,37 +210,61 @@ describe('プ譜画像をリクエスト時に生成する', () => {
     });
     await expect(fresh.renderSavedPufu(app.env, score)).resolves.toMatchObject({ width: 1760 });
   });
-  it.each(['update', 'delete'] as const)('描画中の%s後は古い画像を返さない', async (operation) => {
-    const original = renderer.renderSavedPufu;
-    let release!: () => void, started!: () => void;
-    const wait = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const begin = new Promise<void>((resolve) => {
-      started = resolve;
-    });
-    vi.spyOn(renderer, 'renderSavedPufu').mockImplementationOnce(async (env, score) => {
-      started();
-      await wait;
-      return original(env, score);
-    });
-    const request = app.request(imagePath);
-    await begin;
-    if (operation === 'delete')
-      await app.env.DB.prepare("DELETE FROM questions WHERE id='image-question'").run();
-    else
-      await app.env.DB.prepare(
-        "UPDATE pufu_scores SET revision=revision+1 WHERE id='image-pufu'",
-      ).run();
-    release();
-    expect((await request).status).toBe(operation === 'delete' ? 404 : 409);
-  });
+  it.each(['update', 'delete', 'delete_pufu', 'move', 'newer'] as const)(
+    '描画中の%s後も指定したプ譜だけを再確認する',
+    async (operation) => {
+      const original = renderer.renderSavedPufu;
+      let release!: () => void, started!: () => void;
+      const wait = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const begin = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      vi.spyOn(renderer, 'renderSavedPufu').mockImplementationOnce(async (env, score) => {
+        started();
+        await wait;
+        return original(env, score);
+      });
+      const request = app.request(imagePath);
+      await begin;
+      if (operation === 'delete')
+        await app.env.DB.prepare("DELETE FROM questions WHERE id='image-question'").run();
+      else if (operation === 'delete_pufu')
+        await app.env.DB.prepare("DELETE FROM pufu_scores WHERE id='image-pufu'").run();
+      else if (operation === 'move') {
+        await app.env.DB.batch([
+          app.env.DB.prepare(
+            "INSERT INTO questions(id,project_id,text,source,status) VALUES('moved-question','alice-project','移動先','user','ready')",
+          ),
+          app.env.DB.prepare(
+            "UPDATE pufu_scores SET question_id='moved-question' WHERE id='image-pufu'",
+          ),
+        ]);
+      } else if (operation === 'newer')
+        await app.env.DB.prepare(
+          `INSERT INTO pufu_scores(id,user_id,question_id,task,input_json,score_json,editor_version,status,created_at)
+        VALUES('another-pufu','alice','image-question','another','{}',?,'0.9.15','ready','2030-01-01')`,
+        )
+          .bind(JSON.stringify(score))
+          .run();
+      else
+        await app.env.DB.prepare(
+          "UPDATE pufu_scores SET revision=revision+1 WHERE id='image-pufu'",
+        ).run();
+      release();
+      expect((await request).status).toBe(
+        operation === 'newer' ? 200 : operation === 'update' ? 409 : 404,
+      );
+    },
+  );
   it('JSONの破損を未作成として扱わない', async () => {
     const render = vi.spyOn(renderer, 'renderSavedPufu');
     await app.env.DB.prepare(
       "UPDATE pufu_scores SET score_json='broken' WHERE id='image-pufu'",
     ).run();
     expect((await app.request(imagePath)).status).toBe(500);
+    expect((await app.request(pufuPath)).status).toBe(500);
     expect(render).not.toHaveBeenCalled();
   });
 });

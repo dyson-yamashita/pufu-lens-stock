@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { Buffer } from 'node:buffer';
 import { HTTPException } from 'hono/http-exception';
 import { generateQuestionPufuImage } from './pufu-images';
+import { readQuestionPufu } from './pufu-read';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -21,6 +22,14 @@ import {
 } from '../shared/domain';
 
 const id = z.string().min(1).max(100);
+const pufuSelection = z.object({
+  question_id: id.describe('list_questions/get_questionが返す問いID。'),
+  pufu_id: id
+    .optional()
+    .describe(
+      'get_questionが返すpufus[].id。取得するプ譜を指定します。省略時は互換用に最新の完成済みプ譜を選びます。',
+    ),
+});
 const filters = {
   project_id: id
     .optional()
@@ -274,47 +283,45 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     'get_question',
     {
       title: '問い詳細',
-      description: '指定した問いと、任意の関連ストックのID・保存先を取得します。',
+      description:
+        '指定した問いと、任意の関連ストックのID・保存先、紐づくプ譜一覧pufusを取得します。pufus[].idをget_pufu/get_pufu_imageのpufu_idに指定すると、取得するプ譜を選べます。',
       inputSchema: z.object({ question_id: id }),
       annotations: read,
       _meta: security('questions:read'),
     },
     ({ question_id }) =>
-      run('questions:read', async () => ({
-        question: (await ownedDetail('questions', question_id)).question,
-      })),
+      run('questions:read', async () => {
+        const data = await ownedDetail('questions', question_id);
+        return { question: data.question, pufus: data.pufus };
+      }),
   );
   register(
     'get_pufu',
     {
       title: 'プ譜取得',
       description:
-        '指定した問いに紐づくプ譜を取得します。projectScoreにPufu EditorのProjectScoreModel形式で返します。保存済みの内容を維持し、要約・補完は行いません。プ譜が未作成の場合はprojectScore: nullを返します。',
-      inputSchema: z.object({
-        question_id: id.describe(
-          'list_questions/get_questionの問いID。複数のプ譜がある場合は一覧順で最新の完成済みプ譜の最新局面を取得します。',
-        ),
-      }),
+        '指定した問いに紐づくプ譜の最新局面を取得します。pufu_idで取得するプ譜を選び、projectScoreにPufu EditorのProjectScoreModel形式で返します。保存済みの内容を維持し、要約・補完は行いません。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時だけ最新の完成済みプ譜を選び、未作成ならprojectScore: nullを返します。',
+      inputSchema: pufuSelection,
       annotations: read,
       _meta: security('questions:read'),
     },
-    ({ question_id }) =>
-      run('questions:read', () => invoke(`questions/${encodeURIComponent(question_id)}/pufu`)),
+    ({ question_id, pufu_id }) =>
+      run('questions:read', () => readQuestionPufu(env, principal, question_id, pufu_id)),
   );
   register(
     'get_pufu_image',
     {
       title: 'プ譜画像取得',
       description:
-        '指定した問いの最新の完成済みプ譜から、そのリクエスト時にPNG画像を生成して返します。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。not_createdは完成済みのプ譜がない状態です。',
-      inputSchema: z.object({ question_id: id }),
+        '指定した問いのプ譜から、そのリクエスト時にPNG画像を生成して返します。pufu_idで取得するプ譜を選びます。PNGはcontent内のtype: image、mimeType: image/pngの要素のdataにBase64文字列として返します。Base64をデコードして画像をユーザーに表示してください。直接表示できない環境ではPNGファイルに保存し、回答本文に画像プレビューとダウンロードリンクを提示してください。JSONが必要な場合はget_pufuを使います。AIは使わず、保存済みの内容やDBを更新しません。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
+      inputSchema: pufuSelection,
       annotations: read,
       _meta: security('questions:read'),
     },
-    async ({ question_id }) => {
+    async ({ question_id, pufu_id }) => {
       let png: string | undefined;
       const output = await run('questions:read', async () => {
-        const image = await generateQuestionPufuImage(env, principal, question_id);
+        const image = await generateQuestionPufuImage(env, principal, question_id, pufu_id);
         if (image.png) png = Buffer.from(image.png).toString('base64');
         return image.metadata;
       });
