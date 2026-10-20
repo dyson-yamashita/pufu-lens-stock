@@ -53,6 +53,7 @@ import { generateQuestionPufuImage } from './pufu-images';
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(1000).default(''),
+  show_in_all_lists: z.boolean().optional(),
   include_in_user_memory: z.boolean().optional(),
 });
 const questionColumns =
@@ -77,10 +78,16 @@ async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>):
 }
 async function ownedProject(env: Env, userId: string, id: string) {
   const project = await env.DB.prepare(
-    'SELECT id, name, description, memory_revision FROM projects WHERE id = ? AND user_id = ?',
+    'SELECT id, name, description, memory_revision, include_in_user_memory FROM projects WHERE id = ? AND user_id = ?',
   )
     .bind(id, userId)
-    .first<{ id: string; name: string; description: string; memory_revision: number }>();
+    .first<{
+      id: string;
+      name: string;
+      description: string;
+      memory_revision: number;
+      include_in_user_memory: number;
+    }>();
   if (!project) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
   return project;
 }
@@ -219,13 +226,14 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/projects', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.include_in_user_memory, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
+      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
     )
       .bind(user.id, tokenProjectId, tokenProjectId)
       .all();
     return c.json({
       projects: result.results.map((project) => ({
         ...project,
+        show_in_all_lists: Boolean(project.show_in_all_lists),
         include_in_user_memory: Boolean(project.include_in_user_memory),
       })),
     });
@@ -241,8 +249,15 @@ export function createApp(trustedPrincipal?: Principal) {
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'INSERT INTO projects (id, user_id, name, description, include_in_user_memory) VALUES (?, ?, ?, ?, ?)',
-      ).bind(id, user.id, data.name, data.description, Number(data.include_in_user_memory ?? true)),
+        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory) VALUES (?, ?, ?, ?, ?, ?)',
+      ).bind(
+        id,
+        user.id,
+        data.name,
+        data.description,
+        Number(data.show_in_all_lists ?? true),
+        Number(data.include_in_user_memory ?? true),
+      ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
@@ -251,21 +266,27 @@ export function createApp(trustedPrincipal?: Principal) {
   app.patch('/api/v1/projects/:id', async (c) => {
     const { user } = c.get('principal');
     const id = c.req.param('id');
-    await ownedProject(c.env, user.id, id);
+    const project = await ownedProject(c.env, user.id, id);
     const data = await body(c, projectSchema);
+    const memoryChanged =
+      project.name !== data.name ||
+      project.description !== data.description ||
+      (data.include_in_user_memory !== undefined &&
+        Boolean(project.include_in_user_memory) !== data.include_in_user_memory);
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'UPDATE projects SET name = ?, description = ?, include_in_user_memory = COALESCE(?, include_in_user_memory) WHERE id = ? AND user_id = ?',
+        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory) WHERE id = ? AND user_id = ?',
       ).bind(
         data.name,
         data.description,
+        data.show_in_all_lists === undefined ? null : Number(data.show_in_all_lists),
         data.include_in_user_memory === undefined ? null : Number(data.include_in_user_memory),
         id,
         user.id,
       ),
-      ...dirtyMemoryStatements(c.env, user.id, [id]),
+      ...(memoryChanged ? dirtyMemoryStatements(c.env, user.id, [id]) : []),
     ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    if (memoryChanged) c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true });
   });
   app.delete('/api/v1/projects/:id', async (c) => {
@@ -756,7 +777,7 @@ export function createApp(trustedPrincipal?: Principal) {
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
     const where =
-      "p.user_id = ? AND (? IS NULL OR q.project_id = ?) AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(s.title, a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
+      "p.user_id = ? AND ((? IS NULL AND p.show_in_all_lists = 1) OR q.project_id = ?) AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(s.title, a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
       (favorite === 'true' ? ' AND q.is_favorite = 1' : '');
     const params = [
       user.id,

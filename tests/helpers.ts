@@ -23,6 +23,7 @@ export async function testApp(
     quotaDefaults?: boolean;
     usageMigration?: boolean;
     projectMemoryMigration?: boolean;
+    projectListVisibilityMigration?: boolean;
   } = {},
 ) {
   const runtime = new Miniflare({
@@ -65,6 +66,11 @@ export async function testApp(
   // 旧スキーマの移行テストでも、現在のAPIが参照する表示用タイトル列を用意する。
   if (!migrations.includes('0021_stock_titles.sql'))
     await applyMigration(DB, '0021_stock_titles.sql');
+  if (
+    options.projectListVisibilityMigration !== false &&
+    !migrations.includes('0024_project_list_visibility.sql')
+  )
+    await applyMigration(DB, '0024_project_list_visibility.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),

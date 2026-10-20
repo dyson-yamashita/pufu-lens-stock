@@ -123,6 +123,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  show_in_all_lists: boolean;
   include_in_user_memory: boolean;
   count: number;
   ready_count: number;

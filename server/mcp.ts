@@ -22,7 +22,11 @@ import {
 
 const id = z.string().min(1).max(100);
 const filters = {
-  project_id: id.optional(),
+  project_id: id
+    .optional()
+    .describe(
+      '未指定では全体一覧への表示がオンのプロジェクトが対象です。指定時や対象プロジェクトを指定した接続では、そのプロジェクトの表示設定にかかわらず検索します。',
+    ),
   q: z.string().max(200).optional(),
   page: z.number().int().min(1).max(5000).default(1),
   favorite: z.boolean().default(false),
@@ -152,7 +156,8 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     'list_projects',
     {
       title: 'プロジェクト一覧',
-      description: 'アクセスを許可された保存先プロジェクトのID・名前・説明を取得します。',
+      description:
+        'アクセスを許可された保存先プロジェクトのID・名前・説明・全体一覧への表示設定を取得します。全体一覧に表示しないプロジェクトも含みます。',
       inputSchema: z.object({}),
       annotations: read,
       _meta: security('projects:read'),
@@ -258,7 +263,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: '問い検索',
       description:
-        '問いを本文・記事タイトル・メモから検索します。ストックに紐づかない問いも含み、24件ずつ返します。',
+        '問いを本文・記事タイトル・メモから検索します。ストックに紐づかない問いも含み、24件ずつ返します。プロジェクト未指定では全体一覧への表示がオンのプロジェクトが対象です。対象プロジェクトを指定した接続やproject_idの指定時は、そのプロジェクトの表示設定にかかわらず検索します。',
       inputSchema: z.object({ ...filters, source: z.enum(['all', 'ai', 'user']).default('all') }),
       annotations: read,
       _meta: security('questions:read'),

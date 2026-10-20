@@ -24,7 +24,7 @@ const queryParams = (q: string) => [q, q, q];
 function filter(options: StockSearch) {
   return {
     where:
-      "s.user_id=? AND (? IS NULL OR s.project_id=?) AND (?='all' OR (?='processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status=?) AND (?='all' OR a.source_type=?)" +
+      "s.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR s.project_id=?) AND (?='all' OR (?='processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status=?) AND (?='all' OR a.source_type=?)" +
       (options.favorite === 'true' ? ' AND s.is_favorite=1' : ''),
     params: [
       options.userId,
