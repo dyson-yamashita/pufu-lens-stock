@@ -1905,6 +1905,38 @@ p {
   overflow-wrap: anywhere;
   color: var(--accent);
 }
+.shortcut-setup-figure {
+  margin: 0 0 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--wash);
+}
+.shortcut-setup-figure figcaption {
+  font-size: 14px;
+  font-weight: 600;
+}
+.shortcut-setup-figure img {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 16px auto;
+  border-radius: 8px;
+}
+.shortcut-setup-figure p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--muted);
+}
+.shortcut-setup-figure code {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
 .api-example {
   border: 1px solid var(--border);
   border-radius: 8px;
