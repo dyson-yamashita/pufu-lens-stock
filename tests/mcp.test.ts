@@ -76,14 +76,18 @@ describe('MCPによるストックと問いの取得・追加', () => {
     ]);
   }
 
-  it('ハイブリッド検索でもOAuthの読み取り権限と保存先の制限を維持する', async () => {
+  it('長い日本語のハイブリッド検索でもOAuthの読み取り権限と保存先の制限を維持する', async () => {
     const bindings = searchBindings(app.env);
     await seedStock('hybrid', '2026-10-20T00:00:00.000Z');
     await seedStock('outside', '2026-10-20T00:00:00.000Z', 'alice', 'alice-second');
     await syncSearchIndex(app.env);
     const token = await mcpToken(app, 'alice-project');
     const response = (
-      await call(token, 'list_stocks', { q: '語句にない関連情報', mode: 'hybrid', limit: 1 })
+      await call(token, 'list_stocks', {
+        q: 'AIエージェントの安全性と品質を保つ方法',
+        mode: 'hybrid',
+        limit: 1,
+      })
     ).result;
     expect(response.isError).not.toBe(true);
     expect(response.structuredContent).toMatchObject({

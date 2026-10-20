@@ -17,10 +17,10 @@ export type StockSearch = {
 };
 const candidateLimit = 100;
 const joins = 'stocks s JOIN articles a ON a.id=s.article_id JOIN projects p ON p.id=s.project_id';
+// D1のLIKEパターン上限（50バイト）を避け、従来と同じ英字の大小を区別しない部分一致にする。
 const match =
-  "(COALESCE(s.title,a.title) LIKE ? ESCAPE '\\' OR a.summary_json LIKE ? ESCAPE '\\' OR s.note LIKE ? ESCAPE '\\')";
-const queryParams = (q: string) =>
-  Array(3).fill('%' + q.replace(/[\\%_]/g, '\\$&') + '%') as string[];
+  '(instr(lower(COALESCE(s.title,a.title)),lower(?))>0 OR instr(lower(a.summary_json),lower(?))>0 OR instr(lower(s.note),lower(?))>0)';
+const queryParams = (q: string) => [q, q, q];
 function filter(options: StockSearch) {
   return {
     where:
