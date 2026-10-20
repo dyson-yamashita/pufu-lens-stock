@@ -24,6 +24,7 @@ export async function testApp(
     usageMigration?: boolean;
     projectMemoryMigration?: boolean;
     projectListVisibilityMigration?: boolean;
+    pufuImageLinksMigration?: boolean;
   } = {},
 ) {
   const runtime = new Miniflare({
@@ -71,6 +72,11 @@ export async function testApp(
     !migrations.includes('0024_project_list_visibility.sql')
   )
     await applyMigration(DB, '0024_project_list_visibility.sql');
+  if (
+    options.pufuImageLinksMigration !== false &&
+    !migrations.includes('0025_pufu_image_links.sql')
+  )
+    await applyMigration(DB, '0025_pufu_image_links.sql');
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),

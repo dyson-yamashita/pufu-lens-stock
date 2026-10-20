@@ -49,6 +49,7 @@ import { listStocks } from './stock-search';
 import { SearchError } from './search-ai';
 import { readQuestionPufu } from './pufu-read';
 import { generateQuestionPufuImage } from './pufu-images';
+import { readPufuImageLink } from './pufu-image-links';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -94,25 +95,47 @@ async function ownedProject(env: Env, userId: string, id: string) {
 // OAuth検証済みユーザーによるプロセス内MCP呼び出しでのみprincipalを指定する。
 export function createApp(trustedPrincipal?: Principal) {
   const app = new Hono<AppEnv>();
-  app.use('/api/*', secureHeaders(), (c, next) =>
-    bodyLimit({
-      maxSize:
-        (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
-        (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
-          ? 262144
-          : c.req.method === 'POST' &&
-              (c.req.path === '/api/v1/stocks' ||
-                /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
-            ? 163840
-            : 16384,
-      onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
-    })(c, next),
+  app.use(
+    '/api/*',
+    (c, next) =>
+      secureHeaders({
+        crossOriginResourcePolicy: c.req.path.startsWith('/api/pufu-images/')
+          ? 'cross-origin'
+          : 'same-origin',
+      })(c, next),
+    (c, next) =>
+      bodyLimit({
+        maxSize:
+          (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
+          (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
+            ? 262144
+            : c.req.method === 'POST' &&
+                (c.req.path === '/api/v1/stocks' ||
+                  /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
+              ? 163840
+              : 16384,
+        onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
+      })(c, next),
   );
   app.use('/api/*', async (c, next) => {
     c.header('Cache-Control', 'no-store');
     await next();
   });
   app.route('/api/public', publicProjectsApp());
+  app.on(['GET', 'HEAD'], '/api/pufu-images/:token', async (c) => {
+    const image = await readPufuImageLink(c.env, c.req.param('token'), c.req.method === 'HEAD');
+    return new Response(image.body, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Content-Length': String(image.size),
+        'Content-Disposition': `${c.req.query('download') === '1' ? 'attachment' : 'inline'}; filename="pufu.png"`,
+        'Cache-Control': 'no-store',
+        'Referrer-Policy': 'no-referrer',
+        'X-Robots-Tag': 'noindex, nofollow, noarchive',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  });
   app.get('/api/config', (c) => {
     const origin = new URL(c.req.url).origin;
     const demo = isDemoOrigin(c.env, origin);

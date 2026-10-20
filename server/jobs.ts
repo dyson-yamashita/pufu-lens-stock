@@ -4,6 +4,7 @@ import { now, queueQuestionJobStatement, jobFailureStatements } from './db';
 import { cleanupDeletedAccounts } from './account';
 import { MAX_ATTEMPTS, MAX_WAIT_MS, stopWaitingJob, deferJob } from './job-retries';
 import { syncSearchIndex } from './search-index';
+import { cleanupExpiredPufuImageLinks } from './pufu-image-links';
 
 export async function dispatchJobs(env: Env): Promise<void> {
   // 未開始の古い世代だけを集約する。最新の要求は上限時もpendingのまま残す。
@@ -78,6 +79,11 @@ export async function scheduledMaintenance(env: Env): Promise<void> {
     console.error('search_index_maintenance_pending');
   }
   await cleanupDeletedAccounts(env);
+  try {
+    await cleanupExpiredPufuImageLinks(env);
+  } catch {
+    console.error('pufu_image_link_cleanup_pending');
+  }
   // 結果の保存前にWorkerが終了した場合、同じAIを再発行せず失敗として回復する。
   // 実行中Workflowの枠は期限だけで解放しない。終端状態も確認する。
   const uncertain = await env.DB.prepare(
