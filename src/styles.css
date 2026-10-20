@@ -1260,6 +1260,7 @@ p {
 }
 .memory-page {
   max-width: 900px;
+  margin-inline: auto;
 }
 .full-memory {
   padding: 30px 36px;
