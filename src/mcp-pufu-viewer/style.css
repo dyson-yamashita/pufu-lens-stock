@@ -75,6 +75,7 @@ button:disabled {
   width: 100%;
   max-width: none;
   height: auto;
+  margin-inline: auto;
   background: #fff;
   user-select: none;
 }
