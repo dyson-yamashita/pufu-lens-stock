@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ArticleSummary, MemoryData } from './domain';
 
-export const pufuEditorVersion = '0.9.16';
+export const pufuEditorVersion = '0.9.17';
 export { elementKeys, pufuScoreSchema } from '@pufu-lens/pufu-image/model';
 import { pufuScoreSchema } from '@pufu-lens/pufu-image/model';
 export type PufuScore = z.infer<typeof pufuScoreSchema>;
