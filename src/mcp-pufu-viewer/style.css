@@ -59,13 +59,10 @@ button:disabled {
 }
 #viewport {
   width: 100%;
-  max-height: min(65vh, 560px);
   overflow: auto;
-  overscroll-behavior: contain;
   border: 1px solid var(--color-border-primary, light-dark(#c7d2e2, #52627b));
   border-radius: 6px;
   touch-action: pan-x pan-y;
-  cursor: grab;
 }
 #viewport:empty {
   display: none;
@@ -81,6 +78,11 @@ button:disabled {
 }
 details {
   margin-top: 10px;
+}
+#viewport[data-zoomed='true'],
+html[data-fullscreen='true'] #viewport {
+  overscroll-behavior: contain;
+  cursor: grab;
 }
 html[data-fullscreen='true'] #viewport {
   max-height: calc(100vh - 210px);
