@@ -140,7 +140,7 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 
 生成済み（`ready`）のプ譜が1つ以上ある問いには、AI／ユーザーラベルの横に「プ譜」を表示します。問いの取得APIは `has_pufu`（`0 / 1`）を返し、一覧・詳細・ストックの問いタブで共通の判定を使います。生成中・生成失敗だけの場合は表示しません。
 
-表示・編集は `@goto-lab/pufu-editor@0.9.16` のReactコンポーネントを直接組み込んでいます。iframeは使用せず、同梱のTailwind CSSをビルド時に `.pufu-editor-root` 配下に限定しています。初期データを編集中に再取得して差し替えず、「保存」で `getScoreJson` の内容を取得します。未保存のまま画面を離れる際は確認し、別画面からの同時保存は更新番号で競合を検出します。JSONはエディター標準の `ProjectScoreModel` 形式でダウンロードできます。自己紹介は生成リクエストに直接含めず、ユーザーメモリを通じて間接的に反映します。
+表示・編集は `@goto-lab/pufu-editor@0.9.17` のReactコンポーネントを直接組み込んでいます。iframeは使用せず、同梱のTailwind CSSをビルド時に `.pufu-editor-root` 配下に限定しています。初期データを編集中に再取得して差し替えず、「保存」で `getScoreJson` の内容を取得します。未保存のまま画面を離れる際は確認し、別画面からの同時保存は更新番号で競合を検出します。JSONはエディター標準の `ProjectScoreModel` 形式でダウンロードできます。自己紹介は生成リクエストに直接含めず、ユーザーメモリを通じて間接的に反映します。
 
 プ譜は第1局面から始まり、奇数局面は編集、偶数局面はフィードバック（本文の編集とコメントの追記）モードです。「局面を追加」は最新局面の編集内容を保存し、コメントを含めて次の局面へ引き継ぎます。AIの再生成は行いません。過去の局面も「◀」「▶」で移動して修正・保存でき、ほかの局面の内容は変更しません。矢印は移動先の局面がある場合だけ表示します。局面切り替え時にも未保存の変更を確認します。既存のプ譜は `0012_pufu_phases.sql` で、現在の編集内容を保持した第1局面として移行します。
 
@@ -252,7 +252,7 @@ Worker更新前に `0025_pufu_image_links.sql` を適用してください。追
 { "question_id": "保存した問いのID", "pufu_id": "get_questionのpufusから選んだID" }
 ```
 
-返却項目は `question_id`、`pufu_id`、`project_id`、`updated_at`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.16` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
+返却項目は `question_id`、`pufu_id`、`project_id`、`updated_at`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.17` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
 
 `updated_at` は指定したプ譜の更新日時で、読み取れない日時は `null` です。問いが存在しない・他人の問い・許可プロジェクト外は既存詳細取得と同じ404、scope不足は403です。
 
@@ -493,7 +493,7 @@ AI処理はD1の利用枠を原子的に確保してからWorkflowを起動し�
 
 保存履歴・実呼び出し履歴は30日で整理し、実行中の呼び出しと必要な再実行結果は保持します。生成結果・履歴にはユーザーの資料を含むためD1の既存のアクセス制御下で管理します。
 
-`short-uuid@4.2.2` のAPIを保ち、依存する `uuid` だけをCommonJS対応の修正版 `11.1.1` 以上へoverrideしています。[GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) の修正を取り込み、エディター `0.9.16` のID生成・編集データ形式を維持します。
+`short-uuid@4.2.2` のAPIを保ち、依存する `uuid` だけをCommonJS対応の修正版 `11.1.1` 以上へoverrideしています。[GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) の修正を取り込み、エディター `0.9.17` のID生成・編集データ形式を維持します。
 
 ## ローカル開発
 
