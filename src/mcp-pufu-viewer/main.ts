@@ -14,6 +14,7 @@ const app = new App(
   { strict: true, autoResize: true },
 );
 let zoom = 1,
+  fitting = true,
   imageElement: HTMLImageElement | undefined;
 let bridgeReady = false;
 const controller = new PufuViewerController({
@@ -49,6 +50,7 @@ function render(state: ViewerState) {
   if (!state.loadImage) {
     viewport.replaceChildren();
     imageElement = undefined;
+    sizeImage();
     return;
   }
   if (state.image && imageElement?.dataset.source !== state.image.image_url) {
@@ -58,23 +60,59 @@ function render(state: ViewerState) {
     imageElement.referrerPolicy = 'no-referrer';
     imageElement.draggable = false;
     imageElement.dataset.source = url;
-    imageElement.style.width = `${zoom * 100}%`;
-    imageElement.onload = () => controller.loaded(url);
+    imageElement.onload = () => {
+      sizeImage();
+      controller.loaded(url);
+    };
     imageElement.onerror = () => controller.imageFailed(url);
     imageElement.src = url;
     viewport.replaceChildren(imageElement);
   }
+  sizeImage();
+}
+function sizeImage() {
+  const image = controller.state.image;
+  if (!imageElement || !image) {
+    element<HTMLButtonElement>('zoom-out').disabled = true;
+    element<HTMLButtonElement>('zoom-in').disabled = true;
+    return;
+  }
+  const style = getComputedStyle(viewport);
+  const width = Math.max(
+    1,
+    viewport.getBoundingClientRect().width -
+      parseFloat(style.borderLeftWidth) -
+      parseFloat(style.borderRightWidth),
+  );
+  const height = Math.max(
+    1,
+    parseFloat(style.maxHeight) -
+      parseFloat(style.borderTopWidth) -
+      parseFloat(style.borderBottomWidth) -
+      1,
+  );
+  const imageWidth = imageElement.naturalWidth || image.width;
+  const imageHeight = imageElement.naturalHeight || image.height;
+  const fitZoom =
+    Math.max(1, Math.floor(Math.min(width, (height * imageWidth) / imageHeight))) / width;
+  if (fitting || zoom <= fitZoom) {
+    fitting = true;
+    zoom = fitZoom;
+  }
+  imageElement.style.width = `${width * zoom}px`;
+  element<HTMLButtonElement>('zoom-out').disabled = zoom <= fitZoom;
+  element<HTMLButtonElement>('zoom-in').disabled = zoom >= 6;
 }
 function setZoom(value: number) {
-  zoom = Math.max(1, Math.min(6, value));
-  if (imageElement) imageElement.style.width = `${zoom * 100}%`;
-  element<HTMLButtonElement>('zoom-out').disabled = zoom <= 1;
-  element<HTMLButtonElement>('zoom-in').disabled = zoom >= 6;
+  fitting = false;
+  zoom = Math.min(6, value);
+  sizeImage();
 }
 element('zoom-in').onclick = () => setZoom(zoom + 0.5);
 element('zoom-out').onclick = () => setZoom(zoom - 0.5);
 element('fit').onclick = () => {
-  setZoom(1);
+  fitting = true;
+  sizeImage();
   viewport.scrollTo(0, 0);
 };
 element('retry').onclick = () => {
@@ -123,6 +161,7 @@ function hostContext(context: McpUiHostContext) {
   const fullscreen = element<HTMLButtonElement>('fullscreen');
   fullscreen.hidden = !context.availableDisplayModes?.includes('fullscreen');
   fullscreen.textContent = context.displayMode === 'fullscreen' ? '会話に戻る' : '全画面';
+  sizeImage();
 }
 element('fullscreen').onclick = async () => {
   try {
@@ -145,7 +184,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') controller.returned();
 });
 window.addEventListener('pageshow', () => controller.returned());
-setZoom(1);
+window.addEventListener('resize', sizeImage);
 render(controller.state);
 const connection = app
   .connect()

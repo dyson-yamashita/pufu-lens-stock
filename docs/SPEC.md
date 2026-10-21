@@ -220,7 +220,7 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 
 `@modelcontextprotocol/ext-apps` 2.0.3（既存の `@modelcontextprotocol/server` 2.3.1と互換）の公式ヘルパーで、`ui://pufu/viewer-v1.html` を `text/html;profile=mcp-app` のリソースとして登録します。ツールの `_meta.ui.resourceUri` と紐づけ、CSPの `resourceDomains` は `APP_URL` のオリジンに限定します。JS・CSSはHTMLに同梱し、画像は通常の `img` で読み込みます。直接APIへfetchせず、`connectDomains` は空です。回答本文のMarkdown画像を表示するためのCSP設定ではなく、Markdownで表示できなかった初回原因も有効期限だけと断定しません。
 
-ビューアーは画像のload成功後に表示成功とし、未作成・生成中・取得失敗・閲覧不可を区別します。拡大は最大6倍、パンはタッチのスクロールやマウスのドラッグで行います。全画面はホストが対応を通知した場合のみ要求し、非対応時はカード内の拡大と外部PNGリンクを使います。
+ビューアーは画像のload成功後に表示成功とし、未作成・生成中・取得失敗・閲覧不可を区別します。初期表示と「全体」では縦横比を保ち、画像全体を枠の幅と高さに収めます。枠内のスクロールは拡大して読みたい場合に使い、リサイズ・全画面の切り替え時も全体表示を調整します。拡大は枠幅の最大6倍、パンはタッチのスクロールやマウスのドラッグで行います。全画面はホストが対応を通知した場合のみ要求し、非対応時はカード内の拡大と外部PNGリンクを使います。
 
 画像URLは引き続き1時間有効です。初回表示・表示復帰・再マウント・PNG保存時に残り時間を確認し、期限切れまたは残り60秒未満なら、ホストの `tools/call` から `get_pufu_image` を呼びます。選択確定後は必ず同じ `question_id` と `pufu_id` を指定し、別のプ譜へ切り替えません。このツールは `_meta.ui.visibility: ["model", "app"]` とし、表示リソースは紐づけず、再取得による新しいカードを作りません。OAuthはホストのMCP経路に任せ、UIは認証トークンを取得・永続保存しません。
 
