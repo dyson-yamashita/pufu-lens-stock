@@ -185,9 +185,16 @@ describe('MCPによるストックと問いの取得・追加', () => {
     expect(download.headers.get('Content-Disposition')).toContain('attachment');
     expect(
       result.content?.some(
-        (item) => item.type === 'text' && item.text.includes(`![プ譜](${imageUrl})`),
+        (item) =>
+          item.type === 'text' && item.text.includes('show_pufu') && item.text.includes(imageUrl),
       ),
     ).toBe(true);
+    expect(
+      result.content
+        ?.filter((item) => item.type === 'text')
+        .map((item) => item.text)
+        .join('\n'),
+    ).not.toMatch(/!\[[^\]]*\]\(/);
     expect(JSON.stringify(result)).not.toContain('SECRET_');
     expect(await snapshot()).toEqual(before);
     expect(render).toHaveBeenCalledTimes(1);
