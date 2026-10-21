@@ -1820,122 +1820,153 @@ function SaveForm({
       <p className="form-intro">
         URL・テキストを保存すると、要約と問いを生成し、メモリを自動で更新します。
       </p>
-      <fieldset className="stock-source-picker" disabled={busy}>
-        <legend>種別</legend>
-        <div className="stock-source-options">
-          {(
-            [
-              ['url', 'URL'],
-              ['text', 'テキスト'],
-            ] as const
-          ).map(([value, label]) => (
-            <label key={value} className={type === value ? 'selected' : ''}>
-              <input
-                type="radio"
-                name="stock-source-type"
-                value={value}
-                checked={type === value}
-                onChange={() => {
-                  setType(value);
-                  setText('');
-                  setError('');
-                  key.current = createRequestId();
-                }}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      {type === 'url' ? (
-        <>
-          <label htmlFor="stock-url">記事・Xの投稿URL</label>
-          <input
-            id="stock-url"
-            type="url"
-            value={url}
+      <div
+        className="stock-source-tabs"
+        role="tablist"
+        aria-label="種別"
+        onKeyDown={(event) => {
+          if (busy || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const nextType =
+            event.key === 'Home'
+              ? 'url'
+              : event.key === 'End'
+                ? 'text'
+                : type === 'url'
+                  ? 'text'
+                  : 'url';
+          setType(nextType);
+          setError('');
+          key.current = createRequestId();
+          document.getElementById(`stock-source-tab-${nextType}`)?.focus();
+        }}
+      >
+        {(
+          [
+            ['url', 'URL'],
+            ['text', 'テキスト'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            id={`stock-source-tab-${value}`}
+            type="button"
+            role="tab"
+            aria-selected={type === value}
+            aria-controls="stock-source-panel"
+            tabIndex={type === value ? 0 : -1}
+            autoFocus={value === 'url'}
             disabled={busy}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              key.current = createRequestId();
-            }}
-            required
-            maxLength={4096}
-            autoFocus
-            placeholder="https://…"
-          />
-          <p className="profile-hint">Xは「外部連携」でBearer Tokenを登録すると取得できます。</p>
-        </>
-      ) : (
-        <>
-          <label htmlFor="stock-text-title">
-            タイトル <span className="optional">任意</span>
-          </label>
-          <input
-            id="stock-text-title"
-            value={title}
-            disabled={busy}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              key.current = createRequestId();
-            }}
-            maxLength={200}
-            placeholder="未入力の場合は本文の先頭行から付けます"
-          />
-          <label htmlFor="stock-text">本文</label>
-          <textarea
-            id="stock-text"
-            value={text}
-            disabled={busy}
-            onChange={(e) => {
-              setText(e.target.value);
+            onClick={() => {
+              setType(value);
               setError('');
               key.current = createRequestId();
             }}
-            required
-            maxLength={stockTextLimit}
-            rows={6}
-            aria-describedby="stock-text-hint"
-            placeholder="ストックしたい文章を入力、または貼り付けてください"
-          />
-          <p id="stock-text-hint" className="profile-hint profile-bio-hint">
-            <span>20,000文字まで。</span>
-            <span>{text.length.toLocaleString()} / 20,000</span>
-          </p>
-        </>
-      )}
-      <label htmlFor="stock-project">保存先プロジェクト</label>
-      <select
-        id="stock-project"
-        value={target}
-        disabled={busy || !projects.length}
-        onChange={(e) => {
-          setTarget(e.target.value);
-          key.current = createRequestId();
-        }}
-      >
-        {!target && <option value="">プロジェクトを選択してください</option>}
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
+          >
+            {label}
+          </button>
         ))}
-      </select>
-      <label htmlFor="stock-note">
-        メモ <span className="optional">任意</span>
-      </label>
-      <textarea
-        id="stock-note"
-        value={note}
-        disabled={busy}
-        onChange={(e) => {
-          setNote(e.target.value);
-          key.current = createRequestId();
-        }}
-        maxLength={2000}
-        rows={3}
-        placeholder="気になった理由、あとで考えたいことなど"
-      />
+      </div>
+      <div id="stock-source-panel" role="tabpanel" aria-labelledby={`stock-source-tab-${type}`}>
+        <label htmlFor="stock-project">保存先プロジェクト</label>
+        <select
+          id="stock-project"
+          value={target}
+          disabled={busy || !projects.length}
+          onChange={(e) => {
+            setTarget(e.target.value);
+            key.current = createRequestId();
+          }}
+        >
+          {!target && <option value="">プロジェクトを選択してください</option>}
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+        {type === 'url' ? (
+          <>
+            <label htmlFor="stock-url">投稿URL</label>
+            <input
+              id="stock-url"
+              type="url"
+              value={url}
+              disabled={busy}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                key.current = createRequestId();
+              }}
+              required
+              maxLength={4096}
+              placeholder="https://…"
+            />
+            <p className="profile-hint">Xは「外部連携」でBearer Tokenを登録すると取得できます。</p>
+          </>
+        ) : (
+          <>
+            <label htmlFor="stock-text">本文</label>
+            <textarea
+              id="stock-text"
+              value={text}
+              disabled={busy}
+              onChange={(e) => {
+                setText(e.target.value);
+                setError('');
+                key.current = createRequestId();
+              }}
+              required
+              maxLength={stockTextLimit}
+              rows={6}
+              aria-describedby="stock-text-hint"
+              placeholder="ストックしたい文章を入力、または貼り付けてください"
+            />
+            <p id="stock-text-hint" className="profile-hint profile-bio-hint">
+              <span>20,000文字まで。</span>
+              <span>{text.length.toLocaleString()} / 20,000</span>
+            </p>
+          </>
+        )}
+        <details className="stock-details">
+          <summary>
+            詳細
+            <ChevronDown size={18} aria-hidden="true" />
+          </summary>
+          {type === 'text' && (
+            <>
+              <label htmlFor="stock-text-title">
+                タイトル <span className="optional">任意</span>
+              </label>
+              <input
+                id="stock-text-title"
+                value={title}
+                disabled={busy}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  key.current = createRequestId();
+                }}
+                maxLength={200}
+                placeholder="未入力の場合は本文の先頭行から付けます"
+              />
+            </>
+          )}
+          <label htmlFor="stock-note">
+            メモ <span className="optional">任意</span>
+          </label>
+          <textarea
+            id="stock-note"
+            value={note}
+            disabled={busy}
+            onChange={(e) => {
+              setNote(e.target.value);
+              key.current = createRequestId();
+            }}
+            maxLength={2000}
+            rows={3}
+            placeholder="気になった理由、あとで考えたいことなど"
+          />
+        </details>
+      </div>
       <FormError error={error} />
       <div className="form-actions">
         <button className="button primary" disabled={busy || !target}>
