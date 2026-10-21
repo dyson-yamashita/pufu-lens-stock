@@ -354,14 +354,14 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     content += purposeText.content + group.note.content + '</g>';
   }
   const heads = [
-    [xElements + 8, '廟算八要素'],
-    [xMeasure, '施策'],
-    [xPurpose, '中間目的'],
-    [xObjective, '目標と条件'],
+    [xElements + 8, '廟算八要素', 'start'],
+    [xMeasure + measureWidth / 2, '施策', 'middle'],
+    [xPurpose + purposeWidth / 2, '中間目的', 'middle'],
+    [xObjective, '勝利条件', 'start'],
   ]
     .map(
-      ([x, label]) =>
-        `<text x="${x}" y="57" font-size="18" font-weight="700" fill="#6b7280">${label}</text>`,
+      ([x, label, anchor]) =>
+        `<text x="${x}" y="57" text-anchor="${anchor}" font-size="18" font-weight="700" fill="#6b7280">${label}</text>`,
     )
     .join('');
   const description = `ProjectScoreModelから生成。廟算八要素、施策、中間目的、勝利条件、獲得目標、保存されたコメントを表示。施策の進捗表示は${showProgress ? 'あり' : 'なし'}。`;
