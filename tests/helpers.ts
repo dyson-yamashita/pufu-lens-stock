@@ -6,15 +6,23 @@ import { createApp } from '../server/api';
 import { hash } from '../server/security';
 import type { Env } from '../server/env';
 
+const migrationCache = new Map<string, Promise<string[]>>();
+function migrationStatements(filename: string) {
+  let statements = migrationCache.get(filename);
+  if (!statements) {
+    statements = readFile(new URL(`../migrations/${filename}`, import.meta.url), 'utf8').then(
+      (schema) =>
+        schema
+          .split(schema.includes('-- statement-breakpoint') ? '-- statement-breakpoint' : ';')
+          .map((sql) => sql.trim())
+          .filter(Boolean),
+    );
+    migrationCache.set(filename, statements);
+  }
+  return statements;
+}
 export async function applyMigration(DB: D1Database, filename: string) {
-  const schema = await readFile(new URL(`../migrations/${filename}`, import.meta.url), 'utf8');
-  await DB.batch(
-    schema
-      .split(schema.includes('-- statement-breakpoint') ? '-- statement-breakpoint' : ';')
-      .map((sql) => sql.trim())
-      .filter(Boolean)
-      .map((sql) => DB.prepare(sql)),
-  );
+  await DB.batch((await migrationStatements(filename)).map((sql) => DB.prepare(sql)));
 }
 
 export async function testApp(
@@ -29,8 +37,18 @@ export async function testApp(
 ) {
   const runtime = new Miniflare({
     modules: true,
-    // RateLimitはNode側のRPCではなく、実際のWorker内で呼び出す。
+    // DB初期化とRateLimitは実際のWorker内で実行する。
     script: `export default { async fetch(request, env) {
+      if (new URL(request.url).pathname === '/__test/migrations') {
+        for (const [filename, statements] of await request.json()) {
+          try {
+            await env.DB.batch(statements.map(sql => env.DB.prepare(sql)));
+          } catch (error) {
+            return new Response(filename + ': ' + String(error), { status: 500 });
+          }
+        }
+        return new Response(null, { status: 204 });
+      }
       return Response.json(await env.OAUTH_REGISTRATION_RATE_LIMITER.limit(await request.json()));
     } }`,
     compatibilityDate: '2026-07-30',
@@ -47,36 +65,49 @@ export async function testApp(
   const DB = (await runtime.getD1Database('DB')) as unknown as D1Database;
   const CONTENT = (await runtime.getR2Bucket('CONTENT')) as unknown as R2Bucket;
   const OAUTH_KV = (await runtime.getKVNamespace('OAUTH_KV')) as unknown as KVNamespace;
-  const migrations =
-    options.migrations ??
-    (await readdir(new URL('../migrations/', import.meta.url)))
-      .filter((filename) => filename.endsWith('.sql'))
-      .sort();
-  for (const filename of migrations) await applyMigration(DB, filename);
+  const migrations = [
+    ...(options.migrations ??
+      (await readdir(new URL('../migrations/', import.meta.url)))
+        .filter((filename) => filename.endsWith('.sql'))
+        .sort()),
+  ];
   // 旧スキーマからの移行テストでも、現在のAPIの利用制限基盤は有効にする。
   if (options.usageMigration !== false && !migrations.includes('0013_usage_limits.sql'))
-    await applyMigration(DB, '0013_usage_limits.sql');
+    migrations.push('0013_usage_limits.sql');
   if (options.usageMigration !== false && !migrations.includes('0014_job_retry_limits.sql'))
-    await applyMigration(DB, '0014_job_retry_limits.sql');
+    migrations.push('0014_job_retry_limits.sql');
   // 旧スキーマの機能移行テストでも、現在のAPIが参照するプロジェクト設定を用意する。
   if (
     options.projectMemoryMigration !== false &&
     !migrations.includes('0018_project_user_memory.sql')
   )
-    await applyMigration(DB, '0018_project_user_memory.sql');
+    migrations.push('0018_project_user_memory.sql');
   // 旧スキーマの移行テストでも、現在のAPIが参照する表示用タイトル列を用意する。
-  if (!migrations.includes('0021_stock_titles.sql'))
-    await applyMigration(DB, '0021_stock_titles.sql');
+  if (!migrations.includes('0021_stock_titles.sql')) migrations.push('0021_stock_titles.sql');
   if (
     options.projectListVisibilityMigration !== false &&
     !migrations.includes('0024_project_list_visibility.sql')
   )
-    await applyMigration(DB, '0024_project_list_visibility.sql');
+    migrations.push('0024_project_list_visibility.sql');
   if (
     options.pufuImageLinksMigration !== false &&
     !migrations.includes('0025_pufu_image_links.sql')
   )
-    await applyMigration(DB, '0025_pufu_image_links.sql');
+    migrations.push('0025_pufu_image_links.sql');
+  try {
+    // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
+    const plan = await Promise.all(
+      migrations.map(async (filename) => [filename, await migrationStatements(filename)]),
+    );
+    const response = await runtime.dispatchFetch('http://localhost/__test/migrations', {
+      method: 'POST',
+      body: JSON.stringify(plan),
+    });
+    if (!response.ok) throw new Error(`Test migrations failed: ${await response.text()}`);
+  } catch (error) {
+    await runtime.dispose();
+    throw error;
+  }
   const binding = {
     create: vi.fn(async () => ({ id: 'instance' })),
     get: vi.fn(async () => ({ status: async () => ({ status: 'running' }) })),
