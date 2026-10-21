@@ -208,16 +208,31 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 | `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
 | `get_question`   | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                       |
 | `get_pufu`       | 問いID・プ譜IDで選んだプ譜の最新局面。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）  |
+| `show_pufu`      | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                              |
 | `get_pufu_image` | 問いID・プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                  |
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
 
 追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
 
+### 会話内のプ譜ビューアー
+
+「プ譜を表示して」という依頼には `show_pufu` を使います。入力は `get_pufu_image` と同じ `question_id`（必須）・`pufu_id`（任意）で、未指定時は最新の完成済みプ譜を選びます。`structuredContent` のタイトル・対象ID・局面・revision・更新日時・PNGのURLと寸法を、宣言した `outputSchema` に従って返します。`show_pufu` はBase64を返さず、未作成を `status: "not_created"` で区別し、URL発行に失敗した場合はMCPエラーにします。JSON取得・Base64画像取得の既存ツールと認証方式は維持します。`get_pufu_image` には表示用タイトルを追加します。
+
+`@modelcontextprotocol/ext-apps` 2.0.3（既存の `@modelcontextprotocol/server` 2.3.1と互換）の公式ヘルパーで、`ui://pufu/viewer-v1.html` を `text/html;profile=mcp-app` のリソースとして登録します。ツールの `_meta.ui.resourceUri` と紐づけ、CSPの `resourceDomains` は `APP_URL` のオリジンに限定します。JS・CSSはHTMLに同梱し、画像は通常の `img` で読み込みます。直接APIへfetchせず、`connectDomains` は空です。回答本文のMarkdown画像を表示するためのCSP設定ではなく、Markdownで表示できなかった初回原因も有効期限だけと断定しません。
+
+ビューアーは画像のload成功後に表示成功とし、未作成・生成中・取得失敗・閲覧不可を区別します。拡大は最大6倍、パンはタッチのスクロールやマウスのドラッグで行います。全画面はホストが対応を通知した場合のみ要求し、非対応時はカード内の拡大と外部PNGリンクを使います。
+
+画像URLは引き続き1時間有効です。初回表示・表示復帰・再マウント・PNG保存時に残り時間を確認し、期限切れまたは残り60秒未満なら、ホストの `tools/call` から `get_pufu_image` を呼びます。選択確定後は必ず同じ `question_id` と `pufu_id` を指定し、別のプ譜へ切り替えません。このツールは `_meta.ui.visibility: ["model", "app"]` とし、表示リソースは紐づけず、再取得による新しいカードを作りません。OAuthはホストのMCP経路に任せ、UIは認証トークンを取得・永続保存しません。
+
+画像エラーを期限切れと決めつけず、自動再取得は最大1回です。同時要求をまとめ、古い応答を破棄します。失敗が続くと手動の「再取得」を案内し、定期ポーリングは行いません。表示済みの画像を時間経過だけで再読み込みせず、UIを起動しないホストでの自動復旧も保証しません。同じプ譜の最新完成局面へ変わった場合は「プ譜が更新されたため最新の内容を表示しています」と案内します。再発行と画像配信の両方で、既存の所有権・プロジェクト・紐づき・削除・生成状態を確認します。
+
+反映後は接続先のツール・リソース情報を再読み込みしてください。ホストに再読み込み操作がない場合はMCP接続を再接続します。追加OAuthスコープ・DB移行・Secretはありません。Web版ChatGPTとiPhone版ChatGPTではそれぞれ、会話内表示、拡大・保存、期限切れ・更新後の再取得、削除後の拒否を実機で確認してください。自動テストやブラウザのエミュレーションと、ChatGPT実機の確認結果は分けて記録します。
+
 ### プ譜の取得
 
 `get_question` は問いと紐づくプ譜の一覧 `pufus` を返します。取得するプ譜の `pufus[].id` を選び、`get_pufu` または `get_pufu_image` に、必須の `question_id` と任意の `pufu_id` を指定します。複数登録されていても保存済みIDで選べます。閲覧権限は既存の `questions:read` を使い、問いとプ譜の紐づき、本人と認可されたプロジェクトをサーバー側で確認します。
 
-`get_pufu_image` はリクエストのたびに、指定したプ譜の最新局面からPNGをその場で生成します。MCPの `content` 内に `type: "image", mimeType: "image/png", data: "Base64文字列"` の画像要素を返し、structuredContentにはプ譜ID・幅・高さ・バイト数・局面・更新番号等と、`image_url`・`download_url`・`expires_at` を返します。PNGのBase64をJSONにも重複させません。ツール説明とテキスト要素では、回答本文に画像URLのMarkdownプレビューとダウンロードリンクを提示するよう案内します。URL発行の上限・一時障害時は `image_url_error` とBase64画像を返し、PNGファイルへの保存を案内します。未作成の場合はURLも発行しません。Base64へのフォールバック時も元データを再確認し、更新・削除競合やDB障害で現在の権限を確認できない場合はエラーとして画像を返しません。
+`get_pufu_image` はリクエストのたびに、指定したプ譜の最新局面からPNGをその場で生成します。MCPの `content` 内に `type: "image", mimeType: "image/png", data: "Base64文字列"` の画像要素を返し、structuredContentにはプ譜ID・幅・高さ・バイト数・局面・更新番号等と、`image_url`・`download_url`・`expires_at` を返します。PNGのBase64をJSONにも重複させません。ユーザーへの表示は `show_pufu` を案内し、MCP Apps非対応環境では外部画像・ダウンロードリンクやBase64を使えます。URL発行の上限・一時障害時は `image_url_error` とBase64画像を返し、PNGファイルへの保存を案内します。未作成の場合はURLも発行しません。Base64へのフォールバック時も元データを再確認し、更新・削除競合やDB障害で現在の権限を確認できない場合はエラーとして画像を返しません。
 
 画像URLは `GET /api/pufu-images/:token.png`、ダウンロードURLは同じURLの `?download=1` です。ログインや認証ヘッダーを持たないチャットの画像プロキシも取得できます。URLを知る人が閲覧できる期限付きの権限で、有効期限は発行から1時間です。256ビットの乱数を使い、DBにはそのハッシュだけを保存します。発行元はサーバーの `APP_URL` です。本番ではHTTPSのURLを設定してください。GET/HEADは `image/png`、`Cache-Control: no-store`、`Referrer-Policy: no-referrer`、外部画像表示用の `Cross-Origin-Resource-Policy: cross-origin`・`Access-Control-Allow-Origin: *`、`X-Robots-Tag: noindex, nofollow, noarchive` を返します。ダウンロード時は `Content-Disposition: attachment` です。リンクを知る人が取得済みの画像やチャット側の保存画像を後から回収することはできません。
 
@@ -363,7 +378,7 @@ WHERE current=1;
 
 ### ローカル検証
 
-`pnpm run dev` を起動し、別ターミナルで `pnpm run test:smoke:mcp` を実行します。ローカルデモに対してOAuth・8ツール・プ譜の取得・再送・独立した問い・更新・失効を検証し、検証用プロジェクトと連携を削除します。Workers AIを使わずに検証する場合は `WORKERS_AI_ENABLED=false pnpm run dev` としてください。
+`pnpm run dev` を起動し、別ターミナルで `pnpm run test:smoke:mcp` を実行します。ローカルデモに対してOAuth・ツール一覧・プ譜の取得・再送・独立した問い・更新・失効を検証し、検証用プロジェクトと連携を削除します。Workers AIを使わずに検証する場合は `WORKERS_AI_ENABLED=false pnpm run dev` としてください。
 
 クラウドから `localhost` には直接接続できません。ChatGPTでのローカル接続検証には適切なHTTPSトンネル等が必要です。本番準備後は本番HTTPS URLを使用してください。
 

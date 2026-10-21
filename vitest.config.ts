@@ -1,7 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import { pufuViewerPlugin } from './scripts/pufu-viewer-plugin';
 
 export default defineConfig({
+  plugins: [pufuViewerPlugin()],
   resolve: {
     alias: {
       '@resvg/resvg-wasm/index_bg.wasm?module': fileURLToPath(

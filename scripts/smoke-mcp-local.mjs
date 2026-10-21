@@ -130,7 +130,9 @@ try {
       })
     ).serverInfo,
   );
-  assert.equal((await rpc('tools/list', {})).tools.length, 8);
+  const toolNames = (await rpc('tools/list', {})).tools.map((tool) => tool.name);
+  for (const name of ['list_projects', 'get_pufu', 'get_pufu_image', 'show_pufu'])
+    assert.ok(toolNames.includes(name), `Missing tool: ${name}`);
   assert.deepEqual(
     (await call('list_projects')).structuredContent.projects.map((project) => project.id),
     [projectId],
@@ -213,7 +215,7 @@ try {
     401,
   );
   console.log(
-    'MCPローカル検証成功: OAuth・8ツール・プ譜取得・再送・独立した問い・トークン更新・連携解除',
+    'MCPローカル検証成功: OAuth・ツール一覧・プ譜取得・再送・独立した問い・トークン更新・連携解除',
   );
 } finally {
   if (grantId) await api(`/mcp/connections/${grantId}`, 'DELETE');

@@ -21,8 +21,9 @@ export async function generateQuestionPufuImage(
     phase: snapshot.phase,
     revision: snapshot.revision,
   };
+  const title = snapshot.pufu.projectScore?.gainingGoal.text || 'プ譜';
   if (!snapshot.pufu.projectScore)
-    return { metadata: { ...metadata, status: 'not_created' }, png: null };
+    return { metadata: { ...metadata, status: 'not_created' }, png: null, title };
   let image: Awaited<ReturnType<typeof renderSavedPufu>>;
   try {
     image = await renderSavedPufu(env, snapshot.pufu.projectScore);
@@ -56,5 +57,6 @@ export async function generateQuestionPufuImage(
       byte_length: image.png.byteLength,
     },
     png: image.png,
+    title,
   };
 }
