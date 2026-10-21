@@ -655,6 +655,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'list_projects',
       'list_questions',
       'list_stocks',
+      'show_pufu',
     ]);
     expect(listed.result.tools?.find((tool) => tool.name === 'get_pufu_image')).toMatchObject({
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },

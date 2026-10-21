@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja" data-image-origin="__PUFU_IMAGE_ORIGIN__">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>プ譜ビューアー</title>
+    <!-- MCP Apps SDK license: __PUFU_IMAGE_ORIGIN__/licenses/mcp-apps.txt -->
+    <style>
+      /* VIEWER_STYLE */
+    </style>
+  </head>
+  <body>
+    <main aria-label="プ譜ビューアー">
+      <h1 id="title">プ譜</h1>
+      <p id="metadata"></p>
+      <p id="status" role="status" aria-live="polite">読み込み中です…</p>
+      <p id="updated" role="status" hidden>プ譜が更新されたため最新の内容を表示しています</p>
+      <div class="toolbar" aria-label="画像の操作">
+        <button id="zoom-out" type="button" aria-label="縮小">−</button>
+        <button id="fit" type="button">全体</button>
+        <button id="zoom-in" type="button" aria-label="拡大">＋</button>
+        <button id="fullscreen" type="button" hidden>全画面</button>
+        <button id="download" type="button">PNGを開く・保存</button>
+        <button id="retry" type="button">再取得</button>
+      </div>
+      <a id="external" target="_blank" rel="noopener noreferrer" hidden>PNGを開く</a>
+      <div
+        id="viewport"
+        tabindex="0"
+        aria-label="プ譜画像。拡大後はスクロールやドラッグで移動できます。"
+      ></div>
+      <details>
+        <summary>対象のプ譜</summary>
+        <p id="target"></p>
+      </details>
+    </main>
+    <script>
+      /* VIEWER_SCRIPT */
+    </script>
+  </body>
+</html>

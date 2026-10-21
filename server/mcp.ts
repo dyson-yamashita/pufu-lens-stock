@@ -12,6 +12,9 @@ import { HTTPException } from 'hono/http-exception';
 import { generateQuestionPufuImage } from './pufu-images';
 import { readQuestionPufu } from './pufu-read';
 import { issuePufuImageLink } from './pufu-image-links';
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
+import { registerPufuViewer } from './pufu-viewer';
+import { pufuViewerSchema, pufuViewerUri } from '../shared/pufu-viewer';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -63,10 +66,11 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     { name: 'pufu-lens-stock', version: '1.0.0' },
     {
       instructions:
-        '本人のプロジェクト、ストック、問いを取得・追加し、保存済みのプ譜を閲覧します。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+        '本人のプロジェクト、ストック、問いを取得・追加し、保存済みのプ譜を閲覧します。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
     },
   );
   const api = createApp(principal);
+  registerPufuViewer(server, env);
   const exposedTools: (Tool & { securitySchemes: { type: string; scopes: string[] }[] })[] = [];
   function register<Input extends z.ZodObject>(
     name: string,
@@ -74,17 +78,26 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       title: string;
       description: string;
       inputSchema: Input;
+      outputSchema?: z.ZodObject;
       annotations: ToolAnnotations;
-      _meta: { securitySchemes: { type: string; scopes: string[] }[] };
+      _meta: {
+        securitySchemes: { type: string; scopes: string[] }[];
+        ui?: { resourceUri?: string; visibility?: ('model' | 'app')[] };
+      };
     },
     callback: ToolCallback<Input>,
   ) {
-    server.registerTool(name, config, callback);
+    if (config._meta.ui) registerAppTool(server, name, config, callback);
+    else server.registerTool(name, config, callback);
     // SDKのツール呼び出し検証を利用しつつ、ChatGPTが要求するトップレベルの認証宣言も公開する。
+    const { outputSchema, ...listedConfig } = config;
     exposedTools.push({
-      ...config,
+      ...listedConfig,
       name,
       inputSchema: z.toJSONSchema(config.inputSchema, { io: 'input' }) as Tool['inputSchema'],
+      ...(outputSchema
+        ? { outputSchema: z.toJSONSchema(outputSchema, { io: 'output' }) as Tool['outputSchema'] }
+        : {}),
       securitySchemes: config._meta.securitySchemes,
     });
   }
@@ -149,6 +162,17 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     }
   }
   const security = (scope: string) => ({ securitySchemes: [{ type: 'oauth2', scopes: [scope] }] });
+  const loadPufuImage = async (questionId: string, pufuId?: string) => {
+    const image = await generateQuestionPufuImage(env, principal, questionId, pufuId);
+    return {
+      image,
+      data: {
+        ...image.metadata,
+        title: image.title,
+        ...(await issuePufuImageLink(env, principal, image)),
+      },
+    };
+  };
   const query = (args: Record<string, unknown>) =>
     new URLSearchParams(
       Object.entries({ ...args, project_id: project(args.project_id as string | undefined) })
@@ -314,17 +338,17 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜画像取得',
       description:
-        '指定した問いのプ譜からリクエスト時にPNGを生成します。pufu_idで取得先を選びます。image_urlを回答本文にMarkdown画像として表示し、download_urlへのリンクも提示してください。リンクはURLを知る人が1時間閲覧でき、期限切れ・元のプ譜の更新や削除後は再取得が必要です。PNGはcontent内のtype: image、mimeType: image/pngのdataにもBase64文字列で返します。URLが使えない環境ではBase64をデコードしてPNGへ保存し、プレビューとダウンロードリンクを提示してください。URL発行に失敗した場合はimage_url_errorを確認してください。AIを使わず、保存済みのプ譜は更新しません。JSONが必要な場合はget_pufuを使います。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
+        'プ譜のPNGと画像URLの取得用です。ユーザーへの表示にはshow_pufuを使います。指定した問いのプ譜からリクエスト時にPNGを生成し、pufu_idで取得先を選びます。MCP Apps非対応環境ではimage_urlとdownload_urlへの外部リンクも提示できます。リンクはURLを知る人が1時間閲覧でき、期限切れ・元のプ譜の更新や削除後は再取得が必要です。PNGはcontent内のtype: image、mimeType: image/pngのdataにもBase64文字列で返します。URLが使えない環境ではBase64をデコードしてPNGへ保存し、プレビューとダウンロードリンクを提示してください。URL発行に失敗した場合はimage_url_errorを確認してください。AIを使わず、保存済みのプ譜は更新しません。JSONが必要な場合はget_pufuを使います。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時は最新の完成済みプ譜を選び、完成済みがなければnot_createdを返します。',
       inputSchema: pufuSelection,
       annotations: { ...read, readOnlyHint: false, idempotentHint: false },
-      _meta: security('questions:read'),
+      _meta: { ...security('questions:read'), ui: { visibility: ['model', 'app'] } },
     },
     async ({ question_id, pufu_id }) => {
       let png: string | undefined;
       const output = await run('questions:read', async () => {
-        const image = await generateQuestionPufuImage(env, principal, question_id, pufu_id);
+        const { image, data } = await loadPufuImage(question_id, pufu_id);
         if (image.png) png = Buffer.from(image.png).toString('base64');
-        return { ...image.metadata, ...(await issuePufuImageLink(env, principal, image)) };
+        return data;
       });
       if (png && !output.isError)
         output.content = [
@@ -338,6 +362,53 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
           type: 'text',
           text: `取得した画像を回答本文に表示してください。\n![プ譜](${metadata.image_url})\n[PNGをダウンロード](${metadata.download_url})\nリンクの有効期限: ${metadata.expires_at}`,
         });
+      return output;
+    },
+  );
+  register(
+    'show_pufu',
+    {
+      title: 'プ譜を表示',
+      description:
+        'プ譜をユーザーに表示する際に使います。指定した問いの保存済みプ譜を会話内のビューアーで表示し、拡大・移動・PNG保存ができます。pufu_id省略時は最新の完成済みプ譜を選びます。画像リンクは1時間有効で、ビューアーから同じプ譜IDを指定して再取得します。内容の分析にはget_pufu、Base64や画像URLの取得にはget_pufu_imageを使います。',
+      inputSchema: pufuSelection,
+      outputSchema: pufuViewerSchema,
+      annotations: { ...read, readOnlyHint: false, idempotentHint: false },
+      _meta: {
+        ...security('questions:read'),
+        ui: { resourceUri: pufuViewerUri, visibility: ['model'] },
+      },
+    },
+    async ({ question_id, pufu_id }) => {
+      const output = await run('questions:read', async () => {
+        const { image, data } = await loadPufuImage(question_id, pufu_id);
+        if (image.png && !data.image_url)
+          throw new ToolError(
+            data.image_url_error ?? '画像リンクを発行できませんでした。再取得してください。',
+            503,
+          );
+        return pufuViewerSchema.parse({
+          ...data,
+          mime_type: 'image/png',
+          image_url: data.image_url ?? null,
+          download_url: data.download_url ?? null,
+          expires_at: data.expires_at ?? null,
+          width: 'width' in data ? data.width : null,
+          height: 'height' in data ? data.height : null,
+        });
+      });
+      if (!output.isError) {
+        const data = pufuViewerSchema.parse(output.structuredContent);
+        output.content = [
+          {
+            type: 'text',
+            text:
+              data.status === 'ready'
+                ? `プ譜の画像を取得しました。対応環境ではビューアーで確認できます。\n[画像を開く](${data.image_url})\n[PNGをダウンロード](${data.download_url})`
+                : 'この問いのプ譜はまだ作成されていません。',
+          },
+        ];
+      }
       return output;
     },
   );

@@ -79,6 +79,6 @@ pnpm run dev
 
 ## ライセンス・商標
 
-独自ソースコードのライセンスは [BSD-3-Clause](LICENSE) です。第三者コードは各提供元のライセンスに従います：[Pufu editor（BSD-3-Clause）](public/licenses/pufu-editor.txt)、[Superpowers（MIT）](.agents/SUPERPOWERS-LICENSE)、[Miniflareパッチ（MIT）](patches/LICENSE-MIT)。
+独自ソースコードのライセンスは [BSD-3-Clause](LICENSE) です。第三者コードは各提供元のライセンスに従います：[Pufu editor（BSD-3-Clause）](public/licenses/pufu-editor.txt)、[Superpowers（MIT）](.agents/SUPERPOWERS-LICENSE)、[Miniflareパッチ（MIT）](patches/LICENSE-MIT)、[MCP Apps SDK](public/licenses/mcp-apps.txt)。
 
 「プ譜」は株式会社ゴトーラボの登録商標です。
