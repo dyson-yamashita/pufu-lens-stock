@@ -14,7 +14,6 @@ const app = new App(
   { strict: true, autoResize: true },
 );
 let zoom = 1,
-  fitting = true,
   imageElement: HTMLImageElement | undefined;
 let bridgeReady = false;
 const controller = new PufuViewerController({
@@ -84,35 +83,24 @@ function sizeImage() {
       parseFloat(style.borderLeftWidth) -
       parseFloat(style.borderRightWidth),
   );
-  const height = Math.max(
-    1,
-    parseFloat(style.maxHeight) -
-      parseFloat(style.borderTopWidth) -
-      parseFloat(style.borderBottomWidth) -
-      1,
-  );
   const imageWidth = imageElement.naturalWidth || image.width;
   const imageHeight = imageElement.naturalHeight || image.height;
-  const fitZoom =
-    Math.max(1, Math.floor(Math.min(width, (height * imageWidth) / imageHeight))) / width;
-  if (fitting || zoom <= fitZoom) {
-    fitting = true;
-    zoom = fitZoom;
-  }
-  imageElement.style.width = `${width * zoom}px`;
-  element<HTMLButtonElement>('zoom-out').disabled = zoom <= fitZoom;
+  // 横幅100%時の画像高に枠を合わせ、SDKのautoResizeでホストへ通知する。
+  // 拡大時もこの高さを保ち、画像内をパンできるようにする。
+  viewport.style.height = `${Math.ceil((width * imageHeight) / imageWidth) + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)}px`;
+  viewport.dataset.zoomed = String(zoom > 1);
+  imageElement.style.width = `${zoom * 100}%`;
+  element<HTMLButtonElement>('zoom-out').disabled = zoom <= 1;
   element<HTMLButtonElement>('zoom-in').disabled = zoom >= 6;
 }
 function setZoom(value: number) {
-  fitting = false;
-  zoom = Math.min(6, value);
+  zoom = Math.max(1, Math.min(6, value));
   sizeImage();
 }
 element('zoom-in').onclick = () => setZoom(zoom + 0.5);
 element('zoom-out').onclick = () => setZoom(zoom - 0.5);
 element('fit').onclick = () => {
-  fitting = true;
-  sizeImage();
+  setZoom(1);
   viewport.scrollTo(0, 0);
 };
 element('retry').onclick = () => {
