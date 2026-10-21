@@ -711,6 +711,8 @@ pnpm run check
 
 型チェック、lint、Vitest、整形チェック、クライアント／Workerのビルドを実行します。テストはMiniflareのD1・R2と実際のアプリのルートを使用します。Workflow基底クラスとAI・記事HTTP応答はテスト内で差し替えます。Cloudflare Workflowsの永続化・リトライそのものはNodeテストの対象外で、ローカルWorkersでもデモの処理を確認します。
 
+各テスト環境は独立したMiniflare・D1・R2・KVを作成します。初期化では実際の移行SQLをファイル順にWorker内で適用し、SQLの準備によるNode／Worker間の同期RPCを減らします。各ファイルのトランザクション境界と、旧スキーマからの移行テストで使う `applyMigration` は維持します。共有するのは移行SQLの読み込み結果だけで、DBや保存データは共有しません。
+
 `pnpm audit` で依存関係を検査できます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
 
 開発サーバーの起動中に `pnpm run test:smoke` を実行すると、MDNの公開記事を取得し、実際のローカルWorkers・Workflows・R2・D1を通して保存と問い・メモリの生成を確認します。この検証で作成したプロジェクトと記事は終了時に削除します。デモ環境専用で、本番には接続しません。
