@@ -18,6 +18,7 @@ export default defineConfig(({ command }) => ({
     pufuViewerPlugin(),
     pdfCmapsPlugin(),
     cloudflare({
+      auxiliaryWorkers: [{ configPath: 'wrangler.pdf.jsonc' }],
       config: (config) => {
         const envFile = process.env.CLOUDFLARE_ENV
           ? `.dev.vars.${process.env.CLOUDFLARE_ENV}`

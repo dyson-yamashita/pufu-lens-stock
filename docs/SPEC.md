@@ -467,9 +467,11 @@ YouTubeのプレーヤーはプライバシー強化モードの `youtube-nocook
 
 通常はHTMLを取得してReadabilityで本文を抽出します。本文が不足する場合はBrowser Runを使用します。ブラウザのHTTP要求も検証付き取得を通し、POST、ダウンロード、Service Worker、WebSocketを許可しません。ログイン・ペイウォール・アクセス制限の回避は行いません。ページ上の任意の対話操作には対応していません。
 
-`application/pdf` と `application/octet-stream` の応答は、取得済みのバイト列をWorkers内のunpdf（Mozilla PDF.js）で解析します。各ページの文字情報を順番に読み取り、既存の本文保存・要約・問い・メモリ更新へ渡します。タイトルはPDFメタデータ、本文の先頭行、ドメインの順で補います。PDF内のJavaScriptを実行せず、外部のフォント等を取得しません。日本語などの組み込みCMapは、PDF.jsと同じバージョンのpdfjs-distからライセンスとともに静的資産へ同梱し、ASSETSバインディングで読み込みます。CMap以外の外部資源要求や不正なファイル名は拒否します。解析後や失敗時には解析資源を破棄します。文字情報のないスキャンPDF・パスワード保護・破損したPDFは理由と本文補完の案内を表示します。OCRやパスワード解除は行いません。HTMLページがリンクするPDFの自動巡回は行わず、PDFそのものの公開URLを保存してください。過去に失敗したPDFは、詳細から取得を再試行できます。
+`application/pdf` と `application/octet-stream` の応答は、本文ストリームを `PDF_PARSER` サービスバインディングで専用Worker `pufu-lens-pdf-parser` へ渡し、unpdf（Mozilla PDF.js）で解析します。本体WorkerはPDF.jsをロードせず、PDF全体をバッファしません。各ページの文字情報を順番に読み取り、既存の本文保存・要約・問い・メモリ更新へ渡します。タイトルはPDFメタデータ、本文の先頭行、ドメインの順で補います。PDF内のJavaScriptを実行せず、外部のフォント等を取得しません。日本語などの組み込みCMapは、PDF.jsと同じバージョンのpdfjs-distからライセンスとともに解析Workerのバンドルへ同梱します。CMap以外の外部資源要求や不正なファイル名は拒否します。解析後や失敗時には解析資源を破棄します。文字情報のないスキャンPDF・パスワード保護・破損したPDFは理由と本文補完の案内を表示します。OCRやパスワード解除は行いません。HTMLページがリンクするPDFの自動巡回は行わず、PDFそのものの公開URLを保存してください。過去に失敗したPDFは、詳細から取得を再試行できます。
 
-HTML・テキストの取得上限は2MB、PDFは10MB・100ページ、PDF解析の待機時間は20秒、抽出本文は共通で12万文字です。Content-Lengthの有無にかかわらず取得中の実バイト数も検査します。上限超過や取得失敗時はURLとエラーを保持します。プロジェクトは50件、保存はユーザーごとに直近24時間200件までに制限しています。本文・AI処理の時間と実記事の要約品質は、利用する記事で確認してください。
+PDF専用Workerは公開URL・preview URLを持たず、DB・R2・AI・OAuthのバインディングやSecretを持ちません。`secrets.required` を空配列にし、ローカル開発でも本体用 `.dev.vars` のSecretを注入しません。メモリはCloudflareの128MB/isolate制限、CPUはWorkers Paidの5,000ms上限を利用します。同じisolateでは一度に一つのPDFだけを受け付け、混雑時は503を返してWorkflowの既存リトライに戻します。資源超過・サービス未設定・異常応答・待機超過時には、本体内での解析へフォールバックせず、URLとエラーを残して本文補完を案内します。20秒の期限やサービス呼び出しの中断では、取得元ストリームとPDF解析を中止して受付枠を解放します。専用Workerの `enable_request_signal` を有効にし、本体からの中断通知を受け取ります。メモリ制限の本番での適用挙動はローカルMiniflareの成功だけでは保証できません。
+
+HTML・テキストの取得上限は2MB、PDFは10MB・100ページ、PDF解析の待機時間は20秒、抽出本文は共通で12万文字です。本文の文字情報はストリームで読み、12万文字超で早期停止しますが、これをPDF内の圧縮データの展開量制限として扱いません。Content-Lengthの有無にかかわらず取得中の実バイト数も検査します。上限超過や取得失敗時はURLとエラーを保持します。プロジェクトは50件、保存はユーザーごとに直近24時間200件までに制限しています。本文・AI処理の時間と実記事の要約品質は、利用する記事で確認してください。
 
 ## 利用量制限
 
@@ -602,10 +604,10 @@ OAuth同意画面の「アプリのドメイン」には、次のURLを登録で
    export OAUTH_KV_ID="実際のOAuth KVの32桁ID"
    pnpm run build:production
    pnpm run db:migrate:production
-   pnpm exec wrangler deploy --env production
+   pnpm run deploy:workers
    ```
 
-`APP_URL` はパス・クエリ・フラグメント・認証情報を含まないHTTPSオリジンにします。末尾の `/` は除去されます。未設定、不正なURL、localhost、`.invalid` のダミー値では本番ビルドを停止します。`.dev.vars.production` の値は本番ビルドへ自動注入されません。`pnpm run deploy` も同じ環境変数が必要です。通常の `pnpm run build` とローカル開発には不要です。D1・KVも未設定・不正形式・ゼロのIDでは本番ビルドを停止します。生成された `dist` はGit管理対象外です。`db:migrate:production` は本番ビルドが生成した `dist/pufu_lens_stock/wrangler.json` を明示的に使うため、先に本番ビルドを成功させてください。
+`APP_URL` はパス・クエリ・フラグメント・認証情報を含まないHTTPSオリジンにします。末尾の `/` は除去されます。未設定、不正なURL、localhost、`.invalid` のダミー値では本番ビルドを停止します。`.dev.vars.production` の値は本番ビルドへ自動注入されません。`pnpm run deploy` も同じ環境変数が必要です。通常の `pnpm run build` とローカル開発には不要です。D1・KVも未設定・不正形式・ゼロのIDでは本番ビルドを停止します。生成された `dist` はGit管理対象外です。`db:migrate:production` は本番ビルドが生成した `dist/pufu_lens_stock/wrangler.json` を明示的に使うため、先に本番ビルドを成功させてください。`deploy:workers` は `dist/pufu_lens_pdf_parser/wrangler.json` のPDF専用Workerを先に配置し、成功後に `dist/pufu_lens_stock/wrangler.json` の本体を配置します。PDF専用Workerは `wrangler.pdf.jsonc`、本体の接続先は `wrangler.jsonc` の `services` で定義します。ローカル開発もViteのauxiliary Workerとして同じ構成を使用し、別プロセスの起動操作は不要です。
 
 この設定はアプリのURL設定であり、Cloudflareのドメイン割り当てやGoogle側のOAuth設定は変更しません。URLは秘密情報として扱いません。Git履歴やActionsのログなどから既存URLが見える場合があります。
 
@@ -661,7 +663,7 @@ gh api repos/{owner}/{repo}/rulesets
 
 1. [共通の検証ワークフロー](../.github/workflows/validate.yml) をSecretsなしで実行します。型チェック・lint・整形チェック・ビルド・依存監査のジョブと、Vitestの全テストを2分割したジョブを並列実行します。各ジョブで `pnpm install --frozen-lockfile` を行い、テストの内容・分離設定・実行対象は変えません。片方のテストが失敗しても残りの分割は実行し、すべての検証が成功した場合だけ従来の必須チェック `Check` が成功します。失敗・キャンセル・スキップは成功扱いにしません。並列化により同時に使うランナー数は増えます。ローカルの `pnpm run check` は従来どおり全検証を実行します。
 2. デプロイジョブの `pnpm install --frozen-lockfile` はSecretsを渡さず実行します。`pnpm run build:production` にだけEnvironment secretsの `APP_URL`、`D1_DATABASE_ID`、`OAUTH_KV_ID` を渡します。Cloudflareのデプロイ認証情報やGoogle OAuthのSecretはビルドに渡しません。
-3. 最後のステップだけに `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` のSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
+3. 最後のステップだけに `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` のSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後に `pnpm run deploy:workers` でPDF専用Worker、本体Workerの順に更新します。PDF専用Workerの配置が失敗したら本体の更新を行いません。
 
 依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。従来から実行していない `core-js-pure` のインストールスクリプトは、pnpm 11でも実行しないよう明示しています。開発用のWranglerも明示的な依存として固定しています。
 

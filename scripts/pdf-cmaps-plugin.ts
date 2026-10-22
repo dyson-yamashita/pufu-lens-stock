@@ -1,30 +1,36 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import type { Plugin } from 'vite';
 
-// CMapは静的資産に置き、Worker本体のサイズを増やさず外部通信も不要にする。
-export function pdfCmapsPlugin(): Plugin {
+// 補助WorkerはASSETS非対応のため、CMapだけをPDF専用バンドルへ同梱する。
+export function pdfCmapsSource(): string {
   const directory = new URL('../node_modules/pdfjs-dist/cmaps/', import.meta.url);
-  const names = readdirSync(directory).filter(
-    (name) => name.endsWith('.bcmap') || name === 'LICENSE',
+  const cmaps = Object.fromEntries(
+    readdirSync(directory)
+      .filter((name) => name.endsWith('.bcmap'))
+      .map((name) => [name, readFileSync(new URL(name, directory)).toString('base64')]),
   );
+  const license = readFileSync(new URL('LICENSE', directory), 'utf8');
+  return `/*! PDF.js CMaps\n${license} */\nexport default ${JSON.stringify(cmaps)};`;
+}
+
+export function pdfCmapsPlugin(): Plugin {
   return {
     name: 'pdf-cmaps',
-    configureServer(server) {
-      server.middlewares.use('/pdf-cmaps', (request, response, next) => {
-        const name = new URL(request.url ?? '/', 'http://localhost').pathname.slice(1);
-        if (!names.includes(name)) return next();
-        response.setHeader('Content-Type', 'application/octet-stream');
-        response.end(readFileSync(new URL(name, directory)));
-      });
+    resolveId(id) {
+      if (id === 'virtual:pdf-cmaps') return '\0virtual:pdf-cmaps';
     },
-    generateBundle() {
-      if (this.environment.name !== 'client') return;
-      for (const name of names)
-        this.emitFile({
-          type: 'asset',
-          fileName: `pdf-cmaps/${name}`,
-          source: readFileSync(new URL(name, directory)),
-        });
+    generateBundle(_options, bundle) {
+      const license = readFileSync(
+        new URL('../node_modules/pdfjs-dist/cmaps/LICENSE', import.meta.url),
+        'utf8',
+      );
+      for (const output of Object.values(bundle)) {
+        if (output.type === 'chunk' && '\0virtual:pdf-cmaps' in output.modules)
+          output.code = `/*! PDF.js CMaps\n${license} */\n${output.code}`;
+      }
+    },
+    load(id) {
+      if (id === '\0virtual:pdf-cmaps') return pdfCmapsSource();
     },
   };
 }

@@ -1,13 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
 import { testApp, mockEvent, mockStep } from './helpers';
 import type { Env, Job } from '../server/env';
+import { createPdfWorker } from './pdf-worker-helper';
 import { pdfArticleText, pdfFixture } from './pdf-fixture';
 
 describe('本文取得から要約とメモリまで', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
+  let pdfWorker: Awaited<ReturnType<typeof createPdfWorker>>;
+  beforeAll(async () => {
+    pdfWorker = await createPdfWorker();
+  });
+  afterAll(async () => pdfWorker?.dispose());
   beforeEach(async () => {
     app = await testApp();
+    app.env.PDF_PARSER = pdfWorker.parser;
     app.env.LOCAL_DEMO_ENABLED = 'true';
   });
   afterEach(async () => {
@@ -173,6 +180,39 @@ describe('本文取得から要約とメモリまで', () => {
     await runArticle();
     expect((await app.env.DB.prepare('SELECT status FROM articles').first())!.status).toBe('ready');
   });
+  it('PDF専用Workerの資源超過ではURLを残して失敗し、本文保存・要約を開始しない', async () => {
+    await savedArticle();
+    articleFetch();
+    const original = globalThis.fetch;
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      return url.hostname === 'example.com'
+        ? new Response(pdfFixture([pdfArticleText]), {
+            headers: { 'Content-Type': 'application/pdf' },
+          })
+        : original(input, init);
+    });
+    Object.assign(app.env, {
+      PDF_PARSER: {
+        async fetch() {
+          throw new Error('Worker exceeded memory limit');
+        },
+      },
+    });
+    await expect(runArticle()).rejects.toThrow(/PDF.*本文を補完/);
+    expect(
+      await app.env.DB.prepare(
+        'SELECT status, source_url, content_key, summary_json FROM articles',
+      ).first(),
+    ).toMatchObject({
+      status: 'failed',
+      source_url: 'https://example.com/story',
+      content_key: null,
+      summary_json: null,
+    });
+    expect((await app.env.CONTENT.list()).objects).toHaveLength(0);
+  });
+
   it('失敗済みのPDFを再試行し、本文保存と要約・問いの生成予約まで進む', async () => {
     const { id } = await savedArticle();
     articleFetch(403);
@@ -245,6 +285,7 @@ describe('本文取得から要約とメモリまで', () => {
     await savedArticle();
     articleFetch();
     await runArticle();
+    app.env.PDF_PARSER = pdfWorker.parser;
     app.env.LOCAL_DEMO_ENABLED = 'false';
     app.env.AI = {
       run: vi.fn(async () => {
