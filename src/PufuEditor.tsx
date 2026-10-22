@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ProjectScore, getScoreJson } from '@goto-lab/pufu-editor';
+import { getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
 import { pufuScoreSchema, type Pufu } from '../shared/pufu';
 import { send } from './api';
 import { useTheme } from './theme';
 import PufuImagePreview from './PufuImagePreview';
 import PufuModal from './PufuModal';
+import ResponsivePufuScore from './ResponsivePufuScore';
 
 const canonical = (json: string) =>
   JSON.stringify(JSON.parse(json), (key, value) => (key === 'id' ? undefined : value));
@@ -236,17 +237,14 @@ export default function PufuEditor({
             </p>
           )}
           <div className="pufu-editor-shell" inert={busy} aria-busy={busy}>
-            <div className="pufu-editor-root">
-              <ProjectScore
-                key={editorKey}
-                uniqueKey={editorKey}
-                initScore={editor.score}
-                lang="ja"
-                textSize="base"
-                feedback={feedback}
-                dark={theme === 'dark'}
-              />
-            </div>
+            <ResponsivePufuScore
+              key={editorKey}
+              uniqueKey={editorKey}
+              initScore={editor.score}
+              lang="ja"
+              feedback={feedback}
+              dark={theme === 'dark'}
+            />
           </div>
         </PufuModal>
       )}
