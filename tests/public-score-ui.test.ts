@@ -86,6 +86,20 @@ beforeEach(() => {
     configurable: true,
     get: () => containerWidth,
   });
+  Object.defineProperties(window.HTMLElement.prototype, {
+    showModal: {
+      configurable: true,
+      value() {
+        this.setAttribute('open', '');
+      },
+    },
+    close: {
+      configurable: true,
+      value() {
+        this.removeAttribute('open');
+      },
+    },
+  });
   document.cookie = '';
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   Object.defineProperty(window, 'location', {
@@ -126,6 +140,13 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+async function click(label: string) {
+  const button = [...document.querySelectorAll('button')].find(
+    (button) => button.getAttribute('aria-label') === label || button.textContent === label,
+  )!;
+  expect(button).toBeDefined();
+  await act(async () => button.click());
+}
 it.each([
   { width: 1200, theme: 'light' },
   { width: 640, theme: 'light' },
@@ -214,6 +235,12 @@ it.each([1200, 640])(
     });
     const { default: PufuEditor } = await import('../src/PufuEditor');
     await act(async () => root.render(createElement(PufuEditor, { pufu, onGuard: () => {} })));
+    expect(document.querySelector('[role="score"]')).toBeNull();
+    expect(document.querySelector('.pufu-image-preview figcaption')).toBeNull();
+    const help = document.querySelector('.pufu-phase-help')!;
+    expect(help.nextElementSibling?.classList.contains('pufu-image-preview')).toBe(true);
+    await click('編集する');
+    expect(document.querySelector('dialog[open] [role="score"]')).not.toBeNull();
     expect(Boolean(document.querySelector('button[aria-label^="全体マップ："]'))).toBe(width < 900);
     const editor = document.querySelector('[role="score"]')!;
     const fields = [...editor.querySelectorAll('textarea')];
@@ -232,10 +259,7 @@ it.each([1200, 640])(
     expect(preview?.querySelector('svg')).not.toBeNull();
     expect(preview?.textContent).toContain('goalの内容');
     expect(preview?.textContent).toContain('measureの振り返り');
-    expect([...document.querySelectorAll('[role="img"], [role="score"]')]).toEqual([
-      preview,
-      editor,
-    ]);
+    expect(document.querySelector('dialog')?.contains(editor)).toBe(true);
   },
 );
 
@@ -256,16 +280,11 @@ it('プ譜画像は選択中の局面を表示し、未保存の編集では変�
   });
   await act(async () => root.render(createElement(PufuEditor, { pufu: input, onGuard: () => {} })));
   const preview = () => document.querySelector('.pufu-image-preview [role="img"]');
-  const click = async (label: string) => {
-    const button = [...document.querySelectorAll('button')].find(
-      (button) => button.getAttribute('aria-label') === label || button.textContent === label,
-    )!;
-    await act(async () => button.click());
-  };
   expect(preview()?.textContent).toContain('第2局面の目標');
   await click('前の局面へ');
   expect(preview()?.getAttribute('aria-label')).toBe('第1局面のプ譜');
   expect(preview()?.textContent).toContain('goalの内容');
+  await click('編集する');
   const edited = structuredClone(score);
   edited.gainingGoal.text = '保存後の目標';
   await act(async () => setScore(`${pufu.id}-phase-1`, JSON.stringify(edited)));
@@ -277,6 +296,8 @@ it('プ譜画像は選択中の局面を表示し、未保存の編集では変�
     'PATCH',
   );
   expect(preview()?.textContent).toContain('保存後の目標');
+  await click('閉じる');
+  expect(document.querySelector('[role="score"]')).toBeNull();
   await click('次の局面へ');
   expect(preview()?.textContent).toContain('第2局面の目標');
   send.mockResolvedValue({
@@ -305,6 +326,7 @@ it('画像にできない内容でも編集画面を維持し、保存で解消�
   expect(document.querySelector('.pufu-image-preview')?.textContent).toContain(
     'プ譜の画像を表示できません',
   );
+  await click('編集する');
   expect(document.querySelector('[role="score"]')).not.toBeNull();
   await act(async () => setScore(`${pufu.id}-phase-1`, JSON.stringify(score)));
   const save = [...document.querySelectorAll('button')].find(
@@ -312,6 +334,80 @@ it('画像にできない内容でも編集画面を維持し、保存で解消�
   )!;
   await act(async () => save.click());
   expect(document.querySelector('.pufu-image-preview svg')).not.toBeNull();
+});
+
+it('未保存の編集は閉じる・Escapeで確認し、保存失敗後も保持して破棄後は保存済み内容に戻す', async () => {
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { setScore, getScoreJson } = require(
+    join(editorRoot, 'components/ProjectScore.js'),
+  ) as typeof import('@goto-lab/pufu-editor');
+  const confirm = vi.fn().mockReturnValue(false);
+  Object.defineProperty(window, 'confirm', { configurable: true, value: confirm });
+  const send = vi.spyOn(api, 'send').mockRejectedValue(new Error('保存に失敗しました'));
+  const guard = vi.fn();
+  await act(async () => root.render(createElement(PufuEditor, { pufu, onGuard: guard })));
+  await click('編集する');
+  const edited = structuredClone(score);
+  edited.gainingGoal.text = '未保存の目標';
+  const key = `${pufu.id}-phase-1`;
+  await act(async () => setScore(key, JSON.stringify(edited)));
+  await click('保存');
+  expect(send).toHaveBeenCalledOnce();
+  expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain('保存に失敗');
+  const cancel = new window.Event('cancel', { cancelable: true });
+  await act(async () => document.querySelector('dialog')!.dispatchEvent(cancel));
+  expect(cancel.defaultPrevented).toBe(true);
+  expect(document.querySelector('dialog[open]')).not.toBeNull();
+  expect(JSON.parse(getScoreJson(key)!).gainingGoal.text).toBe('未保存の目標');
+  await click('閉じる');
+  expect(document.querySelector('dialog[open]')).not.toBeNull();
+  confirm.mockReturnValue(true);
+  await click('閉じる');
+  expect(document.querySelector('dialog')).toBeNull();
+  await click('編集する');
+  expect(JSON.parse(getScoreJson(key)!).gainingGoal.text).toBe('goalの内容');
+  expect(guard.mock.lastCall?.[0]()).toBe(true);
+});
+
+it('保存中は閉じる・Escapeを受け付けず、完了後に閉じられる', async () => {
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  let finish!: (value: unknown) => void;
+  vi.spyOn(api, 'send').mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await act(async () => root.render(createElement(PufuEditor, { pufu, onGuard: () => {} })));
+  await click('編集する');
+  await click('保存');
+  expect(
+    document.querySelector<HTMLButtonElement>('dialog button[aria-label="閉じる"]')?.disabled,
+  ).toBe(true);
+  await act(async () =>
+    document
+      .querySelector('dialog')!
+      .dispatchEvent(new window.Event('cancel', { cancelable: true })),
+  );
+  expect(document.querySelector('dialog[open]')).not.toBeNull();
+  await act(async () =>
+    finish({ revision: 2, current_phase: 1, updated_at: '2026-10-22T01:00:00Z' }),
+  );
+  await click('閉じる');
+  expect(document.querySelector('dialog')).toBeNull();
+});
+
+it('エディターを一度も開かずに保存済みの局面をJSON出力できる', async () => {
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const input = { ...pufu, id: 'unmounted-export' };
+  const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:export');
+  const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  await act(async () => root.render(createElement(PufuEditor, { pufu: input, onGuard: () => {} })));
+  await click('JSON');
+  expect(document.querySelector('[role="score"]')).toBeNull();
+  const blob = createUrl.mock.calls[0][0] as Blob;
+  expect(JSON.parse(await blob.text())).toEqual(score);
+  expect(revokeUrl).toHaveBeenCalledWith('blob:export');
 });
 
 it('読み取り専用の取得結果はEditorのJSON出力と一致し、そのまま再読み込みできる', async () => {
