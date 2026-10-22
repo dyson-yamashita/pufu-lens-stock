@@ -27,6 +27,7 @@ import {
   LoaderCircle,
   LogOut,
   Menu,
+  Network,
   Pencil,
   Plus,
   RefreshCw,
@@ -57,6 +58,7 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
+import Pufus from './Pufus';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
@@ -79,6 +81,7 @@ type Route = {
     | 'mcp'
     | 'profile'
     | 'questions'
+    | 'pufus'
     | 'settings'
     | 'question'
     | 'resolve'
@@ -89,6 +92,7 @@ type Route = {
 const headerLabels: Record<Route['view'], string> = {
   stocks: 'ストック',
   questions: '問い',
+  pufus: 'プ譜',
   memory: 'メモリ',
   settings: '設定',
   profile: 'プロフィール',
@@ -101,6 +105,7 @@ const headerLabels: Record<Route['view'], string> = {
 const globalHeaderLabels: Partial<Record<Route['view'], string>> = {
   stocks: 'すべてのストック',
   questions: 'すべての問い',
+  pufus: 'すべてのプ譜',
   memory: 'あなたのメモリ',
 };
 type ModalState =
@@ -139,12 +144,18 @@ function routeFromHash(): Route {
       view === 'mcp' ||
       view === 'profile' ||
       view === 'questions' ||
+      view === 'pufus' ||
       ((view === 'question' || view === 'resolve' || view === 'pufu') && !!id) ||
       (view === 'settings' && !!id)
         ? view
         : 'stocks',
     projectId:
-      (view === 'project' || view === 'memory' || view === 'questions' || view === 'settings') && id
+      (view === 'project' ||
+        view === 'memory' ||
+        view === 'questions' ||
+        view === 'pufus' ||
+        view === 'settings') &&
+      id
         ? decodeURIComponent(id)
         : null,
     detailId:
@@ -349,6 +360,7 @@ export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [route, setRoute] = useState<Route>(routeFromHash);
   const [questionListContext, setQuestionListContext] = useState({
+    view: 'questions' as 'questions' | 'pufus',
     projectId: null as string | null,
     scope: null as string | null,
     hash: '#questions',
@@ -388,7 +400,9 @@ export default function App() {
   const selected = projects.find((project) => project.id === route.projectId);
   const questionFlow =
     route.view === 'question' || route.view === 'resolve' || route.view === 'pufu';
-  const libraryView = !route.projectId && (route.view === 'stocks' || route.view === 'questions');
+  const libraryView =
+    !route.projectId &&
+    (route.view === 'stocks' || route.view === 'questions' || route.view === 'pufus');
   const listProjectId = route.projectId ?? (libraryView ? libraryProjectId : null);
   const filterProject = (projectId: string | null) => {
     setLibraryProjectId(projectId);
@@ -401,14 +415,28 @@ export default function App() {
     setMobileNav(false);
   };
   const openQuestion = (id: string) => {
-    if (route.view === 'questions')
+    if (!questionFlow)
       setQuestionListContext({
+        view: 'questions',
         projectId: route.projectId,
         scope: listProjectId,
-        hash: window.location.hash,
-        scroll: window.scrollY,
+        hash:
+          route.view === 'questions'
+            ? window.location.hash
+            : `#questions${route.projectId ? `/${encodeURIComponent(route.projectId)}` : ''}`,
+        scroll: route.view === 'questions' ? window.scrollY : 0,
       });
     navigateDetail('question', id);
+  };
+  const openPufu = (id: string) => {
+    setQuestionListContext({
+      view: 'pufus',
+      projectId: route.projectId,
+      scope: listProjectId,
+      hash: `#pufus${route.projectId ? `/${encodeURIComponent(route.projectId)}` : ''}`,
+      scroll: window.scrollY,
+    });
+    navigateDetail('pufu', id);
   };
   const navigate = (view: Route['view'], projectId: string | null = null) => {
     window.location.hash =
@@ -442,9 +470,15 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (questionFlow) window.scrollTo(0, 0);
-    else if (route.view === 'questions')
+    else if (route.view === questionListContext.view)
       window.requestAnimationFrame(() => window.scrollTo(0, questionListContext.scroll));
-  }, [route.view, route.detailId, questionFlow, questionListContext.scroll]);
+  }, [
+    route.view,
+    route.detailId,
+    questionFlow,
+    questionListContext.scroll,
+    questionListContext.view,
+  ]);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)');
     const listener = () => setIsMobile(media.matches);
@@ -652,23 +686,28 @@ export default function App() {
         ? selected
           ? `${selected.name}の問い`
           : 'すべての問い'
-        : route.view === 'profile'
-          ? 'プロフィール'
-          : route.view === 'mcp'
-            ? '外部連携'
-            : route.view === 'shortcuts'
-              ? 'ショートカット連携'
-              : route.view === 'memory'
-                ? selected
-                  ? `${selected.name}のメモリ`
-                  : 'あなたのメモリ'
-                : (selected?.name ?? 'すべてのストック');
+        : route.view === 'pufus'
+          ? selected
+            ? `${selected.name}のプ譜`
+            : 'すべてのプ譜'
+          : route.view === 'profile'
+            ? 'プロフィール'
+            : route.view === 'mcp'
+              ? '外部連携'
+              : route.view === 'shortcuts'
+                ? 'ショートカット連携'
+                : route.view === 'memory'
+                  ? selected
+                    ? `${selected.name}のメモリ`
+                    : 'あなたのメモリ'
+                  : (selected?.name ?? 'すべてのストック');
   const questionListProject = projects.find(
     (project) => project.id === questionListContext.projectId,
   );
+  const listLabel = questionListContext.view === 'pufus' ? 'プ譜' : '問い';
   const questionListHeading = questionListProject
-    ? `${questionListProject.name}の問い`
-    : 'すべての問い';
+    ? `${questionListProject.name}の${listLabel}`
+    : `すべての${listLabel}`;
   const headerProjectId = questionFlow ? questionListContext.projectId : route.projectId;
   const headerProject = questionFlow ? questionListProject : selected;
   const headerLabel = headerProjectId
@@ -885,7 +924,7 @@ export default function App() {
             {questionFlow ? (
               <>
                 <a href={questionListContext.hash} title={questionListHeading}>
-                  {headerProjectId ? '問い' : 'すべての問い'}
+                  {headerProjectId ? listLabel : `すべての${listLabel}`}
                 </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
                 <a
@@ -921,16 +960,18 @@ export default function App() {
                   <p>
                     {route.view === 'questions'
                       ? '日常やストックから生まれた問いを集める。'
-                      : route.view === 'settings'
-                        ? 'プロジェクトの設定を編集できます。'
-                        : route.view === 'mcp'
-                          ? '会話から、ストックと問いにつなげる。'
-                          : route.view === 'shortcuts'
-                            ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
-                            : route.view === 'memory'
-                              ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
-                              : selected?.description ||
-                                '気になった記事と、生まれたアイデアをひとつの場所に。'}
+                      : route.view === 'pufus'
+                        ? '問いから生まれた解決の案を、一覧で振り返る。'
+                        : route.view === 'settings'
+                          ? 'プロジェクトの設定を編集できます。'
+                          : route.view === 'mcp'
+                            ? '会話から、ストックと問いにつなげる。'
+                            : route.view === 'shortcuts'
+                              ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
+                              : route.view === 'memory'
+                                ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
+                                : selected?.description ||
+                                  '気になった記事と、生まれたアイデアをひとつの場所に。'}
                   </p>
                 )}
               </div>
@@ -977,6 +1018,7 @@ export default function App() {
           )}
           {(route.view === 'stocks' ||
             route.view === 'questions' ||
+            route.view === 'pufus' ||
             route.view === 'settings' ||
             route.view === 'memory') && (
             <div
@@ -998,6 +1040,14 @@ export default function App() {
               >
                 <CircleHelp size={16} aria-hidden="true" />
                 問い
+              </button>
+              <button
+                className={route.view === 'pufus' ? 'active' : ''}
+                aria-pressed={route.view === 'pufus'}
+                onClick={() => navigate('pufus', route.projectId)}
+              >
+                <Network size={16} aria-hidden="true" />
+                プ譜
               </button>
               <button
                 className={route.view === 'memory' ? 'active' : ''}
@@ -1033,7 +1083,8 @@ export default function App() {
               </button>
             </div>
           )}
-          {(route.view === 'questions' || questionFlow) && (
+          {(route.view === 'questions' ||
+            (questionFlow && questionListContext.view === 'questions')) && (
             <div hidden={route.view !== 'questions'}>
               <Questions
                 key={`${(questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}-${questionCreation}`}
@@ -1052,6 +1103,17 @@ export default function App() {
               />
             </div>
           )}
+          {(route.view === 'pufus' || (questionFlow && questionListContext.view === 'pufus')) && (
+            <div hidden={route.view !== 'pufus'}>
+              <Pufus
+                key={(questionFlow ? questionListContext.scope : listProjectId) ?? 'all'}
+                projectId={questionFlow ? questionListContext.scope : listProjectId}
+                active={route.view === 'pufus'}
+                refresh={refresh}
+                onPufu={openPufu}
+              />
+            </div>
+          )}
           {questionFlow ? (
             route.view === 'pufu' ? (
               <PufuPage
@@ -1065,6 +1127,7 @@ export default function App() {
                 key={route.detailId}
                 id={route.detailId!}
                 resolve={route.view === 'resolve'}
+                backLabel={`${listLabel}の一覧に戻る`}
                 onBack={() => {
                   if (route.view === 'resolve') navigateDetail('question', route.detailId!);
                   else window.location.hash = questionListContext.hash;
@@ -1104,7 +1167,8 @@ export default function App() {
                 </p>
               )}
             </section>
-          ) : route.view === 'questions' ? null : route.view === 'profile' ? (
+          ) : route.view === 'questions' || route.view === 'pufus' ? null : route.view ===
+            'profile' ? (
             <Profile
               user={user}
               onSave={(savedUser) => {
@@ -1690,7 +1754,7 @@ function ProjectForm({
         <details className="project-advanced">
           <summary>詳細設定</summary>
           <label className="project-memory-toggle" htmlFor={listVisibilityId}>
-            <span>すべてのストックと問いの一覧に表示する</span>
+            <span>すべてのストック・問い・プ譜の一覧に表示する</span>
             <input
               id={listVisibilityId}
               type="checkbox"
@@ -1702,7 +1766,7 @@ function ProjectForm({
             />
           </label>
           <p id={`${listVisibilityId}-hint`} className="project-memory-hint">
-            オフにすると、このプロジェクトのストックと問いを全体の一覧から外します。プロジェクトを指定すると表示できます。メモリの更新設定や公開設定には影響しません。
+            オフにすると、このプロジェクトのストック・問い・プ譜を全体の一覧から外します。プロジェクトを指定すると表示できます。メモリの更新設定や公開設定には影響しません。
           </p>
           <label className="project-memory-toggle" htmlFor={userMemoryId}>
             <span>ストック追加時にユーザーのメモリを更新する</span>

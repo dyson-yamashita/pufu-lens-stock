@@ -740,6 +740,29 @@ export function createApp(trustedPrincipal?: Principal) {
       },
     });
   });
+  app.get('/api/v1/pufus', async (c) => {
+    const { user } = c.get('principal');
+    const projectId = c.req.query('project_id') || null;
+    if (projectId) await ownedProject(c.env, user.id, projectId);
+    const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
+    const joins =
+      'pufu_scores pf JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id';
+    const where =
+      'pf.user_id=? AND p.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR p.id=?)';
+    const params = [user.id, user.id, projectId, projectId];
+    const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
+      c.env.DB.prepare(
+        `SELECT ${pufuColumns
+          .split(',')
+          .map((column) => `pf.${column}`)
+          .join(',')},
+          p.id AS project_id,p.name AS project_name,q.text AS question_text
+          FROM ${joins} WHERE ${where} ORDER BY pf.created_at DESC,pf.id DESC LIMIT 24 OFFSET ?`,
+      ).bind(...params, (page - 1) * 24),
+      c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${joins} WHERE ${where}`).bind(...params),
+    ]);
+    return c.json({ pufus: rows.results, total: totals.results[0].count, page, pageSize: 24 });
+  });
   async function savePufu(c: import('hono').Context<AppEnv>, append: boolean) {
     const pufu = await ownedPufu(c);
     const data = await body(c, append ? addPufuPhaseSchema : savePufuSchema);
