@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
 import { testApp, mockEvent, mockStep } from './helpers';
 import type { Env, Job } from '../server/env';
+import { pdfArticleText, pdfFixture } from './pdf-fixture';
 
 describe('本文取得から要約とメモリまで', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -171,6 +172,45 @@ describe('本文取得から要約とメモリまで', () => {
     articleFetch();
     await runArticle();
     expect((await app.env.DB.prepare('SELECT status FROM articles').first())!.status).toBe('ready');
+  });
+  it('失敗済みのPDFを再試行し、本文保存と要約・問いの生成予約まで進む', async () => {
+    const { id } = await savedArticle();
+    articleFetch(403);
+    await expect(runArticle()).rejects.toThrow();
+    expect((await app.request(`/api/v1/stocks/${id}/retry`, { method: 'POST' })).status).toBe(202);
+    const original = globalThis.fetch;
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      return url.hostname === 'example.com'
+        ? new Response(pdfFixture([pdfArticleText], 'PDF article'), {
+            headers: { 'Content-Type': 'application/pdf' },
+          })
+        : original(input, init);
+    });
+    const job = await runArticle();
+    const article = await app.env.DB.prepare(
+      'SELECT status, title, error, content_key, summary_json FROM articles WHERE id = ?',
+    )
+      .bind(job.target_id)
+      .first<{
+        status: string;
+        title: string;
+        error: string | null;
+        content_key: string;
+        summary_json: string;
+      }>();
+    expect(article).toMatchObject({ status: 'ready', title: 'PDF article', error: null });
+    expect(
+      (await (await app.env.CONTENT.get(article!.content_key))!.text()).replace(/\s+/g, ' '),
+    ).toContain(pdfArticleText.trim());
+    expect(JSON.parse(article!.summary_json).keyPoints.length).toBeGreaterThan(0);
+    expect(
+      await app.env.DB.prepare(
+        "SELECT id FROM processing_jobs WHERE kind = 'question' AND target_id = ?",
+      )
+        .bind(id)
+        .first(),
+    ).not.toBeNull();
   });
   it('要約生成中に増えた保存先にもメモリ更新を登録する', async () => {
     await savedArticle();

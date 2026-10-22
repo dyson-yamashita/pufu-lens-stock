@@ -43,7 +43,7 @@ jobs:
       - name: Build application
         run: pnpm run build
       - name: Audit dependencies
-        run: pnpm audit --audit-level=high
+        run: pnpm run audit
 
   tests:
     name: Tests (${{ matrix.shard }}/2)

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import prefixSelector from 'postcss-prefix-selector';
 import { pufuViewerPlugin } from './scripts/pufu-viewer-plugin';
+import { pdfCmapsPlugin } from './scripts/pdf-cmaps-plugin';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import {
@@ -15,6 +16,7 @@ export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     pufuViewerPlugin(),
+    pdfCmapsPlugin(),
     cloudflare({
       config: (config) => {
         const envFile = process.env.CLOUDFLARE_ENV

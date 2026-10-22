@@ -461,11 +461,13 @@ YouTube Data API連携・APIキー・動画情報専用の要約処理・サー�
 
 YouTubeのプレーヤーはプライバシー強化モードの `youtube-nocookie.com` を使いますが、サムネイルやプレーヤーの表示・再生時にはブラウザからYouTubeへ通信します。[公式の埋め込み案内](https://support.google.com/youtube/answer/171780?hl=ja)も参照してください。
 
-対象は、ログインせず読める公開HTML・テキスト記事です。HTTP(S)以外、内部・予約アドレス、認証情報入りURL、標準外ポートを拒否します。DNSのA・AAAAの全回答と各リダイレクト先を検査し、取得時にアプリのCookieやBearerトークンを送りません。
+対象は、ログインせず読める公開HTML・テキスト・PDF記事です。HTTP(S)以外、内部・予約アドレス、認証情報入りURL、標準外ポートを拒否します。DNSのA・AAAAの全回答と各リダイレクト先を検査し、取得時にアプリのCookieやBearerトークンを送りません。
 
 通常はHTMLを取得してReadabilityで本文を抽出します。本文が不足する場合はBrowser Runを使用します。ブラウザのHTTP要求も検証付き取得を通し、POST、ダウンロード、Service Worker、WebSocketを許可しません。ログイン・ペイウォール・アクセス制限の回避は行いません。ページ上の任意の対話操作には対応していません。
 
-ページの取得上限は2MB、抽出本文は12万文字です。上限超過や取得失敗時はURLとエラーを保持します。プロジェクトは50件、保存はユーザーごとに直近24時間200件までに制限しています。本文・AI処理の時間と実記事の要約品質は、利用する記事で確認してください。
+`application/pdf` と `application/octet-stream` の応答は、取得済みのバイト列をWorkers内のunpdf（Mozilla PDF.js）で解析します。各ページの文字情報を順番に読み取り、既存の本文保存・要約・問い・メモリ更新へ渡します。タイトルはPDFメタデータ、本文の先頭行、ドメインの順で補います。PDF内のJavaScriptを実行せず、外部のフォント等を取得しません。日本語などの組み込みCMapは、PDF.jsと同じバージョンのpdfjs-distからライセンスとともに静的資産へ同梱し、ASSETSバインディングで読み込みます。CMap以外の外部資源要求や不正なファイル名は拒否します。解析後や失敗時には解析資源を破棄します。文字情報のないスキャンPDF・パスワード保護・破損したPDFは理由と本文補完の案内を表示します。OCRやパスワード解除は行いません。HTMLページがリンクするPDFの自動巡回は行わず、PDFそのものの公開URLを保存してください。過去に失敗したPDFは、詳細から取得を再試行できます。
+
+HTML・テキストの取得上限は2MB、PDFは10MB・100ページ、PDF解析の待機時間は20秒、抽出本文は共通で12万文字です。Content-Lengthの有無にかかわらず取得中の実バイト数も検査します。上限超過や取得失敗時はURLとエラーを保持します。プロジェクトは50件、保存はユーザーごとに直近24時間200件までに制限しています。本文・AI処理の時間と実記事の要約品質は、利用する記事で確認してください。
 
 ## 利用量制限
 
@@ -497,7 +499,7 @@ AI処理はD1の利用枠を原子的に確保してからWorkflowを起動し�
 
 ## ローカル開発
 
-Node.js 22.18以降の22系、または24.11以降（推奨24系）とpnpm 10.34.7を使用します。pnpmのバージョンは `package.json` の `packageManager` で固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
+Node.js 22.18以降の22系、または24.11以降（推奨24系）とpnpm 11.28.6を使用します。開発・CI・監査・デプロイで使うpnpmのバージョンは、`package.json` の `packageManager` で一元的に固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
 
 設定値の例は [.dev.vars.example](../.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
@@ -659,7 +661,9 @@ gh api repos/{owner}/{repo}/rulesets
 2. デプロイジョブの `pnpm install --frozen-lockfile` はSecretsを渡さず実行します。`pnpm run build:production` にだけEnvironment secretsの `APP_URL`、`D1_DATABASE_ID`、`OAUTH_KV_ID` を渡します。Cloudflareのデプロイ認証情報やGoogle OAuthのSecretはビルドに渡しません。
 3. 最後のステップだけに `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` のSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後にWorkerを更新します。
 
-依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。開発用のWranglerも明示的な依存として固定しています。
+依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。従来から実行していない `core-js-pure` のインストールスクリプトは、pnpm 11でも実行しないよう明示しています。開発用のWranglerも明示的な依存として固定しています。
+
+pnpm 11の公開後24時間の待機設定を維持しつつ、移行前からロックファイルに固定・検証済みの `@goto-lab/pufu-editor@0.9.18` と `@napi-rs/canvas@1.0.13` およびそのOS別パッケージの同じバージョンだけを `minimumReleaseAgeExclude` に列挙しています。別バージョンや新しい依存は、この例外の対象になりません。
 
 同一mainのデプロイは直列実行し、実行中の処理は後続pushでキャンセルしません。待機中の古い実行はGitHubのconcurrencyにより最新の実行へ置き換わる場合があります。マイグレーション後にWorker更新が失敗しても、成功済みのDB変更は戻りません。マイグレーションは旧Workerとも動く追加的な変更にし、削除・破壊的な変更は別途手順を検討してください。再実行では適用済みのマイグレーションをスキップします。
 
@@ -713,7 +717,7 @@ pnpm run check
 
 各テスト環境は独立したMiniflare・D1・R2・KVを作成します。初期化では実際の移行SQLをファイル順にWorker内で適用し、SQLの準備によるNode／Worker間の同期RPCを減らします。各ファイルのトランザクション境界と、旧スキーマからの移行テストで使う `applyMigration` は維持します。共有するのは移行SQLの読み込み結果だけで、DBや保存データは共有しません。
 
-`pnpm audit` で依存関係を検査できます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
+`pnpm run audit` で依存関係を検査できます。インストール・ビルドと同じpnpm 11.28.6で `pnpm audit --audit-level=high` を実行し、Bulk Advisory APIを使用します。監査用に別のpnpmを取得する処理はありません。high以上の脆弱性と監査APIのエラーは引き続きCIを失敗させます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
 
 開発サーバーの起動中に `pnpm run test:smoke` を実行すると、MDNの公開記事を取得し、実際のローカルWorkers・Workflows・R2・D1を通して保存と問い・メモリの生成を確認します。この検証で作成したプロジェクトと記事は終了時に削除します。デモ環境専用で、本番には接続しません。
 

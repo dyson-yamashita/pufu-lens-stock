@@ -6,26 +6,40 @@ import type { Env } from './env';
 import { assertPublicDestination, validateUrl } from './security';
 
 const MAX_BYTES = 2 * 1024 * 1024;
-export async function limitedText(response: Response): Promise<string> {
-  if (Number(response.headers.get('Content-Length')) > MAX_BYTES)
-    throw new Error('ページが大きすぎます（上限2MB）。');
-  if (!response.body) return '';
+async function limitedBytes(response: Response, maxBytes = MAX_BYTES): Promise<Uint8Array> {
+  const message =
+    maxBytes === MAX_BYTES
+      ? 'ページが大きすぎます（上限2MB）。'
+      : 'PDFが大きすぎます（上限10MB）。';
+  if (Number(response.headers.get('Content-Length')) > maxBytes) {
+    await response.body?.cancel();
+    throw new Error(message);
+  }
+  if (!response.body) return new Uint8Array();
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
   let size = 0;
-  let text = '';
+  const chunks: Uint8Array[] = [];
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_BYTES) throw new Error('ページが大きすぎます（上限2MB）。');
-      text += decoder.decode(value, { stream: true });
+      if (size > maxBytes) throw new Error(message);
+      chunks.push(value);
     }
-    return text + decoder.decode();
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return bytes;
   } finally {
     await reader.cancel();
   }
+}
+export async function limitedText(response: Response): Promise<string> {
+  return new TextDecoder().decode(await limitedBytes(response));
 }
 export function extractHtml(html: string, url: string): { title: string; text: string } {
   const { document } = parseHTML(html);
@@ -101,7 +115,7 @@ export async function fetchPublic(value: string): Promise<{ response: Response; 
       redirect: 'manual',
       headers: {
         'User-Agent': 'PufuLens/0.1 (personal article bookmarks)',
-        Accept: 'text/html,text/plain;q=0.8',
+        Accept: 'text/html,application/pdf,text/plain;q=0.8,application/octet-stream;q=0.5',
       },
       signal: AbortSignal.timeout(20000),
     });
@@ -133,8 +147,13 @@ export async function fetchArticle(
       `本文を取得できませんでした（HTTP ${response.status}）。ログインやアクセス制限が必要なページは保存URLのみ保持します。`,
     );
   const contentType = response.headers.get('Content-Type') ?? '';
+  if (/^application\/(pdf|octet-stream)(?:\s*;|$)/i.test(contentType)) {
+    const data = await limitedBytes(response, 10 * 1024 * 1024);
+    const { extractPdf } = await import('./pdf');
+    return extractPdf(data, url, env.ASSETS);
+  }
   if (!/text\/(html|plain)|application\/xhtml\+xml/i.test(contentType))
-    throw new Error('現在はHTML・テキストの記事に対応しています。');
+    throw new Error('現在はHTML・テキスト・PDFの記事に対応しています。');
   const content = await limitedText(response);
   let result = contentType.includes('text/plain')
     ? { title: url.hostname, text: content.trim() }
