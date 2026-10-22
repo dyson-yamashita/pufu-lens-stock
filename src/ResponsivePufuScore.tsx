@@ -8,7 +8,7 @@ export default function ResponsivePufuScore(props: Props) {
   const [narrow, setNarrow] = useState(false);
   useLayoutEffect(() => {
     const container = ref.current!;
-    // pufu-editor 0.9.18のミニマップと同じく、埋め込み先が900px未満なら切り替える。
+    // pufu-editorのミニマップと同じく、埋め込み先が900px未満なら切り替える。
     const measure = () => setNarrow(container.clientWidth < 900);
     measure();
     const observer = new ResizeObserver(measure);
@@ -17,7 +17,7 @@ export default function ResponsivePufuScore(props: Props) {
   }, []);
   return (
     <div className="pufu-editor-root" ref={ref}>
-      <ProjectScore {...props} textSize={narrow ? 'small' : 'base'} />
+      <ProjectScore {...props} textSize={narrow ? 'xsmall' : 'base'} />
     </div>
   );
 }
