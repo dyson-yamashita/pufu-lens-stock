@@ -55,6 +55,7 @@
     "short-uuid": "^4.2.2",
     "sortablejs": "^1.15.2",
     "ts-interface-checker": "^1.0.2",
+    "unpdf": "1.9.1",
     "zod": "^4.0.0",
     "zustand": "^4.5.2"
   },
@@ -70,6 +71,7 @@
     "esbuild": "0.28.2",
     "eslint": "^9.0.0",
     "miniflare": "^4.20260730.0",
+    "pdfjs-dist": "6.4.299",
     "postcss-prefix-selector": "^2.2.1",
     "prettier": "^3.0.0",
     "typescript": "^5.9.0",
