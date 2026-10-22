@@ -2,12 +2,29 @@ autoInstallPeers: true
 packages:
   - packages/*
 
+# 移行前から固定・検証済みのバージョンに限り、公開後24時間の待機を除外する。
+minimumReleaseAgeExclude:
+  - '@goto-lab/pufu-editor@0.9.18'
+  - '@napi-rs/canvas@1.0.13'
+  - '@napi-rs/canvas-android-arm64@1.0.13'
+  - '@napi-rs/canvas-darwin-arm64@1.0.13'
+  - '@napi-rs/canvas-darwin-x64@1.0.13'
+  - '@napi-rs/canvas-linux-arm-gnueabihf@1.0.13'
+  - '@napi-rs/canvas-linux-arm64-gnu@1.0.13'
+  - '@napi-rs/canvas-linux-arm64-musl@1.0.13'
+  - '@napi-rs/canvas-linux-riscv64-gnu@1.0.13'
+  - '@napi-rs/canvas-linux-x64-gnu@1.0.13'
+  - '@napi-rs/canvas-linux-x64-musl@1.0.13'
+  - '@napi-rs/canvas-win32-arm64-msvc@1.0.13'
+  - '@napi-rs/canvas-win32-x64-msvc@1.0.13'
+
 overrides:
   undici: ^7.29.1
   sharp: ^0.35.5
   short-uuid>uuid: ^11.1.1
 
 allowBuilds:
+  core-js-pure: false
   esbuild: true
   sharp: true
   workerd: true

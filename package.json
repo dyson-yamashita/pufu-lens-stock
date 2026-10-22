@@ -14,7 +14,7 @@
     "build": "vite build",
     "build:production": "CLOUDFLARE_ENV=production vite build",
     "typecheck": "tsc --noEmit",
-    "audit": "pnpm dlx pnpm@11.28.6 --pm-on-fail=ignore audit --audit-level=high",
+    "audit": "pnpm audit --audit-level=high",
     "test": "vitest run",
     "test:smoke": "node scripts/smoke-local.mjs",
     "test:smoke:mcp": "node scripts/smoke-mcp-local.mjs",
@@ -81,5 +81,5 @@
     "vitest": "^5.0.4",
     "wrangler": "4.151.0"
   },
-  "packageManager": "pnpm@10.34.7"
+  "packageManager": "pnpm@11.28.6"
 }

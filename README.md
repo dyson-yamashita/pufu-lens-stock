@@ -16,7 +16,7 @@ Googleアカウントでログインし、複数のプロジェクトを管理�
 
 ## まずはローカルで試す
 
-**Node.js 22.18以降の22系、または24.11以降（推奨24系） / pnpm 10.34.7** を使用します。Corepackを使う場合は、初回に `corepack enable` を実行してください。
+**Node.js 22.18以降の22系、または24.11以降（推奨24系） / pnpm 11.28.6** を使用します。Corepackを使う場合は、初回に `corepack enable` を実行してください。
 
 ```sh
 pnpm install --frozen-lockfile
