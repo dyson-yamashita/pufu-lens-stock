@@ -5,6 +5,7 @@ import wasm from './resvg-wasm';
 import sparse from './fixtures/pufu-sparse.json';
 import many from './fixtures/pufu-many-measures.json';
 import long from './fixtures/pufu-long-text.json';
+import { parseHTML } from 'linkedom';
 let font: Uint8Array;
 beforeAll(async () => {
   await initPufuWasm(wasm);
@@ -17,12 +18,17 @@ describe('Pufu JSON -> SVG -> PNG (real WASM)', () => {
     ['long', long],
   ] as const)('%s: retains nodes/comments and generates both progress variants', (_name, score) => {
     const original = JSON.stringify(score);
-    for (const showProgress of [true, false]) {
-      const result = renderPufuPng(score, { font, showProgress });
+    for (const options of [
+      { showProgress: true, theme: 'light' },
+      { showProgress: false, theme: 'light' },
+      { showProgress: true, theme: 'dark' },
+      { showProgress: false, theme: 'dark' },
+    ] as const) {
+      const result = renderPufuPng(score, { font, ...options });
       expect(Buffer.from(result.png.subarray(0, 8)).toString('hex')).toBe('89504e470d0a1a0a');
       expect(Buffer.from(result.png).readUInt32BE(16)).toBe(result.width);
       expect(Buffer.from(result.png).readUInt32BE(20)).toBe(result.height);
-      const expected = showProgress
+      const expected = options.showProgress
         ? score.purposes.flatMap((p) => p.measures).filter((m) => 'progress' in m).length
         : 0;
       expect(result.svg.match(/data-role="measure-progress"/g)?.length ?? 0).toBe(expected);
@@ -43,6 +49,57 @@ describe('Pufu JSON -> SVG -> PNG (real WASM)', () => {
       expect(result.svg).not.toContain('Pufu Lens');
     }
     expect(JSON.stringify(score)).toBe(original);
+  });
+  it('両テーマで内容と配置を保持し、ダークでは施策の色分けと文字のコントラストを保つ', () => {
+    const score = structuredClone(sparse);
+    const source = score.purposes[0].measures[0];
+    const colors = ['white', 'blue', 'green', 'red', 'yellow'] as const;
+    score.purposes[0].measures = colors.map((color, index) => ({
+      ...source,
+      uuid: `theme-${index}`,
+      color,
+      text: '色の説明 #ffffff fill="#4b5563"',
+      comment: { color: 'blue', text: `メモ：${color}` },
+    }));
+    const light = createPufuSvg(score, { theme: 'light' });
+    const dark = createPufuSvg(score, { theme: 'dark' });
+    expect(createPufuSvg(score)).toBe(light);
+    expect(dark).not.toBe(light);
+    const lightSvg = parseHTML(`<html><body>${light}</body></html>`).document.querySelector('svg')!;
+    const darkSvg = parseHTML(`<html><body>${dark}</body></html>`).document.querySelector('svg')!;
+    expect(darkSvg.textContent).toBe(lightSvg.textContent);
+    expect(darkSvg.getAttribute('viewBox')).toBe(lightSvg.getAttribute('viewBox'));
+    expect([...darkSvg.querySelectorAll('path')].map((path) => path.getAttribute('d'))).toEqual(
+      [...lightSvg.querySelectorAll('path')].map((path) => path.getAttribute('d')),
+    );
+    const luminance = (hex: string) => {
+      const channels = hex
+        .slice(1)
+        .match(/../g)!
+        .map((channel) => {
+          const value = parseInt(channel, 16) / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const measures = [...darkSvg.querySelectorAll('[data-role="measure"]')];
+    const fills = measures.map((measure) => measure.querySelector('rect')!.getAttribute('fill')!);
+    expect(new Set(fills).size).toBe(colors.length);
+    for (const measure of measures) {
+      const background = luminance(measure.querySelector('rect')!.getAttribute('fill')!);
+      const foreground = luminance(measure.querySelector('text')!.getAttribute('fill')!);
+      expect(
+        (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05),
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(Buffer.from(renderPufuPng(score, { font, theme: 'dark' }).png)).not.toEqual(
+      Buffer.from(renderPufuPng(score, { font, theme: 'light' }).png),
+    );
+  });
+  it.each(['', 'sepia', null, true])('不正なテーマは画像化せずエラーにする：%s', (theme) => {
+    expect(() => createPufuSvg(sparse, { theme } as never)).toThrow(
+      expect.objectContaining({ code: 'INVALID_OPTIONS' }),
+    );
   });
   it('empty and no measures are valid, progress is not invented', () => {
     const score = structuredClone(sparse);

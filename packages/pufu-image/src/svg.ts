@@ -1,7 +1,7 @@
 import { pufuScoreSchema, type PufuScore } from './model.js';
 import metrics from './font-metrics.json';
 import { PufuImageError, imageLimits } from './errors.js';
-export type SvgOptions = { showProgress?: boolean };
+export type SvgOptions = { showProgress?: boolean; theme?: 'light' | 'dark' };
 type BaseNode = PufuScore['gainingGoal'];
 type MeasureNode = PufuScore['purposes'][number]['measures'][number];
 const segmenter = new Intl.Segmenter('ja', { granularity: 'grapheme' });
@@ -11,6 +11,32 @@ const palette = {
   green: { fill: '#eef8f1', border: '#69ad83', text: '#2c6841' },
   red: { fill: '#fff0f1', border: '#d98d95', text: '#8a3d49' },
   yellow: { fill: '#fff9e4', border: '#d6b962', text: '#71602f' },
+};
+const darkColors: Record<string, string> = {
+  '#ffffff': '#172033',
+  '#24354e': '#e5eaf3',
+  '#4b5563': '#e5eaf3',
+  '#6b7280': '#afbdd2',
+  '#c8d2df': '#667b98',
+  '#9ca3af': '#667b98',
+  '#bdc8d8': '#667b98',
+  '#cbd5e1': '#667b98',
+  '#a4b0c0': '#8297b3',
+  '#eaf3ff': '#223653',
+  '#70a8ed': '#7ba9e2',
+  '#eef8f1': '#233d35',
+  '#69ad83': '#7ebc9a',
+  '#fff0f1': '#442b35',
+  '#d98d95': '#da9cab',
+  '#fff9e4': '#423923',
+  '#d6b962': '#d2b96f',
+  '#41b4f7': '#6ac3ff',
+  '#43db6d': '#6ddb8b',
+  '#f2a4b7': '#ffb2c6',
+  '#73839a': '#afbdd2',
+  '#e1e8f1': '#36445c',
+  '#5384b7': '#a9c8f5',
+  '#56718f': '#b3c9e7',
 };
 const xml = (value: unknown) =>
   String(value).replace(
@@ -230,7 +256,9 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     (options.showProgress !== undefined && typeof options.showProgress !== 'boolean')
   )
     throw new PufuImageError('INVALID_OPTIONS', '進捗表示には真偽値を指定してください。');
-  const { showProgress = true } = options;
+  if (options.theme !== undefined && options.theme !== 'light' && options.theme !== 'dark')
+    throw new PufuImageError('INVALID_OPTIONS', 'テーマはlightまたはdarkを指定してください。');
+  const { showProgress = true, theme = 'light' } = options;
   const score = validateScore(input);
   const width = 1760;
   const rowStart = 88;
@@ -365,5 +393,11 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     )
     .join('');
   const description = `ProjectScoreModelから生成。廟算八要素、施策、中間目的、勝利条件、獲得目標、保存されたコメントを表示。施策の進捗表示は${showProgress ? 'あり' : 'なし'}。`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>プ譜：${xml(score.gainingGoal.text)}</title><desc>${description}</desc><g font-family="Noto Sans CJK JP, sans-serif">${rect(0, 0, width, height, '#ffffff', 'none', 0)}${rect(30, 24, 1696, height - 48, '#ffffff', '#bdc8d8', 0)}${heads}<line x1="402" y1="24" x2="402" y2="${height - 24}" stroke="#cbd5e1"/>${lines}${content}${win.content}${goal.content}</g></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>プ譜：${xml(score.gainingGoal.text)}</title><desc>${description}</desc><g font-family="Noto Sans CJK JP, sans-serif">${rect(0, 0, width, height, '#ffffff', 'none', 0)}${rect(30, 24, 1696, height - 48, '#ffffff', '#bdc8d8', 0)}${heads}<line x1="402" y1="24" x2="402" y2="${height - 24}" stroke="#cbd5e1"/>${lines}${content}${win.content}${goal.content}</g></svg>`;
+  if (theme === 'light') return svg;
+  // 色属性だけを置き換え、本文に書かれた色コードやエスケープ済みの文章は変えない。
+  return svg.replace(
+    /\b(fill|stroke)="(#[0-9a-f]{6})"/g,
+    (_match, attribute: string, color: string) => `${attribute}="${darkColors[color] ?? color}"`,
+  );
 }

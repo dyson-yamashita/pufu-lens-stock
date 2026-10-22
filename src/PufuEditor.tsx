@@ -4,6 +4,8 @@ import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-reac
 import { pufuScoreSchema, type Pufu } from '../shared/pufu';
 import { send } from './api';
 import { useTheme } from './theme';
+import PufuImagePreview from './PufuImagePreview';
+import PufuModal from './PufuModal';
 
 const canonical = (json: string) =>
   JSON.stringify(JSON.parse(json), (key, value) => (key === 'id' ? undefined : value));
@@ -33,13 +35,17 @@ export default function PufuEditor({
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const savedPhase = phases.find((phase) => phase.number === editor.number)!;
   const baseline = useRef(canonical(JSON.stringify(editor.score)));
   const hasChanges = () => {
+    if (!editing) return false;
     const json = getScoreJson(editorKey);
     return Boolean(json && canonical(json) !== baseline.current);
   };
   useEffect(() => {
     const changed = () => {
+      if (!editing) return false;
       const json = getScoreJson(editorKey);
       return Boolean(json && canonical(json) !== baseline.current);
     };
@@ -59,7 +65,25 @@ export default function PufuEditor({
       window.removeEventListener('beforeunload', unload);
       window.clearInterval(timer);
     };
-  }, [editorKey, onGuard]);
+  }, [editorKey, onGuard, editing]);
+  function openEditor() {
+    if (busy) return;
+    setEditor(structuredClone(savedPhase));
+    baseline.current = canonical(JSON.stringify(savedPhase.score));
+    setDirty(false);
+    setError('');
+    setNotice('');
+    setEditing(true);
+  }
+  function closeEditor() {
+    if (busy) return;
+    if (hasChanges() && !window.confirm('保存していない変更があります。保存せずに閉じますか？'))
+      return;
+    setEditing(false);
+    setEditor(structuredClone(savedPhase));
+    baseline.current = canonical(JSON.stringify(savedPhase.score));
+    setDirty(false);
+  }
   function selectPhase(number: number) {
     if (number === editor.number || busy) return;
     if (
@@ -80,7 +104,7 @@ export default function PufuEditor({
     setError('');
     setNotice('');
     try {
-      const json = getScoreJson(editorKey);
+      const json = editing ? getScoreJson(editorKey) : JSON.stringify(savedPhase.score);
       if (!json) throw new Error('編集内容を読み取れませんでした。');
       const input = pufuScoreSchema.safeParse(JSON.parse(json));
       if (!input.success)
@@ -144,15 +168,11 @@ export default function PufuEditor({
         </div>
       </div>
       <div className="pufu-toolbar">
-        <span className="field-hint" role="status">
-          {dirty ? '未保存の変更があります' : '保存済み'}
-        </span>
         <div>
           <button
             className="button secondary"
             onClick={() => {
-              const json = getScoreJson(editorKey);
-              if (!json) return;
+              const json = JSON.stringify(savedPhase.score);
               const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
               const link = document.createElement('a');
               link.href = url;
@@ -170,14 +190,6 @@ export default function PufuEditor({
               局面を追加
             </button>
           )}
-          <button className="button primary" disabled={busy} onClick={() => save()}>
-            {busy ? (
-              <LoaderCircle className="spin" size={17} aria-hidden="true" />
-            ) : (
-              <Save size={17} aria-hidden="true" />
-            )}
-            {busy ? '保存中…' : '保存'}
-          </button>
         </div>
       </div>
       {isLatest && (
@@ -185,30 +197,59 @@ export default function PufuEditor({
           奇数局面は編集、偶数局面はフィードバックです。局面を追加すると、現在の内容を保存して次の局面へ引き継ぎます。
         </p>
       )}
-      {error && (
+      <PufuImagePreview score={savedPhase.score} phase={editor.number} onEdit={openEditor} />
+      {!editing && error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
-      {notice && (
+      {!editing && notice && (
         <p className="toast" role="status">
           <Check size={17} aria-hidden="true" />
           {notice}
         </p>
       )}
-      <div className="pufu-editor-shell" inert={busy} aria-busy={busy}>
-        <div className="pufu-editor-root">
-          <ProjectScore
-            key={editorKey}
-            uniqueKey={editorKey}
-            initScore={editor.score}
-            lang="ja"
-            textSize="base"
-            feedback={feedback}
-            dark={theme === 'dark'}
-          />
-        </div>
-      </div>
+      {editing && (
+        <PufuModal title={`第${editor.number}局面のプ譜を編集`} onClose={closeEditor} busy={busy}>
+          <div className="pufu-toolbar">
+            <span className="field-hint" role="status">
+              {dirty ? '未保存の変更があります' : '保存済み'}
+            </span>
+            <button className="button primary" disabled={busy} onClick={() => save()}>
+              {busy ? (
+                <LoaderCircle className="spin" size={17} aria-hidden="true" />
+              ) : (
+                <Save size={17} aria-hidden="true" />
+              )}
+              {busy ? '保存中…' : '保存'}
+            </button>
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p className="toast" role="status">
+              <Check size={17} aria-hidden="true" />
+              {notice}
+            </p>
+          )}
+          <div className="pufu-editor-shell" inert={busy} aria-busy={busy}>
+            <div className="pufu-editor-root">
+              <ProjectScore
+                key={editorKey}
+                uniqueKey={editorKey}
+                initScore={editor.score}
+                lang="ja"
+                textSize="base"
+                feedback={feedback}
+                dark={theme === 'dark'}
+              />
+            </div>
+          </div>
+        </PufuModal>
+      )}
       <p className="pufu-memory-caption">
         生成に参照したメモリ：あなた{' '}
         {pufu.context.userMemory
