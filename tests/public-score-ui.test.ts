@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import { elementKeys, type PufuScore } from '../shared/pufu';
+import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 import { testApp } from './helpers';
 
 const require = createRequire(import.meta.url);
@@ -49,11 +49,18 @@ const score: PufuScore = {
 };
 let root: Root;
 let document: Document;
+let containerWidth: number;
 beforeEach(() => {
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
   document = dom.document as unknown as Document;
   vi.stubGlobal('window', dom.window);
   vi.stubGlobal('document', document);
+  vi.stubGlobal('MutationObserver', dom.window.MutationObserver);
+  containerWidth = 1200;
+  Object.defineProperty(window.HTMLElement.prototype, 'clientWidth', {
+    configurable: true,
+    get: () => containerWidth,
+  });
   document.cookie = '';
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   Object.defineProperty(window, 'location', {
@@ -94,13 +101,14 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 it.each([
-  { mobile: false, theme: 'light' },
-  { mobile: true, theme: 'light' },
-  { mobile: false, theme: 'dark' },
-  { mobile: true, theme: 'dark' },
+  { width: 1200, theme: 'light' },
+  { width: 640, theme: 'light' },
+  { width: 1200, theme: 'dark' },
+  { width: 640, theme: 'dark' },
 ])(
-  '公開プ譜はpufu-editorで全内容を閲覧でき、編集できない（$mobile / $theme）',
-  async ({ mobile, theme }) => {
+  '公開プ譜は全内容を閲覧でき、狭い表示領域ではミニマップを利用できる（$width / $theme）',
+  async ({ width, theme }) => {
+    containerWidth = width;
     const snapshot = { theme, preference: theme };
     Object.defineProperty(window, 'pufuTheme', {
       configurable: true,
@@ -108,11 +116,13 @@ it.each([
     });
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
-      value: () => ({ matches: mobile, addEventListener() {}, removeEventListener() {} }),
+      value: () => ({ matches: width < 1000, addEventListener() {}, removeEventListener() {} }),
     });
     const { default: PublicScore } = await import('../src/PublicPufuScore');
     const original = structuredClone(score);
     await act(async () => root.render(createElement(PublicScore, { score })));
+    expect(Boolean(document.querySelector('[aria-label="プ譜の表示エリア"]'))).toBe(width < 900);
+    expect(Boolean(document.querySelector('button[aria-label^="全体マップ："]'))).toBe(width < 900);
     expect(document.querySelector('[role="score"]')).not.toBeNull();
     const fields = [
       ...document
@@ -153,43 +163,71 @@ it.each([
     const lists = [...document.querySelectorAll('[role="score"] div')]
       .map((element) => Sortable.get(element))
       .filter((sortable) => sortable !== undefined);
-    expect(lists.length).toBeGreaterThan(0);
     expect(lists.every((sortable) => sortable.option('disabled') === true)).toBe(true);
     expect(
-      document.querySelectorAll(
-        'input,button,[contenteditable="true"],[aria-label="delete-icon"],[aria-label="add-icon"]',
-      ),
+      document
+        .querySelector('[role="score"]')!
+        .querySelectorAll(
+          'input,button,[contenteditable="true"],[aria-label="delete-icon"],[aria-label="add-icon"]',
+        ),
     ).toHaveLength(0);
   },
 );
-it('通常の編集モードでは入力・追加・並べ替えを引き続き利用できる', async () => {
-  const { ProjectScore } = require(
-    join(editorRoot, 'components/ProjectScore.js'),
-  ) as typeof import('@goto-lab/pufu-editor');
-  await act(async () =>
-    root.render(
-      createElement(ProjectScore, {
-        initScore: structuredClone(score),
-        uniqueKey: 'private-edit-mode',
-        mobile: true,
-        preview: false,
-      }),
-    ),
-  );
-  const editor = document.querySelector('[role="score"]')!;
-  const fields = [...editor.querySelectorAll('textarea')];
-  expect(fields.length).toBeGreaterThanOrEqual(12);
-  expect(fields.every((field) => !field.hasAttribute('readOnly'))).toBe(true);
-  expect(editor.querySelector('[aria-label="add-icon"]')).not.toBeNull();
-  const Sortable = require('sortablejs') as {
-    get: (element: Element) => { option: (name: string) => unknown } | undefined;
-  };
-  const lists = [...editor.querySelectorAll('div')]
-    .map((element) => Sortable.get(element))
-    .filter((sortable) => sortable !== undefined);
-  expect(lists.length).toBeGreaterThan(0);
-  expect(lists.every((sortable) => sortable.option('disabled') === false)).toBe(true);
-});
+it.each([1200, 640])(
+  '編集画面は幅%sで入力・追加・並べ替えと必要なミニマップを利用できる',
+  async (width) => {
+    containerWidth = width;
+    const snapshot = { theme: 'light', preference: 'light' };
+    Object.defineProperty(window, 'pufuTheme', {
+      configurable: true,
+      value: { subscribe: () => () => {}, getSnapshot: () => snapshot },
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: () => ({ matches: width < 1000, addEventListener() {}, removeEventListener() {} }),
+    });
+    const { default: PufuEditor } = await import('../src/PufuEditor');
+    const pufu: Pufu = {
+      id: 'private-edit-mode',
+      question_id: 'question',
+      task: '課題',
+      status: 'ready',
+      error: null,
+      model: 'test',
+      editor_version: '0.9.18',
+      revision: 1,
+      current_phase: 1,
+      generation: 1,
+      created_at: '2026-10-22T00:00:00.000Z',
+      updated_at: '2026-10-22T00:00:00.000Z',
+      score,
+      phases: [{ number: 1, score, created_at: '', updated_at: '' }],
+      context: {
+        question: { id: 'question', text: '問い', source: 'user' },
+        task: '課題',
+        project: { id: 'project', name: 'プロジェクト', description: '' },
+        stock: null,
+        userMemory: null,
+        projectMemory: null,
+      },
+    };
+    await act(async () => root.render(createElement(PufuEditor, { pufu, onGuard: () => {} })));
+    expect(Boolean(document.querySelector('button[aria-label^="全体マップ："]'))).toBe(width < 900);
+    const editor = document.querySelector('[role="score"]')!;
+    const fields = [...editor.querySelectorAll('textarea')];
+    expect(fields.length).toBeGreaterThanOrEqual(12);
+    expect(fields.every((field) => !field.hasAttribute('readOnly'))).toBe(true);
+    expect(editor.querySelector('[aria-label="add-icon"]')).not.toBeNull();
+    const Sortable = require('sortablejs') as {
+      get: (element: Element) => { option: (name: string) => unknown } | undefined;
+    };
+    const lists = [...editor.querySelectorAll('div')]
+      .map((element) => Sortable.get(element))
+      .filter((sortable) => sortable !== undefined);
+    expect(lists.length).toBeGreaterThan(0);
+    expect(lists.every((sortable) => sortable.option('disabled') === false)).toBe(true);
+  },
+);
 
 it('読み取り専用の取得結果はEditorのJSON出力と一致し、そのまま再読み込みできる', async () => {
   const app = await testApp();
