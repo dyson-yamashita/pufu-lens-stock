@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
-import { ProjectScore } from '@goto-lab/pufu-editor';
 import type { PufuScore } from '../shared/pufu';
 import { useTheme } from './theme';
+import ResponsivePufuScore from './ResponsivePufuScore';
 
 export default function PublicPufuScore({ score }: { score: PufuScore }) {
   const id = useId();
@@ -11,17 +11,14 @@ export default function PublicPufuScore({ score }: { score: PufuScore }) {
   return (
     <>
       <div className="pufu-editor-shell public-pufu-preview" aria-label="プ譜（閲覧のみ）">
-        <div className="pufu-editor-root">
-          <ProjectScore
-            uniqueKey={`public-${id}`}
-            initScore={initialScore}
-            preview
-            showProgress
-            lang="ja"
-            textSize="base"
-            dark={theme === 'dark'}
-          />
-        </div>
+        <ResponsivePufuScore
+          uniqueKey={`public-${id}`}
+          initScore={initialScore}
+          preview
+          showProgress
+          lang="ja"
+          dark={theme === 'dark'}
+        />
       </div>
       <p className="pufu-credit">
         <a href="https://github.com/goto-lab/pufu-editor" target="_blank" rel="noreferrer">

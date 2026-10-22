@@ -75,6 +75,7 @@ const pufu: Pufu = {
 let root: Root;
 let document: Document;
 let containerWidth: number;
+let resizeCallbacks: Set<() => void>;
 beforeEach(() => {
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
   document = dom.document as unknown as Document;
@@ -82,6 +83,7 @@ beforeEach(() => {
   vi.stubGlobal('document', document);
   vi.stubGlobal('MutationObserver', dom.window.MutationObserver);
   containerWidth = 1200;
+  resizeCallbacks = new Set();
   Object.defineProperty(window.HTMLElement.prototype, 'clientWidth', {
     configurable: true,
     get: () => containerWidth,
@@ -111,8 +113,13 @@ beforeEach(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      observe() {}
-      disconnect() {}
+      constructor(private callback: () => void) {}
+      observe() {
+        resizeCallbacks.add(this.callback);
+      }
+      disconnect() {
+        resizeCallbacks.delete(this.callback);
+      }
     },
   );
   Object.defineProperty(window, 'getComputedStyle', {
@@ -148,13 +155,13 @@ async function click(label: string) {
   await act(async () => button.click());
 }
 it.each([
-  { width: 1200, theme: 'light' },
-  { width: 640, theme: 'light' },
-  { width: 1200, theme: 'dark' },
-  { width: 640, theme: 'dark' },
+  { width: 900, theme: 'light', textClass: 'text-base' },
+  { width: 899, theme: 'light', textClass: 'text-sm' },
+  { width: 1200, theme: 'dark', textClass: 'text-base' },
+  { width: 640, theme: 'dark', textClass: 'text-sm' },
 ])(
   '公開プ譜は全内容を閲覧でき、狭い表示領域ではミニマップを利用できる（$width / $theme）',
-  async ({ width, theme }) => {
+  async ({ width, theme, textClass }) => {
     containerWidth = width;
     const snapshot = { theme, preference: theme };
     Object.defineProperty(window, 'pufuTheme', {
@@ -177,6 +184,8 @@ it.each([
         .querySelectorAll<HTMLTextAreaElement>('textarea'),
     ];
     expect(fields.length).toBeGreaterThanOrEqual(12);
+    const textFields = fields.filter((field) => !field.getAttribute('role')?.endsWith('-comment'));
+    expect(textFields.every((field) => field.classList.contains(textClass))).toBe(true);
     expect(fields.filter((field) => !field.hasAttribute('readOnly'))).toHaveLength(0);
     for (const key of [
       'goal',
@@ -220,9 +229,12 @@ it.each([
     ).toHaveLength(0);
   },
 );
-it.each([1200, 640])(
-  '編集画面は幅%sで入力・追加・並べ替えと必要なミニマップを利用できる',
-  async (width) => {
+it.each([
+  { width: 900, textClass: 'text-base' },
+  { width: 899, textClass: 'text-sm' },
+])(
+  '編集画面は幅$width pxで入力・追加・並べ替えと必要なミニマップを利用できる',
+  async ({ width, textClass }) => {
     containerWidth = width;
     const snapshot = { theme: 'light', preference: 'light' };
     Object.defineProperty(window, 'pufuTheme', {
@@ -245,6 +257,8 @@ it.each([1200, 640])(
     const editor = document.querySelector('[role="score"]')!;
     const fields = [...editor.querySelectorAll('textarea')];
     expect(fields.length).toBeGreaterThanOrEqual(12);
+    const textFields = fields.filter((field) => !field.getAttribute('role')?.endsWith('-comment'));
+    expect(textFields.every((field) => field.classList.contains(textClass))).toBe(true);
     expect(fields.every((field) => !field.hasAttribute('readOnly'))).toBe(true);
     expect(editor.querySelector('[aria-label="add-icon"]')).not.toBeNull();
     const Sortable = require('sortablejs') as {
@@ -262,6 +276,35 @@ it.each([1200, 640])(
     expect(document.querySelector('dialog')?.contains(editor)).toBe(true);
   },
 );
+
+it('幅の変更でミニマップと文字サイズが一緒に切り替わり、未保存の編集を保持する', async () => {
+  containerWidth = 900;
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { setScore, getScoreJson } = require(
+    join(editorRoot, 'components/ProjectScore.js'),
+  ) as typeof import('@goto-lab/pufu-editor');
+  await act(async () => root.render(createElement(PufuEditor, { pufu, onGuard: () => {} })));
+  await click('編集する');
+  const edited = structuredClone(score);
+  edited.gainingGoal.text = '幅を変更しても保持する目標';
+  const key = `${pufu.id}-phase-1`;
+  await act(async () => setScore(key, JSON.stringify(edited)));
+  for (const { width, textClass, minimap } of [
+    { width: 899, textClass: 'text-sm', minimap: true },
+    { width: 900, textClass: 'text-base', minimap: false },
+  ]) {
+    await act(async () => {
+      containerWidth = width;
+      for (const callback of [...resizeCallbacks]) callback();
+    });
+    expect(Boolean(document.querySelector('button[aria-label^="全体マップ："]'))).toBe(minimap);
+    const fields = [
+      ...document.querySelectorAll('[role="score"] textarea:not([role$="-comment"])'),
+    ];
+    expect(fields.every((field) => field.classList.contains(textClass))).toBe(true);
+    expect(JSON.parse(getScoreJson(key)!).gainingGoal.text).toBe('幅を変更しても保持する目標');
+  }
+});
 
 it('プ譜画像は選択中の局面を表示し、未保存の編集では変わらず保存・局面追加後に更新する', async () => {
   const { default: PufuEditor } = await import('../src/PufuEditor');
