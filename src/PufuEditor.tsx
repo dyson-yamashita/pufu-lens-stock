@@ -21,7 +21,6 @@ export default function PufuEditor({
   onGuard: (guard: (() => boolean) | null) => void;
 }) {
   const { theme } = useTheme();
-  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 1000px)').matches);
   const [revision, setRevision] = useState(pufu.revision);
   const [phases, setPhases] = useState(pufu.phases);
   // エディターは入力オブジェクトを直接変更するため、保存済みの局面とは参照を分ける。
@@ -39,12 +38,6 @@ export default function PufuEditor({
     const json = getScoreJson(editorKey);
     return Boolean(json && canonical(json) !== baseline.current);
   };
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 1000px)');
-    const change = () => setMobile(media.matches);
-    media.addEventListener('change', change);
-    return () => media.removeEventListener('change', change);
-  }, []);
   useEffect(() => {
     const changed = () => {
       const json = getScoreJson(editorKey);
@@ -210,11 +203,9 @@ export default function PufuEditor({
             uniqueKey={editorKey}
             initScore={editor.score}
             lang="ja"
-            mobile={mobile}
             textSize="base"
             feedback={feedback}
             dark={theme === 'dark'}
-            border={!mobile}
           />
         </div>
       </div>

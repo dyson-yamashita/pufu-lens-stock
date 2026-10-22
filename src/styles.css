@@ -3006,7 +3006,7 @@ textarea::placeholder {
   font-family: inherit;
   min-width: 0;
 }
-.pufu-editor-root.pufu-editor-root > [role='score'] {
+.pufu-editor-root.pufu-editor-root [role='score'] {
   border-color: var(--field-border);
 }
 .pufu-editor-root.pufu-editor-root textarea {
@@ -3057,30 +3057,6 @@ textarea::placeholder {
     overflow-wrap: anywhere;
   }
 }
-@media (max-width: 1000px) {
-  .pufu-editor-shell {
-    border: 0;
-    border-radius: 0;
-  }
-  .pufu-editor-root.pufu-editor-root [role='score'] > .flex.justify-center {
-    flex-direction: column;
-  }
-  .pufu-editor-root.pufu-editor-root [role='score'] > .flex.justify-center > div {
-    width: 100%;
-  }
-  .pufu-editor-root.pufu-editor-root [role='score'] > .flex.justify-center > .flex {
-    order: -1;
-    padding: 0 0 20px;
-    gap: 16px;
-  }
-  .pufu-editor-root.pufu-editor-root [role='score'] > .flex.justify-center > .flex > .py-4 {
-    display: none;
-  }
-  .pufu-editor-root.pufu-editor-root [role='gaining-goal'][aria-label='box'] {
-    order: -1;
-  }
-}
-
 /* 公開プロジェクトはログインせずに閲覧できる、独立した表示。 */
 .public-directory {
   max-width: 1180px;
