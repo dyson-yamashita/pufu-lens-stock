@@ -2904,6 +2904,7 @@ textarea::placeholder {
   margin-top: 8px;
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .pufu-list-item svg {
   flex-shrink: 0;

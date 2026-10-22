@@ -17,6 +17,7 @@ import QuestionLabels from './QuestionLabels';
 export default function QuestionPage({
   id,
   resolve,
+  backLabel = '問いの一覧に戻る',
   onBack,
   onResolve,
   onPufu,
@@ -25,6 +26,7 @@ export default function QuestionPage({
 }: {
   id: string;
   resolve: boolean;
+  backLabel?: string;
   onBack: () => void;
   onResolve: () => void;
   onPufu: (id: string) => void;
@@ -104,7 +106,7 @@ export default function QuestionPage({
     >
       <button className="back-link" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" />
-        {resolve ? '問いの詳細に戻る' : '問いの一覧に戻る'}
+        {resolve ? '問いの詳細に戻る' : backLabel}
       </button>
       <header className="page-header">
         <div>
