@@ -3,6 +3,7 @@ import { createPufuSvg } from '@pufu-lens/pufu-image';
 import type { PufuScore } from '../shared/pufu';
 import { Pencil } from 'lucide-react';
 import PufuImageModal from './PufuImageModal';
+import { useTheme } from './theme';
 
 export default function PufuImagePreview({
   score,
@@ -13,14 +14,15 @@ export default function PufuImagePreview({
   phase: number;
   onEdit: () => void;
 }) {
+  const { theme } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const image = useMemo(() => {
     try {
-      return { __html: createPufuSvg(score, { showProgress: false }) };
+      return { __html: createPufuSvg(score, { showProgress: false, theme }) };
     } catch {
       return null;
     }
-  }, [score]);
+  }, [score, theme]);
   return (
     <div className="pufu-image-preview">
       {image ? (

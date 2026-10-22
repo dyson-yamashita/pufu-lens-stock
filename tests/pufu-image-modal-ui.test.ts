@@ -5,6 +5,7 @@ import { parseHTML } from 'linkedom';
 import PufuImagePreview from '../src/PufuImagePreview';
 import { pufuScoreSchema } from '../shared/pufu';
 import fixture from './fixtures/pufu-sparse.json';
+import type { ThemeStore } from '../src/theme';
 
 let root: Root;
 let document: Document;
@@ -15,6 +16,21 @@ beforeEach(async () => {
   vi.stubGlobal('window', dom.window);
   vi.stubGlobal('document', document);
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  let snapshot: ReturnType<ThemeStore['getSnapshot']> = { preference: 'light', theme: 'light' };
+  const listeners = new Set<() => void>();
+  window.pufuTheme = {
+    getSnapshot: () => snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    setPreference: (preference) => {
+      snapshot = { preference, theme: preference === 'dark' ? 'dark' : 'light' };
+      listeners.forEach((listener) => listener());
+    },
+  };
   closedWhileAttached = [];
   Object.defineProperties(window.HTMLElement.prototype, {
     showModal: {
@@ -81,6 +97,22 @@ it('画像を押すと拡大モーダルが開き、ボタンで拡大縮小・�
   expect(document.querySelector('dialog')).toBeNull();
   expect(document.body.style.overflow).toBe('auto');
   expect(closedWhileAttached).toEqual([true]);
+});
+
+it('アプリのテーマ変更を通常画像と開いている拡大画像へ反映し、倍率は保つ', async () => {
+  const backgrounds = () =>
+    [...document.querySelectorAll('[role="img"] svg')].map((svg) =>
+      svg.querySelector('rect')!.getAttribute('fill'),
+    );
+  expect(backgrounds()).toEqual(['#ffffff']);
+  await click('第1局面のプ譜を拡大表示');
+  await click('拡大');
+  await act(async () => window.pufuTheme.setPreference('dark'));
+  expect(backgrounds()).toEqual(['#172033', '#172033']);
+  expect(zoom()).toBe('150%');
+  await act(async () => window.pufuTheme.setPreference('light'));
+  expect(backgrounds()).toEqual(['#ffffff', '#ffffff']);
+  expect(zoom()).toBe('150%');
 });
 
 it('2点の距離でピンチ拡大縮小し、指のキャンセル後もドラッグと倍率制限が機能する', async () => {
