@@ -3006,6 +3006,7 @@ textarea::placeholder {
   padding: 0;
   border: 0;
   background: transparent;
+  box-shadow: 0 4px 16px var(--shadow);
   cursor: zoom-in;
 }
 .pufu-image-preview svg {
