@@ -59,3 +59,8 @@ export type Pufu = PufuSummary & {
   phases: PufuPhase[];
   context: PufuContext;
 };
+export type PufuListItem = PufuSummary & {
+  project_id: string;
+  project_name: string;
+  question_text: string;
+};
