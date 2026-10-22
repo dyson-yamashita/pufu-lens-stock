@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pufu-lens-pdf-parser",
+  "main": "server/pdf-worker.ts",
+  "compatibility_date": "2026-07-30",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "enable_request_signal"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "secrets": { "required": [] },
+  // メモリはプラットフォームの128MB/isolate上限。CPUも本体から制限する。
+  "limits": { "cpu_ms": 5000 },
+  "env": {
+    "production": {
+      "name": "pufu-lens-pdf-parser",
+      "workers_dev": false,
+      "preview_urls": false,
+      "secrets": { "required": [] },
+      "limits": { "cpu_ms": 5000 },
+    },
+  },
+}

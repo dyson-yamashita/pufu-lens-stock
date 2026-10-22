@@ -5,9 +5,11 @@ class PdfContentError extends Error {}
 export async function extractPdf(
   data: Uint8Array,
   url: URL,
-  assets?: Fetcher,
+  assets?: Pick<Fetcher, 'fetch'>,
+  signal?: AbortSignal,
 ): Promise<{ title: string; text: string }> {
   const { getDocument } = await getResolvedPDFJS();
+  signal?.throwIfAborted();
   // URLを渡さず取得済みバイト列だけを解析し、外部のフォント等も読み込まない。
   const task = getDocument({
     data,
@@ -26,6 +28,10 @@ export async function extractPdf(
     maxImageSize: 0,
     verbosity: 0,
   });
+  const abort = () => {
+    void task.destroy().catch(() => undefined);
+  };
+  signal?.addEventListener('abort', abort, { once: true });
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -36,12 +42,24 @@ export async function extractPdf(
         let text = '';
         for (let number = 1; number <= pdf.numPages; number++) {
           const page = await pdf.getPage(number);
-          const content = await page.getTextContent();
-          for (const item of content.items) {
-            if ('str' in item) text += item.str + (item.hasEOL ? '\n' : ' ');
+          const reader = page.streamTextContent().getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              for (const item of value.items) {
+                if ('str' in item) text += item.str + (item.hasEOL ? '\n' : ' ');
+                if (text.length > 120000)
+                  throw new PdfContentError(
+                    '本文が長すぎます（上限12万文字）。URLは保存されています。',
+                  );
+              }
+            }
+          } finally {
+            await reader.cancel(new Error('PDF text extraction ended'));
+            page.cleanup();
           }
           text += '\n\n';
-          page.cleanup();
           if (text.length > 120000)
             throw new PdfContentError('本文が長すぎます（上限12万文字）。URLは保存されています。');
         }
@@ -84,6 +102,7 @@ export async function extractPdf(
     );
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
     await task.destroy();
   }
 }

@@ -24,7 +24,8 @@
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run format:check && pnpm run build",
     "db:migrate:local": "wrangler d1 migrations apply stock-db --local",
     "db:migrate:production": "wrangler d1 migrations apply stock-db --remote --env production --config dist/pufu_lens_stock/wrangler.json",
-    "deploy": "pnpm run build:production && wrangler deploy --env production"
+    "deploy:workers": "wrangler deploy --config dist/pufu_lens_pdf_parser/wrangler.json && wrangler deploy --config dist/pufu_lens_stock/wrangler.json",
+    "deploy": "pnpm run build:production && pnpm run deploy:workers"
   },
   "dependencies": {
     "@cloudflare/playwright": "^1.3.6",

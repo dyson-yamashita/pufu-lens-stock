@@ -1,3 +1,5 @@
+import { limitedBytes } from './limited-bytes';
+import { parsePdf } from './pdf-client';
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 import { fetchXPost, xPostId } from './x';
@@ -6,40 +8,10 @@ import type { Env } from './env';
 import { assertPublicDestination, validateUrl } from './security';
 
 const MAX_BYTES = 2 * 1024 * 1024;
-async function limitedBytes(response: Response, maxBytes = MAX_BYTES): Promise<Uint8Array> {
-  const message =
-    maxBytes === MAX_BYTES
-      ? 'ページが大きすぎます（上限2MB）。'
-      : 'PDFが大きすぎます（上限10MB）。';
-  if (Number(response.headers.get('Content-Length')) > maxBytes) {
-    await response.body?.cancel();
-    throw new Error(message);
-  }
-  if (!response.body) return new Uint8Array();
-  const reader = response.body.getReader();
-  let size = 0;
-  const chunks: Uint8Array[] = [];
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) throw new Error(message);
-      chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return bytes;
-  } finally {
-    await reader.cancel();
-  }
-}
 export async function limitedText(response: Response): Promise<string> {
-  return new TextDecoder().decode(await limitedBytes(response));
+  return new TextDecoder().decode(
+    await limitedBytes(response, MAX_BYTES, 'ページが大きすぎます（上限2MB）。'),
+  );
 }
 export function extractHtml(html: string, url: string): { title: string; text: string } {
   const { document } = parseHTML(html);
@@ -148,9 +120,7 @@ export async function fetchArticle(
     );
   const contentType = response.headers.get('Content-Type') ?? '';
   if (/^application\/(pdf|octet-stream)(?:\s*;|$)/i.test(contentType)) {
-    const data = await limitedBytes(response, 10 * 1024 * 1024);
-    const { extractPdf } = await import('./pdf');
-    return extractPdf(data, url, env.ASSETS);
+    return parsePdf(env, response, url);
   }
   if (!/text\/(html|plain)|application\/xhtml\+xml/i.test(contentType))
     throw new Error('現在はHTML・テキスト・PDFの記事に対応しています。');

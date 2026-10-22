@@ -1,12 +1,21 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fetchArticle } from '../server/ingest';
 import type { Env } from '../server/env';
 import { japanesePdfFixture, japanesePdfText, pdfArticleText, pdfFixture } from './pdf-fixture';
-import { readFile } from 'node:fs/promises';
+import { createPdfWorker } from './pdf-worker-helper';
 
 describe('公開記事の取得', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
   const env = {} as Env;
+  let pdfWorker: Awaited<ReturnType<typeof createPdfWorker>>;
+  beforeAll(async () => {
+    pdfWorker = await createPdfWorker();
+    env.PDF_PARSER = pdfWorker.parser;
+  });
+  afterAll(async () => pdfWorker?.dispose());
   const articleText = '記事の保存と要約を分離し、失敗した処理を再試行する方法を検証します。'.repeat(
     12,
   );
@@ -110,6 +119,70 @@ describe('公開記事の取得', () => {
     },
   );
 
+  it('PDFの解析結果を専用Workerから受け取り、本文バイト列だけを渡す', async () => {
+    const pdf = pdfFixture([pdfArticleText], '元のPDF');
+    mockNetwork(() => new Response(pdf, { headers: { 'Content-Type': 'application/pdf' } }));
+    const calls: Request[] = [];
+    const parser = {
+      async fetch(request: Request) {
+        calls.push(request);
+        return Response.json({ title: '隔離先のタイトル', text: articleText });
+      },
+    } as unknown as Fetcher;
+    expect(
+      await fetchArticle({ ...env, PDF_PARSER: parser } as Env, 'https://example.com/paper.pdf'),
+    ).toEqual({
+      title: '隔離先のタイトル',
+      text: articleText,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('POST');
+    expect(calls[0].url).toBe('https://example.com/paper.pdf');
+    expect(calls[0].headers.get('Cookie')).toBeNull();
+    expect(calls[0].headers.get('Authorization')).toBeNull();
+    expect(new Uint8Array(await calls[0].arrayBuffer())).toEqual(pdf);
+  });
+
+  it.each(['未設定', '資源超過', '異常応答'])(
+    'PDF専用Workerが%sなら本体で解析せず、本文補完を案内する',
+    async (failure) => {
+      mockNetwork(
+        () =>
+          new Response(pdfFixture([pdfArticleText]), {
+            headers: { 'Content-Type': 'application/pdf' },
+          }),
+      );
+      const parser =
+        failure === '未設定'
+          ? undefined
+          : ({
+              async fetch() {
+                if (failure === '資源超過') throw new Error('Worker exceeded memory limit');
+                return new Response('Worker exceeded resource limits', { status: 500 });
+              },
+            } as unknown as Fetcher);
+      await expect(
+        fetchArticle({ ...env, PDF_PARSER: parser } as Env, 'https://example.com/paper.pdf'),
+      ).rejects.toThrow(/PDF.*本文を補完/);
+    },
+  );
+
+  it('PDF専用Workerが応答しない場合は待機を打ち切る', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    mockNetwork(
+      () =>
+        new Response(pdfFixture([pdfArticleText]), {
+          headers: { 'Content-Type': 'application/pdf' },
+        }),
+    );
+    const parser = { fetch: () => new Promise<Response>(() => {}) } as unknown as Fetcher;
+    const result = expect(
+      fetchArticle({ ...env, PDF_PARSER: parser }, 'https://example.com/paper.pdf'),
+    ).rejects.toThrow(/PDF.*本文を補完/);
+    await vi.advanceTimersByTimeAsync(20000);
+    await result;
+  });
+
   it.each(['application/pdf;charset=UTF-8', 'APPLICATION/PDF', 'application/octet-stream'])(
     'PDFの複数ページと日本語のメタデータタイトルを取得する: %s',
     async (contentType) => {
@@ -159,19 +232,7 @@ describe('公開記事の取得', () => {
           headers: { 'Content-Type': 'application/pdf' },
         }),
     );
-    const assets = {
-      async fetch(input: RequestInfo | URL) {
-        const name = new URL(String(input)).pathname.split('/').pop()!;
-        const data = await readFile(
-          new URL(`../node_modules/pdfjs-dist/cmaps/${name}`, import.meta.url),
-        );
-        return new Response(data);
-      },
-    } as Fetcher;
-    const article = await fetchArticle(
-      { ...env, ASSETS: assets },
-      'https://example.com/japanese.pdf',
-    );
+    const article = await fetchArticle(env, 'https://example.com/japanese.pdf');
     expect(article.text).toContain(japanesePdfText);
     expect(article.text.length).toBeGreaterThan(200);
     expect(requests).toEqual(['https://example.com/japanese.pdf']);

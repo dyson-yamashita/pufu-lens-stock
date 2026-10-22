@@ -70,7 +70,7 @@ jobs:
           OAUTH_KV_ID: ${{ secrets.OAUTH_KV_ID }}
           VECTORIZE_INDEX_NAME: ${{ vars.VECTORIZE_INDEX_NAME }}
         run: pnpm run build:production
-      - name: Migrate D1 and deploy Worker
+      - name: Migrate D1 and deploy Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -80,4 +80,4 @@ jobs:
             exit 1
           fi
           pnpm run db:migrate:production
-          pnpm exec wrangler deploy --env production
+          pnpm run deploy:workers

@@ -21,6 +21,7 @@
   "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
   "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
   // VECTORIZE_INDEX_NAMEを指定した場合だけ、ViteがSEARCH_INDEXを追加します。
+  "services": [{ "binding": "PDF_PARSER", "service": "pufu-lens-pdf-parser" }],
   "vectorize": [],
   "ratelimits": [
     {
@@ -58,6 +59,7 @@
       ],
       "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
       "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
+      "services": [{ "binding": "PDF_PARSER", "service": "pufu-lens-pdf-parser" }],
       "vectorize": [],
       "ratelimits": [
         {
