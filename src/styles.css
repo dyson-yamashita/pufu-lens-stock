@@ -3006,6 +3006,10 @@ textarea::placeholder {
   font-family: inherit;
   min-width: 0;
 }
+.pufu-editor-root [role='region'] {
+  /* エディターがインライン指定する狭い画面の高さ上限を上書きする。 */
+  max-height: 70svh !important;
+}
 .pufu-editor-root.pufu-editor-root [role='score'] {
   border-color: var(--field-border);
 }
