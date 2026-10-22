@@ -715,7 +715,7 @@ pnpm run check
 
 各テスト環境は独立したMiniflare・D1・R2・KVを作成します。初期化では実際の移行SQLをファイル順にWorker内で適用し、SQLの準備によるNode／Worker間の同期RPCを減らします。各ファイルのトランザクション境界と、旧スキーマからの移行テストで使う `applyMigration` は維持します。共有するのは移行SQLの読み込み結果だけで、DBや保存データは共有しません。
 
-`pnpm audit` で依存関係を検査できます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
+`pnpm run audit` で依存関係を検査できます。監査コマンドだけはpnpm 11.28.6を固定して実行し、廃止された旧APIに代わるBulk Advisory APIを使用します。`--pm-on-fail=ignore` はプロジェクトのpnpm 10指定への自動切り替えだけを抑制する設定です。high以上の脆弱性と監査APIのエラーは引き続きCIを失敗させます。通常のインストール・ビルドは既存のpnpm 10.34.7とロックファイルを維持します。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
 
 開発サーバーの起動中に `pnpm run test:smoke` を実行すると、MDNの公開記事を取得し、実際のローカルWorkers・Workflows・R2・D1を通して保存と問い・メモリの生成を確認します。この検証で作成したプロジェクトと記事は終了時に削除します。デモ環境専用で、本番には接続しません。
 
