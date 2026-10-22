@@ -1,6 +1,6 @@
 # @pufu-lens/pufu-image
 
-Pufu Editor 0.9.18のProjectScoreModelから、DOM・ブラウザ・AIを使わずSVGとPNGを作るTypeScriptライブラリです。このリポジトリのworkspace packageとして利用します。npmへの公開は行っていません。
+Pufu Editor 0.9.19のProjectScoreModelから、DOM・ブラウザ・AIを使わずSVGとPNGを作るTypeScriptライブラリです。このリポジトリのworkspace packageとして利用します。npmへの公開は行っていません。
 
 ```ts
 import { createPufuSvg, initPufuWasm, renderPufuPng } from '@pufu-lens/pufu-image';

@@ -156,9 +156,9 @@ async function click(label: string) {
 }
 it.each([
   { width: 900, theme: 'light', textClass: 'text-base' },
-  { width: 899, theme: 'light', textClass: 'text-sm' },
+  { width: 899, theme: 'light', textClass: 'text-xs' },
   { width: 1200, theme: 'dark', textClass: 'text-base' },
-  { width: 640, theme: 'dark', textClass: 'text-sm' },
+  { width: 640, theme: 'dark', textClass: 'text-xs' },
 ])(
   '公開プ譜は全内容を閲覧でき、狭い表示領域ではミニマップを利用できる（$width / $theme）',
   async ({ width, theme, textClass }) => {
@@ -231,7 +231,7 @@ it.each([
 );
 it.each([
   { width: 900, textClass: 'text-base' },
-  { width: 899, textClass: 'text-sm' },
+  { width: 899, textClass: 'text-xs' },
 ])(
   '編集画面は幅$width pxで入力・追加・並べ替えと必要なミニマップを利用できる',
   async ({ width, textClass }) => {
@@ -290,7 +290,7 @@ it('幅の変更でミニマップと文字サイズが一緒に切り替わり�
   const key = `${pufu.id}-phase-1`;
   await act(async () => setScore(key, JSON.stringify(edited)));
   for (const { width, textClass, minimap } of [
-    { width: 899, textClass: 'text-sm', minimap: true },
+    { width: 899, textClass: 'text-xs', minimap: true },
     { width: 900, textClass: 'text-base', minimap: false },
   ]) {
     await act(async () => {
