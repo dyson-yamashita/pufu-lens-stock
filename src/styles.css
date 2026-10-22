@@ -2996,6 +2996,25 @@ textarea::placeholder {
   font-size: 12px;
   line-height: 1.8;
 }
+.pufu-image-preview {
+  margin: 16px 0 24px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.pufu-image-preview figcaption {
+  margin-bottom: 12px;
+  line-height: 1.8;
+}
+.pufu-image-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.pufu-image-preview svg > g {
+  font-family: 'Noto Sans JP', sans-serif;
+}
 .pufu-editor-shell {
   padding: 20px;
   background: var(--card);

@@ -4,6 +4,7 @@ import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-reac
 import { pufuScoreSchema, type Pufu } from '../shared/pufu';
 import { send } from './api';
 import { useTheme } from './theme';
+import PufuImagePreview from './PufuImagePreview';
 
 const canonical = (json: string) =>
   JSON.stringify(JSON.parse(json), (key, value) => (key === 'id' ? undefined : value));
@@ -143,6 +144,10 @@ export default function PufuEditor({
           )}
         </div>
       </div>
+      <PufuImagePreview
+        score={phases.find((phase) => phase.number === editor.number)!.score}
+        phase={editor.number}
+      />
       <div className="pufu-toolbar">
         <span className="field-hint" role="status">
           {dirty ? '未保存の変更があります' : '保存済み'}
