@@ -4,6 +4,7 @@ import { cloudflare } from '@cloudflare/vite-plugin';
 import prefixSelector from 'postcss-prefix-selector';
 import { pufuViewerPlugin } from './scripts/pufu-viewer-plugin';
 import { pdfCmapsPlugin } from './scripts/pdf-cmaps-plugin';
+import { legalPagesPlugin } from './scripts/legal-pages-plugin';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import {
@@ -17,6 +18,7 @@ export default defineConfig(({ command }) => ({
     react(),
     pufuViewerPlugin(),
     pdfCmapsPlugin(),
+    legalPagesPlugin(),
     cloudflare({
       auxiliaryWorkers: [{ configPath: 'wrangler.pdf.jsonc' }],
       config: (config) => {

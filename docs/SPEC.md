@@ -563,7 +563,32 @@ OAuth同意画面の「アプリのドメイン」には、次のURLを登録で
 | プライバシーポリシー           | `<APP_URL>/privacy` |
 | 利用規約                       | `<APP_URL>/terms`   |
 
-本文の編集元は `src/LegalPage.tsx` です。運営者表記は「Pufu Lens 運営者」、問い合わせ先はGoogleログイン同意画面のユーザーサポート窓口としています。Google Cloud側のアプリ名・サポートメール・ドメイン設定を実際の運用と一致させてください。
+本文の編集元は `src/LegalPage.tsx` です。ビルド時に同じコンポーネントから `dist/client/privacy/index.html` と `dist/client/terms/index.html` を生成するため、JavaScriptを実行しない取得でも本文を読めます。トップの初期HTMLにもサービス説明と両ページへのリンクを含めます。開発サーバーでは従来どおりReactで表示します。
+
+Googleから取得する情報の用途・保存・送信・削除はプライバシーポリシーの「Googleユーザーデータの取り扱い」に記載しています。プロフィールの表示名（初回はGoogleから取得した名前、提供されない場合はメールアドレス）と自己紹介は、ユーザーメモリ生成時にWorkers AIへ送信されます。Googleアカウントの識別子・プロフィール画像のURLはAI生成に使いません。
+
+運営者表記は「Pufu Lens 運営者」、問い合わせ先はGoogleログイン同意画面のユーザーサポート窓口としています。Google Cloud側のアプリ名・サポートメール・ドメイン設定を実際の運用と一致させてください。
+
+### Googleのブランド確認・プライバシーポリシー審査
+
+`pufu-lens.dev` を使う本番環境では、Google Auth Platformの「ブランディング」で次の値を登録します。URL欄に引用符、日本語の説明、Markdownのリンク記法を含めないでください。
+
+| 項目                           | 設定値                                        |
+| ------------------------------ | --------------------------------------------- |
+| アプリケーションのホームページ | `https://pufu-lens.dev`                       |
+| プライバシーポリシー           | `https://pufu-lens.dev/privacy`               |
+| 利用規約                       | `https://pufu-lens.dev/terms`                 |
+| 承認済みドメイン               | `pufu-lens.dev`（プロトコルやパスは付けない） |
+
+ドメインがHTTP 200で応答することと、Googleに所有権が確認されていることは別です。「ドメインが無効」と指摘された場合は、次を確認します。
+
+1. [Google Search Console](https://search.google.com/search-console)で `pufu-lens.dev` のドメインプロパティを追加し、指定されたDNS TXTレコードで所有権を確認します。既存の確認済みプロパティがあれば再利用します。
+2. 所有権を確認したGoogleアカウントが、対象Google Cloudプロジェクトのオーナーまたは編集者であることを確認します。承認済みドメイン・ホームページ・ポリシー・規約・OAuthクライアントのリダイレクトURIを同じ本番ドメインに揃えます。
+3. 修正版の本番反映後、ログアウト状態でトップ・ポリシー・規約を開き、リンクと本文を確認します。JavaScriptを無効にしても本文が読めること、ログイン・アクセス制限・ボット対策の認証画面で遮られていないことも確認します。
+4. 「コンテンツ不足」が解消しない場合は、`curl -L https://pufu-lens.dev/privacy` のHTMLにポリシー本文が含まれるかを確認します。Cloudflare側のチャレンジなどが返る場合は、配信側の設定も調査します。
+5. Google Auth Platformで審査を再実行します。審査チームからメールで修正を依頼された場合は、その案内に従って更新完了を返信します。
+
+DNS・Google Cloud設定と審査状態はコード変更だけでは確認・更新できません。本番反映、所有権確認、再申請をそれぞれ確認してください。[Googleのプライバシーポリシー要件](https://support.google.com/cloud/answer/13806988?hl=en)、[ドメイン所有権と公開ホームページの要件](https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance)を参照してください。
 
 ローカルでは `.dev.vars` の `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` を設定して開発サーバーを再起動します。本番ではWorkerのSecretとして登録します。認証ライブラリはWorkersに対応した `openid-client` を使用しています。
 
