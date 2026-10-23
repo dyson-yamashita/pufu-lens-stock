@@ -56,8 +56,65 @@ const privacySections: Section[] = [
     ),
   },
   {
+    id: 'google-user-data',
+    title: '3. Googleユーザーデータの取り扱い',
+    content: (
+      <>
+        <p>
+          Pufu
+          Lensは、利用者がGoogleの同意画面で許可した場合に、Googleログインを通じて情報を取得します。
+          要求する権限は<code>openid email profile</code>
+          のみです。Gmail、Googleドライブ、GoogleカレンダーなどのGoogle
+          Workspaceのデータにアクセスする権限は要求しません。
+        </p>
+        <ul>
+          <li>
+            <strong>取得する情報と用途：</strong>
+            Googleアカウントの識別子（sub）をアカウントの識別と保存データの紐付けに使います。
+            メールアドレスとその確認済み状態をログイン時の本人確認に使い、メールアドレス・名前・プロフィール画像のURLをアカウント情報の表示に使います。
+            Googleのパスワードは取得しません。
+          </li>
+          <li>
+            <strong>保存と保護：</strong>
+            Googleアカウントの識別子・メールアドレス・名前・プロフィール画像のURLをCloudflare
+            D1データベースに保存し、利用者ごとのアクセス制御とHTTPS通信で保護します。
+            Googleが発行する認証用トークンはログイン処理で一時的に扱い、継続アクセス用には保存しません。
+          </li>
+          <li>
+            <strong>AI処理への送信：</strong>
+            プロフィールの表示名（初回はGoogleから取得した名前）と自己紹介は、利用者自身のメモリを生成するためCloudflare
+            Workers AIへ送信します。表示名は「プロフィール」で変更できます。
+            Googleから名前が提供されない場合は、メールアドレスが初期表示名となります。メールアドレスを表示名として設定している場合も、その表示名が送信されます。
+            Googleアカウントの識別子・プロフィール画像のURLは、AI生成の入力に使用しません。
+          </li>
+          <li>
+            <strong>共有と利用の制限：</strong>
+            Googleユーザーデータは、本サービスの本人確認・アカウント管理・利用者向け機能の提供に必要な範囲で利用します。
+            保存・処理の委託先はCloudflareです。Googleユーザーデータを販売せず、広告・信用評価・融資の目的で利用・提供しません。
+            汎用的なAI・機械学習モデルの開発・改善・学習には使用せず、その目的で第三者に提供しません。
+            Google Workspace APIのデータも、そのようなモデルの開発・改善・学習に使用しません。
+          </li>
+          <li>
+            <strong>保存期間と削除：</strong>
+            Googleログイン情報はアカウントを維持する間保存し、「プロフィール」から退会すると削除します。
+            Googleアカウントの接続管理から連携を解除することもできますが、連携解除だけでは保存済みデータは削除されません。
+            詳しくは<a href="#retention">保存期間・削除・連携解除</a>をご確認ください。
+          </li>
+        </ul>
+        <p>
+          Pufu LensによるGoogle APIから受け取った情報の利用および他のアプリへの転送は、Limited
+          Useの要件を含む
+          <a href="https://developers.google.com/terms/api-services-user-data-policy">
+            Google API Services User Data Policy
+          </a>
+          に従います。
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'purposes',
-    title: '3. 情報の利用目的',
+    title: '4. 情報の利用目的',
     content: (
       <ul>
         <li>本人確認、ログイン状態の維持、利用者ごとのデータ管理。</li>
@@ -69,17 +126,17 @@ const privacySections: Section[] = [
   },
   {
     id: 'processors',
-    title: '4. 外部サービスとAI処理',
+    title: '5. 外部サービスとAI処理',
     content: (
       <>
         <p>
           本サービスはCloudflareの配信・データベース・ストレージ・AI処理基盤を利用します。
           AI生成に必要な範囲で、記事本文・タイトル・要約、メモ、プロジェクト名・概要、自己紹介、メモリ、問い、課題、プ譜などをCloudflare
-          Workers AIに送信します。自己紹介はユーザーメモリの生成に利用します。
+          Workers AIに送信します。プロフィールの表示名と自己紹介はユーザーメモリの生成に利用します。
           機密情報や、送信する権限のない個人情報を入力しないでください。
         </p>
         <p>
-          Googleログイン情報は本人確認・アカウント管理に使用し、広告目的で第三者に販売しません。
+          Googleログイン情報は前節に記載した用途で使用し、第三者に販売しません。
           利用者の情報は、サービス提供に必要な委託、利用者が許可した連携・公開、法令に基づく場合を除き、第三者へ提供しません。
           外部サービスの設備により、日本国外で情報が処理される場合があります。
         </p>
@@ -123,7 +180,7 @@ const privacySections: Section[] = [
   },
   {
     id: 'publication',
-    title: '5. プロジェクトを公開した場合',
+    title: '6. プロジェクトを公開した場合',
     content: (
       <>
         <p>
@@ -140,7 +197,7 @@ const privacySections: Section[] = [
   },
   {
     id: 'cookies',
-    title: '6. Cookie・ブラウザ保存・通信情報',
+    title: '7. Cookie・ブラウザ保存・通信情報',
     content: (
       <>
         <p>
@@ -159,7 +216,7 @@ const privacySections: Section[] = [
   },
   {
     id: 'retention',
-    title: '7. 保存期間・削除・連携解除',
+    title: '8. 保存期間・削除・連携解除',
     content: (
       <>
         <p>
@@ -194,7 +251,7 @@ const privacySections: Section[] = [
   },
   {
     id: 'security',
-    title: '8. 安全管理',
+    title: '9. 安全管理',
     content: (
       <p>
         運営者は、暗号化通信、利用者ごとのアクセス制御、認証情報の保護などにより、不正アクセスや漏えいの防止に努めます。
@@ -204,7 +261,7 @@ const privacySections: Section[] = [
   },
   {
     id: 'changes',
-    title: '9. ポリシーの変更',
+    title: '10. ポリシーの変更',
     content: (
       <p>
         運営者は、法令やサービスの変更に応じて本ポリシーを改定することがあります。
@@ -213,7 +270,7 @@ const privacySections: Section[] = [
       </p>
     ),
   },
-  { id: 'contact', title: '10. 運営者・お問い合わせ', content: <Contact /> },
+  { id: 'contact', title: '11. 運営者・お問い合わせ', content: <Contact /> },
 ];
 
 const termsSections: Section[] = [
@@ -375,6 +432,7 @@ const termsSections: Section[] = [
 
 export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
   const title = page === 'privacy' ? 'プライバシーポリシー' : '利用規約';
+  const updated = page === 'privacy' ? '2026-10-23' : '2026-10-19';
   const sections = page === 'privacy' ? privacySections : termsSections;
   useEffect(() => {
     const previousTitle = document.title;
@@ -400,7 +458,9 @@ export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
           <div>
             <h1>{title}</h1>
             <p>
-              制定日・最終更新日：<time dateTime="2026-10-19">2026年10月19日</time>
+              制定日：<time dateTime="2026-10-19">2026年10月19日</time>
+              <br />
+              最終更新日：<time dateTime={updated}>{updated.replaceAll('-', '/')}</time>
             </p>
           </div>
         </header>
