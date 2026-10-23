@@ -18,7 +18,25 @@ beforeAll(async () => {
   const result = (await build({
     configFile: false,
     root,
-    plugins: [legalPagesPlugin()],
+    plugins: [
+      legalPagesPlugin(),
+      {
+        name: 'legal-page-script-fixtures',
+        transformIndexHtml: {
+          order: 'post',
+          handler: (html) =>
+            html.replace(
+              '</head>',
+              `<script type='module' data-test="single-quoted">console.log('module');</script>
+              <SCRIPT TYPE=module data-test="unquoted">console.log('module');</SCRIPT>
+              <script type="MODULE" data-test="uppercase">console.log('module');</script>
+              <script data-note='type="module"' data-test="classic">console.log('classic');</script>
+              <script type="application/ld+json" data-test="data">{"name":"Pufu Lens"}</script>
+              </head>`,
+            ),
+        },
+      },
+    ],
     logLevel: 'silent',
     build: { write: false },
   })) as Rollup.RollupOutput;
@@ -27,6 +45,21 @@ beforeAll(async () => {
       .filter((output) => output.type === 'asset')
       .map((output) => [output.fileName, String(output.source)]),
   );
+});
+
+it('HTMLの表記にかかわらずmodule scriptを除去し、通常のスクリプトとデータは維持する', () => {
+  for (const page of ['privacy', 'terms']) {
+    const { document } = parseHTML(assets.get(`${page}/index.html`)!);
+    for (const name of ['single-quoted', 'unquoted', 'uppercase']) {
+      expect(document.querySelector(`script[data-test="${name}"]`)).toBeNull();
+    }
+    expect(document.querySelector('script[data-test="classic"]')?.textContent).toContain(
+      "console.log('classic')",
+    );
+    expect(document.querySelector('script[data-test="data"]')?.textContent).toBe(
+      '{"name":"Pufu Lens"}',
+    );
+  }
 });
 
 afterAll(async () => {
