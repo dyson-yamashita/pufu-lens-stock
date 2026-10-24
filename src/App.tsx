@@ -2273,11 +2273,13 @@ function StockDetail({
         {(youtube
           ? [
               ['summary', '動画'],
+              ['comments', 'コメント'],
               ['note', 'メモ・保存先'],
             ]
           : [
               ['summary', '要約'],
               ['question', '問い・気づき'],
+              ['comments', 'コメント'],
               ['note', 'メモ・保存先'],
               ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
             ]
@@ -2391,7 +2393,7 @@ function StockDetail({
             {content ?? '取得した本文はありません。サンプル記事では元の記事をご覧ください。'}
           </pre>
         )
-      ) : (
+      ) : tab === 'note' ? (
         <form
           onSubmit={async (event) => {
             event.preventDefault();
@@ -2447,7 +2449,10 @@ function StockDetail({
             </button>
           </div>
         </form>
-      )}
+      ) : null}
+      <div hidden={tab !== 'comments'}>
+        <Comments targetType="stock" targetId={stock.id} />
+      </div>
       <FormError error={error} />
       <div className="detail-footer">
         <span>{fullDate(stock.created_at)} に保存</span>
@@ -2475,7 +2480,6 @@ function StockDetail({
           削除
         </button>
       </div>
-      <Comments targetType="stock" targetId={stock.id} />
     </div>
   );
 }
