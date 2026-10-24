@@ -1697,7 +1697,6 @@ function ProjectForm({
   const autoQuestionsId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const projectIdFieldId = useId();
   const [idCopied, setIdCopied] = useState(false);
   const [idCopyError, setIdCopyError] = useState('');
   return (
@@ -1734,30 +1733,32 @@ function ProjectForm({
         </p>
         {project && (
           <>
-            <label htmlFor={projectIdFieldId}>プロジェクトID</label>
-            <div className="project-id-row">
-              <input id={projectIdFieldId} value={project.id} readOnly />
-              <button
-                type="button"
-                className="button secondary"
-                aria-label="プロジェクトIDをコピー"
-                onClick={async () => {
-                  setIdCopied(false);
-                  setIdCopyError('');
-                  try {
-                    await navigator.clipboard.writeText(project.id);
-                    setIdCopied(true);
-                  } catch {
-                    setIdCopyError(
-                      'コピーできませんでした。プロジェクトIDを選択してコピーしてください。',
-                    );
-                  }
-                }}
-              >
-                <Copy size={16} aria-hidden="true" />
-                コピー
-              </button>
-            </div>
+            <dl className="project-id">
+              <dt>プロジェクトID</dt>
+              <dd className="project-id-row">
+                <span className="project-id-value">{project.id}</span>
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="プロジェクトIDをコピー"
+                  title="プロジェクトIDをコピー"
+                  onClick={async () => {
+                    setIdCopied(false);
+                    setIdCopyError('');
+                    try {
+                      await navigator.clipboard.writeText(project.id);
+                      setIdCopied(true);
+                    } catch {
+                      setIdCopyError(
+                        'コピーできませんでした。プロジェクトIDを選択してコピーしてください。',
+                      );
+                    }
+                  }}
+                >
+                  <Copy size={16} aria-hidden="true" />
+                </button>
+              </dd>
+            </dl>
             <p className="guide-note" role="status">
               {idCopied && 'プロジェクトIDをコピーしました。'}
             </p>
