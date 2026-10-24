@@ -7,7 +7,7 @@ export function queueQuestionJobStatement(
   articleId: string | null = null,
 ): D1PreparedStatement {
   return env.DB.prepare(
-    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id WHERE q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
   ).bind(stockId, stockId, articleId, articleId);
 }
 export function queueQuestionStatements(
@@ -17,7 +17,7 @@ export function queueQuestionStatements(
 ): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
     ).bind(stockId, stockId, articleId, articleId),
     queueQuestionJobStatement(env, stockId, articleId),
   ];

@@ -33,6 +33,7 @@ export async function testApp(
     projectMemoryMigration?: boolean;
     projectListVisibilityMigration?: boolean;
     pufuImageLinksMigration?: boolean;
+    projectQuestionSettingsMigration?: boolean;
   } = {},
 ) {
   const runtime = new Miniflare({
@@ -94,6 +95,11 @@ export async function testApp(
     !migrations.includes('0025_pufu_image_links.sql')
   )
     migrations.push('0025_pufu_image_links.sql');
+  if (
+    options.projectQuestionSettingsMigration !== false &&
+    !migrations.includes('0027_project_question_settings.sql')
+  )
+    migrations.push('0027_project_question_settings.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(
