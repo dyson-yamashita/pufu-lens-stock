@@ -1,19 +1,11 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  Folder,
-  LoaderCircle,
-  Plus,
-  Star,
-  Trash2,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Folder, LoaderCircle, Plus, Star } from 'lucide-react';
 import type { Project, Question, QuestionDetail } from '../shared/domain';
 import { createPufuSchema, type PufuSummary } from '../shared/pufu';
 import { api, createRequestId, send } from './api';
 import QuestionLabels from './QuestionLabels';
 import Comments from './Comments';
+import DeleteAction from './DeleteAction';
 import QuestionSettings from './QuestionSettings';
 
 const detailTabs = [
@@ -56,7 +48,6 @@ export default function QuestionPage({
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const request = useRef<{ task: string; id: string } | null>(null);
   const detailsVersion = useRef(0);
   useEffect(() => {
@@ -403,113 +394,35 @@ export default function QuestionPage({
                   }}
                 />
               </div>
-              <div className="question-delete-action">
-                <button
-                  type="button"
-                  className="button danger-text"
-                  disabled={deleting || favoriteBusy || saving}
-                  onClick={() => {
-                    setError('');
-                    setConfirmDelete(true);
-                  }}
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                  問い・気づきを削除
-                </button>
-              </div>
+              <DeleteAction
+                label="問い・気づきを削除"
+                title="問い・気づきを削除しますか？"
+                disabled={deleting || favoriteBusy || saving}
+                onDelete={async () => {
+                  setDeleting(true);
+                  try {
+                    await api(`/api/v1/questions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    onDeleted();
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                <p className="delete-target">
+                  {question.text ||
+                    (question.status === 'queued'
+                      ? '生成待ちの問い・気づき'
+                      : '生成中・生成に失敗した問い・気づき')}
+                </p>
+                <p>プロジェクト：{question.project_name}</p>
+                <p>
+                  この問い・気づきと、紐づくすべてのプ譜・局面・コメントを削除します。ストックは残ります。この操作は取り消せません。
+                </p>
+              </DeleteAction>
             </>
           )}
         </>
       )}
-      {confirmDelete && (
-        <QuestionDeleteDialog
-          busy={deleting}
-          error={error}
-          onCancel={() => setConfirmDelete(false)}
-          onConfirm={async () => {
-            setDeleting(true);
-            setError('');
-            try {
-              await api(`/api/v1/questions/${encodeURIComponent(id)}`, { method: 'DELETE' });
-              onDeleted();
-            } catch (e) {
-              setError((e as Error).message);
-              setDeleting(false);
-            }
-          }}
-        />
-      )}
     </section>
-  );
-}
-
-function QuestionDeleteDialog({
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  busy: boolean;
-  error: string;
-  onCancel: () => void;
-  onConfirm: () => Promise<void>;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const titleId = useId();
-  const descriptionId = useId();
-  useEffect(() => {
-    const dialog = ref.current!;
-    dialog.showModal();
-    cancelRef.current?.focus();
-    return () => dialog.close();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className="dialog"
-      aria-labelledby={titleId}
-      aria-describedby={descriptionId}
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onCancel();
-      }}
-    >
-      <div className="dialog-head">
-        <h2 id={titleId}>問い・気づきを削除</h2>
-      </div>
-      <p className="form-intro" id={descriptionId}>
-        この問い・気づきと紐づくすべてのプ譜を削除します。この操作は取り消せません。
-      </p>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="form-actions">
-        <button
-          ref={cancelRef}
-          type="button"
-          className="button secondary"
-          disabled={busy}
-          onClick={onCancel}
-        >
-          キャンセル
-        </button>
-        <button
-          type="button"
-          className="button danger-text"
-          disabled={busy}
-          onClick={() => void onConfirm()}
-        >
-          {busy ? (
-            <LoaderCircle className="spin" size={16} aria-hidden="true" />
-          ) : (
-            <Trash2 size={16} aria-hidden="true" />
-          )}
-          {busy ? '削除中…' : '削除する'}
-        </button>
-      </div>
-    </dialog>
   );
 }

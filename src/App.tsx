@@ -34,7 +34,6 @@ import {
   Settings,
   Sparkles,
   Star,
-  Trash2,
   UserRound,
   X,
 } from 'lucide-react';
@@ -59,6 +58,7 @@ import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
 import Comments from './Comments';
+import DeleteAction from './DeleteAction';
 import Pufus from './Pufus';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
@@ -1846,39 +1846,33 @@ function ProjectForm({
         </details>
         <FormError error={error} />
         <div className="form-actions">
-          {project && (
-            <button
-              type="button"
-              className="button danger-text"
-              disabled={busy}
-              onClick={async () => {
-                if (
-                  !window.confirm(
-                    'このプロジェクト内の記事・問い・気づき・プ譜を削除します。他のプロジェクトにも保存した記事は残ります。削除しますか？',
-                  )
-                )
-                  return;
-                setBusy(true);
-                try {
-                  await api(`/api/v1/projects/${project.id}`, { method: 'DELETE' });
-                  onDelete();
-                } catch (e) {
-                  setError((e as Error).message);
-                  setBusy(false);
-                }
-              }}
-            >
-              <Trash2 size={16} aria-hidden="true" />
-              削除
-            </button>
-          )}
           <button className="button primary" disabled={busy}>
             {busy ? <Spinner /> : <Check size={17} aria-hidden="true" />}
             {project ? '保存' : 'プロジェクトを作成'}
           </button>
         </div>
       </form>
-      {project && <ProjectPublicationSettings key={project.id} projectId={project.id} />}
+      {project && (
+        <>
+          <ProjectPublicationSettings key={project.id} projectId={project.id} />
+          <DeleteAction
+            summary="プロジェクトの削除"
+            label="プロジェクトを削除"
+            title="プロジェクトを削除しますか？"
+            disabled={busy}
+            onDelete={async () => {
+              await api(`/api/v1/projects/${project.id}`, { method: 'DELETE' });
+              onDelete();
+            }}
+          >
+            <p className="delete-target">{project.name}</p>
+            <p>
+              このプロジェクトのストック・問い・気づき・プ譜（すべての局面）・コメント・メモリを削除します。他のプロジェクトに保存した記事は残ります。
+            </p>
+            <p>公開中の場合は公開ページも閲覧できなくなります。この操作は取り消せません。</p>
+          </DeleteAction>
+        </>
+      )}
     </>
   );
 }
@@ -2458,30 +2452,23 @@ function StockDetail({
       <FormError error={error} />
       <div className="detail-footer">
         <span>{fullDate(stock.created_at)} に保存</span>
-        <button
-          className="button danger-text"
-          disabled={busy}
-          onClick={async () => {
-            if (
-              !window.confirm(
-                'この記事と、紐づく問い・気づき・プ譜をこのプロジェクトから削除しますか？',
-              )
-            )
-              return;
-            setBusy(true);
-            try {
-              await api(`/api/v1/stocks/${stock.id}`, { method: 'DELETE' });
-              onDone('記事を削除し、メモリの更新を受け付けました。');
-            } catch (e) {
-              setError((e as Error).message);
-              setBusy(false);
-            }
-          }}
-        >
-          <Trash2 size={15} aria-hidden="true" />
-          削除
-        </button>
       </div>
+      <DeleteAction
+        label="このストックを削除"
+        title="このストックを削除しますか？"
+        disabled={busy || favoriteBusy}
+        onDelete={async () => {
+          await api(`/api/v1/stocks/${stock.id}`, { method: 'DELETE' });
+          onDone('記事を削除し、メモリの更新を受け付けました。');
+        }}
+      >
+        <p className="delete-target">{displayTitle}</p>
+        <p>保存先：{stock.project_name}</p>
+        <p>
+          このプロジェクトのストックと、紐づく問い・気づき・プ譜（すべての局面）・コメントを削除します。他のプロジェクトに保存した同じ記事は残ります。
+        </p>
+        <p>この操作は取り消せません。</p>
+      </DeleteAction>
     </div>
   );
 }

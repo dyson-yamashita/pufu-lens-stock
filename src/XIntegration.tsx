@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
+import DeleteAction from './DeleteAction';
 
 type Status = { configured: boolean; available: boolean };
 export default function XIntegration() {
@@ -70,33 +71,29 @@ export default function XIntegration() {
           <button className="button primary" disabled={busy || !status?.available || !token.trim()}>
             {busy ? '処理中…' : status?.configured ? '更新する' : '登録する'}
           </button>
-          {status?.configured && (
-            <button
-              type="button"
-              className="button danger"
-              disabled={busy}
-              onClick={async () => {
-                if (!window.confirm('Xの認証情報を削除しますか？')) return;
-                setBusy(true);
-                setError('');
-                setNotice('');
-                try {
-                  await api('/api/v1/integrations/x', { method: 'DELETE' });
-                  setStatus({ ...status, configured: false });
-                  setToken('');
-                  setNotice('Xの認証情報を削除しました。');
-                } catch {
-                  setError('削除できませんでした。再度お試しください。');
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              削除する
-            </button>
-          )}
         </div>
       </form>
+      {status?.configured && (
+        <DeleteAction
+          summary="Xの認証情報の削除"
+          label="Xの認証情報を削除"
+          title="Xの認証情報を削除しますか？"
+          disabled={busy}
+          onDelete={async () => {
+            await api('/api/v1/integrations/x', { method: 'DELETE' });
+            setStatus({ ...status, configured: false });
+            setToken('');
+            setError('');
+            setNotice('Xの認証情報を削除しました。');
+          }}
+        >
+          <p>
+            登録したX
+            APIの認証情報を削除します。新たにXの投稿を取得するには、認証情報の再登録が必要です。
+          </p>
+          <p>ストック済みの記事は残ります。</p>
+        </DeleteAction>
+      )}
       {error && (
         <p className="error-box" role="alert">
           {error}
