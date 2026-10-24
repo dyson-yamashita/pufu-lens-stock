@@ -54,6 +54,7 @@ export const userQuestionSchema = questionSchema
   .extend({
     project_id: z.string().trim().min(1, 'プロジェクトを選択してください。').max(100).optional(),
     stock_id: z.string().trim().min(1).max(100).nullable().optional(),
+    note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').default(''),
     request_id: z.uuid().optional(),
   })
   .strict()

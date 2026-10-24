@@ -445,11 +445,16 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: '問い・気づき追加',
       description:
-        'プロジェクトに問い・気づきを保存します。stock_idは任意で、指定する場合は同じプロジェクトのストックを選びます。request_idは追加操作ごとに新しいUUIDを使い、再送では同じ値を使います。',
+        'プロジェクトに問い・気づきを保存します。noteで任意のメモ（2,000文字以内）も一緒に保存できます。メモは公開ページやAIのメモリに含めません。stock_idは任意で、指定する場合は同じプロジェクトのストックを選びます。request_idは追加操作ごとに新しいUUIDを使い、再送ではメモも含め同じ内容と同じ値を使います。',
       inputSchema: z.object({
         project_id: id,
         stock_id: id.optional(),
         text: z.string().trim().min(1).max(500),
+        note: z
+          .string()
+          .max(2000)
+          .optional()
+          .describe('問い・気づきに添える任意のメモ。省略時は空文字。'),
         request_id: z.uuid(),
       }),
       annotations: { ...add, openWorldHint: false },

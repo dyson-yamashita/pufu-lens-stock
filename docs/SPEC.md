@@ -228,7 +228,7 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 | `get_pufu`       | 問いID・プ譜IDで選んだプ譜の最新局面。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）  |
 | `show_pufu`      | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                              |
 | `get_pufu_image` | 問いID・プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                  |
-| `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
+| `add_question`   | プロジェクトに問いを追加。関連する `stock_id` と登録時のメモ `note`（2,000文字まで、省略時は空文字）は任意     |
 | `list_comments`  | ストック・問い・プ譜局面のコメントを古い順に50件ずつ取得。同じユーザーの別接続の投稿も含む                     |
 | `add_comment`    | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                           |
 
