@@ -955,20 +955,21 @@ export function createApp(trustedPrincipal?: Principal) {
     await ownedProject(c.env, user.id, projectId);
     const id = `user-${user.id}-${data.request_id ?? crypto.randomUUID()}`;
     const result = await c.env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, text, source, status) SELECT ?, id, ?, ?, 'user', 'ready' FROM projects WHERE id = ? AND user_id = ?",
+      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, text, note, source, status) SELECT ?, id, ?, ?, ?, 'user', 'ready' FROM projects WHERE id = ? AND user_id = ?",
     )
-      .bind(id, stockId, data.text, projectId, user.id)
+      .bind(id, stockId, data.text, data.note, projectId, user.id)
       .run();
     const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
+      `SELECT ${questionColumns}, q.note FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
     )
       .bind(id, user.id)
-      .first<Question>();
+      .first<QuestionDetail>();
     if (!question) throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
     if (
       question.stock_id !== stockId ||
       question.project_id !== projectId ||
       question.text !== data.text ||
+      question.note !== data.note ||
       question.source !== 'user'
     )
       throw new HTTPException(409, {

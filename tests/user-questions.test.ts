@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp, applyMigration, mockEvent, mockStep } from './helpers';
 import { ArticleWorkflow } from '../server/workflows';
 import { queueQuestionStatements } from '../server/db';
-import type { Question } from '../shared/domain';
+import type { Question, QuestionDetail } from '../shared/domain';
 import type { Job } from '../server/env';
 
 describe('ユーザーの問いの追加', () => {
@@ -54,7 +54,7 @@ describe('ユーザーの問いの追加', () => {
     const jobs = await app.env.DB.prepare('SELECT COUNT(*) AS count FROM processing_jobs').first();
     const response = await add(id, '  記事の主張は、自分の状況でも成り立つだろうか？  ');
     expect(response.status).toBe(201);
-    const { question } = (await response.json()) as { question: Question };
+    const { question } = (await response.json()) as { question: QuestionDetail };
     expect(question).toMatchObject({
       stock_id: id,
       project_id: 'alice-project',
@@ -63,11 +63,13 @@ describe('ユーザーの問いの追加', () => {
       model: null,
       text: '記事の主張は、自分の状況でも成り立つだろうか？',
     });
-    expect((await userQuestions()).questions).toEqual([question]);
+    const { note, ...listedQuestion } = question;
+    expect(note).toBe('');
+    expect((await userQuestions()).questions).toEqual([listedQuestion]);
     const detail = await questions(id);
     expect(detail.question.source).toBe('ai');
     expect(detail.questions).toHaveLength(2);
-    expect(detail.questions.find((item) => item.id === question.id)).toEqual(question);
+    expect(detail.questions.find((item) => item.id === question.id)).toEqual(listedQuestion);
     expect(
       await app.env.DB.prepare('SELECT COUNT(*) AS count FROM processing_jobs').first(),
     ).toEqual(jobs);
@@ -221,6 +223,7 @@ describe('ユーザーの問いの追加', () => {
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
+    await applyMigration(app.env.DB, '0028_question_notes.sql');
     expect((await add(id, '追加1？')).status).toBe(201);
     expect((await add(id, '追加2？')).status).toBe(201);
     await expect(
