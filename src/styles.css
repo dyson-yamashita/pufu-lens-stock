@@ -1571,6 +1571,16 @@ p {
   box-shadow: inset 0 -2px var(--primary);
   font-weight: 600;
 }
+.stock-detail .detail-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.stock-detail .detail-tabs button {
+  flex-shrink: 0;
+}
+.stock-detail .detail-tabs button:focus-visible {
+  outline-offset: -3px;
+}
 .library-tabs button {
   display: inline-flex;
   align-items: center;
