@@ -1697,6 +1697,8 @@ function ProjectForm({
   const autoQuestionsId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [idCopied, setIdCopied] = useState(false);
+  const [idCopyError, setIdCopyError] = useState('');
   return (
     <>
       <form
@@ -1729,6 +1731,40 @@ function ProjectForm({
             ? 'プロジェクト名と概要を変更できます。内容はメモリの整理にも使われます。'
             : '集めたいテーマに名前をつけましょう。目的を書くと、メモリの整理にも使われます。'}
         </p>
+        {project && (
+          <>
+            <dl className="project-id">
+              <dt>プロジェクトID</dt>
+              <dd className="project-id-row">
+                <span className="project-id-value">{project.id}</span>
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="プロジェクトIDをコピー"
+                  title="プロジェクトIDをコピー"
+                  onClick={async () => {
+                    setIdCopied(false);
+                    setIdCopyError('');
+                    try {
+                      await navigator.clipboard.writeText(project.id);
+                      setIdCopied(true);
+                    } catch {
+                      setIdCopyError(
+                        'コピーできませんでした。プロジェクトIDを選択してコピーしてください。',
+                      );
+                    }
+                  }}
+                >
+                  <Copy size={16} aria-hidden="true" />
+                </button>
+              </dd>
+            </dl>
+            <p className="guide-note" role="status">
+              {idCopied && 'プロジェクトIDをコピーしました。'}
+            </p>
+            <FormError error={idCopyError} />
+          </>
+        )}
         <label htmlFor={nameId}>プロジェクト名</label>
         <input
           id={nameId}
