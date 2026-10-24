@@ -3630,8 +3630,8 @@ textarea::placeholder {
   }
 }
 .comments {
-  margin-block: 28px;
-  padding: 20px;
+  margin-block: 16px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card);
@@ -3642,7 +3642,7 @@ textarea::placeholder {
 .comment-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .comments-heading {
   justify-content: space-between;
@@ -3650,15 +3650,15 @@ textarea::placeholder {
 }
 .comments-heading h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
 }
 .comment-list {
-  margin: 18px 0;
+  margin: 8px 0;
   padding: 0;
   list-style: none;
 }
 .comment-list li {
-  padding-block: 14px;
+  padding-block: 10px;
   border-bottom: 1px solid var(--border);
 }
 .comment-meta {
@@ -3669,15 +3669,24 @@ textarea::placeholder {
   font-size: 12px;
 }
 .comment-list p {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.8;
 }
 .comments form {
-  margin-top: 18px;
+  margin-top: 8px;
 }
 .comments textarea {
+  display: block;
   width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  line-height: 1.5;
   resize: vertical;
+}
+.comments .form-actions {
+  margin-top: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
 }

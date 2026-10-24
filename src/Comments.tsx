@@ -69,8 +69,8 @@ function CommentThread({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [focused, setFocused] = useState(false);
   const headingId = useId();
-  const fieldId = useId();
   const hintId = useId();
   const controller = useRef<AbortController | null>(null);
   const targetType = target.target_type,
@@ -143,7 +143,7 @@ function CommentThread({
         </h2>
         <button
           type="button"
-          className="button secondary"
+          className="button text-button"
           disabled={loading || busy}
           onClick={() => void load(1, controller.current!.signal)}
         >
@@ -151,15 +151,12 @@ function CommentThread({
           更新
         </button>
       </div>
-      <p className="field-hint" id={hintId}>
-        自分用の記録です。公開ページやAIのメモリには含まれません。
-      </p>
       {loadError && (
         <p className="form-error" role="alert">
           {loadError}「更新」で再試行できます。
         </p>
       )}
-      {visibleComments.length > 0 ? (
+      {visibleComments.length > 0 && (
         <ol className="comment-list">
           {visibleComments.map((item) => (
             <li key={item.id}>
@@ -179,8 +176,6 @@ function CommentThread({
             </li>
           ))}
         </ol>
-      ) : (
-        !loading && !loadError && <p className="field-hint">コメントはまだありません。</p>
       )}
       {loading && (
         <p className="content-loading" role="status">
@@ -199,16 +194,18 @@ function CommentThread({
         </button>
       )}
       <form onSubmit={submit}>
-        <label htmlFor={fieldId}>コメントを追加</label>
         <textarea
-          id={fieldId}
+          aria-label="コメントを追加"
           aria-describedby={hintId}
+          placeholder="コメントを追加…"
           value={body}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onInput={(event) => {
             const value = event.currentTarget.value;
             updateDraft((current) => ({ ...current, body: value }));
           }}
-          rows={3}
+          rows={focused || body ? 3 : 1}
           maxLength={2000}
           disabled={busy}
         />
@@ -223,7 +220,9 @@ function CommentThread({
           </p>
         )}
         <div className="form-actions">
-          <span className="field-hint">2,000文字まで</span>
+          <span className="field-hint" id={hintId}>
+            2,000文字まで
+          </span>
           <button className="button primary" disabled={busy || loading || !body.trim()}>
             {busy && <LoaderCircle size={16} className="spin" aria-hidden="true" />}
             {busy ? '追加中…' : 'コメントを追加'}
