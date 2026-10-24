@@ -58,6 +58,20 @@ async function submit() {
       .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
   );
 }
+it('普段は1行で表示し、入力中と下書きがある間は入力欄を広げる', async () => {
+  await render();
+  const textarea = document.querySelector('textarea')!;
+  // ReactをDOMなしで読み込むテスト環境では、旧入力イベントの検出を補う。
+  Object.assign(textarea, { attachEvent: vi.fn(), detachEvent: vi.fn() });
+  expect(textarea.getAttribute('rows')).toBe('1');
+  await act(async () => textarea.dispatchEvent(new window.Event('focusin', { bubbles: true })));
+  expect(textarea.getAttribute('rows')).toBe('3');
+  await input('書きかけのコメント');
+  await act(async () => textarea.dispatchEvent(new window.Event('focusout', { bubbles: true })));
+  expect(textarea.getAttribute('rows')).toBe('3');
+  await submit();
+  expect(textarea.getAttribute('rows')).toBe('1');
+});
 it('作成者・日時・本文を表示し、現在の局面に投稿して入力欄を空にする', async () => {
   await render();
   expect(document.body.textContent).toContain('第1局面のコメント');
