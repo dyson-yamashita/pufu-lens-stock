@@ -151,9 +151,6 @@ function CommentThread({
           更新
         </button>
       </div>
-      <p className="field-hint" id={hintId}>
-        自分用・非公開（AIのメモリ対象外）
-      </p>
       {loadError && (
         <p className="form-error" role="alert">
           {loadError}「更新」で再試行できます。
@@ -223,7 +220,9 @@ function CommentThread({
           </p>
         )}
         <div className="form-actions">
-          <span className="field-hint">2,000文字まで</span>
+          <span className="field-hint" id={hintId}>
+            2,000文字まで
+          </span>
           <button className="button primary" disabled={busy || loading || !body.trim()}>
             {busy && <LoaderCircle size={16} className="spin" aria-hidden="true" />}
             {busy ? '追加中…' : 'コメントを追加'}
