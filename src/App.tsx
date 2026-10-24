@@ -2074,7 +2074,12 @@ function StockDetail({
   const [titleError, setTitleError] = useState('');
   const titleInput = useRef<HTMLInputElement>(null);
   const titleButton = useRef<HTMLButtonElement>(null);
+  const noteInput = useRef<HTMLTextAreaElement>(null);
+  const noteHintId = useId();
   const titleId = useId();
+  useEffect(() => {
+    if (tab === 'note') noteInput.current?.focus();
+  }, [tab]);
   useEffect(() => {
     if (editingTitle) {
       titleInput.current?.focus();
@@ -2235,6 +2240,19 @@ function StockDetail({
           ) : stock.summary ? (
             <>
               <p>{stock.summary.overview}</p>
+              {stock.summary.shortSource && (
+                <div className="local-model-note">
+                  <p>短い本文のため、推測を加えず原文を表示しています。</p>
+                  {!stock.note.trim() && (
+                    <>
+                      <p>なぜ気になったかを一言残すと、問いとメモリに反映されます。</p>
+                      <button className="button secondary" onClick={() => setTab('note')}>
+                        ひとことメモを残す
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
               <h4>この記事の要点</h4>
               <ul>
                 {stock.summary.keyPoints.map((point, index) => (
@@ -2322,20 +2340,35 @@ function StockDetail({
             setError('');
             try {
               await send(`/api/v1/stocks/${stock.id}`, { note, project_id: projectId }, 'PATCH');
-              onDone('メモと保存先を更新しました。');
+              onDone(
+                stock.summary?.shortSource && note !== stock.note
+                  ? 'メモを保存しました。問いとメモリに反映します。'
+                  : 'メモと保存先を更新しました。',
+              );
             } catch (e) {
               setError((e as Error).message);
               setBusy(false);
             }
           }}
         >
-          <label htmlFor="edit-note">メモ</label>
+          <label htmlFor="edit-note">
+            {stock.summary?.shortSource ? 'なぜ気になった？（メモ）' : 'メモ'}
+          </label>
+          {stock.summary?.shortSource && (
+            <p id={noteHintId} className="local-model-note">
+              気になった理由を一言残すと、問いとメモリに反映されます。原文はそのまま残ります。
+              プロジェクトの公開時は、メモをもとに作った問いも公開されます。
+            </p>
+          )}
           <textarea
+            ref={noteInput}
             id="edit-note"
+            aria-describedby={stock.summary?.shortSource ? noteHintId : undefined}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={4}
             maxLength={2000}
+            disabled={busy}
           />
           <label htmlFor="edit-project">保存先プロジェクト</label>
           <select

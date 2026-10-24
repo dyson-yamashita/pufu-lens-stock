@@ -267,7 +267,7 @@ describe('AIジョブの再試行と待機期限', () => {
       body: {
         type: 'text',
         project_id: 'alice-project',
-        text: '期限判定と実行開始の競合確認用本文です。',
+        text: '期限判定と実行開始の競合確認用本文です。'.repeat(8),
       },
     });
     const job = (await app.env.DB.prepare(
@@ -334,7 +334,11 @@ describe('AIジョブの再試行と待機期限', () => {
   it('並行Cronの古い完了確認で10回目の実行を待機・失敗へ戻さない', async () => {
     await app.request('/api/v1/stocks', {
       method: 'POST',
-      body: { type: 'text', project_id: 'alice-project', text: '並行Cronの競合確認用本文です。' },
+      body: {
+        type: 'text',
+        project_id: 'alice-project',
+        text: '並行Cronの競合確認用本文です。'.repeat(8),
+      },
     });
     const job = (await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind='article'",

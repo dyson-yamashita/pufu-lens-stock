@@ -3,9 +3,9 @@ import { z } from 'zod';
 export const summarySchema = z.object({
   overview: z.string().min(1).max(1600),
   keyPoints: z.array(z.string().min(1).max(500)).min(1).max(8),
-  topics: z.array(z.string().min(1).max(40)).min(1).max(8),
+  topics: z.array(z.string().min(1).max(40)).max(8),
 });
-export type ArticleSummary = z.infer<typeof summarySchema>;
+export type ArticleSummary = z.infer<typeof summarySchema> & { shortSource?: true };
 export const stockListOptionsSchema = z.object({
   limit: z.number().int().min(1).max(24).default(24),
   sort_by: z.literal('created_at').default('created_at'),

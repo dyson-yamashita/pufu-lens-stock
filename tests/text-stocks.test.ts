@@ -156,12 +156,14 @@ describe('URLとテキストのストック', () => {
   });
 
   it('要約に失敗しても本文を保持し、再試行で回復できる', async () => {
-    const { id } = (await (await save()).json()) as { id: string };
+    // 短文はAIなしで原文を使うため、AI要約が必要な長さの本文で障害を再現する。
+    const longText = `${text}\n${text}`;
+    const { id } = (await (await save({ text: longText })).json()) as { id: string };
     app.env.LOCAL_DEMO_ENABLED = 'false';
     await expect(run('article')).rejects.toThrow('Workers AI');
     expect((await detail(id)).stock.status).toBe('failed');
     expect(await (await app.request(`/api/v1/stocks/${id}/content`)).json()).toEqual({
-      content: text,
+      content: longText,
     });
     expect((await app.request(`/api/v1/stocks/${id}/retry`, { method: 'POST' })).status).toBe(202);
     app.env.LOCAL_DEMO_ENABLED = 'true';
@@ -170,7 +172,9 @@ describe('URLとテキストのストック', () => {
     expect((await detail(id)).stock.status).toBe('ready');
     await run('cleanup');
     expect(await app.env.CONTENT.get(`alice/${job.target_id}/1.txt`)).toBeNull();
-    expect(await (await app.env.CONTENT.get(`alice/${job.target_id}/2.txt`))!.text()).toBe(text);
+    expect(await (await app.env.CONTENT.get(`alice/${job.target_id}/2.txt`))!.text()).toBe(
+      longText,
+    );
   });
 
   it('削除でテキストと問いを除去し、R2本文の削除要求を残す', async () => {
