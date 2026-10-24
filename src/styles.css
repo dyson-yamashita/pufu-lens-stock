@@ -208,6 +208,43 @@ p {
 .danger-text:hover {
   color: var(--danger-hover);
 }
+.delete-action {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.delete-action > summary {
+  min-height: 44px;
+  padding: 11px 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.delete-action > button {
+  margin-top: 8px;
+}
+.delete-description {
+  font-size: 14px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.delete-description p + p {
+  margin-top: 12px;
+}
+.delete-target {
+  font-weight: 600;
+}
+.delete-confirmation .form-actions {
+  flex-wrap: wrap;
+}
+.delete-confirm-button {
+  background: var(--danger);
+  color: var(--card);
+  white-space: normal;
+}
+.delete-confirm-button:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
 .icon-button {
   min-height: 44px;
   min-width: 44px;
@@ -2922,11 +2959,6 @@ textarea::placeholder {
   display: flex;
   justify-content: flex-end;
   margin: 28px 0 12px;
-}
-.question-delete-action {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
 }
 .pufu-context {
   border-left: 3px solid var(--primary);
