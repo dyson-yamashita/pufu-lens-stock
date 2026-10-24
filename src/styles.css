@@ -567,6 +567,26 @@ p {
   border: 1px solid var(--border);
   border-radius: 12px;
 }
+.project-id {
+  margin: 22px 0 0;
+}
+.project-id dt {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.project-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.project-id-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.8;
+}
 .project-advanced {
   margin-top: 24px;
   border-top: 1px solid var(--border);
