@@ -44,7 +44,7 @@ export default function McpConnections() {
             <Layers size={23} aria-hidden="true" />
           </span>
           <div>
-            <h3>ChatGPTなどからストック・問いを使う</h3>
+            <h3>ChatGPTなどからストック・問い・気づきを使う</h3>
             <p>会話の中で、保存した情報を活用できます。</p>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function McpConnections() {
           </p>
         )}
         <p>
-          接続先から「プロジェクトのストックを探して」「この問いを保存して」と依頼できます。ストックを追加すると、要約とAIの問いが順次生成されます。
+          接続先から「プロジェクトのストックを探して」「この問い・気づきを保存して」と依頼できます。ストックを追加すると、要約とAIの問い・気づきが順次生成されます。
         </p>
       </section>
       {error && (

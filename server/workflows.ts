@@ -112,7 +112,7 @@ async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
   } catch (error) {
     if (await deferLimitedJob(env, job, error)) return;
     await step.do('record-question-failure', () =>
-      fail(env, job, '問いを生成できませんでした。「再試行」からやり直せます。'),
+      fail(env, job, '問い・気づきを生成できませんでした。「再試行」からやり直せます。'),
     );
     throw error;
   }

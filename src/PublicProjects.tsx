@@ -117,7 +117,7 @@ export function PublicProjectDirectory() {
         <h2 id="public-directory-heading">公開プロジェクト</h2>
       </div>
       <p className="public-lead">
-        誰かの関心から、次のアイデアへ。ストックと問い、その先のプ譜をのぞいてみませんか。
+        誰かの関心から、次のアイデアへ。ストックと問い・気づき、その先のプ譜をのぞいてみませんか。
       </p>
       {!data ? (
         <ResourceState error={error} retry={reload} />
@@ -137,7 +137,7 @@ export function PublicProjectDirectory() {
                 <h3 title={project.name}>{project.name}</h3>
                 <p>
                   {project.public_description ||
-                    '集めたストックと、そこから生まれた問いを公開しています。'}
+                    '集めたストックと、そこから生まれた問い・気づきを公開しています。'}
                 </p>
                 <div className="public-card-footer">
                   <span>
@@ -146,7 +146,7 @@ export function PublicProjectDirectory() {
                   </span>
                   <span>
                     <CircleHelp size={16} aria-hidden="true" />
-                    {project.question_count} 問い
+                    {project.question_count} 問い・気づき
                   </span>
                   <ArrowRight size={18} aria-hidden="true" />
                 </div>
@@ -246,7 +246,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         <ul>
           <li>プロジェクト名と公開用の紹介文</li>
           <li>ストックのタイトル・URL・要約・要点・トピック</li>
-          <li>問いと、紐づくプ譜の最新局面・振り返り</li>
+          <li>問い・気づきと、紐づくプ譜の最新局面・振り返り</li>
         </ul>
         <p>
           <LockKeyhole size={15} aria-hidden="true" />
@@ -410,7 +410,9 @@ function PublicQuestionCard({ question }: { question: PublicQuestion }) {
       <h3>{question.text}</h3>
       {question.article_title && <p className="public-help">{question.article_title}</p>}
       <div className="public-card-footer">
-        <span>{question.pufu_count ? `${question.pufu_count}件のプ譜` : '問いの詳細を見る'}</span>
+        <span>
+          {question.pufu_count ? `${question.pufu_count}件のプ譜` : '問い・気づきの詳細を見る'}
+        </span>
         <ArrowRight size={18} aria-hidden="true" />
       </div>
     </a>
@@ -431,14 +433,14 @@ function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
       </a>
       <h2 className="public-detail-title">ストックの詳細</h2>
       <StockDetails stock={data.stock} />
-      <h3 className="public-detail-title">関連する問い</h3>
+      <h3 className="public-detail-title">関連する問い・気づき</h3>
       <div className="public-content-grid">
         {data.questions.map((question) => (
           <PublicQuestionCard key={question.id} question={question} />
         ))}
       </div>
       {!data.questions.length && (
-        <p className="public-message">このストックには公開できる問いがまだありません。</p>
+        <p className="public-message">このストックには公開できる問い・気づきがまだありません。</p>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
     </section>
@@ -476,7 +478,9 @@ function PublicQuestionList({ root, page, onPageChange }: PublicListProps) {
           <PublicQuestionCard key={question.id} question={question} />
         ))}
       </div>
-      {!data.items.length && <p className="public-message">公開できる問いはまだありません。</p>}
+      {!data.items.length && (
+        <p className="public-message">公開できる問い・気づきはまだありません。</p>
+      )}
       <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
     </>
   );
@@ -500,15 +504,18 @@ function PublicQuestionDetail({
   return !data ? (
     <ResourceState error={error} retry={reload} />
   ) : (
-    <section className="question-detail-page public-question-detail" aria-label="問いの詳細">
+    <section
+      className="question-detail-page public-question-detail"
+      aria-label="問い・気づきの詳細"
+    >
       <a className="back-link" href="#questions">
         <ArrowLeft size={16} aria-hidden="true" />
-        問いの一覧に戻る
+        問い・気づきの一覧に戻る
       </a>
       <header className="page-header">
         <div>
-          <h2 className="page-title">問いの詳細</h2>
-          <p>問いを見つめ直し、次の一歩へ。</p>
+          <h2 className="page-title">問い・気づきの詳細</h2>
+          <p>問い・気づきを見つめ直し、次の一歩へ。</p>
         </div>
       </header>
       <article className="question-detail-card">
@@ -545,7 +552,7 @@ function PublicQuestionDetail({
       </article>
       <div className="section-head pufu-list-heading">
         <div>
-          <h3 className="section-title">この問いのプ譜</h3>
+          <h3 className="section-title">この問い・気づきのプ譜</h3>
           <p>課題ごとにまとめられた案を閲覧できます。</p>
         </div>
         <span className="result-count">{data.question.pufu_count}件</span>
@@ -568,7 +575,7 @@ function PublicQuestionDetail({
         </div>
       ) : (
         <div className="pufu-empty">
-          <p>この問いのプ譜はまだありません。</p>
+          <p>この問い・気づきのプ譜はまだありません。</p>
         </div>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
@@ -597,7 +604,7 @@ function PublicPufuDetail({ root, id }: { root: string; id: string }) {
     <section>
       <a className="text-link" href={`#question/${encodeURIComponent(data.pufu.question_id)}`}>
         <ArrowLeft size={16} aria-hidden="true" />
-        問いに戻る
+        問い・気づきに戻る
       </a>
       <h2 className="public-detail-title">{data.pufu.task}</h2>
       <p className="public-help">{data.pufu.question_text}</p>
@@ -687,7 +694,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 }
               >
                 <CircleHelp size={18} aria-hidden="true" />
-                問い<span>{data.project.question_count}</span>
+                問い・気づき<span>{data.project.question_count}</span>
               </a>
             </nav>
             {content}

@@ -92,7 +92,7 @@ export class PufuViewerController {
       .safeParse(result.structuredContent);
     if (empty.success) {
       if (!this.confirmed) this.target = { question_id: empty.data.question_id };
-      this.fail('この問いのプ譜はまだ作成されていません。', 'not_created');
+      this.fail('この問い・気づきのプ譜はまだ作成されていません。', 'not_created');
       return;
     }
     const parsed = pufuViewerReadySchema.safeParse(result.structuredContent);

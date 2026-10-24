@@ -577,7 +577,7 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Question>();
-    if (!question) throw new HTTPException(404, { message: '問いが見つかりません。' });
+    if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return question;
   }
   async function ownedPufu(c: import('hono').Context<AppEnv>) {
@@ -668,7 +668,9 @@ export function createApp(trustedPrincipal?: Principal) {
       return c.json({ id, status: previous.status });
     }
     if (question.status !== 'ready' || !question.text)
-      throw new HTTPException(409, { message: '問いの生成が完了してから、プ譜を作成できます。' });
+      throw new HTTPException(409, {
+        message: '問い・気づきの生成が完了してから、プ譜を作成できます。',
+      });
     const project = await ownedProject(c.env, user.id, question.project_id);
     const [stockRows, memoryRows] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
@@ -733,7 +735,9 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(id, user.id)
       .first<PufuSummary>();
     if (!saved)
-      throw new HTTPException(409, { message: '問いが変更されました。開き直してお試しください。' });
+      throw new HTTPException(409, {
+        message: '問い・気づきが変更されました。開き直してお試しください。',
+      });
     if (saved.question_id !== question.id || saved.task !== data.task)
       throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
     c.executionCtx.waitUntil(dispatchJobs(c.env));
@@ -931,7 +935,9 @@ export function createApp(trustedPrincipal?: Principal) {
       question.text !== data.text ||
       question.source !== 'user'
     )
-      throw new HTTPException(409, { message: '同じリクエストIDで異なる問いが送信されました。' });
+      throw new HTTPException(409, {
+        message: '同じリクエストIDで異なる問い・気づきが送信されました。',
+      });
     return c.json({ question }, result.meta.changes ? 201 : 200);
   });
   app.patch('/api/v1/questions/:id/favorite', async (c) => {
@@ -941,7 +947,7 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(Number(data.is_favorite), now(), c.req.param('id'), c.get('principal').user.id)
       .first<Pick<Question, 'id' | 'is_favorite'>>();
-    if (!question) throw new HTTPException(404, { message: '問いが見つかりません。' });
+    if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return c.json(question);
   });
   app.get('/api/v1/stocks/:id', async (c) => {
@@ -1002,7 +1008,7 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(stock.id)
       .first<{ status: string; source: string; generation: number }>();
     if (!question || question.source !== 'ai' || question.status !== 'failed')
-      throw new HTTPException(409, { message: '生成に失敗した問いだけ再試行できます。' });
+      throw new HTTPException(409, { message: '生成に失敗した問い・気づきだけ再試行できます。' });
     if (stock.status !== 'ready')
       throw new HTTPException(409, { message: '先に記事の取得・要約を完了してください。' });
     const jobId = `q-${stock.id}-${question.generation + 1}`;

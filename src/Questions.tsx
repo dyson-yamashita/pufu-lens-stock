@@ -24,7 +24,7 @@ function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () =>
             <button
               className="question-open"
               onClick={onOpen}
-              aria-label={`問いの詳細を開く：${question.text}`}
+              aria-label={`問い・気づきの詳細を開く：${question.text}`}
             >
               {question.text}
             </button>
@@ -39,8 +39,8 @@ function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () =>
           )}
           {question.error ??
             (question.article_status !== 'ready'
-              ? '記事の要約が完了したら、問いを1つ生成します。'
-              : 'この記事から、考えを深める問いを生成しています。')}
+              ? '記事の要約が完了したら、問い・気づきを1つ生成します。'
+              : 'この記事から、考えを深める問い・気づきを生成しています。')}
         </p>
       )}
     </>
@@ -94,7 +94,7 @@ export function StockQuestion({
             <section className="stock-question" key={question.id}>
               <div className="question-kicker">
                 <CircleHelp size={18} aria-hidden="true" />
-                この記事から生まれた問い
+                この記事から生まれた問い・気づき
                 <QuestionLabels question={question} />
               </div>
               <QuestionBody
@@ -123,7 +123,7 @@ export function StockQuestion({
                   <RefreshCw size={16} className={busy ? 'spin' : ''} aria-hidden="true" />
                   {question.article_status === 'failed'
                     ? '記事の再取得を試す'
-                    : '問いの生成を再試行'}
+                    : '問い・気づきの生成を再試行'}
                 </button>
               )}
             </section>
@@ -134,8 +134,8 @@ export function StockQuestion({
                 <LoaderCircle className="spin" size={17} aria-hidden="true" />
               )}
               {questions === undefined
-                ? '問いを読み込んでいます…'
-                : 'このストックには問いがありません。'}
+                ? '問い・気づきを読み込んでいます…'
+                : 'このストックには問い・気づきがありません。'}
             </p>
           )}
       {error && (
@@ -220,10 +220,10 @@ export default function Questions({
     };
   }, [projectId, search, filter, page, refresh, reload, active]);
   return (
-    <section className="questions-page" aria-label="プロジェクトの問い">
+    <section className="questions-page" aria-label="プロジェクトの問い・気づき">
       <SearchField
-        label="問いを検索"
-        placeholder="問い、記事のタイトル、メモから検索"
+        label="問い・気づきを検索"
+        placeholder="問い・気づき、記事のタイトル、メモから検索"
         value={query}
         clearable={Boolean(query || search)}
         onChange={setQuery}
@@ -240,7 +240,7 @@ export default function Questions({
         }}
       />
       <div className="filter-row">
-        <div className="filters" aria-label="問いのフィルター">
+        <div className="filters" aria-label="問い・気づきのフィルター">
           {[
             ['all', 'すべて'],
             ['ai', 'AI'],
@@ -270,7 +270,7 @@ export default function Questions({
       {loading && !questions.length ? (
         <div className="empty-state">
           <LoaderCircle className="spin" size={20} aria-hidden="true" />
-          <p>問いを読み込んでいます。</p>
+          <p>問い・気づきを読み込んでいます。</p>
         </div>
       ) : !questions.length ? (
         <div className="empty-state">
@@ -278,12 +278,14 @@ export default function Questions({
             <CircleHelp size={28} aria-hidden="true" />
           </span>
           <h2>
-            {search || filter !== 'all' ? '該当する問いはありません' : '問いから、次の一歩へ'}
+            {search || filter !== 'all'
+              ? '該当する問い・気づきはありません'
+              : '問い・気づきから、次の一歩へ'}
           </h2>
           <p>
             {search || filter !== 'all'
               ? '検索語やフィルターを変えてお試しください。'
-              : '「問いを追加」から、日常や会話で生まれた問いを保存できます。自動生成がオンのプロジェクトでは、ストックの要約からAIの問いも生成されます。'}
+              : '「問い・気づきを追加」から、日常や会話で生まれた問い・気づきを保存できます。自動生成がオンのプロジェクトでは、ストックの要約からAIの問い・気づきも生成されます。'}
           </p>
         </div>
       ) : (
