@@ -28,7 +28,13 @@ import {
   logout,
 } from './auth';
 import { canonicalUrl, hash, randomSecret, validateUrl } from './security';
-import { dirtyMemoryStatements, now, orphanCleanupStatements, queueQuestionStatements } from './db';
+import {
+  dirtyMemoryStatements,
+  now,
+  orphanCleanupStatements,
+  queueQuestionStatements,
+  queueQuestionJobStatement,
+} from './db';
 import { dispatchJobs } from './jobs';
 import { cleanupAccount, requestAccountDeletion } from './account';
 import { reserveOperation, assertOperation, retryAt } from './usage';
@@ -1010,9 +1016,19 @@ export function createApp(trustedPrincipal?: Principal) {
     if (duplicate)
       throw new HTTPException(409, { message: '移動先には同じ記事が保存されています。' });
     await c.env.DB.batch([
+      // 同じbatch内で変更前のメモと照合し、重複保存と古い生成結果の上書きを防ぐ。
+      c.env.DB.prepare(
+        `UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ?
+        WHERE stock_id = ? AND source = 'ai' AND EXISTS (
+          SELECT 1 FROM stocks s JOIN articles a ON a.id = s.article_id
+          WHERE s.id = questions.stock_id AND s.user_id = ? AND s.note != ?
+          AND a.status = 'ready' AND json_extract(a.summary_json, '$.shortSource') = 1
+        )`,
+      ).bind(now(), stock.id, user.id, data.note),
       c.env.DB.prepare(
         'UPDATE stocks SET note = ?, project_id = ? WHERE id = ? AND user_id = ?',
       ).bind(data.note, data.project_id, stock.id, user.id),
+      queueQuestionJobStatement(c.env, stock.id),
       ...(!(stock.source_type === 'url' && isYouTubeUrl(stock.source_url)) ||
       stock.note.trim() ||
       data.note.trim()

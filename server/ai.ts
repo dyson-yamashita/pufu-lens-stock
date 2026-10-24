@@ -88,6 +88,9 @@ export async function summarize(
   text: string,
   call: AiCall<ArticleSummary> = directCall,
 ): Promise<ArticleSummary> {
+  const body = text.trim();
+  if (body && [...body].length < 120)
+    return { overview: body, keyPoints: [body], topics: [], shortSource: true };
   if (isDemo(env) && !env.AI) {
     const sentences = text
       .split(/(?<=[。！？.!?])\s*|\n+/)
@@ -102,7 +105,7 @@ export async function summarize(
     });
   }
   const instruction =
-    '記事の主張を300〜600字程度のoverview、3〜5個のkeyPoints、2〜6個の短いtopicsに整理してください。原文の主張と確認済みの事実を区別します。' +
+    '本文にある情報だけをoverview、1〜5個のkeyPoints、0〜6個の短いtopicsに整理してください。本文にない情報は補わず、用語の意味・背景・ユーザーの意図を推測しません。「おそらく」「記載されていない」「不明」のような推測や情報不足の指摘を要点にしません。情報が少なければoverviewは本文の言い換え1文、keyPointsは1個にとどめ、無理に文字数や個数を揃えません。情報が十分な記事のoverviewは300〜600字を目安にし、原文の主張と確認済みの事実を区別します。' +
     'JSON形式: {"overview":"...","keyPoints":["..."],"topics":["..."]}。';
   const textChunks = text.match(/[\s\S]{1,10000}/g) ?? [text];
   let summaries: ArticleSummary[] = [];
@@ -148,11 +151,11 @@ export async function generateQuestion(
 ): Promise<{ text: string }> {
   if (isDemo(env) && !env.AI)
     return questionSchema.parse({
-      text: `「${source.summary.keyPoints[0].slice(0, 100)}」を「${source.project.name}」に取り入れるなら、どのような条件や検証が必要だろう？`,
+      text: `「${source.summary.keyPoints[0].slice(0, 100)}」を「${source.project.name}」に取り入れるなら、${source.note.trim() ? '保存時のメモを踏まえ、' : ''}どのような条件や検証が必要だろう？`,
     });
   return generate(
     env,
-    '記事の要約をもとに、この保存先プロジェクトで考えを深めるための問いを1つだけ作ってください。プロジェクトの目的と保存時のメモを参考にします。記事の要点を検証したり、応用条件・限界を考えたりする具体的で短い問いにします。ユーザーの賛同・信念を断定しません。回答、解説、箇条書き、複数の問いは出力しません。JSON形式: {"text":"...？"}。textは500文字以内。',
+    '記事の要約をもとに、この保存先プロジェクトで考えを深めるための問いを1つだけ作ってください。プロジェクトの目的と保存時のメモを参考にします。メモは関心の文脈としてのみ使い、メモ本文や個人情報をそのまま引用しません。記事の要点を検証したり、応用条件・限界を考えたりする具体的で短い問いにします。ユーザーの賛同・信念を断定しません。回答、解説、箇条書き、複数の問いは出力しません。JSON形式: {"text":"...？"}。textは500文字以内。',
     source,
     questionSchema,
   );

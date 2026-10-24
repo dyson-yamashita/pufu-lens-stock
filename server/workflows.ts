@@ -234,7 +234,13 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         await this.env.DB.batch([
           this.env.DB.prepare(
             "UPDATE articles SET summary_json = ?, model = ?, status = 'ready', error = NULL, updated_at = ? WHERE id = ? AND generation = ?",
-          ).bind(JSON.stringify(summary), modelName(this.env), now(), article.id, job.revision),
+          ).bind(
+            JSON.stringify(summary),
+            summary.shortSource ? 'source-extract' : modelName(this.env),
+            now(),
+            article.id,
+            job.revision,
+          ),
           ...articleMemoryStatements(this.env, job.user_id, article.id),
           ...queueQuestionStatements(this.env, null, article.id),
           this.env.DB.prepare(

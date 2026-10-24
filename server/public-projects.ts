@@ -15,9 +15,11 @@ import { now } from './db';
 
 const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
+// 再生成ではtextを保持する。未完成のAI問いはNULLなので公開しない。
+const publicQuestionWhere = "(q.status='ready' OR (q.source='ai' AND q.text IS NOT NULL))";
 const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
-  (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND q.status='ready') AS question_count`;
+  (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count`;
 const stockColumns =
   "s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
 const stockJoins =
@@ -104,10 +106,10 @@ export function publicProjectsApp() {
         `SELECT ${stockColumns} FROM ${stockJoins} WHERE ${publicWhere} AND s.id=?`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND s.id=? AND q.status='ready' ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND s.id=? AND ${publicQuestionWhere} ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
       c.env.DB.prepare(
-        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id WHERE ${publicWhere} AND s.id=? AND q.status='ready'`,
+        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id WHERE ${publicWhere} AND s.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
     ]);
     if (!stocks.results.length) throw notFound();
@@ -125,10 +127,10 @@ export function publicProjectsApp() {
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
       c.env.DB.prepare(
-        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND q.status='ready' ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND ${publicQuestionWhere} ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), limit, offset),
       c.env.DB.prepare(
-        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND q.status='ready'`,
+        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key')),
     ]);
     if (!project.results.length) throw notFound();
@@ -144,13 +146,13 @@ export function publicProjectsApp() {
     const { page, limit, offset } = pageOptions(c.req.query('page'));
     const [questions, stocks, pufus] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
-        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND q.id=? AND q.status='ready'`,
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT ${stockColumns} FROM ${stockJoins} JOIN questions q ON q.stock_id=s.id AND q.project_id=p.id WHERE ${publicWhere} AND q.id=? AND q.status='ready'`,
+        `SELECT ${stockColumns} FROM ${stockJoins} JOIN questions q ON q.stock_id=s.id AND q.project_id=p.id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND q.id=? AND q.status='ready' AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
+        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
     ]);
     if (!questions.results.length) throw notFound();
@@ -169,7 +171,7 @@ export function publicProjectsApp() {
       COALESCE(ph.score_json,pf.score_json) AS score_json FROM pufu_scores pf
       JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id
       LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
-      WHERE ${publicWhere} AND pf.id=? AND pf.user_id=p.user_id AND pf.status='ready' AND q.status='ready'`,
+      WHERE ${publicWhere} AND pf.id=? AND pf.user_id=p.user_id AND pf.status='ready' AND ${publicQuestionWhere}`,
     )
       .bind(c.req.param('key'), c.req.param('id'))
       .first<Omit<PublicPufu, 'score'> & { score_json: string | null }>();

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { testApp } from './helpers';
+import { testApp, mockEvent, mockStep } from './helpers';
+import { ArticleWorkflow } from '../server/workflows';
+import type { Job } from '../server/env';
 import type {
   Publication,
   PublicList,
@@ -76,6 +78,60 @@ describe('公開プロジェクトの参照専用API', () => {
   afterEach(async () => {
     await app.dispose();
   });
+
+  it.each(['queued', 'generating', 'failed'])(
+    '短文メモの問いが%sでも、最後に確定した公開問いとプ譜を閲覧できる',
+    async (status) => {
+      await app.env.DB.prepare("UPDATE articles SET summary_json=? WHERE id='article'")
+        .bind(
+          JSON.stringify({
+            overview: '短い本文',
+            keyPoints: ['短い本文'],
+            topics: [],
+            shortSource: true,
+          }),
+        )
+        .run();
+      const key = await publish();
+      const response = await app.request('/api/v1/stocks/stock', {
+        method: 'PATCH',
+        body: { note: '公開した問いに反映する理由', project_id: 'alice-project' },
+      });
+      expect(response.status).toBe(200);
+      expect(
+        await app.env.DB.prepare("SELECT status FROM questions WHERE id='question'").first(),
+      ).toEqual({ status: 'queued' });
+      if (status !== 'queued')
+        await app.env.DB.prepare("UPDATE questions SET status=? WHERE id='question'")
+          .bind(status)
+          .run();
+      expect(await (await get(`${root(key)}/questions`)).json()).toMatchObject({
+        total: 2,
+        items: expect.arrayContaining([
+          expect.objectContaining({ id: 'question', text: '公開する問い？' }),
+        ]),
+      });
+      for (const path of ['/stocks/stock', '/questions/question', '/pufus/pufu']) {
+        const publicResponse = await get(`${root(key)}${path}`);
+        expect(publicResponse.status).toBe(200);
+        const text = await publicResponse.text();
+        expect(text).toContain('公開する問い？');
+        expect(text).not.toContain('公開した問いに反映する理由');
+      }
+      if (status === 'queued') {
+        app.env.LOCAL_DEMO_ENABLED = 'true';
+        const job = await app.env.DB.prepare(
+          "SELECT * FROM processing_jobs WHERE kind='question' AND target_id='stock' ORDER BY revision DESC LIMIT 1",
+        ).first<Job>();
+        await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
+        const regenerated = await get(`${root(key)}/questions/question`);
+        expect(regenerated.status).toBe(200);
+        const text = await regenerated.text();
+        expect(text).toContain('短い本文');
+        expect(text).not.toContain('公開した問いに反映する理由');
+      }
+    },
+  );
 
   it('既存・新規プロジェクトは非公開で、公開設定は所有者のセッションと同一Originでのみ変更できる', async () => {
     const initial = await app.request('/api/v1/projects/alice-project/publication');
