@@ -1371,7 +1371,7 @@ export default function App() {
                   ? 'YouTubeのURLを保存しました。'
                   : duplicate
                     ? 'この記事はすでに保存されています。'
-                    : '記事を保存しました。要約と問いを自動で生成します。',
+                    : '記事を保存しました。要約を自動で生成します。',
               )
             }
           />
@@ -1691,6 +1691,10 @@ function ProjectForm({
     project?.include_in_user_memory ?? true,
   );
   const userMemoryId = useId();
+  const [autoGenerateQuestions, setAutoGenerateQuestions] = useState(
+    project?.auto_generate_questions ?? true,
+  );
+  const autoQuestionsId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
@@ -1708,6 +1712,7 @@ function ProjectForm({
                 description,
                 show_in_all_lists: showInAllLists,
                 include_in_user_memory: includeInUserMemory,
+                auto_generate_questions: autoGenerateQuestions,
               },
               project ? 'PATCH' : 'POST',
             );
@@ -1784,6 +1789,21 @@ function ProjectForm({
           <p id={`${userMemoryId}-hint`} className="project-memory-hint">
             オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。
             {project && '保存すると、既存のメモリにも変更を反映します。'}
+          </p>
+          <label className="project-memory-toggle" htmlFor={autoQuestionsId}>
+            <span>ストックから問いを自動生成する</span>
+            <input
+              id={autoQuestionsId}
+              type="checkbox"
+              role="switch"
+              checked={autoGenerateQuestions}
+              disabled={busy}
+              onChange={(event) => setAutoGenerateQuestions(event.target.checked)}
+              aria-describedby={`${autoQuestionsId}-hint`}
+            />
+          </label>
+          <p id={`${autoQuestionsId}-hint`} className="project-memory-hint">
+            オフにすると、このプロジェクトのストックから問いを自動生成しません。生成済みの問いは残り、手動で問いを追加できます。要約とメモリの更新設定は変わりません。
           </p>
         </details>
         <FormError error={error} />
@@ -1883,7 +1903,9 @@ function SaveForm({
       }}
     >
       <p className="form-intro">
-        URL・テキストを保存すると、要約と問いを生成し、メモリを自動で更新します。
+        URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。
+        {projects.find((project) => project.id === target)?.auto_generate_questions !== false &&
+          '問いも自動で生成します。'}
       </p>
       <div
         className="stock-source-tabs"

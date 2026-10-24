@@ -26,7 +26,8 @@ export function reserveOperation(env: Env, job: Pick<Job, 'id' | 'user_id' | 'ki
     SELECT ?,?,? WHERE
     (SELECT COUNT(*) FROM ai_operations WHERE user_id=? AND kind=? AND created_at>?) < ?
     AND (SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
-      WHERE o.user_id=? AND j.status NOT IN ('done','failed')) < ?
+      WHERE o.user_id=? AND j.status NOT IN ('done','failed')
+      AND NOT (j.kind='question' AND j.status='pending')) < ?
     AND (SELECT COUNT(*) FROM ai_attempts WHERE user_id=? AND created_at>?) < ?
     AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running') < ?`,
   ).bind(
@@ -110,7 +111,14 @@ export async function admitJob(env: Env, job: Job): Promise<boolean> {
   if (job.kind === 'cleanup') return true;
   await env.DB.batch([reserveOperation(env, job)]);
   return Boolean(
-    await env.DB.prepare('SELECT id FROM ai_operations WHERE id=?').bind(job.id).first(),
+    await env.DB.prepare(
+      `SELECT id FROM ai_operations WHERE id=? AND (? != 'question' OR (
+        SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
+        WHERE o.user_id=? AND j.id!=? AND j.status NOT IN ('done','failed')
+        AND NOT (j.kind='question' AND j.status='pending')) < ?)`,
+    )
+      .bind(job.id, job.kind, job.user_id, job.id, limits(env).concurrent)
+      .first(),
   );
 }
 // Workflowのステップ単位で結果と試行数を記録する。再実行は保存済み結果を再利用する。

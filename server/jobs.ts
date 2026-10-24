@@ -22,14 +22,14 @@ export async function dispatchJobs(env: Env): Promise<void> {
     .all<Job>();
   for (const job of expired.results) await stopWaitingJob(env, job);
   const pending = await env.DB.prepare(
-    "SELECT * FROM processing_jobs WHERE status = 'pending' AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')) ORDER BY CASE kind WHEN 'article' THEN 0 WHEN 'cleanup' THEN 1 WHEN 'question' THEN 2 ELSE 3 END, created_at LIMIT 20",
+    "SELECT * FROM processing_jobs WHERE status = 'pending' AND NOT (kind = 'question' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id = s.project_id WHERE s.id = processing_jobs.target_id AND p.auto_generate_questions = 0)) AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')) ORDER BY CASE kind WHEN 'article' THEN 0 WHEN 'cleanup' THEN 1 WHEN 'question' THEN 2 ELSE 3 END, created_at LIMIT 20",
   ).all<Job>();
   for (const job of pending.results) {
     // Workflow起動前に取得権を確定する。起動直後のpending/doneを上書きしない。
     const claimedAt = now();
     const claimed = await env.DB.batch([
       env.DB.prepare(
-        "UPDATE processing_jobs SET status='dispatched',error=NULL,updated_at=? WHERE id=? AND status='pending' AND COALESCE((SELECT attempts FROM job_dispatch_attempts WHERE job_id=processing_jobs.id),0)<? AND created_at>? AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+        "UPDATE processing_jobs SET status='dispatched',error=NULL,updated_at=? WHERE id=? AND status='pending' AND NOT (kind = 'question' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id = s.project_id WHERE s.id = processing_jobs.target_id AND p.auto_generate_questions = 0)) AND COALESCE((SELECT attempts FROM job_dispatch_attempts WHERE job_id=processing_jobs.id),0)<? AND created_at>? AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
       ).bind(claimedAt, job.id, MAX_ATTEMPTS, new Date(Date.now() - MAX_WAIT_MS).toISOString()),
       env.DB.prepare(
         'INSERT INTO job_dispatch_attempts (job_id,attempts) SELECT ?,1 WHERE changes()=1 ON CONFLICT(job_id) DO UPDATE SET attempts=job_dispatch_attempts.attempts+1',

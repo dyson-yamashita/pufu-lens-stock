@@ -125,6 +125,7 @@ export type Project = {
   description: string;
   show_in_all_lists: boolean;
   include_in_user_memory: boolean;
+  auto_generate_questions: boolean;
   count: number;
   ready_count: number;
   created_at: string;

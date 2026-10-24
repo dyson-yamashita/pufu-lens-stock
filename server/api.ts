@@ -64,6 +64,7 @@ const projectSchema = z.object({
   description: z.string().trim().max(1000).default(''),
   show_in_all_lists: z.boolean().optional(),
   include_in_user_memory: z.boolean().optional(),
+  auto_generate_questions: z.boolean().optional(),
 });
 const questionColumns =
   "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, COALESCE(s.title, a.title) AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu";
@@ -274,7 +275,7 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/projects', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
+      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.auto_generate_questions, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
     )
       .bind(user.id, tokenProjectId, tokenProjectId)
       .all();
@@ -283,6 +284,7 @@ export function createApp(trustedPrincipal?: Principal) {
         ...project,
         show_in_all_lists: Boolean(project.show_in_all_lists),
         include_in_user_memory: Boolean(project.include_in_user_memory),
+        auto_generate_questions: Boolean(project.auto_generate_questions),
       })),
     });
   });
@@ -297,7 +299,7 @@ export function createApp(trustedPrincipal?: Principal) {
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory, auto_generate_questions) VALUES (?, ?, ?, ?, ?, ?, ?)',
       ).bind(
         id,
         user.id,
@@ -305,6 +307,7 @@ export function createApp(trustedPrincipal?: Principal) {
         data.description,
         Number(data.show_in_all_lists ?? true),
         Number(data.include_in_user_memory ?? true),
+        Number(data.auto_generate_questions ?? true),
       ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
@@ -323,18 +326,20 @@ export function createApp(trustedPrincipal?: Principal) {
         Boolean(project.include_in_user_memory) !== data.include_in_user_memory);
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory) WHERE id = ? AND user_id = ?',
+        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory), auto_generate_questions = COALESCE(?, auto_generate_questions) WHERE id = ? AND user_id = ?',
       ).bind(
         data.name,
         data.description,
         data.show_in_all_lists === undefined ? null : Number(data.show_in_all_lists),
         data.include_in_user_memory === undefined ? null : Number(data.include_in_user_memory),
+        data.auto_generate_questions === undefined ? null : Number(data.auto_generate_questions),
         id,
         user.id,
       ),
       ...(memoryChanged ? dirtyMemoryStatements(c.env, user.id, [id]) : []),
     ]);
-    if (memoryChanged) c.executionCtx.waitUntil(dispatchJobs(c.env));
+    if (memoryChanged || data.auto_generate_questions === true)
+      c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true });
   });
   app.delete('/api/v1/projects/:id', async (c) => {
@@ -1038,12 +1043,14 @@ export function createApp(trustedPrincipal?: Principal) {
       // 同じbatch内で変更前のメモと照合し、重複保存と古い生成結果の上書きを防ぐ。
       c.env.DB.prepare(
         `UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ?
-        WHERE stock_id = ? AND source = 'ai' AND EXISTS (
+        WHERE stock_id = ? AND source = 'ai'
+        AND EXISTS (SELECT 1 FROM projects WHERE id = ? AND auto_generate_questions = 1)
+        AND EXISTS (
           SELECT 1 FROM stocks s JOIN articles a ON a.id = s.article_id
           WHERE s.id = questions.stock_id AND s.user_id = ? AND s.note != ?
           AND a.status = 'ready' AND json_extract(a.summary_json, '$.shortSource') = 1
         )`,
-      ).bind(now(), stock.id, user.id, data.note),
+      ).bind(now(), stock.id, data.project_id, user.id, data.note),
       c.env.DB.prepare(
         'UPDATE stocks SET note = ?, project_id = ? WHERE id = ? AND user_id = ?',
       ).bind(data.note, data.project_id, stock.id, user.id),
