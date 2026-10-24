@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import { randomUUID, createHash } from 'node:crypto';
 import { URL, URLSearchParams } from 'node:url';
 
-const base = 'http://localhost:5173';
+const base = process.env.SMOKE_BASE_URL ?? 'http://localhost:5173';
 assert.equal(
   (await (await fetch(`${base}/api/config`)).json()).demo,
   true,
@@ -131,7 +131,14 @@ try {
     ).serverInfo,
   );
   const toolNames = (await rpc('tools/list', {})).tools.map((tool) => tool.name);
-  for (const name of ['list_projects', 'get_pufu', 'get_pufu_image', 'show_pufu'])
+  for (const name of [
+    'list_projects',
+    'get_pufu',
+    'get_pufu_image',
+    'show_pufu',
+    'add_comment',
+    'list_comments',
+  ])
     assert.ok(toolNames.includes(name), `Missing tool: ${name}`);
   assert.deepEqual(
     (await call('list_projects')).structuredContent.projects.map((project) => project.id),
@@ -197,6 +204,34 @@ try {
   );
   assert.equal((await call('list_questions', { q: 'ストックなし' })).structuredContent.total, 1);
   assert.equal((await call('list_stocks', { q: 'MCPの動作確認' })).structuredContent.total, 1);
+  const commentTarget = {
+    target_type: 'question',
+    target_id: question.structuredContent.question.id,
+  };
+  const commentInput = { ...commentTarget, body: 'AI連携の判断記録', request_id: randomUUID() };
+  const addedComment = await call('add_comment', commentInput);
+  assert.ok(!addedComment.isError, JSON.stringify(addedComment));
+  assert.equal(addedComment.structuredContent.comment.author_kind, 'agent');
+  assert.equal(
+    (await call('add_comment', commentInput)).structuredContent.comment.id,
+    addedComment.structuredContent.comment.id,
+  );
+  const webComments = await api(`/comments?${new URLSearchParams(commentTarget)}`);
+  assert.deepEqual(
+    webComments.comments.map((comment) => comment.body),
+    [commentInput.body],
+  );
+  await api('/comments', 'POST', {
+    ...commentTarget,
+    body: 'Webからの追記',
+    request_id: randomUUID(),
+  });
+  assert.deepEqual(
+    (await call('list_comments', commentTarget)).structuredContent.comments.map(
+      (comment) => comment.body,
+    ),
+    ['AI連携の判断記録', 'Webからの追記'],
+  );
   const refreshed = await fetch(`${base}/oauth/token`, {
     method: 'POST',
     body: new URLSearchParams({

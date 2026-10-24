@@ -56,6 +56,8 @@ import { SearchError } from './search-ai';
 import { readQuestionPufu } from './pufu-read';
 import { generateQuestionPufuImage } from './pufu-images';
 import { readPufuImageLink } from './pufu-image-links';
+import { addCommentSchema, listCommentsSchema } from '../shared/comments';
+import { addComment, listComments } from './comments';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -167,10 +169,11 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
+          /^\/api\/v1\/(comments|projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
             c.req.path,
           )) ||
-        (c.req.method === 'POST' && ['/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
+        (c.req.method === 'POST' &&
+          ['/api/v1/comments', '/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
       )
     )
       throw new HTTPException(403);
@@ -185,6 +188,22 @@ export function createApp(trustedPrincipal?: Principal) {
     await next();
   });
   app.route('/api/v1/projects', publicationApp());
+  app.get('/api/v1/comments', async (c) => {
+    const query = c.req.query();
+    const parsed = listCommentsSchema.safeParse({
+      ...query,
+      phase: query.phase ? Number(query.phase) : undefined,
+      page: query.page ? Number(query.page) : undefined,
+    });
+    if (!parsed.success)
+      throw new HTTPException(400, { message: 'コメントの対象と局面番号を確認してください。' });
+    return c.json(await listComments(c.env, c.get('principal'), parsed.data));
+  });
+  app.post('/api/v1/comments', async (c) => {
+    const input = await body(c, addCommentSchema);
+    const { comment, created } = await addComment(c.env, c.get('principal'), input);
+    return c.json({ comment }, created ? 201 : 200);
+  });
   app.get('/api/v1/integrations/x', async (c) => {
     const row = await c.env.DB.prepare(
       "SELECT updated_at FROM external_integrations WHERE user_id = ? AND provider = 'x'",

@@ -653,12 +653,14 @@ describe('MCPによるストックと問いの取得・追加', () => {
     expect(initialized.result).toHaveProperty('serverInfo');
     const listed = await rpc(token, 'tools/list');
     expect(listed.result.tools?.map((tool) => tool.name).sort()).toEqual([
+      'add_comment',
       'add_question',
       'add_stock',
       'get_pufu',
       'get_pufu_image',
       'get_question',
       'get_stock',
+      'list_comments',
       'list_projects',
       'list_questions',
       'list_stocks',

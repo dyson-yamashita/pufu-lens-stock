@@ -11,6 +11,7 @@ APIのパスは、特記のない限り `/api/v1` からの相対パスです。
 - [プロフィールとメモリへの反映](#プロフィールとメモリへの反映)
 - [問い](#問い)
 - [プ譜](#プ譜)
+- [時系列コメント](#時系列コメント)
 - [プロジェクトの公開](#プロジェクトの公開)
 - [X連携](#x連携)
 - [MCP連携（ChatGPTなど）](#mcp連携chatgptなど)
@@ -165,6 +166,20 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 
 `pufu_scores` に原案・最新の編集結果・入力時点の問いとメモリのスナップショット（内容・更新番号）・モデル・エディターのバージョン、`pufu_phases` に各局面の編集結果を保持します。メモリが後で変わっても、生成した案の根拠を確認できます。プ譜の作成・編集・局面追加で既存のメモリは更新しません。ライセンス文は [pufu-editor.txt](../public/licenses/pufu-editor.txt) に同梱しています。
 
+## 時系列コメント
+
+ストック・問いの詳細、およびプ譜の表示中の局面に、共通のコメント欄を表示します。本文は前後の空白を除いて1〜2,000文字で、改行を保ちます。作成元（本人／AI連携）・作成者・日時とともに古い順に50件ずつ表示し、「更新」と「続きを読み込む」で履歴を取得できます。
+
+プ譜の局面切り替えでは、対象・局面ごとの未投稿の下書きと再送IDを画面内で保持し、送信成功時に該当下書きだけを消します。送信中に別局面へ移動して戻っても、二重送信を防ぎます。画面を閉じたり再読み込みした場合の下書き保存は行いません。
+
+コメントは対象の所有ユーザー内で共有します。同じユーザーのWebと複数のMCP接続は、許可されたプロジェクト・操作の範囲で、互いが残したコメントを参照・追記できます。作成元や接続の違いはアクセス制限に使いません。他ユーザーへの共有・通知・コメント単体の編集や削除は提供しません。
+
+D1の`comments`テーブルに`target_type`（`stock / question / pufu`）、`target_id`、`phase`、`body`、`author_id`、`author_kind`（`user / agent`）、`created_at`を保存します。プ譜だけは実在する局面番号`phase`が必須で、それ以外の対象には指定できません。プ譜エディターの各要素のコメントとは独立し、局面追加時も引き継ぎません。対象・プロジェクト・ユーザーの削除では、外部キーと削除トリガーで関連コメントを同時に削除します。Worker更新前に`0026_comments.sql`を適用してください。
+
+`GET /api/v1/comments`は`target_type`・`target_id`、プ譜では`phase`、任意の`page`（既定1、1〜5000）を受け取り、`comments`と`has_more`を返します。`POST /api/v1/comments`は対象指定に`body`と`request_id`（UUID）を加え、保存した`comment`を返します。新規作成は201、同じID・対象・本文の再送は200、同じIDを異なる内容で再利用すると409です。作成者・作成元はサーバーが認証情報から決めます。
+
+本人のセッションとMCPだけが利用できます。MCPではストックに`stocks:read / stocks:write`、問い・プ譜に`questions:read / questions:write`を適用し、接続のプロジェクト制限も検証します。対象が存在しない・他ユーザー所有・許可対象外のプロジェクト・存在しない局面は404です。公開API・画像・ダウンロード・AIメモリ・プ譜生成入力にコメントを追加しません。
+
 ## プロジェクトの公開
 
 プロジェクトの「設定」→「公開設定」で公開できます。初期状態は非公開です。公開すると `/p/<公開ID>` の参照URLが発行され、ログイン前のトップページにも掲載されます。
@@ -214,8 +229,10 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 | `show_pufu`      | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                              |
 | `get_pufu_image` | 問いID・プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                  |
 | `add_question`   | プロジェクトに問いを追加。関連する `stock_id` は任意                                                           |
+| `list_comments`  | ストック・問い・プ譜局面のコメントを古い順に50件ずつ取得。同じユーザーの別接続の投稿も含む                     |
+| `add_comment`    | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                           |
 
-追加ツールには `project_id` と `request_id`（UUID）が必須です。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
+`add_stock`・`add_question`には `project_id` と `request_id`（UUID）が必須です。`add_comment`は対象IDからプロジェクトを確認するため`project_id`は指定しません。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
 
 ### 会話内のプ譜ビューアー
 
@@ -389,34 +406,35 @@ WHERE current=1;
 
 `/api/v1` は認証必須です。WebのCookie認証での変更操作には、`APP_URL` と一致する `Origin` が必要です。Bearer認証ではCookieに依存しません。
 
-| メソッド・パス                    | 用途                                   | Bearer |
-| --------------------------------- | -------------------------------------- | ------ |
-| `GET /projects`                   | 自分のプロジェクト一覧                 | 可     |
-| `POST /stocks`                    | URL／テキストの保存受付                | 可     |
-| `GET /me`                         | ログイン中のユーザー                   | —      |
-| `PATCH /me`                       | 自分の名前・自己紹介の更新             | —      |
-| `DELETE /me`                      | 本人の退会と登録データの削除           | —      |
-| `POST /logout`                    | セッション終了                         | —      |
-| `POST /projects`                  | プロジェクト作成                       | —      |
-| `PATCH・DELETE /projects/:id`     | プロジェクト編集・削除                 | —      |
-| `GET /stocks`                     | 検索・状態・プロジェクトで絞り込む一覧 | —      |
-| `GET /stocks/:id`                 | 保存した記事の詳細                     | —      |
-| `GET /questions`                  | 自分の問い一覧                         | —      |
-| `POST /questions`                 | プロジェクトにユーザーの問いを追加     | —      |
-| `PATCH /questions/:id/favorite`   | 問いのお気に入りを登録・解除           | —      |
-| `DELETE /questions/:id`           | 問いと紐づくプ譜の削除                 | —      |
-| `GET /stocks/:id/question`        | ストックに紐づく問い                   | —      |
-| `POST /stocks/:id/question/retry` | 生成失敗した問いの再試行               | —      |
-| `PATCH・DELETE /stocks/:id`       | メモ・所属の更新、保存の削除           | —      |
-| `PATCH /stocks/:id/favorite`      | ストックのお気に入りを登録・解除       | —      |
-| `PATCH /stocks/:id/title`         | ストックのタイトルを編集               | —      |
-| `POST /stocks/:id/retry`          | 失敗した取得・要約の再試行             | —      |
-| `GET /stocks/:id/content`         | 取得本文・入力テキストの閲覧           | —      |
-| `GET /articles/:id`               | メモリの根拠記事を開く                 | —      |
-| `GET /memory`                     | ユーザー／プロジェクトのメモリ         | —      |
-| `POST /memory/rebuild`            | メモリの再生成受付                     | —      |
-| `GET・POST /tokens`               | トークン一覧・発行                     | —      |
-| `DELETE /tokens/:id`              | トークンの失効                         | —      |
+| メソッド・パス                    | 用途                                         | Bearer |
+| --------------------------------- | -------------------------------------------- | ------ |
+| `GET /projects`                   | 自分のプロジェクト一覧                       | 可     |
+| `POST /stocks`                    | URL／テキストの保存受付                      | 可     |
+| `GET /me`                         | ログイン中のユーザー                         | —      |
+| `PATCH /me`                       | 自分の名前・自己紹介の更新                   | —      |
+| `DELETE /me`                      | 本人の退会と登録データの削除                 | —      |
+| `POST /logout`                    | セッション終了                               | —      |
+| `POST /projects`                  | プロジェクト作成                             | —      |
+| `PATCH・DELETE /projects/:id`     | プロジェクト編集・削除                       | —      |
+| `GET /stocks`                     | 検索・状態・プロジェクトで絞り込む一覧       | —      |
+| `GET /stocks/:id`                 | 保存した記事の詳細                           | —      |
+| `GET /questions`                  | 自分の問い一覧                               | —      |
+| `POST /questions`                 | プロジェクトにユーザーの問いを追加           | —      |
+| `PATCH /questions/:id/favorite`   | 問いのお気に入りを登録・解除                 | —      |
+| `DELETE /questions/:id`           | 問いと紐づくプ譜の削除                       | —      |
+| `GET・POST /comments`             | ストック・問い・プ譜局面のコメント一覧・追加 | —      |
+| `GET /stocks/:id/question`        | ストックに紐づく問い                         | —      |
+| `POST /stocks/:id/question/retry` | 生成失敗した問いの再試行                     | —      |
+| `PATCH・DELETE /stocks/:id`       | メモ・所属の更新、保存の削除                 | —      |
+| `PATCH /stocks/:id/favorite`      | ストックのお気に入りを登録・解除             | —      |
+| `PATCH /stocks/:id/title`         | ストックのタイトルを編集                     | —      |
+| `POST /stocks/:id/retry`          | 失敗した取得・要約の再試行                   | —      |
+| `GET /stocks/:id/content`         | 取得本文・入力テキストの閲覧                 | —      |
+| `GET /articles/:id`               | メモリの根拠記事を開く                       | —      |
+| `GET /memory`                     | ユーザー／プロジェクトのメモリ               | —      |
+| `POST /memory/rebuild`            | メモリの再生成受付                           | —      |
+| `GET・POST /tokens`               | トークン一覧・発行                           | —      |
+| `DELETE /tokens/:id`              | トークンの失効                               | —      |
 
 `GET /stocks` は `project_id`、`q`、`source`（`all / web / user`）、`favorite`（`true` のときお気に入りのみ）、`page` を受け付け、既定は24件ずつ返します。`limit`（1〜24）、`sort_by=created_at`、`order=asc / desc`、`detail=compact / full` も指定でき、HTTP APIの既定は `full`・新しい順です。`source=web` は `source_type=url`、`source=user` は `source_type=text` に対応します。APIでは `status`（`all / ready / processing / failed`）も併用できます。`GET /memory` は `project_id` を省略するとユーザーメモリです。
 

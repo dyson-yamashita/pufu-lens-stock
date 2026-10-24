@@ -58,6 +58,7 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
+import Comments from './Comments';
 import Pufus from './Pufus';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
@@ -2412,6 +2413,7 @@ function StockDetail({
           削除
         </button>
       </div>
+      <Comments targetType="stock" targetId={stock.id} />
     </div>
   );
 }
