@@ -567,6 +567,18 @@ p {
   border: 1px solid var(--border);
   border-radius: 12px;
 }
+.project-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-id-row input {
+  flex: 1;
+  min-width: 0;
+}
+.project-id-row .button {
+  flex-shrink: 0;
+}
 .project-advanced {
   margin-top: 24px;
   border-top: 1px solid var(--border);
