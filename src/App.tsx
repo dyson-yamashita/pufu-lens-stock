@@ -1127,7 +1127,9 @@ export default function App() {
               <QuestionPage
                 key={route.detailId}
                 id={route.detailId!}
+                projects={projects}
                 resolve={route.view === 'resolve'}
+                onUpdated={reload}
                 backLabel={`${listLabel}の一覧に戻る`}
                 onBack={() => {
                   if (route.view === 'resolve') navigateDetail('question', route.detailId!);

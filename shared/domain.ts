@@ -79,6 +79,13 @@ export type Question = {
   article_status: Stock['status'] | null;
   domain: string | null;
 };
+export type QuestionDetail = Question & { note: string };
+export const questionSettingsSchema = z
+  .strictObject({
+    note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').optional(),
+    project_id: z.string().trim().min(1).max(100).optional(),
+  })
+  .refine((input) => input.note !== undefined || input.project_id !== undefined);
 export const memorySchema = z.object({
   interests: z.array(z.string().min(1).max(300)).max(8),
   knowledge: z

@@ -12,7 +12,9 @@ import {
   stockListOptionsSchema,
   stockSearchOptionsSchema,
   userQuestionSchema,
+  questionSettingsSchema,
   type Question,
+  type QuestionDetail,
   type Stock,
   type User,
 } from '../shared/domain';
@@ -573,10 +575,10 @@ export function createApp(trustedPrincipal?: Principal) {
   }
   async function ownedQuestion(c: import('hono').Context<AppEnv>) {
     const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
+      `SELECT ${questionColumns}, q.note FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
-      .first<Question>();
+      .first<QuestionDetail>();
     if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return question;
   }
@@ -598,6 +600,40 @@ export function createApp(trustedPrincipal?: Principal) {
       .all<PufuSummary>();
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ question, pufus: pufus.results });
+  });
+  app.patch('/api/v1/questions/:id', async (c) => {
+    const data = await body(c, questionSettingsSchema);
+    const question = await ownedQuestion(c);
+    const { user } = c.get('principal');
+    const projectId = data.project_id ?? question.project_id;
+    await ownedProject(c.env, user.id, projectId);
+    if (question.stock_id && projectId !== question.project_id)
+      throw new HTTPException(409, {
+        message: '記事に紐づく問い・気づきの保存先は、元の記事で変更してください。',
+      });
+    const updated = await c.env.DB.prepare(
+      `UPDATE questions SET note = COALESCE(?, note), project_id = ?, updated_at = ?
+       WHERE id = ? AND project_id = ? AND stock_id IS ?
+       AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?)
+       AND EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ?) RETURNING id`,
+    )
+      .bind(
+        data.note ?? null,
+        projectId,
+        now(),
+        question.id,
+        question.project_id,
+        question.stock_id,
+        user.id,
+        projectId,
+        user.id,
+      )
+      .first();
+    if (!updated)
+      throw new HTTPException(409, {
+        message: '問い・気づきの保存先が変更されました。再読み込みしてお試しください。',
+      });
+    return c.json({ question: await ownedQuestion(c) });
   });
   app.get('/api/v1/questions/:id/pufu', async (c) =>
     c.json(await readQuestionPufu(c.env, c.get('principal'), c.req.param('id'))),
