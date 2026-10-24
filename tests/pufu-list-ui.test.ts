@@ -216,8 +216,8 @@ it.each(['', '#project/project'])(
       [...document.querySelectorAll('.library-tabs button')].map((button) => button.textContent),
     ).toEqual(
       hash
-        ? ['ストック', '問い', 'プ譜', 'メモリ', '設定']
-        : ['ストック', '問い', 'プ譜', 'メモリ'],
+        ? ['ストック', '問い・気づき', 'プ譜', 'メモリ', '設定']
+        : ['ストック', '問い・気づき', 'プ譜', 'メモリ'],
     );
     await tab('プ譜');
     expect(window.location.hash).toBe(hash ? '#pufus/project' : '#pufus');
@@ -263,7 +263,7 @@ it('全体のプロジェクト絞り込みをプ譜・メモリ・問いのタ�
       ?.searchParams.get('project_id'),
   ).toBe('project');
   await tab('メモリ');
-  await tab('問い');
+  await tab('問い・気づき');
   expect(
     requests
       .filter((url) => url.pathname === '/api/v1/questions')
@@ -292,7 +292,7 @@ it('取得失敗から再読み込みでき、空の一覧には作成手順を�
       .click(),
   );
   expect(list.querySelector('[role="alert"]')).toBeNull();
-  expect(list.textContent).toContain('問い');
+  expect(list.textContent).toContain('問い・気づき');
   expect(list.querySelector('.pufu-list-item')).toBeNull();
 });
 
@@ -330,7 +330,7 @@ it('プ譜を見た後にストックから問いを開くと、問い一覧を�
   await act(async () => document.querySelector<HTMLButtonElement>('.article-open')!.click());
   await act(async () =>
     [...document.querySelectorAll<HTMLButtonElement>('.stock-detail .detail-tabs button')]
-      .find((button) => button.textContent === '問い')!
+      .find((button) => button.textContent === '問い・気づき')!
       .click(),
   );
   await act(async () =>
@@ -339,7 +339,7 @@ it('プ譜を見た後にストックから問いを開くと、問い一覧を�
   await hashChange();
   expect(document.querySelector('.breadcrumb a[href="#questions"]')).not.toBeNull();
   const back = document.querySelector<HTMLButtonElement>('.question-detail-page .back-link')!;
-  expect(back.textContent).toBe('問いの一覧に戻る');
+  expect(back.textContent).toBe('問い・気づきの一覧に戻る');
   await act(async () => back.click());
   await hashChange();
   expect(window.location.hash).toBe('#questions');

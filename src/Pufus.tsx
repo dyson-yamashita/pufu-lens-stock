@@ -89,7 +89,9 @@ export default function Pufus({
               <Network size={28} aria-hidden="true" />
             </span>
             <h2>プ譜はまだありません</h2>
-            <p>「問い」タブで問いを開き、「問いの解決を考える」からプ譜を作成できます。</p>
+            <p>
+              「問い・気づき」タブで問い・気づきを開き、「問い・気づきから考える」からプ譜を作成できます。
+            </p>
           </div>
         )
       ) : (
@@ -98,7 +100,7 @@ export default function Pufus({
             <button key={pufu.id} className="pufu-list-item" onClick={() => onPufu(pufu.id)}>
               <span>
                 <strong>{pufu.task}</strong>
-                <small>問い：{pufu.question_text}</small>
+                <small>問い・気づき：{pufu.question_text}</small>
                 <small>
                   {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
                 </small>

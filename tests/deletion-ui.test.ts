@@ -146,6 +146,8 @@ async function render(screen: Screen) {
           ? createElement(QuestionPage, {
               id: 'question',
               resolve: false,
+              projects: [project],
+              onUpdated() {},
               onBack() {},
               onResolve() {},
               onPufu() {},
@@ -184,7 +186,7 @@ async function openConfirmation(label: string) {
 it.each([
   ['project', 'プロジェクトを削除', '/api/v1/projects/project', '調査プロジェクト'],
   ['stock', 'このストックを削除', '/api/v1/stocks/stock', '調べている記事'],
-  ['question', '問いを削除', '/api/v1/questions/question', '何を検証する？'],
+  ['question', '問い・気づきを削除', '/api/v1/questions/question', '何を検証する？'],
   ['x', 'Xの認証情報を削除', '/api/v1/integrations/x', 'X'],
 ] as const)(
   '%s: 削除を通常操作から分離し、対象の確認後だけDELETEを送る',
@@ -246,12 +248,12 @@ it('削除失敗は確認内に表示し、再試行中の連打・Escapeを防�
   expect(document.body.textContent).toContain('Xの認証情報を削除しました。');
 });
 
-it('本文がまだない生成待ちの問いも、削除対象と関連データの影響を確認できる', async () => {
+it('本文がまだない生成待ちの問い・気づきも、削除対象と関連データの影響を確認できる', async () => {
   question.text = null;
   question.status = 'queued';
   await render('question');
-  const dialog = await openConfirmation('問いを削除');
-  expect(dialog.textContent).toContain('生成待ちの問い');
+  const dialog = await openConfirmation('問い・気づきを削除');
+  expect(dialog.textContent).toContain('生成待ちの問い・気づき');
   expect(dialog.textContent).toContain('プ譜');
   expect(dialog.textContent).toContain('コメント');
   expect(deletes()).toHaveLength(0);
@@ -269,5 +271,45 @@ it('ストック内の削除確認をEscapeで閉じても、親の詳細と編�
   expect(document.querySelector('.delete-confirmation')).toBeNull();
   expect(document.querySelector('#edit-note')).toBe(note);
   expect(note.value).toBe('書きかけ');
+  expect(deletes()).toHaveLength(0);
+});
+
+it('問い・気づきのメモ保存中は削除を無効にし、保存後は最新の保存先を確認する', async () => {
+  await render('question');
+  await act(async () => button('メモ・保存先').click());
+  await act(async () => {
+    const note = document.querySelector<HTMLTextAreaElement>('#question-note')!;
+    note.value = '保存中のメモ';
+    note.dispatchEvent(new window.Event('input', { bubbles: true }));
+  });
+  let finish!: (value: unknown) => void;
+  vi.mocked(send).mockReturnValueOnce(
+    new Promise((done) => {
+      finish = done;
+    }),
+  );
+  await act(async () =>
+    document
+      .querySelector('#question-note')!
+      .closest('form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+  );
+  expect(send).toHaveBeenCalledWith(
+    '/api/v1/questions/question',
+    { note: '保存中のメモ', project_id: project.id },
+    'PATCH',
+  );
+  expect(button('問い・気づきを削除').disabled).toBe(true);
+  expect(deletes()).toHaveLength(0);
+  await act(async () =>
+    finish({
+      question: { ...question, note: '保存中のメモ', project_name: '更新後の保存先' },
+    }),
+  );
+  expect(button('問い・気づきを削除').disabled).toBe(false);
+  const dialog = await openConfirmation('問い・気づきを削除');
+  expect(dialog.textContent).toContain('更新後の保存先');
+  await act(async () => button('キャンセル', dialog).click());
+  expect(document.querySelector<HTMLTextAreaElement>('#question-note')!.value).toBe('保存中のメモ');
   expect(deletes()).toHaveLength(0);
 });

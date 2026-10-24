@@ -94,7 +94,7 @@ export default function QuestionForm({
   return (
     <form onSubmit={submit}>
       <p className="form-intro">
-        プロジェクトに自分の問いを保存します。関連するストックは任意で選べます。
+        プロジェクトに自分の問い・気づきを保存します。関連するストックは任意で選べます。
       </p>
       <label htmlFor="question-project">プロジェクト</label>
       <select
@@ -160,7 +160,7 @@ export default function QuestionForm({
         <p className="profile-hint">
           {query
             ? '該当するストックがありません。検索語を変えてください。'
-            : 'ストックがなくても問いを保存できます。'}
+            : 'ストックがなくても問い・気づきを保存できます。'}
         </p>
       )}
       {total > 24 && (
@@ -196,7 +196,7 @@ export default function QuestionForm({
           </button>
         </div>
       )}
-      <label htmlFor="question-text">問い</label>
+      <label htmlFor="question-text">問い・気づき</label>
       <textarea
         id="question-text"
         value={text}
@@ -204,7 +204,7 @@ export default function QuestionForm({
         required
         rows={4}
         maxLength={500}
-        placeholder="考えたいこと、確かめたいことは？"
+        placeholder="考えたいこと、確かめたいこと、気づいたこと"
         aria-describedby="question-text-hint"
         onChange={(event) => {
           setText(event.target.value);
@@ -228,7 +228,7 @@ export default function QuestionForm({
           ) : (
             <CircleHelp size={17} aria-hidden="true" />
           )}
-          {busy ? '保存中…' : '問いを追加'}
+          {busy ? '保存中…' : '問い・気づきを追加'}
         </button>
       </div>
     </form>

@@ -12,7 +12,9 @@ import {
   stockListOptionsSchema,
   stockSearchOptionsSchema,
   userQuestionSchema,
+  questionSettingsSchema,
   type Question,
+  type QuestionDetail,
   type Stock,
   type User,
 } from '../shared/domain';
@@ -573,11 +575,11 @@ export function createApp(trustedPrincipal?: Principal) {
   }
   async function ownedQuestion(c: import('hono').Context<AppEnv>) {
     const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
+      `SELECT ${questionColumns}, q.note FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
-      .first<Question>();
-    if (!question) throw new HTTPException(404, { message: '問いが見つかりません。' });
+      .first<QuestionDetail>();
+    if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return question;
   }
   async function ownedPufu(c: import('hono').Context<AppEnv>) {
@@ -598,6 +600,40 @@ export function createApp(trustedPrincipal?: Principal) {
       .all<PufuSummary>();
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ question, pufus: pufus.results });
+  });
+  app.patch('/api/v1/questions/:id', async (c) => {
+    const data = await body(c, questionSettingsSchema);
+    const question = await ownedQuestion(c);
+    const { user } = c.get('principal');
+    const projectId = data.project_id ?? question.project_id;
+    await ownedProject(c.env, user.id, projectId);
+    if (question.stock_id && projectId !== question.project_id)
+      throw new HTTPException(409, {
+        message: '記事に紐づく問い・気づきの保存先は、元の記事で変更してください。',
+      });
+    const updated = await c.env.DB.prepare(
+      `UPDATE questions SET note = COALESCE(?, note), project_id = ?, updated_at = ?
+       WHERE id = ? AND project_id = ? AND stock_id IS ?
+       AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?)
+       AND EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ?) RETURNING id`,
+    )
+      .bind(
+        data.note ?? null,
+        projectId,
+        now(),
+        question.id,
+        question.project_id,
+        question.stock_id,
+        user.id,
+        projectId,
+        user.id,
+      )
+      .first();
+    if (!updated)
+      throw new HTTPException(409, {
+        message: '問い・気づきの保存先が変更されました。再読み込みしてお試しください。',
+      });
+    return c.json({ question: await ownedQuestion(c) });
   });
   app.get('/api/v1/questions/:id/pufu', async (c) =>
     c.json(await readQuestionPufu(c.env, c.get('principal'), c.req.param('id'))),
@@ -668,7 +704,9 @@ export function createApp(trustedPrincipal?: Principal) {
       return c.json({ id, status: previous.status });
     }
     if (question.status !== 'ready' || !question.text)
-      throw new HTTPException(409, { message: '問いの生成が完了してから、プ譜を作成できます。' });
+      throw new HTTPException(409, {
+        message: '問い・気づきの生成が完了してから、プ譜を作成できます。',
+      });
     const project = await ownedProject(c.env, user.id, question.project_id);
     const [stockRows, memoryRows] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
@@ -733,7 +771,9 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(id, user.id)
       .first<PufuSummary>();
     if (!saved)
-      throw new HTTPException(409, { message: '問いが変更されました。開き直してお試しください。' });
+      throw new HTTPException(409, {
+        message: '問い・気づきが変更されました。開き直してお試しください。',
+      });
     if (saved.question_id !== question.id || saved.task !== data.task)
       throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
     c.executionCtx.waitUntil(dispatchJobs(c.env));
@@ -915,23 +955,26 @@ export function createApp(trustedPrincipal?: Principal) {
     await ownedProject(c.env, user.id, projectId);
     const id = `user-${user.id}-${data.request_id ?? crypto.randomUUID()}`;
     const result = await c.env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, text, source, status) SELECT ?, id, ?, ?, 'user', 'ready' FROM projects WHERE id = ? AND user_id = ?",
+      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, text, note, source, status) SELECT ?, id, ?, ?, ?, 'user', 'ready' FROM projects WHERE id = ? AND user_id = ?",
     )
-      .bind(id, stockId, data.text, projectId, user.id)
+      .bind(id, stockId, data.text, data.note, projectId, user.id)
       .run();
     const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
+      `SELECT ${questionColumns}, q.note FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
     )
       .bind(id, user.id)
-      .first<Question>();
+      .first<QuestionDetail>();
     if (!question) throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
     if (
       question.stock_id !== stockId ||
       question.project_id !== projectId ||
       question.text !== data.text ||
+      question.note !== data.note ||
       question.source !== 'user'
     )
-      throw new HTTPException(409, { message: '同じリクエストIDで異なる問いが送信されました。' });
+      throw new HTTPException(409, {
+        message: '同じリクエストIDで異なる問い・気づきが送信されました。',
+      });
     return c.json({ question }, result.meta.changes ? 201 : 200);
   });
   app.patch('/api/v1/questions/:id/favorite', async (c) => {
@@ -941,7 +984,7 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(Number(data.is_favorite), now(), c.req.param('id'), c.get('principal').user.id)
       .first<Pick<Question, 'id' | 'is_favorite'>>();
-    if (!question) throw new HTTPException(404, { message: '問いが見つかりません。' });
+    if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return c.json(question);
   });
   app.get('/api/v1/stocks/:id', async (c) => {
@@ -1002,7 +1045,7 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(stock.id)
       .first<{ status: string; source: string; generation: number }>();
     if (!question || question.source !== 'ai' || question.status !== 'failed')
-      throw new HTTPException(409, { message: '生成に失敗した問いだけ再試行できます。' });
+      throw new HTTPException(409, { message: '生成に失敗した問い・気づきだけ再試行できます。' });
     if (stock.status !== 'ready')
       throw new HTTPException(409, { message: '先に記事の取得・要約を完了してください。' });
     const jobId = `q-${stock.id}-${question.generation + 1}`;

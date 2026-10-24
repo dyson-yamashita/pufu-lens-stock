@@ -92,7 +92,7 @@ type Route = {
 };
 const headerLabels: Record<Route['view'], string> = {
   stocks: 'ストック',
-  questions: '問い',
+  questions: '問い・気づき',
   pufus: 'プ譜',
   memory: 'メモリ',
   settings: '設定',
@@ -105,7 +105,7 @@ const headerLabels: Record<Route['view'], string> = {
 };
 const globalHeaderLabels: Partial<Record<Route['view'], string>> = {
   stocks: 'すべてのストック',
-  questions: 'すべての問い',
+  questions: 'すべての問い・気づき',
   pufus: 'すべてのプ譜',
   memory: 'あなたのメモリ',
 };
@@ -685,8 +685,8 @@ export default function App() {
         : 'プロジェクト設定'
       : route.view === 'questions'
         ? selected
-          ? `${selected.name}の問い`
-          : 'すべての問い'
+          ? `${selected.name}の問い・気づき`
+          : 'すべての問い・気づき'
         : route.view === 'pufus'
           ? selected
             ? `${selected.name}のプ譜`
@@ -705,7 +705,7 @@ export default function App() {
   const questionListProject = projects.find(
     (project) => project.id === questionListContext.projectId,
   );
-  const listLabel = questionListContext.view === 'pufus' ? 'プ譜' : '問い';
+  const listLabel = questionListContext.view === 'pufus' ? 'プ譜' : '問い・気づき';
   const questionListHeading = questionListProject
     ? `${questionListProject.name}の${listLabel}`
     : `すべての${listLabel}`;
@@ -770,7 +770,7 @@ export default function App() {
             }}
           >
             <CircleHelp size={19} aria-hidden="true" />
-            すべての問い<span className="nav-count">{allQuestionCount}</span>
+            すべての問い・気づき<span className="nav-count">{allQuestionCount}</span>
           </button>
           <button
             className={`nav-item ${route.view === 'memory' && !route.projectId ? 'active' : ''}`}
@@ -960,13 +960,13 @@ export default function App() {
                 {route.view !== 'profile' && (
                   <p>
                     {route.view === 'questions'
-                      ? '日常やストックから生まれた問いを集める。'
+                      ? '日常やストックから生まれた問い・気づきを集める。'
                       : route.view === 'pufus'
-                        ? '問いから生まれた解決の案を、一覧で振り返る。'
+                        ? '問い・気づきから生まれた解決の案を、一覧で振り返る。'
                         : route.view === 'settings'
                           ? 'プロジェクトの設定を編集できます。'
                           : route.view === 'mcp'
-                            ? '会話から、ストックと問いにつなげる。'
+                            ? '会話から、ストックと問い・気づきにつなげる。'
                             : route.view === 'shortcuts'
                               ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
                               : route.view === 'memory'
@@ -1011,7 +1011,7 @@ export default function App() {
                 {route.view === 'questions' && (
                   <button className="button primary" onClick={() => setModal({ type: 'question' })}>
                     <Plus size={18} aria-hidden="true" />
-                    問いを追加
+                    問い・気づきを追加
                   </button>
                 )}
               </div>
@@ -1040,7 +1040,7 @@ export default function App() {
                 onClick={() => navigate('questions', route.projectId)}
               >
                 <CircleHelp size={16} aria-hidden="true" />
-                問い
+                問い・気づき
               </button>
               <button
                 className={route.view === 'pufus' ? 'active' : ''}
@@ -1127,7 +1127,9 @@ export default function App() {
               <QuestionPage
                 key={route.detailId}
                 id={route.detailId!}
+                projects={projects}
                 resolve={route.view === 'resolve'}
+                onUpdated={reload}
                 backLabel={`${listLabel}の一覧に戻る`}
                 onBack={() => {
                   if (route.view === 'resolve') navigateDetail('question', route.detailId!);
@@ -1136,7 +1138,7 @@ export default function App() {
                 onResolve={() => navigateDetail('resolve', route.detailId!)}
                 onPufu={(id) => navigateDetail('pufu', id)}
                 onDeleted={() => {
-                  setNotice('問いを削除しました。');
+                  setNotice('問い・気づきを削除しました。');
                   reload();
                   window.location.hash = questionListContext.hash;
                 }}
@@ -1378,12 +1380,12 @@ export default function App() {
         </Modal>
       )}
       {modal?.type === 'question' && (
-        <Modal title="問いを追加" onClose={() => setModal(null)}>
+        <Modal title="問い・気づきを追加" onClose={() => setModal(null)}>
           <QuestionForm
             projects={projects}
             projectId={listProjectId}
             onDone={(projectId) => {
-              completed('問いを追加しました。');
+              completed('問い・気づきを追加しました。');
               setQuestionCreation((value) => value + 1);
               if (route.projectId) navigate('questions', projectId);
               else if (libraryProjectId) filterProject(projectId);
@@ -1796,7 +1798,7 @@ function ProjectForm({
         <details className="project-advanced">
           <summary>詳細設定</summary>
           <label className="project-memory-toggle" htmlFor={listVisibilityId}>
-            <span>すべてのストック・問い・プ譜の一覧に表示する</span>
+            <span>すべてのストック・問い・気づき・プ譜の一覧に表示する</span>
             <input
               id={listVisibilityId}
               type="checkbox"
@@ -1808,7 +1810,7 @@ function ProjectForm({
             />
           </label>
           <p id={`${listVisibilityId}-hint`} className="project-memory-hint">
-            オフにすると、このプロジェクトのストック・問い・プ譜を全体の一覧から外します。プロジェクトを指定すると表示できます。メモリの更新設定や公開設定には影響しません。
+            オフにすると、このプロジェクトのストック・問い・気づき・プ譜を全体の一覧から外します。プロジェクトを指定すると表示できます。メモリの更新設定や公開設定には影響しません。
           </p>
           <label className="project-memory-toggle" htmlFor={userMemoryId}>
             <span>ストック追加時にユーザーのメモリを更新する</span>
@@ -1827,7 +1829,7 @@ function ProjectForm({
             {project && '保存すると、既存のメモリにも変更を反映します。'}
           </p>
           <label className="project-memory-toggle" htmlFor={autoQuestionsId}>
-            <span>ストックから問いを自動生成する</span>
+            <span>ストックから問い・気づきを自動生成する</span>
             <input
               id={autoQuestionsId}
               type="checkbox"
@@ -1839,7 +1841,7 @@ function ProjectForm({
             />
           </label>
           <p id={`${autoQuestionsId}-hint`} className="project-memory-hint">
-            オフにすると、このプロジェクトのストックから問いを自動生成しません。生成済みの問いは残り、手動で問いを追加できます。要約とメモリの更新設定は変わりません。
+            オフにすると、このプロジェクトのストックから問い・気づきを自動生成しません。生成済みの問い・気づきは残り、手動で問い・気づきを追加できます。要約とメモリの更新設定は変わりません。
           </p>
         </details>
         <FormError error={error} />
@@ -1865,7 +1867,7 @@ function ProjectForm({
           >
             <p className="delete-target">{project.name}</p>
             <p>
-              このプロジェクトのストック・問い・プ譜（すべての局面）・コメント・メモリを削除します。他のプロジェクトに保存した記事は残ります。
+              このプロジェクトのストック・問い・気づき・プ譜（すべての局面）・コメント・メモリを削除します。他のプロジェクトに保存した記事は残ります。
             </p>
             <p>公開中の場合は公開ページも閲覧できなくなります。この操作は取り消せません。</p>
           </DeleteAction>
@@ -1935,7 +1937,7 @@ function SaveForm({
       <p className="form-intro">
         URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。
         {projects.find((project) => project.id === target)?.auto_generate_questions !== false &&
-          '問いも自動で生成します。'}
+          '問い・気づきも自動で生成します。'}
       </p>
       <div
         className="stock-source-tabs"
@@ -2267,11 +2269,13 @@ function StockDetail({
         {(youtube
           ? [
               ['summary', '動画'],
+              ['comments', 'コメント'],
               ['note', 'メモ・保存先'],
             ]
           : [
               ['summary', '要約'],
-              ['question', '問い'],
+              ['question', '問い・気づき'],
+              ['comments', 'コメント'],
               ['note', 'メモ・保存先'],
               ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
             ]
@@ -2298,7 +2302,7 @@ function StockDetail({
                   <p>短い本文のため、推測を加えず原文を表示しています。</p>
                   {!stock.note.trim() && (
                     <>
-                      <p>なぜ気になったかを一言残すと、問いとメモリに反映されます。</p>
+                      <p>なぜ気になったかを一言残すと、問い・気づきとメモリに反映されます。</p>
                       <button className="button secondary" onClick={() => setTab('note')}>
                         ひとことメモを残す
                       </button>
@@ -2385,7 +2389,7 @@ function StockDetail({
             {content ?? '取得した本文はありません。サンプル記事では元の記事をご覧ください。'}
           </pre>
         )
-      ) : (
+      ) : tab === 'note' ? (
         <form
           onSubmit={async (event) => {
             event.preventDefault();
@@ -2395,7 +2399,7 @@ function StockDetail({
               await send(`/api/v1/stocks/${stock.id}`, { note, project_id: projectId }, 'PATCH');
               onDone(
                 stock.summary?.shortSource && note !== stock.note
-                  ? 'メモを保存しました。問いとメモリに反映します。'
+                  ? 'メモを保存しました。問い・気づきとメモリに反映します。'
                   : 'メモと保存先を更新しました。',
               );
             } catch (e) {
@@ -2409,8 +2413,8 @@ function StockDetail({
           </label>
           {stock.summary?.shortSource && (
             <p id={noteHintId} className="local-model-note">
-              気になった理由を一言残すと、問いとメモリに反映されます。原文はそのまま残ります。
-              プロジェクトの公開時は、メモをもとに作った問いも公開されます。
+              気になった理由を一言残すと、問い・気づきとメモリに反映されます。原文はそのまま残ります。
+              プロジェクトの公開時は、メモをもとに作った問い・気づきも公開されます。
             </p>
           )}
           <textarea
@@ -2441,12 +2445,14 @@ function StockDetail({
             </button>
           </div>
         </form>
-      )}
+      ) : null}
+      <div hidden={tab !== 'comments'}>
+        <Comments targetType="stock" targetId={stock.id} />
+      </div>
       <FormError error={error} />
       <div className="detail-footer">
         <span>{fullDate(stock.created_at)} に保存</span>
       </div>
-      <Comments targetType="stock" targetId={stock.id} />
       <DeleteAction
         label="このストックを削除"
         title="このストックを削除しますか？"
@@ -2459,7 +2465,7 @@ function StockDetail({
         <p className="delete-target">{displayTitle}</p>
         <p>保存先：{stock.project_name}</p>
         <p>
-          このプロジェクトのストックと、紐づく問い・プ譜（すべての局面）・コメントを削除します。他のプロジェクトに保存した同じ記事は残ります。
+          このプロジェクトのストックと、紐づく問い・気づき・プ譜（すべての局面）・コメントを削除します。他のプロジェクトに保存した同じ記事は残ります。
         </p>
         <p>この操作は取り消せません。</p>
       </DeleteAction>

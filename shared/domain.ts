@@ -47,13 +47,14 @@ export const questionSchema = z.object({
   text: z
     .string()
     .trim()
-    .min(1, '問いを入力してください。')
-    .max(500, '問いは500文字以内で入力してください。'),
+    .min(1, '問い・気づきを入力してください。')
+    .max(500, '問い・気づきは500文字以内で入力してください。'),
 });
 export const userQuestionSchema = questionSchema
   .extend({
     project_id: z.string().trim().min(1, 'プロジェクトを選択してください。').max(100).optional(),
     stock_id: z.string().trim().min(1).max(100).nullable().optional(),
+    note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').default(''),
     request_id: z.uuid().optional(),
   })
   .strict()
@@ -79,6 +80,13 @@ export type Question = {
   article_status: Stock['status'] | null;
   domain: string | null;
 };
+export type QuestionDetail = Question & { note: string };
+export const questionSettingsSchema = z
+  .strictObject({
+    note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').optional(),
+    project_id: z.string().trim().min(1).max(100).optional(),
+  })
+  .refine((input) => input.note !== undefined || input.project_id !== undefined);
 export const memorySchema = z.object({
   interests: z.array(z.string().min(1).max(300)).max(8),
   knowledge: z

@@ -735,6 +735,96 @@ describe('MCPによるストックと問いの取得・追加', () => {
       (await call(token, 'list_questions', { q: '会話' })).result.structuredContent.total,
     ).toBe(1);
   });
+  it.each([false, true])(
+    'メモ付きの問いを登録し、登録結果と詳細から取得できる（記事あり=%s）',
+    async (withStock) => {
+      const token = await mcpToken(app, 'alice-project');
+      if (withStock) await seedStock('note-source', '2026-10-24T00:00:00Z');
+      const note = '  気になった理由\n次に試すこと  ';
+      const args = {
+        project_id: 'alice-project',
+        ...(withStock ? { stock_id: 'stock-note-source' } : {}),
+        text: 'メモと一緒に考えたい問い',
+        note,
+        request_id: crypto.randomUUID(),
+      };
+      const result = (await call(token, 'add_question', args)).result;
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent.question).toMatchObject({
+        note,
+        text: 'メモと一緒に考えたい問い',
+        stock_id: withStock ? 'stock-note-source' : null,
+      });
+      const { id } = result.structuredContent.question as { id: string };
+      expect(
+        (await call(token, 'get_question', { question_id: id })).result.structuredContent.question,
+      ).toMatchObject({ note });
+      expect(
+        (await call(token, 'add_question', args)).result.structuredContent.question,
+      ).toMatchObject({ id, note });
+      expect(
+        await app.env.DB.prepare(
+          "SELECT COUNT(*) AS count FROM questions WHERE source='user'",
+        ).first(),
+      ).toEqual({ count: 1 });
+      if (withStock)
+        expect(
+          await app.env.DB.prepare("SELECT note FROM stocks WHERE id='stock-note-source'").first(),
+        ).toEqual({ note: 'メモだけの検索語' });
+    },
+  );
+
+  it('問いの登録メモは2,000文字まで受け付け、超過・不正な型では問いも保存しない', async () => {
+    const token = await mcpToken(app, 'alice-project');
+    const args = { project_id: 'alice-project', text: '長さを確かめる問い' };
+    const accepted = (
+      await call(token, 'add_question', {
+        ...args,
+        note: 'あ'.repeat(2000),
+        request_id: crypto.randomUUID(),
+      })
+    ).result;
+    expect(accepted.isError).not.toBe(true);
+    expect(accepted.structuredContent.question).toMatchObject({ note: 'あ'.repeat(2000) });
+    for (const note of ['あ'.repeat(2001), null, 123])
+      expect(
+        (await call(token, 'add_question', { ...args, note, request_id: crypto.randomUUID() }))
+          .result.isError,
+      ).toBe(true);
+    expect(await app.env.DB.prepare('SELECT COUNT(*) AS count FROM questions').first()).toEqual({
+      count: 1,
+    });
+  });
+
+  it('メモが異なる再送を拒否し、省略と空文字の再送では1件に保つ', async () => {
+    const token = await mcpToken(app, 'alice-project');
+    const args = {
+      project_id: 'alice-project',
+      text: '再送を確認する問い',
+      request_id: crypto.randomUUID(),
+    };
+    const first = (await call(token, 'add_question', { ...args, note: '元のメモ' })).result;
+    expect(first.isError).not.toBe(true);
+    const { id } = first.structuredContent.question as { id: string };
+    for (const extra of [{ note: '別のメモ' }, {}])
+      expect((await call(token, 'add_question', { ...args, ...extra })).result).toMatchObject({
+        isError: true,
+        structuredContent: { status: 409 },
+      });
+    expect(
+      (await call(token, 'get_question', { question_id: id })).result.structuredContent.question,
+    ).toMatchObject({ note: '元のメモ' });
+    const empty = { ...args, request_id: crypto.randomUUID() };
+    for (const extra of [{ note: '' }, {}]) {
+      const result = (await call(token, 'add_question', { ...empty, ...extra })).result;
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent.question).toMatchObject({ note: '' });
+    }
+    expect(await app.env.DB.prepare('SELECT COUNT(*) AS count FROM questions').first()).toEqual({
+      count: 2,
+    });
+  });
+
   it('全体一覧の非表示設定を反映し、プロジェクト指定・接続先限定では表示する', async () => {
     await seedStock('hidden', '2026-10-20');
     await seedStock('visible', '2026-10-19', 'alice', 'alice-second');
@@ -786,7 +876,12 @@ describe('MCPによるストックと問いの取得・追加', () => {
       ['get_question', { question_id: questionId }],
       [
         'add_question',
-        { project_id: 'alice-second', text: '禁止', request_id: crypto.randomUUID() },
+        {
+          project_id: 'alice-second',
+          text: '禁止',
+          note: '禁止されたメモ',
+          request_id: crypto.randomUUID(),
+        },
       ],
       [
         'add_question',
@@ -794,6 +889,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
           project_id: 'alice-project',
           stock_id: stockId,
           text: '不一致',
+          note: '別の保存先へのメモ',
           request_id: crypto.randomUUID(),
         },
       ],
@@ -817,6 +913,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
     const denied = await call(token, 'add_question', {
       project_id: 'alice-project',
       text: '許可なし',
+      note: '読み取り専用では保存できないメモ',
       request_id: crypto.randomUUID(),
     });
     expect(denied.result.isError).toBe(true);

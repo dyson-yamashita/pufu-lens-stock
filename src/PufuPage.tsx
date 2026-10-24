@@ -64,12 +64,12 @@ export default function PufuPage({
     <section className="pufu-page" aria-label="プ譜の編集">
       <button className="back-link" onClick={() => onQuestion(pufu?.question_id ?? '')}>
         <ArrowLeft size={16} aria-hidden="true" />
-        問いの詳細に戻る
+        問い・気づきの詳細に戻る
       </button>
       <header className="page-header">
         <div>
           <h1>プ譜</h1>
-          <p>問いから、実行に向けた一枚へ。</p>
+          <p>問い・気づきから、実行に向けた一枚へ。</p>
         </div>
       </header>
       {error && (
@@ -79,7 +79,7 @@ export default function PufuPage({
       )}
       {pufu && (
         <div className="pufu-context">
-          <span className="question-origin pufu-context-label">問い</span>
+          <span className="question-origin pufu-context-label">問い・気づき</span>
           <p>{pufu.context.question.text}</p>
           <div className="pufu-context-task">
             <span className="question-origin pufu-context-label">課題（獲得目標）</span>
@@ -131,7 +131,7 @@ export default function PufuPage({
             <h2>{pufu ? 'プ譜を生成しています' : 'プ譜を読み込んでいます'}</h2>
             <p>
               {pufu
-                ? '問い・課題・メモリから、勝利条件と実行の案を整理しています。この画面を閉じても生成を続けます。'
+                ? '問い・気づき・課題・メモリから、勝利条件と実行の案を整理しています。この画面を閉じても生成を続けます。'
                 : '保存した内容を取得しています。'}
             </p>
           </div>

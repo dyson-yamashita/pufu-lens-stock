@@ -83,6 +83,7 @@ beforeEach(() => {
     if (url.pathname === '/api/v1/stocks') return { stocks: [stock], total: 1 };
     if (url.pathname === '/api/v1/questions') return { questions: [], total: 0 };
     if (url.pathname === '/api/v1/stocks/youtube-stock') return { stock };
+    if (url.pathname === '/api/v1/comments') return { comments: [], has_more: false };
     if (url.pathname === '/api/public/projects/project')
       return {
         project: {
@@ -149,11 +150,17 @@ it('保存済みYouTubeストックも記録不可表示から動画プレーヤ
   expect(detail.querySelector('a')?.getAttribute('href')).toBe(stock.source_url);
   expect(
     [...detail.querySelectorAll('.detail-tabs button')].map((button) => button.textContent),
-  ).toEqual(['動画', 'メモ・保存先']);
+  ).toEqual(['動画', 'コメント', 'メモ・保存先']);
   await act(async () =>
     detail.querySelectorAll<HTMLButtonElement>('.detail-tabs button')[1].click(),
   );
   expect(detail.querySelector('iframe')).toBeNull();
+  expect(detail.querySelector('.comments')?.closest('[hidden]')).toBeNull();
+  expect(detail.querySelector('#edit-note')).toBeNull();
+  await act(async () =>
+    detail.querySelectorAll<HTMLButtonElement>('.detail-tabs button')[2].click(),
+  );
+  expect(detail.querySelector('.comments')?.closest('[hidden]')).not.toBeNull();
   expect(detail.querySelector('#edit-note')).not.toBeNull();
 });
 it.each([

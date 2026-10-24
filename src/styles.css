@@ -316,7 +316,7 @@ p {
   min-height: 100vh;
 }
 .sidebar {
-  width: 248px;
+  width: 272px;
   flex-shrink: 0;
   padding: 34px 20px 0;
   background: var(--sidebar);
@@ -466,7 +466,7 @@ p {
 }
 .workspace {
   flex: 1;
-  margin-left: 248px;
+  margin-left: 272px;
   min-width: 0;
 }
 .topbar {
@@ -1608,6 +1608,16 @@ p {
   box-shadow: inset 0 -2px var(--primary);
   font-weight: 600;
 }
+.stock-detail .detail-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.stock-detail .detail-tabs button {
+  flex-shrink: 0;
+}
+.stock-detail .detail-tabs button:focus-visible {
+  outline-offset: -3px;
+}
 .library-tabs button {
   display: inline-flex;
   align-items: center;
@@ -2373,12 +2383,12 @@ p {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .sidebar {
-    width: 224px;
+    width: 248px;
     padding-left: 15px;
     padding-right: 15px;
   }
   .workspace {
-    margin-left: 224px;
+    margin-left: 248px;
   }
   .page-body {
     padding-left: 28px;
@@ -2451,7 +2461,7 @@ p {
   }
   .sidebar {
     transform: translateX(-100%);
-    width: 250px;
+    width: 272px;
     transition: transform 0.2s ease;
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -2646,6 +2656,9 @@ p {
     font-size: 11px;
     padding: 10px 12px;
   }
+  .library-tabs svg {
+    display: none;
+  }
   .project-tabs button {
     flex: 1;
     justify-content: center;
@@ -2826,6 +2839,26 @@ textarea::placeholder {
 }
 .question-detail-page {
   max-width: 900px;
+}
+.question-detail-tabs {
+  flex-wrap: nowrap;
+}
+.question-detail-tabs button {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 8px;
+}
+.question-settings {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.question-settings > label:first-child {
+  margin-top: 0;
+}
+.question-detail-page [role='tabpanel'] > .pufu-list-heading {
+  margin-top: 0;
 }
 .question-detail-card,
 .pufu-task-form {
