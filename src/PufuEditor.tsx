@@ -7,6 +7,7 @@ import { useTheme } from './theme';
 import PufuImagePreview from './PufuImagePreview';
 import PufuModal from './PufuModal';
 import ResponsivePufuScore from './ResponsivePufuScore';
+import Comments from './Comments';
 
 const canonical = (json: string) =>
   JSON.stringify(JSON.parse(json), (key, value) => (key === 'id' ? undefined : value));
@@ -199,6 +200,7 @@ export default function PufuEditor({
         </p>
       )}
       <PufuImagePreview score={savedPhase.score} phase={editor.number} onEdit={openEditor} />
+      <Comments targetType="pufu" targetId={pufu.id} phase={editor.number} />
       {!editing && error && (
         <p className="form-error" role="alert">
           {error}

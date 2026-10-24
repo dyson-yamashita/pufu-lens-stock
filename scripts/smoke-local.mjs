@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
+import { URLSearchParams } from 'node:url';
 
-const base = 'http://localhost:5173';
+const base = process.env.SMOKE_BASE_URL ?? 'http://localhost:5173';
 // 同時実行枠が埋まると最短60秒待機するため、再試行と完了までの時間も含める。
 const processingTimeoutMs = 180000;
 const config = await (await fetch(`${base}/api/config`)).json();
@@ -66,6 +67,20 @@ try {
       assert.ok(details.questions.some((value) => value.id === manual.question.id));
       const userQuestions = await request(`/questions?project_id=${projectId}&source=user`);
       assert.equal(userQuestions.total, 1);
+      for (const target of [
+        { target_type: 'stock', target_id: saved.id },
+        { target_type: 'question', target_id: manual.question.id },
+      ]) {
+        const comment = { ...target, body: 'ローカル検証の時系列メモ', request_id: randomUUID() };
+        const added = await request('/comments', 'POST', comment);
+        assert.equal(added.comment.author_kind, 'user');
+        assert.equal((await request('/comments', 'POST', comment)).comment.id, added.comment.id);
+        const listed = await request(`/comments?${new URLSearchParams(target)}`);
+        assert.deepEqual(
+          listed.comments.map((item) => item.body),
+          [comment.body],
+        );
+      }
       const inputText =
         'テキストストックの検証\n保存受付と要約処理を分離すると、通信が切れても処理を続けられます。\n同じ操作の再送では重複を防ぎ、失敗した処理だけを再試行します。';
       const textStock = await request('/stocks', 'POST', {

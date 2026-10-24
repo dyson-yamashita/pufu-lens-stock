@@ -13,6 +13,7 @@ import type { Question } from '../shared/domain';
 import { createPufuSchema, type PufuSummary } from '../shared/pufu';
 import { api, createRequestId, send } from './api';
 import QuestionLabels from './QuestionLabels';
+import Comments from './Comments';
 
 export default function QuestionPage({
   id,
@@ -246,6 +247,7 @@ export default function QuestionPage({
             </form>
           ) : (
             <>
+              <Comments targetType="question" targetId={id} />
               <div className="section-head pufu-list-heading">
                 <div>
                   <h2>この問いのプ譜</h2>

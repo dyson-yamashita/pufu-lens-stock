@@ -19,6 +19,7 @@ import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
 import type { McpContext } from './mcp-oauth';
+import { addCommentSchema, listCommentsSchema } from '../shared/comments';
 import {
   stockInputSchema,
   stockListOptionsSchema,
@@ -162,6 +163,33 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     }
   }
   const security = (scope: string) => ({ securitySchemes: [{ type: 'oauth2', scopes: [scope] }] });
+  for (const write of [false, true]) {
+    register(
+      write ? 'add_comment' : 'list_comments',
+      {
+        title: write ? 'コメント追加' : 'コメント一覧',
+        description: `本人用の時系列コメントを${write ? '追加' : '古い順に50件ずつ取得'}します。target_typeはstock・question・pufu、target_idは対象IDです。プ譜は実在する局面番号phaseを必ず指定し、ストック・問いには指定しません。ストックはstocks:${write ? 'write' : 'read'}、問い・プ譜はquestions:${write ? 'write' : 'read'}権限が必要です。コメントは公開ページやメモリに含みません。${write ? 'request_idは操作ごとに新しいUUIDを使い、再送は同じ値を使います。本文は2,000文字以内です。' : 'has_moreがtrueならpageを増やして続きを取得できます。'}`,
+        inputSchema: write ? addCommentSchema : listCommentsSchema,
+        annotations: write ? { ...add, openWorldHint: false } : read,
+        _meta: {
+          securitySchemes: ['stocks', 'questions'].map((kind) => ({
+            type: 'oauth2',
+            scopes: [`${kind}:${write ? 'write' : 'read'}`],
+          })),
+        },
+      },
+      (args: z.infer<typeof addCommentSchema> | z.infer<typeof listCommentsSchema>) =>
+        run(
+          `${args.target_type === 'stock' ? 'stocks' : 'questions'}:${write ? 'write' : 'read'}`,
+          () =>
+            write
+              ? invoke('comments', 'POST', args)
+              : invoke(
+                  `comments?${new URLSearchParams(Object.entries(args).map(([key, value]) => [key, String(value)]))}`,
+                ),
+        ),
+    );
+  }
   const loadPufuImage = async (questionId: string, pufuId?: string) => {
     const image = await generateQuestionPufuImage(env, principal, questionId, pufuId);
     return {

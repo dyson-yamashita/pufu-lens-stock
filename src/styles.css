@@ -3629,3 +3629,55 @@ textarea::placeholder {
     padding: 24px 0;
   }
 }
+.comments {
+  margin-block: 28px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  min-width: 0;
+}
+.comments-heading,
+.comments-heading h2,
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.comments-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.comments-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.comment-list {
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+}
+.comment-list li {
+  padding-block: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.comment-meta {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 12px;
+}
+.comment-list p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.comments form {
+  margin-top: 18px;
+}
+.comments textarea {
+  width: 100%;
+  resize: vertical;
+}
