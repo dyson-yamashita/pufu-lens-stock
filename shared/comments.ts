@@ -11,7 +11,7 @@ export const commentTargetSchema = z
     (target) =>
       target.target_type === 'pufu' ? target.phase !== undefined : target.phase === undefined,
     {
-      message: 'プ譜には局面番号を指定してください。ストック・問いには指定できません。',
+      message: 'プ譜には局面番号を指定してください。ストック・問い・気づきには指定できません。',
       path: ['phase'],
     },
   );

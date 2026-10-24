@@ -38,12 +38,12 @@ async function readQuestionPufuRecord(
       revision: number | null;
       pufu_status: string | null;
     }>();
-  if (!row) throw new HTTPException(404, { message: '問いが見つかりません。' });
+  if (!row) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
   if (pufuId !== undefined && !row.pufu_id)
     throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
   if (row.pufu_id && row.pufu_status !== 'ready')
     throw new HTTPException(409, {
-      message: 'プ譜の作成が完了していません。問いの詳細で処理状態を確認してください。',
+      message: 'プ譜の作成が完了していません。問い・気づきの詳細で処理状態を確認してください。',
     });
   return row;
 }

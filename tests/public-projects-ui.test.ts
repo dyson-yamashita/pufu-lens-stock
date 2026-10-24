@@ -98,7 +98,7 @@ it('一覧のストックは詳細へのリンクで、要点は詳細で関連�
   expect(card?.querySelector('a,details')).toBeNull();
   await navigate('#stock/stock');
   expect(document.body.textContent).toContain('詳細で確認する記事の要点');
-  expect(document.body.textContent).toContain('関連する問い');
+  expect(document.body.textContent).toContain('関連する問い・気づき');
   expect(document.querySelector('a[href="#question/ai"]')?.textContent).toContain(
     'AIが生成した問い',
   );

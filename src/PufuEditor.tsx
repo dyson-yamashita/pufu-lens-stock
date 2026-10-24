@@ -139,7 +139,7 @@ export default function PufuEditor({
     <>
       {pufu.model === 'local-pufu-template' && (
         <p className="pufu-demo-note">
-          ローカルデモ：AI未接続のため、問い・課題・メモリから定型の案を作成しています。
+          ローカルデモ：AI未接続のため、問い・気づき・課題・メモリから定型の案を作成しています。
         </p>
       )}
       <div className="pufu-phase-bar">

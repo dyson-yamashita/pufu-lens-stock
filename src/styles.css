@@ -279,7 +279,7 @@ p {
   min-height: 100vh;
 }
 .sidebar {
-  width: 248px;
+  width: 272px;
   flex-shrink: 0;
   padding: 34px 20px 0;
   background: var(--sidebar);
@@ -429,7 +429,7 @@ p {
 }
 .workspace {
   flex: 1;
-  margin-left: 248px;
+  margin-left: 272px;
   min-width: 0;
 }
 .topbar {
@@ -2336,12 +2336,12 @@ p {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .sidebar {
-    width: 224px;
+    width: 248px;
     padding-left: 15px;
     padding-right: 15px;
   }
   .workspace {
-    margin-left: 224px;
+    margin-left: 248px;
   }
   .page-body {
     padding-left: 28px;
@@ -2414,7 +2414,7 @@ p {
   }
   .sidebar {
     transform: translateX(-100%);
-    width: 250px;
+    width: 272px;
     transition: transform 0.2s ease;
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -2608,6 +2608,9 @@ p {
   .detail-tabs button {
     font-size: 11px;
     padding: 10px 12px;
+  }
+  .library-tabs svg {
+    display: none;
   }
   .project-tabs button {
     flex: 1;

@@ -47,8 +47,8 @@ export const questionSchema = z.object({
   text: z
     .string()
     .trim()
-    .min(1, '問いを入力してください。')
-    .max(500, '問いは500文字以内で入力してください。'),
+    .min(1, '問い・気づきを入力してください。')
+    .max(500, '問い・気づきは500文字以内で入力してください。'),
 });
 export const userQuestionSchema = questionSchema
   .extend({

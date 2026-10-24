@@ -18,7 +18,7 @@ import Comments from './Comments';
 export default function QuestionPage({
   id,
   resolve,
-  backLabel = '問いの一覧に戻る',
+  backLabel = '問い・気づきの一覧に戻る',
   onBack,
   onResolve,
   onPufu,
@@ -103,19 +103,19 @@ export default function QuestionPage({
   return (
     <section
       className="question-detail-page"
-      aria-label={resolve ? '課題からプ譜を作成' : '問いの詳細'}
+      aria-label={resolve ? '課題からプ譜を作成' : '問い・気づきの詳細'}
     >
       <button className="back-link" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" />
-        {resolve ? '問いの詳細に戻る' : backLabel}
+        {resolve ? '問い・気づきの詳細に戻る' : backLabel}
       </button>
       <header className="page-header">
         <div>
-          <h1>{resolve ? '課題からプ譜を作成' : '問いの詳細'}</h1>
+          <h1>{resolve ? '課題からプ譜を作成' : '問い・気づきの詳細'}</h1>
           <p>
             {resolve
               ? '実現したいことを課題として書き、解決に向けたプ譜をつくります。'
-              : '問いを見つめ直し、次の一歩へ。'}
+              : '問い・気づきを見つめ直し、次の一歩へ。'}
           </p>
         </div>
       </header>
@@ -128,7 +128,7 @@ export default function QuestionPage({
         !error && (
           <p className="content-loading">
             <LoaderCircle className="spin" size={20} aria-hidden="true" />
-            問いを読み込んでいます…
+            問い・気づきを読み込んでいます…
           </p>
         )
       ) : (
@@ -144,8 +144,8 @@ export default function QuestionPage({
             <h2>
               {question.text ||
                 (question.status === 'failed'
-                  ? '問いを生成できませんでした。'
-                  : '問いを生成しています…')}
+                  ? '問い・気づきを生成できませんでした。'
+                  : '問い・気づきを生成しています…')}
             </h2>
             {question.stock_id && (
               <div className="question-detail-source">
@@ -211,10 +211,10 @@ export default function QuestionPage({
           {resolve ? (
             <form className="pufu-task-form" onSubmit={generate}>
               <label htmlFor="pufu-task">
-                問いを解決する課題<span className="task-caption">獲得目標</span>
+                問い・気づきから考える課題<span className="task-caption">獲得目標</span>
               </label>
               <p className="field-hint" id="pufu-task-help">
-                この問いを解決して、どんな状態を実現したいですか？
+                この問い・気づきから、どんな状態を実現したいですか？
                 入力した内容を、そのままプ譜の獲得目標にします。
               </p>
               <textarea
@@ -229,7 +229,7 @@ export default function QuestionPage({
                 placeholder="例：記事の取得が途中で失敗しても、要約まで確実に完了できる仕組みをつくる。"
               />
               <p className="field-hint">
-                問い・プロジェクトの説明・あなたとプロジェクトのメモリを参考に、勝利条件や施策を生成します。関連するストックがあれば、その要約とメモも使います。
+                問い・気づき・プロジェクトの説明・あなたとプロジェクトのメモリを参考に、勝利条件や施策を生成します。関連するストックがあれば、その要約とメモも使います。
               </p>
               <div className="form-actions">
                 <button
@@ -250,7 +250,7 @@ export default function QuestionPage({
               <Comments targetType="question" targetId={id} />
               <div className="section-head pufu-list-heading">
                 <div>
-                  <h2>この問いのプ譜</h2>
+                  <h2>この問い・気づきのプ譜</h2>
                   <p>課題ごとに案をつくり、編集して育てられます。</p>
                 </div>
                 <span className="result-count">{pufus.length}件</span>
@@ -279,7 +279,7 @@ export default function QuestionPage({
                 </div>
               ) : (
                 <div className="pufu-empty">
-                  <p>この問いのプ譜はまだありません。</p>
+                  <p>この問い・気づきのプ譜はまだありません。</p>
                   <p>取り組みたい課題から、実行に向けた案をつくれます。</p>
                 </div>
               )}
@@ -289,7 +289,7 @@ export default function QuestionPage({
                   onClick={onResolve}
                   disabled={deleting || question.status !== 'ready' || !question.text}
                 >
-                  問いの解決を考える
+                  問い・気づきから考える
                   <ArrowRight size={18} aria-hidden="true" />
                 </button>
               </div>
@@ -304,7 +304,7 @@ export default function QuestionPage({
                   }}
                 >
                   <Trash2 size={16} aria-hidden="true" />
-                  問いを削除
+                  問い・気づきを削除
                 </button>
               </div>
             </>
@@ -366,10 +366,10 @@ function QuestionDeleteDialog({
       }}
     >
       <div className="dialog-head">
-        <h2 id={titleId}>問いを削除</h2>
+        <h2 id={titleId}>問い・気づきを削除</h2>
       </div>
       <p className="form-intro" id={descriptionId}>
-        この問いと紐づくすべてのプ譜を削除します。この操作は取り消せません。
+        この問い・気づきと紐づくすべてのプ譜を削除します。この操作は取り消せません。
       </p>
       {error && (
         <p className="form-error" role="alert">
