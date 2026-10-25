@@ -2276,8 +2276,8 @@ function StockDetail({
               ['summary', '要約'],
               ['question', '問い・気づき'],
               ['comments', 'コメント'],
-              ['note', 'メモ・保存先'],
               ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
+              ['note', 'メモ・保存先'],
             ]
         ).map(([value, label]) => (
           <button
