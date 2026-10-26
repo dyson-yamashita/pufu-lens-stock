@@ -50,7 +50,7 @@ export async function generatePufu(env: Env, context: PufuContext): Promise<Pufu
           text: '問いの前提と、確認が必要な点が整理されている。',
           measures: [
             {
-              text: `問い「${context.question.text.slice(0, 300)}」を、確認できる論点に分ける。`,
+              text: `問い「${(context.question?.text ?? context.task).slice(0, 300)}」を、確認できる論点に分ける。`,
               color: 'white',
             },
             {

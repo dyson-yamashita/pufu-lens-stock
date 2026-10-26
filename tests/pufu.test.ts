@@ -568,6 +568,9 @@ describe('問いからプ譜を生成・編集・保存する', () => {
       ),
     ]);
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
+    await applyMigration(app.env.DB, '0016_independent_questions.sql');
+    await applyMigration(app.env.DB, '0026_comments.sql');
+    await applyMigration(app.env.DB, '0029_independent_pufus.sql');
     const migrated = await get('old-pufu');
     expect(migrated.revision).toBe(7);
     expect(migrated.current_phase).toBe(1);

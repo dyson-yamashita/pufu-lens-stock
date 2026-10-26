@@ -10,7 +10,7 @@ export type ViewerState = {
   updated: boolean;
 };
 const selection = z.object({
-  question_id: z.string().min(1).max(100),
+  question_id: z.string().min(1).max(100).nullable().optional(),
   pufu_id: z.string().min(1).max(100).optional(),
 });
 type Selection = z.infer<typeof selection>;
@@ -101,10 +101,7 @@ export class PufuViewerController {
       return;
     }
     const image = parsed.data;
-    if (
-      this.confirmed &&
-      (image.question_id !== this.target?.question_id || image.pufu_id !== this.target.pufu_id)
-    ) {
+    if (this.confirmed && image.pufu_id !== this.target?.pufu_id) {
       if (refreshing) this.fail('対象のプ譜と取得結果が一致しません。再取得してください。');
       return;
     }
@@ -117,7 +114,8 @@ export class PufuViewerController {
       if (refreshing) this.fail('古い取得結果のため表示を更新しませんでした。再取得してください。');
       return;
     }
-    this.target = { question_id: image.question_id, pufu_id: image.pufu_id };
+    // 問いの紐付けを変更・解除しても、同じプ譜を再取得する。
+    this.target = { pufu_id: image.pufu_id };
     this.confirmed = true;
     const expired = needsNewUrl(image, this.now());
     const alreadyDisplayed =
@@ -144,7 +142,6 @@ export class PufuViewerController {
       previous &&
       (parsed.data.revision < previous.revision ||
         (parsed.data.revision === previous.revision && parsed.data.phase < previous.phase) ||
-        parsed.data.question_id !== previous.question_id ||
         parsed.data.pufu_id !== previous.pufu_id)
     )
       return;

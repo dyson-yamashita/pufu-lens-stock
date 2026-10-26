@@ -38,6 +38,41 @@ function setup(call = vi.fn(async () => result())) {
   };
 }
 describe('プ譜ビューアーの期限・競合・再試行', () => {
+  it.each([null, 'linked-question'])(
+    '問いの紐付けが%sへ変わっても同じプ譜を再取得する',
+    async (question_id) => {
+      const { controller, call } = setup();
+      controller.receive(result());
+      call.mockImplementation(async (args?: unknown) => {
+        if ((args as { question_id?: string })?.question_id)
+          return { isError: true, structuredContent: { status: 404 } } as unknown as ReturnType<
+            typeof result
+          >;
+        return result(image({ question_id, revision: 2 }));
+      });
+      await controller.refresh();
+      expect(controller.state.image).toMatchObject({
+        pufu_id: 'selected-pufu',
+        question_id,
+        revision: 2,
+      });
+      expect(controller.state.status).toBe('loading');
+      expect(call).toHaveBeenCalledWith({ pufu_id: 'selected-pufu' });
+      controller.receive(result(image({ question_id: 'another-question', revision: 3 })));
+      expect(controller.state.image?.revision).toBe(3);
+    },
+  );
+  it('問いなしのプ譜もIDを固定して表示・再取得できる', async () => {
+    const independent = image({ question_id: null });
+    const { controller, call } = setup(vi.fn(async () => result(independent)));
+    controller.setInput({ pufu_id: independent.pufu_id });
+    await controller.refresh();
+    controller.loaded(independent.image_url);
+    expect(controller.state.status).toBe('ready');
+    await controller.refresh(true);
+    expect(call).toHaveBeenLastCalledWith({ pufu_id: independent.pufu_id });
+    expect(controller.state.image?.question_id).toBeNull();
+  });
   it.each([
     [60001, false],
     [60000, false],
@@ -74,7 +109,7 @@ describe('プ譜ビューアーの期限・競合・再試行', () => {
     controller.receive(result(image({ expires_at: new Date(start + remaining).toISOString() })));
     await controller.refresh();
     expect(call).toHaveBeenCalledTimes(1);
-    expect(call).toHaveBeenCalledWith({ question_id: 'question', pufu_id: 'selected-pufu' });
+    expect(call).toHaveBeenCalledWith({ pufu_id: 'selected-pufu' });
     expect(controller.state.loadImage).toBe(true);
     expect(controller.state.status).toBe('loading');
   });
@@ -160,7 +195,7 @@ describe('プ譜ビューアーの期限・競合・再試行', () => {
     await controller.refresh();
     expect(controller.state.image).toMatchObject({ phase: 3, revision: 4, title: '新しい目標' });
     expect(controller.state.updated).toBe(true);
-    expect(call).toHaveBeenCalledWith({ question_id: 'question', pufu_id: 'selected-pufu' });
+    expect(call).toHaveBeenCalledWith({ pufu_id: 'selected-pufu' });
     controller.receive(result(image({ pufu_id: 'different', revision: 9 })));
     expect(controller.state.image?.pufu_id).toBe('selected-pufu');
   });

@@ -32,8 +32,9 @@ function render(state: ViewerState) {
   element('metadata').textContent = state.image
     ? `局面 ${state.image.phase} · 更新 ${state.image.updated_at ? new Date(state.image.updated_at).toLocaleString() : '日時不明'}`
     : '';
-  element('target').textContent = controller.target
-    ? `問い・気づき: ${controller.target.question_id} / プ譜: ${controller.target.pufu_id ?? '未選択'}`
+  const target = state.image ?? controller.target;
+  element('target').textContent = target
+    ? `${target.question_id ? `問い・気づき: ${target.question_id} / ` : ''}プ譜: ${target.pufu_id ?? '未選択'}`
     : '';
   element<HTMLButtonElement>('download').disabled = !state.image || state.status === 'forbidden';
   element<HTMLButtonElement>('retry').disabled = !bridgeReady || state.status === 'loading';

@@ -100,7 +100,7 @@ export default function Pufus({
             <button key={pufu.id} className="pufu-list-item" onClick={() => onPufu(pufu.id)}>
               <span>
                 <strong>{pufu.task}</strong>
-                <small>問い・気づき：{pufu.question_text}</small>
+                {pufu.question_id && <small>問い・気づき：{pufu.question_text}</small>}
                 <small>
                   {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
                 </small>

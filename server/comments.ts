@@ -13,7 +13,7 @@ function targetQuery(principal: Principal, target: CommentTarget) {
   const sources = {
     stock: 'stocks t JOIN projects p ON p.id = t.project_id',
     question: 'questions t JOIN projects p ON p.id = t.project_id',
-    pufu: 'pufu_scores t JOIN questions q ON q.id = t.question_id JOIN projects p ON p.id = q.project_id',
+    pufu: 'pufu_scores t JOIN projects p ON p.id = t.project_id',
   };
   return {
     sql: `SELECT 1 FROM ${sources[target.target_type]} WHERE t.id = ? AND p.user_id = ? AND (? IS NULL OR p.id = ?)${target.target_type === 'pufu' ? ' AND t.user_id = p.user_id AND EXISTS (SELECT 1 FROM pufu_phases ph WHERE ph.pufu_id = t.id AND ph.number = ?)' : ''}`,

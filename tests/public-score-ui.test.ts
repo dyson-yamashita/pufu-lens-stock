@@ -51,6 +51,7 @@ const score: PufuScore = {
 const pufu: Pufu = {
   id: 'private-edit-mode',
   question_id: 'question',
+  project_id: 'project',
   task: '課題',
   status: 'ready',
   error: null,

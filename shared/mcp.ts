@@ -2,8 +2,9 @@ export const mcpScopes = {
   'projects:read': 'プロジェクトの一覧を取得',
   'stocks:read': 'ストックを検索・閲覧（本文・コメントを含む）',
   'stocks:write': 'ストックとコメントを追加',
-  'questions:read': '問い・気づきを検索・閲覧、紐づくプ譜とコメントを閲覧',
+  'questions:read': '問い・気づきとプ譜を検索・閲覧、コメントを閲覧',
   'questions:write': '問い・気づきと、問い・気づき・プ譜のコメントを追加',
+  'pufus:write': 'プ譜を作成・編集、問い・気づきへの紐付けを変更',
   offline_access: '連携を継続するためにトークンを更新',
 };
 export type McpConnection = {

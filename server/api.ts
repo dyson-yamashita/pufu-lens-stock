@@ -43,6 +43,7 @@ import { reserveOperation, assertOperation, retryAt } from './usage';
 import { memoryCoverage, memoryId } from './memory';
 import {
   createPufuSchema,
+  createSavedPufuSchema,
   savePufuSchema,
   addPufuPhaseSchema,
   pufuEditorVersion,
@@ -53,6 +54,7 @@ import {
   type MemorySnapshot,
 } from '../shared/pufu';
 import { queuePufuJob, initialPufuPhase } from './pufu';
+import { createSavedPufu } from './pufu-write';
 import { listStocks } from './stock-search';
 import { SearchError } from './search-ai';
 import { readQuestionPufu } from './pufu-read';
@@ -73,7 +75,7 @@ const questionColumns =
 const questionJoins =
   'questions q JOIN projects p ON p.id = q.project_id LEFT JOIN stocks s ON s.id = q.stock_id LEFT JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
-  'id,question_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
+  'id,question_id,project_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
 async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
   let value: unknown;
   try {
@@ -118,6 +120,7 @@ export function createApp(trustedPrincipal?: Principal) {
       bodyLimit({
         maxSize:
           (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
+          (c.req.method === 'POST' && c.req.path === '/api/v1/pufus') ||
           (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
             ? 262144
             : c.req.method === 'POST' &&
@@ -172,11 +175,14 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(comments|projects|stocks|stocks\/[^/]+(?:\/content)?|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
+          /^\/api\/v1\/(comments|projects|stocks|stocks\/[^/]+(?:\/content)?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
             c.req.path,
           )) ||
         (c.req.method === 'POST' &&
-          ['/api/v1/comments', '/api/v1/stocks', '/api/v1/questions'].includes(c.req.path))
+          ['/api/v1/comments', '/api/v1/stocks', '/api/v1/questions', '/api/v1/pufus'].includes(
+            c.req.path,
+          )) ||
+        (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path))
       )
     )
       throw new HTTPException(403);
@@ -584,9 +590,14 @@ export function createApp(trustedPrincipal?: Principal) {
   }
   async function ownedPufu(c: import('hono').Context<AppEnv>) {
     const pufu = await c.env.DB.prepare(
-      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ?`,
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ? AND (? IS NULL OR project_id=?)`,
     )
-      .bind(c.req.param('id'), c.get('principal').user.id)
+      .bind(
+        c.req.param('id'),
+        c.get('principal').user.id,
+        c.get('principal').tokenProjectId,
+        c.get('principal').tokenProjectId,
+      )
       .first<PufuSummary>();
     if (!pufu) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
     return pufu;
@@ -779,6 +790,11 @@ export function createApp(trustedPrincipal?: Principal) {
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ id, status: saved.status }, result[2].meta.changes ? 202 : 200);
   });
+  app.post('/api/v1/pufus', async (c) => {
+    const data = await body(c, createSavedPufuSchema);
+    const { pufu, created } = await createSavedPufu(c.env, c.get('principal'), data);
+    return c.json({ pufu }, created ? 201 : 200);
+  });
   app.get('/api/v1/pufus/:id', async (c) => {
     const id = c.req.param('id');
     const userId = c.get('principal').user.id;
@@ -811,12 +827,14 @@ export function createApp(trustedPrincipal?: Principal) {
     });
   });
   app.get('/api/v1/pufus', async (c) => {
-    const { user } = c.get('principal');
-    const projectId = c.req.query('project_id') || null;
+    const { user, tokenProjectId } = c.get('principal');
+    const requested = c.req.query('project_id') || null;
+    if (tokenProjectId && requested && requested !== tokenProjectId) throw new HTTPException(404);
+    const projectId = tokenProjectId ?? requested;
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
     const joins =
-      'pufu_scores pf JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id';
+      'pufu_scores pf JOIN projects p ON p.id=pf.project_id LEFT JOIN questions q ON q.id=pf.question_id';
     const where =
       'pf.user_id=? AND p.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR p.id=?)';
     const params = [user.id, user.id, projectId, projectId];
@@ -826,7 +844,7 @@ export function createApp(trustedPrincipal?: Principal) {
           .split(',')
           .map((column) => `pf.${column}`)
           .join(',')},
-          p.id AS project_id,p.name AS project_name,q.text AS question_text
+          p.name AS project_name,q.text AS question_text
           FROM ${joins} WHERE ${where} ORDER BY pf.created_at DESC,pf.id DESC LIMIT 24 OFFSET ?`,
       ).bind(...params, (page - 1) * 24),
       c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${joins} WHERE ${where}`).bind(...params),
@@ -836,6 +854,14 @@ export function createApp(trustedPrincipal?: Principal) {
   async function savePufu(c: import('hono').Context<AppEnv>, append: boolean) {
     const pufu = await ownedPufu(c);
     const data = await body(c, append ? addPufuPhaseSchema : savePufuSchema);
+    const questionId = data.question_id === undefined ? pufu.question_id : data.question_id;
+    if (
+      questionId !== null &&
+      !(await c.env.DB.prepare('SELECT id FROM questions WHERE id=? AND project_id=?')
+        .bind(questionId, pufu.project_id)
+        .first())
+    )
+      throw new HTTPException(404, { message: '紐付け先の問い・気づきが見つかりません。' });
     if (pufu.status !== 'ready')
       throw new HTTPException(409, { message: 'プ譜の生成が完了してから保存してください。' });
     const phase = data.phase ?? pufu.current_phase;
@@ -849,8 +875,19 @@ export function createApp(trustedPrincipal?: Principal) {
     const timestamp = now();
     const userId = c.get('principal').user.id;
     const condition =
-      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ? AND EXISTS (SELECT 1 FROM pufu_phases WHERE pufu_id = pufu_scores.id AND number = ?)";
-    const values = [pufu.id, userId, data.revision, pufu.current_phase, phase];
+      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ? AND EXISTS (SELECT 1 FROM pufu_phases WHERE pufu_id = pufu_scores.id AND number = ?) AND project_id=? AND (? IS NULL OR project_id=?) AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=pufu_scores.project_id))";
+    const values = [
+      pufu.id,
+      userId,
+      data.revision,
+      pufu.current_phase,
+      phase,
+      pufu.project_id,
+      c.get('principal').tokenProjectId,
+      c.get('principal').tokenProjectId,
+      questionId,
+      questionId,
+    ];
     // すべての書き込みを同じ更新番号で制限し、保存と局面追加を1トランザクションで確定する。
     const statements = [
       initialPufuPhase(c.env, pufu.id, userId),
@@ -866,8 +903,17 @@ export function createApp(trustedPrincipal?: Principal) {
       );
     statements.push(
       c.env.DB.prepare(
-        `UPDATE pufu_scores SET score_json = CASE WHEN current_phase = ? THEN ? ELSE score_json END, current_phase = current_phase + ?, revision = revision + 1, updated_at = ? WHERE ${condition} RETURNING revision,current_phase,updated_at`,
-      ).bind(phase, json, append ? 1 : 0, timestamp, ...values),
+        `UPDATE pufu_scores SET score_json = CASE WHEN current_phase = ? THEN ? ELSE score_json END, task = CASE WHEN current_phase = ? THEN ? ELSE task END, question_id=?, current_phase = current_phase + ?, revision = revision + 1, updated_at = ? WHERE ${condition} RETURNING revision,current_phase,updated_at`,
+      ).bind(
+        phase,
+        json,
+        phase,
+        data.score.gainingGoal.text,
+        questionId,
+        append ? 1 : 0,
+        timestamp,
+        ...values,
+      ),
     );
     const results = await c.env.DB.batch<{
       revision: number;
