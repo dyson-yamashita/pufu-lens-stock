@@ -16,10 +16,12 @@ const PufuEditor = lazy(async () => {
 export default function PufuPage({
   id,
   onQuestion,
+  onBack,
   onGuard,
 }: {
   id: string;
   onQuestion: (id: string) => void;
+  onBack?: () => void;
   onGuard: (guard: (() => boolean) | null) => void;
 }) {
   const [pufu, setPufu] = useState<Pufu>();
@@ -62,9 +64,12 @@ export default function PufuPage({
   }, [id, retry]);
   return (
     <section className="pufu-page" aria-label="プ譜の編集">
-      <button className="back-link" onClick={() => onQuestion(pufu?.question_id ?? '')}>
+      <button
+        className="back-link"
+        onClick={() => (pufu?.question_id ? onQuestion(pufu.question_id) : onBack?.())}
+      >
         <ArrowLeft size={16} aria-hidden="true" />
-        問い・気づきの詳細に戻る
+        {pufu?.question_id ? '問い・気づきの詳細に戻る' : 'プ譜の一覧に戻る'}
       </button>
       <header className="page-header">
         <div>
@@ -79,8 +84,16 @@ export default function PufuPage({
       )}
       {pufu && (
         <div className="pufu-context">
-          <span className="question-origin pufu-context-label">問い・気づき</span>
-          <p>{pufu.context.question.text}</p>
+          {pufu.question_id && (
+            <>
+              <span className="question-origin pufu-context-label">問い・気づき</span>
+              <p>
+                {pufu.context.question?.id === pufu.question_id
+                  ? pufu.context.question.text
+                  : '関連する問い・気づき'}
+              </p>
+            </>
+          )}
           <div className="pufu-context-task">
             <span className="question-origin pufu-context-label">課題（獲得目標）</span>
             <p>{pufu.task}</p>

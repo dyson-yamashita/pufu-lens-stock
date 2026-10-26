@@ -13,7 +13,8 @@ const entry = new Hono<AppEnv>();
 entry.use(
   '/mcp',
   bodyLimit({
-    maxSize: 196608,
+    // プ譜保存の256KiBに、JSON-RPCの包みとツール引数の余白を加える。
+    maxSize: 278528,
     onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
   }),
 );

@@ -17,6 +17,13 @@ export const savePufuSchema = z.strictObject({
   revision: z.number().int().positive(),
   phase: z.number().int().positive().optional(),
   score: pufuScoreSchema,
+  question_id: z.string().min(1).max(100).nullable().optional(),
+});
+export const createSavedPufuSchema = z.strictObject({
+  project_id: z.string().min(1).max(100),
+  question_id: z.string().min(1).max(100).nullable().optional(),
+  score: pufuScoreSchema,
+  request_id: z.uuid(),
 });
 export const addPufuPhaseSchema = savePufuSchema.extend({ phase: z.number().int().positive() });
 export type PufuPhase = {
@@ -33,7 +40,7 @@ export type MemorySnapshot = {
   updated_at: string;
 };
 export type PufuContext = {
-  question: { id: string; text: string; source: 'ai' | 'user' };
+  question: { id: string; text: string; source: 'ai' | 'user' } | null;
   task: string;
   project: { id: string; name: string; description: string };
   stock: { id: string; title: string; summary: ArticleSummary | null; note: string } | null;
@@ -42,7 +49,8 @@ export type PufuContext = {
 };
 export type PufuSummary = {
   id: string;
-  question_id: string;
+  question_id: string | null;
+  project_id: string;
   task: string;
   status: 'queued' | 'generating' | 'ready' | 'failed';
   error: string | null;
@@ -62,5 +70,5 @@ export type Pufu = PufuSummary & {
 export type PufuListItem = PufuSummary & {
   project_id: string;
   project_name: string;
-  question_text: string;
+  question_text: string | null;
 };

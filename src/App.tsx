@@ -1121,6 +1121,10 @@ export default function App() {
                 key={route.detailId}
                 id={route.detailId!}
                 onQuestion={(id) => navigateDetail('question', id)}
+                onBack={() => {
+                  window.location.hash =
+                    questionListContext.view === 'pufus' ? questionListContext.hash : '#pufus';
+                }}
                 onGuard={setNavigationGuard}
               />
             ) : (

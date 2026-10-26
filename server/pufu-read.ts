@@ -8,14 +8,17 @@ const maxScoreBytes = 262144;
 async function readQuestionPufuRecord(
   env: Env,
   principal: Principal,
-  questionId: string,
+  questionId: string | null | undefined,
   pufuId?: string,
 ) {
   const projectId = principal.tokenProjectId ?? null;
   const selectedId = pufuId ?? null;
+  if (!questionId && !pufuId)
+    throw new HTTPException(400, { message: 'pufu_idまたはquestion_idを指定してください。' });
   // 問い・保存先の権限と選択する局面を同じ読み取りで確定する。
-  const row = await env.DB.prepare(
-    `SELECT q.id AS question_id,q.project_id,pf.id AS pufu_id,pf.current_phase,
+  const query = questionId
+    ? env.DB.prepare(
+        `SELECT q.id AS question_id,q.project_id,pf.id AS pufu_id,pf.current_phase,
       pf.score_json,ph.score_json AS phase_score_json,pf.updated_at,pf.revision,pf.status AS pufu_status
     FROM questions q JOIN projects p ON p.id=q.project_id
     LEFT JOIN pufu_scores pf ON pf.id=(
@@ -25,19 +28,33 @@ async function readQuestionPufuRecord(
     )
     LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
     WHERE q.id=? AND p.user_id=? AND (? IS NULL OR q.project_id=?)`,
-  )
-    .bind(selectedId, selectedId, selectedId, questionId, principal.user.id, projectId, projectId)
-    .first<{
-      question_id: string;
-      project_id: string;
-      pufu_id: string | null;
-      current_phase: number | null;
-      score_json: string | null;
-      phase_score_json: string | null;
-      updated_at: string | null;
-      revision: number | null;
-      pufu_status: string | null;
-    }>();
+      ).bind(
+        selectedId,
+        selectedId,
+        selectedId,
+        questionId,
+        principal.user.id,
+        projectId,
+        projectId,
+      )
+    : env.DB.prepare(
+        `SELECT pf.question_id,pf.project_id,pf.id AS pufu_id,pf.current_phase,
+      pf.score_json,ph.score_json AS phase_score_json,pf.updated_at,pf.revision,pf.status AS pufu_status
+      FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
+      LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
+      WHERE pf.id=? AND pf.user_id=? AND p.user_id=? AND (? IS NULL OR p.id=?)`,
+      ).bind(pufuId, principal.user.id, principal.user.id, projectId, projectId);
+  const row = await query.first<{
+    question_id: string | null;
+    project_id: string;
+    pufu_id: string | null;
+    current_phase: number | null;
+    score_json: string | null;
+    phase_score_json: string | null;
+    updated_at: string | null;
+    revision: number | null;
+    pufu_status: string | null;
+  }>();
   if (!row) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
   if (pufuId !== undefined && !row.pufu_id)
     throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
@@ -50,7 +67,7 @@ async function readQuestionPufuRecord(
 export async function readQuestionPufuSnapshot(
   env: Env,
   principal: Principal,
-  questionId: string,
+  questionId: string | null | undefined,
   pufuId?: string,
 ) {
   const row = await readQuestionPufuRecord(env, principal, questionId, pufuId);
@@ -89,9 +106,16 @@ export async function readQuestionPufuSnapshot(
 export async function readQuestionPufu(
   env: Env,
   principal: Principal,
-  questionId: string,
+  questionId: string | null | undefined,
   pufuId?: string,
 ) {
   const snapshot = await readQuestionPufuSnapshot(env, principal, questionId, pufuId);
-  return pufuId === undefined ? snapshot.pufu : { pufu_id: snapshot.pufuId, ...snapshot.pufu };
+  return pufuId === undefined
+    ? snapshot.pufu
+    : {
+        pufu_id: snapshot.pufuId,
+        revision: snapshot.revision,
+        phase: snapshot.phase,
+        ...snapshot.pufu,
+      };
 }

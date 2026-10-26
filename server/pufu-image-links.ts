@@ -8,9 +8,9 @@ import { readQuestionPufuSnapshot } from './pufu-read';
 const lifetimeSeconds = 3600;
 const activeLimit = 50;
 type Image = Awaited<ReturnType<typeof generateQuestionPufuImage>>;
-const currentPufu = `SELECT 1 FROM pufu_scores pf JOIN questions q ON q.id=pf.question_id
-  JOIN projects p ON p.id=q.project_id
-  WHERE pf.id=l.pufu_id AND q.id=l.question_id AND p.id=l.project_id
+const currentPufu = `SELECT 1 FROM pufu_scores pf
+  JOIN projects p ON p.id=pf.project_id
+  WHERE pf.id=l.pufu_id AND pf.question_id IS l.question_id AND p.id=l.project_id
   AND pf.user_id=l.user_id AND p.user_id=l.user_id AND pf.status='ready'
   AND pf.current_phase=l.phase AND pf.revision=l.revision`;
 const usableLink = `SELECT l.content_key,l.expires_at FROM pufu_image_links l
@@ -50,9 +50,9 @@ export async function issuePufuImageLink(env: Env, principal: Principal, image: 
   try {
     const inserted = await env.DB.prepare(
       `INSERT INTO pufu_image_links(token_hash,user_id,question_id,pufu_id,project_id,phase,revision,content_key,expires_at)
-      SELECT ?,p.user_id,q.id,pf.id,p.id,pf.current_phase,pf.revision,?,?
-      FROM pufu_scores pf JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id
-      WHERE pf.id=? AND q.id=? AND p.id=? AND p.user_id=? AND pf.user_id=p.user_id
+      SELECT ?,p.user_id,pf.question_id,pf.id,p.id,pf.current_phase,pf.revision,?,?
+      FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
+      WHERE pf.id=? AND pf.question_id IS ? AND p.id=? AND p.user_id=? AND pf.user_id=p.user_id
       AND pf.status='ready' AND pf.current_phase=? AND pf.revision=?
       AND (? IS NULL OR p.id=?)
       AND (SELECT COUNT(*) FROM pufu_image_links WHERE user_id=p.user_id AND expires_at>?)<?`,

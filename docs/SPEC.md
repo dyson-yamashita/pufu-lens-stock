@@ -217,40 +217,49 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 
 既存Workerの `/mcp` に、OAuth 2.1付きStreamable HTTPサーバーを追加しています。サイドメニューの「MCP連携」で接続URLと連携一覧を確認し、不要な連携を解除できます。
 
-| ツール           | 用途                                                                                                           |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| `list_projects`  | 許可されたプロジェクトの一覧                                                                                   |
-| `list_stocks`    | 軽量なストック一覧。検索・絞り込み・件数指定・保存日時順・ページ送り                                           |
-| `get_stock`      | ストック詳細。`include_content: true` の場合だけ本文を20,000文字まで取得（超過時は `content_truncated: true`） |
-| `add_stock`      | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                               |
-| `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                   |
-| `get_question`   | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                       |
-| `get_pufu`       | 問いID・プ譜IDで選んだプ譜の最新局面。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）  |
-| `show_pufu`      | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                              |
-| `get_pufu_image` | 問いID・プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                  |
-| `add_question`   | プロジェクトに問いを追加。関連する `stock_id` と登録時のメモ `note`（2,000文字まで、省略時は空文字）は任意     |
-| `list_comments`  | ストック・問い・プ譜局面のコメントを古い順に50件ずつ取得。同じユーザーの別接続の投稿も含む                     |
-| `add_comment`    | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                           |
+| ツール           | 用途                                                                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `list_projects`  | 許可されたプロジェクトの一覧                                                                                                 |
+| `list_stocks`    | 軽量なストック一覧。検索・絞り込み・件数指定・保存日時順・ページ送り                                                         |
+| `get_stock`      | ストック詳細。`include_content: true` の場合だけ本文を20,000文字まで取得（超過時は `content_truncated: true`）               |
+| `add_stock`      | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                                             |
+| `list_pufus`     | 問いなしのプ譜を含む一覧。プロジェクト絞り込み・ページ送り（`questions:read`）                                               |
+| `create_pufu`    | プ譜JSONを指定プロジェクトへ保存。問いの紐付けは任意（`pufus:write`）                                                        |
+| `update_pufu`    | revisionを指定して既存プ譜を編集。問いの紐付け・解除（`pufus:write`）                                                        |
+| `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                                 |
+| `get_question`   | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                                     |
+| `get_pufu`       | プ譜IDで選んだプ譜の最新局面と編集用revision・phase。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`） |
+| `show_pufu`      | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                                            |
+| `get_pufu_image` | プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                                        |
+| `add_question`   | プロジェクトに問いを追加。関連する `stock_id` と登録時のメモ `note`（2,000文字まで、省略時は空文字）は任意                   |
+| `list_comments`  | ストック・問い・プ譜局面のコメントを古い順に50件ずつ取得。同じユーザーの別接続の投稿も含む                                   |
+| `add_comment`    | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                                         |
+
+`list_pufus` は問いなしのプ譜も含む一覧を24件ずつ返し、`project_id` と `page` で絞り込みます（`questions:read`）。`create_pufu` は必須の `project_id`・`projectScore`（ProjectScoreModel）・`request_id`（UUID）で完成済みの第1局面を保存します。`question_id` は省略・null可で、指定時は同じ保存先の完成済みの問いだけ紐付けます。サーバー側のAI生成・メモリ更新は起動しません。同じrequest_idと作成内容の再送は同じプ譜を返し、その後の編集でも初回の内容と照合します。異なる内容の再使用は409です。
+
+`update_pufu` は `pufu_id`・`revision`・`projectScore` を受け取り、既存の局面保存処理で編集します。`phase` 省略は最新局面、指定時は既存の局面を更新します。局面は追加しません。`question_id` 省略は紐付けを維持、nullは解除、同一プロジェクトの問いIDで紐付けを変更します。最新局面の編集では一覧の課題も獲得目標に合わせます。古いrevisionは409、他人・許可外保存先・紐付け先の不一致は404です。作成・編集の本文上限は256KiBです。`get_pufu` で内容とrevisionを取得してから編集してください。作成・編集には新規の `pufus:write` が必要で、既存の許可には追加せず、再認可が必要です。
+
+反映前に `0029_independent_pufus.sql` を適用します。既存のプ譜・局面・コメント・期限付き画像リンクを保全し、プ譜に保存先 `project_id` を追加、`question_id` をnullableにします。問いの移動時は紐づくプ譜も追随し、問い削除時の紐づくプ譜削除は維持します。問いなしのプ譜はプロジェクト削除時に削除されます。Webの一覧・編集・コメント、MCPの取得・画像・ビューアーは問いなしでも利用できます。公開ページには従来どおり問いに紐づくプ譜だけを表示します。追加のSecretやbindingはありません。
 
 `add_stock`・`add_question`には `project_id` と `request_id`（UUID）が必須です。`add_comment`は対象IDからプロジェクトを確認するため`project_id`は指定しません。同じ操作の通信再試行では同じUUIDを使います。ストックの要約・AIの問い・メモリは非同期で生成し、既存の保存件数・AI利用量制限を共通で適用します。
 
 ### 会話内のプ譜ビューアー
 
-「プ譜を表示して」という依頼には `show_pufu` を使います。入力は `get_pufu_image` と同じ `question_id`（必須）・`pufu_id`（任意）で、未指定時は最新の完成済みプ譜を選びます。`structuredContent` のタイトル・対象ID・局面・revision・更新日時・PNGのURLと寸法を、宣言した `outputSchema` に従って返します。`show_pufu` はBase64を返さず、未作成を `status: "not_created"` で区別し、URL発行に失敗した場合はMCPエラーにします。JSON取得・Base64画像取得の既存ツールと認証方式は維持します。`get_pufu_image` には表示用タイトルを追加します。
+「プ譜を表示して」という依頼には `show_pufu` を使います。入力は `get_pufu_image` と同じ `pufu_id`、任意の `question_id` です。`pufu_id` 省略時は `question_id` を必須として最新の完成済みプ譜を選びます。`structuredContent` のタイトル・対象ID・局面・revision・更新日時・PNGのURLと寸法を、宣言した `outputSchema` に従って返します。`show_pufu` はBase64を返さず、未作成を `status: "not_created"` で区別し、URL発行に失敗した場合はMCPエラーにします。JSON取得・Base64画像取得の既存ツールと認証方式は維持します。`get_pufu_image` には表示用タイトルを追加します。
 
 `@modelcontextprotocol/ext-apps` 2.0.3（既存の `@modelcontextprotocol/server` 2.3.1と互換）の公式ヘルパーで、`ui://pufu/viewer-v1.html` を `text/html;profile=mcp-app` のリソースとして登録します。ツールの `_meta.ui.resourceUri` と紐づけ、CSPの `resourceDomains` は `APP_URL` のオリジンに限定します。JS・CSSはHTMLに同梱し、画像は通常の `img` で読み込みます。直接APIへfetchせず、`connectDomains` は空です。回答本文のMarkdown画像を表示するためのCSP設定ではなく、Markdownで表示できなかった初回原因も有効期限だけと断定しません。
 
 ビューアーは画像のload成功後に表示成功とし、未作成・生成中・取得失敗・閲覧不可を区別します。初期表示と「横幅に合わせる」では横幅100%で縦横比を保ち、画像全体の高さに枠を伸ばします。画像高に合わせたカードの高さをMCP Apps SDKのautoResizeでホストへ通知し、通常表示では高さを固定しません。ただし実際のカード高はホストの制約を受けます。拡大時は横幅100%時の枠高を維持し、枠内をスクロールできます。リサイズ時も横幅に合わせて画像高を再計算します。拡大は枠幅の最大6倍、パンはタッチのスクロールやマウスのドラッグで行います。全画面はホストが対応を通知した場合のみ要求し、画面の高さに合わせた枠内でスクロールします。非対応時はカード内の拡大と外部PNGリンクを使います。
 
-画像URLは引き続き1時間有効です。初回表示・表示復帰・再マウント・PNG保存時に残り時間を確認し、期限切れまたは残り60秒未満なら、ホストの `tools/call` から `get_pufu_image` を呼びます。選択確定後は必ず同じ `question_id` と `pufu_id` を指定し、別のプ譜へ切り替えません。このツールは `_meta.ui.visibility: ["model", "app"]` とし、表示リソースは紐づけず、再取得による新しいカードを作りません。OAuthはホストのMCP経路に任せ、UIは認証トークンを取得・永続保存しません。
+画像URLは引き続き1時間有効です。初回表示・表示復帰・再マウント・PNG保存時に残り時間を確認し、期限切れまたは残り60秒未満なら、ホストの `tools/call` から `get_pufu_image` を呼びます。選択確定後は必ず同じ `pufu_id` だけを指定し、問いへの紐付け変更・解除後も同じプ譜を取得します。別のプ譜へ切り替えません。このツールは `_meta.ui.visibility: ["model", "app"]` とし、表示リソースは紐づけず、再取得による新しいカードを作りません。OAuthはホストのMCP経路に任せ、UIは認証トークンを取得・永続保存しません。
 
 画像エラーを期限切れと決めつけず、自動再取得は最大1回です。同時要求をまとめ、古い応答を破棄します。失敗が続くと手動の「再取得」を案内し、定期ポーリングは行いません。表示済みの画像を時間経過だけで再読み込みせず、UIを起動しないホストでの自動復旧も保証しません。同じプ譜の最新完成局面へ変わった場合は「プ譜が更新されたため最新の内容を表示しています」と案内します。再発行と画像配信の両方で、既存の所有権・プロジェクト・紐づき・削除・生成状態を確認します。
 
-反映後は接続先のツール・リソース情報を再読み込みしてください。ホストに再読み込み操作がない場合はMCP接続を再接続します。追加OAuthスコープ・DB移行・Secretはありません。Web版ChatGPTとiPhone版ChatGPTではそれぞれ、会話内表示、拡大・保存、期限切れ・更新後の再取得、削除後の拒否を実機で確認してください。自動テストやブラウザのエミュレーションと、ChatGPT実機の確認結果は分けて記録します。
+反映後は接続先のツール・リソース情報を再読み込みしてください。ホストに再読み込み操作がない場合はMCP接続を再接続します。プ譜の作成・編集を利用する場合は前述の追加OAuthスコープとDB移行が必要です。追加のSecretはありません。Web版ChatGPTとiPhone版ChatGPTではそれぞれ、会話内表示、拡大・保存、期限切れ・更新後の再取得、削除後の拒否を実機で確認してください。自動テストやブラウザのエミュレーションと、ChatGPT実機の確認結果は分けて記録します。
 
 ### プ譜の取得
 
-`get_question` は問いと紐づくプ譜の一覧 `pufus` を返します。取得するプ譜の `pufus[].id` を選び、`get_pufu` または `get_pufu_image` に、必須の `question_id` と任意の `pufu_id` を指定します。複数登録されていても保存済みIDで選べます。閲覧権限は既存の `questions:read` を使い、問いとプ譜の紐づき、本人と認可されたプロジェクトをサーバー側で確認します。
+`get_question` は問いと紐づくプ譜の一覧 `pufus` を返します。取得するプ譜の `pufus[].id` を選び、`get_pufu` または `get_pufu_image` に、`pufu_id` を指定します。`question_id` は任意で、両方指定すると紐付けを検証します。`pufu_id` を省略する場合は `question_id` が必須です。複数登録されていても保存済みIDで選べます。閲覧権限は既存の `questions:read` を使い、問いとプ譜の紐づき、本人と認可されたプロジェクトをサーバー側で確認します。
 
 `get_pufu_image` はリクエストのたびに、指定したプ譜の最新局面からPNGをその場で生成します。MCPの `content` 内に `type: "image", mimeType: "image/png", data: "Base64文字列"` の画像要素を返し、structuredContentにはプ譜ID・幅・高さ・バイト数・局面・更新番号等と、`image_url`・`download_url`・`expires_at` を返します。PNGのBase64をJSONにも重複させません。ユーザーへの表示は `show_pufu` を案内し、MCP Apps非対応環境では外部画像・ダウンロードリンクやBase64を使えます。URL発行の上限・一時障害時は `image_url_error` とBase64画像を返し、PNGファイルへの保存を案内します。未作成の場合はURLも発行しません。Base64へのフォールバック時も元データを再確認し、更新・削除競合やDB障害で現在の権限を確認できない場合はエラーとして画像を返しません。
 
@@ -272,7 +281,7 @@ Worker更新前に `0025_pufu_image_links.sql` を適用してください。追
 { "question_id": "保存した問いのID", "pufu_id": "get_questionのpufusから選んだID" }
 ```
 
-返却項目は `question_id`、`pufu_id`、`project_id`、`updated_at`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.19` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
+ID指定時の返却項目は `question_id`（紐付けなしはnull）、`pufu_id`、`project_id`、`updated_at`、`revision`、`phase`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.19` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
 
 `updated_at` は指定したプ譜の更新日時で、読み取れない日時は `null` です。問いが存在しない・他人の問い・許可プロジェクト外は既存詳細取得と同じ404、scope不足は403です。
 

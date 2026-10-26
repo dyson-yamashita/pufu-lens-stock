@@ -15,6 +15,7 @@ import { issuePufuImageLink } from './pufu-image-links';
 import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { registerPufuViewer } from './pufu-viewer';
 import { pufuViewerSchema, pufuViewerUri } from '../shared/pufu-viewer';
+import { createSavedPufuSchema, savePufuSchema, pufuScoreSchema } from '../shared/pufu';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -28,11 +29,16 @@ import {
 
 const id = z.string().min(1).max(100);
 const pufuSelection = z.object({
-  question_id: id.describe('list_questions/get_questionが返す問い・気づきのID。'),
+  question_id: id
+    .nullable()
+    .optional()
+    .describe(
+      '任意の問い・気づきID。pufu_idを指定する場合は省略できます。両方指定した場合は紐付けを検証します。',
+    ),
   pufu_id: id
     .optional()
     .describe(
-      'get_questionが返すpufus[].id。取得するプ譜を指定します。省略時は互換用に最新の完成済みプ譜を選びます。',
+      'list_pufus/get_question/create_pufuが返すプ譜のID。問いなしのプ譜も取得できます。省略時はquestion_idが必須で、最新の完成済みプ譜を選びます。',
     ),
 });
 const filters = {
@@ -67,7 +73,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     { name: 'pufu-lens-stock', version: '1.0.0' },
     {
       instructions:
-        '本人のプロジェクト、ストック、問い・気づきを取得・追加し、保存済みのプ譜を閲覧します。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのquestion_idとpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+        '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
     },
   );
   const api = createApp(principal);
@@ -190,7 +196,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
         ),
     );
   }
-  const loadPufuImage = async (questionId: string, pufuId?: string) => {
+  const loadPufuImage = async (questionId: string | null | undefined, pufuId?: string) => {
     const image = await generateQuestionPufuImage(env, principal, questionId, pufuId);
     return {
       image,
@@ -349,11 +355,66 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       }),
   );
   register(
+    'list_pufus',
+    {
+      title: 'プ譜一覧',
+      description:
+        '本人のプ譜を24件ずつ取得します。問いへの紐付けがないプ譜も含みます。idをget_pufu/show_pufu/update_pufuのpufu_idに指定してください。全体一覧に非表示のプロジェクトは、project_idを指定すると取得できます。',
+      inputSchema: z.object({ project_id: filters.project_id, page: filters.page }),
+      annotations: read,
+      _meta: security('questions:read'),
+    },
+    ({ project_id, page }) =>
+      run('questions:read', () => {
+        const params = new URLSearchParams({ page: String(page) });
+        const projectId = project(project_id);
+        if (projectId) params.set('project_id', projectId);
+        return invoke(`pufus?${params}`);
+      }),
+  );
+  register(
+    'create_pufu',
+    {
+      title: 'プ譜作成',
+      description:
+        'ProjectScoreModel形式のprojectScoreをプロジェクトへ保存し、完成済みの第1局面を作成します。AI生成は行いません。question_idは任意で、同じプロジェクトの問いだけ指定できます。各要素のuuidは重複しないID、commentはcolorとtextを含めます。request_idは新規操作ごとのUUID、再送時は同じ内容とUUIDを使ってください。異なる内容の再使用は409、上限は256KiBです。作成・編集にはpufus:writeの追加許可が必要です。',
+      inputSchema: createSavedPufuSchema
+        .omit({ score: true })
+        .extend({ projectScore: pufuScoreSchema }),
+      annotations: add,
+      _meta: security('pufus:write'),
+    },
+    ({ projectScore, ...data }) =>
+      run('pufus:write', () => invoke('pufus', 'POST', { ...data, score: projectScore })),
+  );
+  register(
+    'update_pufu',
+    {
+      title: 'プ譜編集',
+      description:
+        '保存済みプ譜の指定局面をprojectScoreで置き換えます。事前にget_pufuで最新の内容とrevisionを取得し、変更しない要素も保持してください。revisionは必須で、競合時は409です。phase省略時は最新局面を編集します。question_id省略で紐付けを維持、nullで解除、同一プロジェクトの問いIDで紐付けます。更新対象の局面の内容を変更し、局面の追加は行いません。上限は256KiBです。',
+      inputSchema: savePufuSchema
+        .omit({ score: true })
+        .extend({ pufu_id: id, projectScore: pufuScoreSchema }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+      _meta: security('pufus:write'),
+    },
+    ({ pufu_id, projectScore, ...data }) =>
+      run('pufus:write', () =>
+        invoke(`pufus/${encodeURIComponent(pufu_id)}`, 'PATCH', { ...data, score: projectScore }),
+      ),
+  );
+  register(
     'get_pufu',
     {
       title: 'プ譜取得',
       description:
-        '指定した問い・気づきに紐づくプ譜の最新局面を取得します。pufu_idで取得するプ譜を選び、projectScoreにPufu EditorのProjectScoreModel形式で返します。保存済みの内容を維持し、要約・補完は行いません。ID指定時の未作成・紐づき不一致は404、作成未完了は409です。pufu_id省略時だけ最新の完成済みプ譜を選び、未作成ならprojectScore: nullを返します。',
+        'pufu_idで指定したプ譜の最新局面を取得します。問いへの紐付けは不要です。projectScoreはPufu EditorのProjectScoreModel形式で、ID指定時は編集に必要なrevisionとphaseも返します。保存済みの内容を維持し、要約・補完は行いません。両ID指定時の紐付き不一致は404、作成未完了は409です。pufu_id省略時はquestion_idが必須で、最新の完成済みプ譜を選び、未作成ならprojectScore: nullを返します。',
       inputSchema: pufuSelection,
       annotations: read,
       _meta: security('questions:read'),

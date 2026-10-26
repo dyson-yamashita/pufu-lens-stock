@@ -5,7 +5,7 @@ const identifier = z.string().min(1).max(100);
 
 export const pufuViewerSchema = z.object({
   status: z.enum(['ready', 'not_created']),
-  question_id: identifier,
+  question_id: identifier.nullable(),
   project_id: identifier,
   pufu_id: identifier.nullable(),
   title: z.string(),

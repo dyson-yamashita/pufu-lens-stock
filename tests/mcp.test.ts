@@ -53,6 +53,98 @@ describe('MCPによるストックと問いの取得・追加', () => {
   }
   const call = (token: string, name: string, args: unknown = {}) =>
     rpc(token, 'tools/call', { name, arguments: args });
+  it('192KiBを超えるプ譜もMCPの作成で保存できる', async () => {
+    const token = await mcpToken(app, 'alice-project', ['pufus:write']);
+    const projectScore = score();
+    const node = () => ({
+      uuid: crypto.randomUUID(),
+      text: 'a'.repeat(1200),
+      comment: { color: 'blue' as const, text: 'b'.repeat(600) },
+    });
+    projectScore.purposes = Array.from({ length: 12 }, () => ({
+      ...node(),
+      measures: Array.from({ length: 8 }, () => ({ ...node(), color: 'white' as const })),
+    }));
+    const args = { project_id: 'alice-project', projectScore, request_id: crypto.randomUUID() };
+    expect(Buffer.byteLength(JSON.stringify(args))).toBeGreaterThan(196608);
+    expect(Buffer.byteLength(JSON.stringify(args))).toBeLessThan(262144);
+    const saved = (await call(token, 'create_pufu', args)).result;
+    expect(saved.isError).not.toBe(true);
+    expect(saved.structuredContent.pufu).toMatchObject({ status: 'ready' });
+  });
+  it('MCPから問いなしのプ譜を作成・取得・編集し、再送と競合を検証する', async () => {
+    const token = await mcpToken(app, 'alice-project', ['questions:read', 'pufus:write']);
+    const projectScore = score();
+    const args = { project_id: 'alice-project', projectScore, request_id: crypto.randomUUID() };
+    const created = (await call(token, 'create_pufu', args)).result;
+    expect(created.isError).not.toBe(true);
+    const pufu = created.structuredContent.pufu as { id: string };
+    expect((await call(token, 'list_pufus')).result.structuredContent).toMatchObject({
+      pufus: [{ id: pufu.id, question_id: null }],
+      total: 1,
+    });
+    expect(
+      (await call(token, 'get_pufu', { pufu_id: pufu.id })).result.structuredContent,
+    ).toMatchObject({ pufu_id: pufu.id, question_id: null, revision: 1, phase: 1, projectScore });
+    projectScore.gainingGoal.text = 'MCPで更新';
+    const updated = (
+      await call(token, 'update_pufu', { pufu_id: pufu.id, revision: 1, projectScore })
+    ).result;
+    expect(updated.isError).not.toBe(true);
+    expect(updated.structuredContent).toMatchObject({ revision: 2 });
+    expect(
+      (await call(token, 'update_pufu', { pufu_id: pufu.id, revision: 1, projectScore })).result
+        .structuredContent,
+    ).toMatchObject({ status: 409 });
+    expect(
+      (await call(token, 'create_pufu', { ...args, projectScore: score() })).result
+        .structuredContent,
+    ).toMatchObject({ status: 409 });
+    const oldToken = await mcpToken(app, 'alice-project');
+    expect((await call(oldToken, 'create_pufu', args)).result.structuredContent).toMatchObject({
+      status: 403,
+    });
+    expect(
+      (await call(oldToken, 'update_pufu', { pufu_id: pufu.id, revision: 2, projectScore })).result
+        .structuredContent,
+    ).toMatchObject({ status: 403 });
+    expect(
+      (
+        await call(token, 'create_pufu', {
+          ...args,
+          project_id: 'alice-second',
+          request_id: crypto.randomUUID(),
+        })
+      ).result.structuredContent,
+    ).toMatchObject({ status: 404 });
+    const elsewhere = await app.request('/api/v1/pufus', {
+      method: 'POST',
+      body: { project_id: 'alice-second', score: projectScore, request_id: crypto.randomUUID() },
+    });
+    const other = ((await elsewhere.json()) as { pufu: { id: string } }).pufu;
+    expect(
+      (await call(token, 'get_pufu', { pufu_id: other.id })).result.structuredContent,
+    ).toMatchObject({ status: 404 });
+    expect(
+      (await call(token, 'update_pufu', { pufu_id: other.id, revision: 1, projectScore })).result
+        .structuredContent,
+    ).toMatchObject({ status: 404 });
+    app.env.ASSETS = {
+      fetch: async () =>
+        new Response(await readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url))),
+    } as unknown as Fetcher;
+    const displayed = (await call(token, 'show_pufu', { pufu_id: pufu.id })).result;
+    expect(displayed.isError).not.toBe(true);
+    expect(displayed.structuredContent).toMatchObject({
+      status: 'ready',
+      question_id: null,
+      pufu_id: pufu.id,
+    });
+    const imagePath = new URL(String(displayed.structuredContent.image_url)).pathname;
+    expect((await app.request(imagePath, { headers: { Cookie: '' } })).status).toBe(200);
+    await call(token, 'update_pufu', { pufu_id: pufu.id, revision: 2, projectScore });
+    expect((await app.request(imagePath, { headers: { Cookie: '' } })).status).toBe(404);
+  });
   async function seedStock(
     name: string,
     savedAt: string,
@@ -656,15 +748,18 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'add_comment',
       'add_question',
       'add_stock',
+      'create_pufu',
       'get_pufu',
       'get_pufu_image',
       'get_question',
       'get_stock',
       'list_comments',
       'list_projects',
+      'list_pufus',
       'list_questions',
       'list_stocks',
       'show_pufu',
+      'update_pufu',
     ]);
     expect(listed.result.tools?.find((tool) => tool.name === 'get_pufu_image')).toMatchObject({
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
@@ -672,7 +767,6 @@ describe('MCPによるストックと問いの取得・追加', () => {
     expect(listed.result.tools?.find((tool) => tool.name === 'get_pufu')).toMatchObject({
       annotations: { readOnlyHint: true },
       securitySchemes: [{ type: 'oauth2', scopes: ['questions:read'] }],
-      inputSchema: { required: ['question_id'] },
     });
     expect(
       listed.result.tools?.find((tool) => tool.name === 'get_stock')?.annotations.readOnlyHint,

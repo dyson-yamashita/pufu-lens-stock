@@ -16,6 +16,7 @@ let requests: URL[];
 let listError: boolean;
 let total: number;
 let includeStock: boolean;
+let independent: boolean;
 const summary = {
   id: 'pufu',
   question_id: 'question',
@@ -53,6 +54,7 @@ beforeEach(() => {
   listError = false;
   total = 1;
   includeStock = false;
+  independent = false;
   Object.defineProperties(window.HTMLElement.prototype, {
     showModal: { configurable: true, value() {} },
     close: { configurable: true, value() {} },
@@ -170,10 +172,13 @@ beforeEach(() => {
         return {
           pufu: {
             ...summary,
+            question_id: independent ? null : summary.question_id,
             score: null,
             phases: [],
             context: {
-              question: { id: 'question', text: summary.question_text, source: 'user' },
+              question: independent
+                ? null
+                : { id: 'question', text: summary.question_text, source: 'user' },
               task: summary.task,
               project: { id: 'project', name: summary.project_name, description: '' },
               stock: null,
@@ -250,6 +255,18 @@ it.each(['', '#project/project'])(
     );
   },
 );
+
+it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {
+  independent = true;
+  await render('#pufus/project');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await hashChange();
+  const back = document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!;
+  expect(back.textContent).toBe('プ譜の一覧に戻る');
+  await act(async () => back.click());
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus/project');
+});
 
 it('全体のプロジェクト絞り込みをプ譜・メモリ・問いのタブ間で引き継ぐ', async () => {
   await render('#pufus');
