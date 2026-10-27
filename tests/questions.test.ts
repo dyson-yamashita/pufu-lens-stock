@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { testApp, applyMigration, mockEvent, mockStep } from './helpers';
+import { testApp, applyMigration, mockEvent, mockStep, upgradeRelationsSchema } from './helpers';
 import { queueQuestionStatements, jobFailureStatements } from '../server/db';
 import { ArticleWorkflow } from '../server/workflows';
 import { scheduledMaintenance } from '../server/jobs';
@@ -236,7 +236,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
       expect((await app.request(path, { method, user: 'bob' })).status).toBe(404);
     expect((await app.request('/api/v1/questions?status=wrong')).status).toBe(400);
   });
-  it('ストック移動に追従し、ストック・プロジェクトの削除で問いも消える', async () => {
+  it('ストック移動に追従し、ストック削除後も問いを保持してプロジェクト削除で消す', async () => {
     const id = await save();
     await ready(id);
     await run(id);
@@ -255,23 +255,52 @@ describe('問い・ストック・プロジェクトの関連', () => {
       project_id: 'alice-second',
     });
     expect((await list('?project_id=alice-project')).total).toBe(0);
-    await app.request(`/api/v1/stocks/${id}`, { method: 'DELETE' });
-    expect((await list()).total).toBe(0);
+    expect((await app.request(`/api/v1/stocks/${id}`, { method: 'DELETE' })).status).toBe(200);
+    expect((await list()).questions).toMatchObject([
+      {
+        id: before.id,
+        text: before.text,
+        stock_id: null,
+        project_id: 'alice-second',
+        stock_ids: [],
+      },
+    ]);
     await save();
-    await app.request('/api/v1/projects/alice-project', { method: 'DELETE' });
+    expect((await app.request('/api/v1/projects/alice-project', { method: 'DELETE' })).status).toBe(
+      200,
+    );
+    expect((await list()).questions.map((item) => item.id)).toEqual([before.id]);
+    expect((await app.request('/api/v1/projects/alice-second', { method: 'DELETE' })).status).toBe(
+      200,
+    );
     expect((await list()).total).toBe(0);
   });
-  it('生成中にストックを削除しても問いを復活させない', async () => {
+  it('生成中にストックを削除すると問いを保持して失敗とし、生成結果を反映しない', async () => {
     const id = await save();
     await ready(id);
+    const before = await question(id);
     app.env.AI = {
       run: vi.fn(async () => {
         await app.request(`/api/v1/stocks/${id}`, { method: 'DELETE' });
         return { response: JSON.stringify({ text: '削除済みの問い？' }) };
       }),
     };
-    await run(id);
-    expect((await list()).total).toBe(0);
+    const job = await run(id);
+    expect((await list()).questions).toMatchObject([
+      {
+        id: before.id,
+        stock_id: null,
+        stock_ids: [],
+        text: before.text,
+        status: 'failed',
+        error: '作成元のストックが削除されたため、問い・気づきの生成を終了しました。',
+      },
+    ]);
+    expect((await app.request(`/api/v1/stocks/${id}`)).status).toBe(404);
+    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job.id), mockStep());
+    expect((await list()).questions).toMatchObject([
+      { id: before.id, text: before.text, status: 'failed', stock_id: null },
+    ]);
   });
   it('中断後の古い生成結果で再試行した問いを上書きしない', async () => {
     const id = await save();
@@ -382,6 +411,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
+    await upgradeRelationsSchema(app.env.DB);
     expect(after.results).toEqual(before.results.map((row) => ({ ...row, source: 'ai' })));
     expect((await list('?source=ai')).questions[0]).toMatchObject({
       stock_id: 'old-stock',
@@ -418,6 +448,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
+    await upgradeRelationsSchema(app.env.DB);
     expect((await list()).total).toBe(1);
     app.env.LOCAL_DEMO_ENABLED = 'true';
     await run('existing-stock');

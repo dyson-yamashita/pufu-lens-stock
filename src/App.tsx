@@ -401,6 +401,13 @@ export default function App() {
   const selected = projects.find((project) => project.id === route.projectId);
   const questionFlow =
     route.view === 'question' || route.view === 'resolve' || route.view === 'pufu';
+  const globalQuestionFlow = questionFlow && !questionListContext.projectId;
+  const allQuestionsActive =
+    (route.view === 'questions' && !route.projectId) ||
+    (globalQuestionFlow && questionListContext.view === 'questions');
+  const allPufusActive =
+    (route.view === 'pufus' && !route.projectId) ||
+    (globalQuestionFlow && questionListContext.view === 'pufus');
   const libraryView =
     !route.projectId &&
     (route.view === 'stocks' || route.view === 'questions' || route.view === 'pufus');
@@ -760,10 +767,8 @@ export default function App() {
             すべてのストック<span className="nav-count">{allCount}</span>
           </button>
           <button
-            className={`nav-item ${(route.view === 'questions' && !route.projectId) || questionFlow ? 'active' : ''}`}
-            aria-current={
-              (route.view === 'questions' && !route.projectId) || questionFlow ? 'page' : undefined
-            }
+            className={`nav-item ${allQuestionsActive ? 'active' : ''}`}
+            aria-current={allQuestionsActive ? 'page' : undefined}
             onClick={() => {
               filterProject(null);
               navigate('questions');
@@ -771,6 +776,17 @@ export default function App() {
           >
             <CircleHelp size={19} aria-hidden="true" />
             すべての問い・気づき<span className="nav-count">{allQuestionCount}</span>
+          </button>
+          <button
+            className={`nav-item ${allPufusActive ? 'active' : ''}`}
+            aria-current={allPufusActive ? 'page' : undefined}
+            onClick={() => {
+              filterProject(null);
+              navigate('pufus');
+            }}
+          >
+            <Network size={19} aria-hidden="true" />
+            すべてのプ譜
           </button>
           <button
             className={`nav-item ${route.view === 'memory' && !route.projectId ? 'active' : ''}`}
@@ -2469,7 +2485,7 @@ function StockDetail({
         <p className="delete-target">{displayTitle}</p>
         <p>保存先：{stock.project_name}</p>
         <p>
-          このプロジェクトのストックと、紐づく問い・気づき・プ譜（すべての局面）・コメントを削除します。他のプロジェクトに保存した同じ記事は残ります。
+          このプロジェクトのストックとコメントを削除します。関連する問い・気づき・プ譜（すべての局面）は残ります。他のプロジェクトに保存した同じ記事は残ります。
         </p>
         <p>この操作は取り消せません。</p>
       </DeleteAction>

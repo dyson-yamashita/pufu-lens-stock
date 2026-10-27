@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Question } from '../shared/domain';
 import { ArticleWorkflow } from '../server/workflows';
 import type { Job } from '../server/env';
-import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
+import { applyMigration, mockEvent, mockStep, testApp, upgradeRelationsSchema } from './helpers';
 
 describe('問いのお気に入り', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -155,7 +155,7 @@ describe('問いのお気に入り', () => {
     expect((await list()).questions[0].is_favorite).toBe(0);
   });
 
-  it('生成の再試行とストックの移動でもお気に入りを保ち、削除時に一緒に消える', async () => {
+  it('生成の再試行・ストックの移動と削除でもお気に入りを保ち、問いの削除で消える', async () => {
     await app.env.DB.batch(fixture('retry'));
     await app.env.DB.prepare("UPDATE questions SET status = 'failed' WHERE id = 'retry'").run();
     await favorite('retry', true);
@@ -175,9 +175,16 @@ describe('問いのお気に入り', () => {
       body: { project_id: 'alice-second', note: '' },
     });
     expect((await list('?favorite=true&project_id=alice-second')).total).toBe(1);
-    await app.request('/api/v1/stocks/stock-retry', { method: 'DELETE' });
+    expect((await app.request('/api/v1/stocks/stock-retry', { method: 'DELETE' })).status).toBe(
+      200,
+    );
+    expect((await list('?favorite=true')).questions).toMatchObject([
+      { id: 'retry', stock_id: null, project_id: 'alice-second', is_favorite: 1, stock_ids: [] },
+    ]);
+    expect((await favorite('retry', false)).status).toBe(200);
     expect((await list('?favorite=true')).total).toBe(0);
-    expect((await favorite('retry', false)).status).toBe(404);
+    expect((await app.request('/api/v1/questions/retry', { method: 'DELETE' })).status).toBe(200);
+    expect((await favorite('retry', true)).status).toBe(404);
   });
 
   it('移行で既存の問いを変更せず、お気に入りを初期値の未選択にする', async () => {
@@ -201,6 +208,7 @@ describe('問いのお気に入り', () => {
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
+    await upgradeRelationsSchema(app.env.DB);
     expect((await list()).total).toBe(2);
     expect((await favorite('old-ai', true)).status).toBe(200);
   });

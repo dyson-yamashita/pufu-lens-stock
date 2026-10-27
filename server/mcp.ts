@@ -377,7 +377,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜作成',
       description:
-        'ProjectScoreModel形式のprojectScoreをプロジェクトへ保存し、完成済みの第1局面を作成します。AI生成は行いません。question_idは任意で、同じプロジェクトの問いだけ指定できます。各要素のuuidは重複しないID、commentはcolorとtextを含めます。request_idは新規操作ごとのUUID、再送時は同じ内容とUUIDを使ってください。異なる内容の再使用は409、上限は256KiBです。作成・編集にはpufus:writeの追加許可が必要です。',
+        'ProjectScoreModel形式のprojectScoreをプロジェクトへ保存し、完成済みの第1局面を作成します。AI生成は行いません。question_idsとstock_idsで同じプロジェクトの問い・ストックを複数関連付けできます。旧question_idも任意で利用できますがquestion_idsとの併用はできません。各要素のuuidは重複しないID、commentはcolorとtextを含めます。request_idは新規操作ごとのUUID、再送時は同じ内容とUUIDを使ってください。異なる内容の再使用は409、上限は256KiBです。作成・編集にはpufus:writeの追加許可が必要です。',
       inputSchema: createSavedPufuSchema
         .omit({ score: true })
         .extend({ projectScore: pufuScoreSchema }),
@@ -392,7 +392,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜編集',
       description:
-        '保存済みプ譜の指定局面をprojectScoreで置き換えます。事前にget_pufuで最新の内容とrevisionを取得し、変更しない要素も保持してください。revisionは必須で、競合時は409です。phase省略時は最新局面を編集します。question_id省略で紐付けを維持、nullで解除、同一プロジェクトの問いIDで紐付けます。更新対象の局面の内容を変更し、局面の追加は行いません。上限は256KiBです。',
+        '保存済みプ譜の指定局面をprojectScoreで置き換えます。事前にget_pufuで最新の内容とrevisionを取得し、変更しない要素も保持してください。revisionは必須で、競合時は409です。phase省略時は最新局面を編集します。question_idsとstock_idsで複数の関連を変更し、空配列で解除、省略で維持します。同じプロジェクト内のみ指定できます。旧question_idも利用できますがquestion_idsとの併用はできません。更新対象の局面の内容を変更し、局面の追加は行いません。上限は256KiBです。',
       inputSchema: savePufuSchema
         .omit({ score: true })
         .extend({ pufu_id: id, projectScore: pufuScoreSchema }),
@@ -506,10 +506,11 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: '問い・気づき追加',
       description:
-        'プロジェクトに問い・気づきを保存します。noteで任意のメモ（2,000文字以内）も一緒に保存できます。メモは公開ページやAIのメモリに含めません。stock_idは任意で、指定する場合は同じプロジェクトのストックを選びます。request_idは追加操作ごとに新しいUUIDを使い、再送ではメモも含め同じ内容と同じ値を使います。',
+        'プロジェクトに問い・気づきを保存します。noteで任意のメモ（2,000文字以内）も一緒に保存できます。メモは公開ページやAIのメモリに含めません。stock_idsで同じプロジェクトの複数ストックを選べます。省略や空配列も可能です。旧stock_idも利用できますがstock_idsとの併用はできません。request_idは追加操作ごとに新しいUUIDを使い、再送ではメモも含め同じ内容と同じ値を使います。',
       inputSchema: z.object({
         project_id: id,
         stock_id: id.optional(),
+        stock_ids: z.array(id).max(100).optional(),
         text: z.string().trim().min(1).max(500),
         note: z
           .string()
@@ -522,9 +523,24 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       _meta: security('questions:write'),
     },
     (args) =>
-      run('questions:write', () => {
+      run('questions:write', async () => {
         project(args.project_id);
-        return invoke('questions', 'POST', args);
+        const saved = (await invoke('questions', 'POST', args)) as { question: { id: string } };
+        const stockIds = [
+          ...new Set(args.stock_ids ?? (args.stock_id ? [args.stock_id] : [])),
+        ].sort();
+        // 作成許可だけの接続へ、関連先や再送後に本人が編集した情報を返さない。
+        return {
+          question: {
+            id: saved.question.id,
+            project_id: args.project_id,
+            source: 'user',
+            stock_id: stockIds[0] ?? null,
+            stock_ids: stockIds,
+            text: args.text,
+            note: args.note ?? '',
+          },
+        };
       }),
   );
   server.server.setRequestHandler('tools/list', async () => ({ tools: exposedTools }));

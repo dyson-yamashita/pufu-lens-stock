@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { testApp, mockEvent, mockStep, applyMigration } from './helpers';
+import { testApp, mockEvent, mockStep, applyMigration, upgradeRelationsSchema } from './helpers';
 import { ArticleWorkflow } from '../server/workflows';
 import { generatePufu } from '../server/pufu';
 import type { Job } from '../server/env';
@@ -374,11 +374,20 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     expect(revised.current_phase).toBe(3);
     expect(revised.score).toEqual(third);
     expect(revised.phases.map((phase) => phase.score)).toEqual([revisedFirst, second, third]);
-    await app.request('/api/v1/stocks/stock', { method: 'DELETE' });
+    const phases = (
+      await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id = ? ORDER BY number')
+        .bind(id)
+        .all()
+    ).results;
+    expect((await app.request('/api/v1/stocks/stock', { method: 'DELETE' })).status).toBe(200);
     expect(
-      (await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id = ?').bind(id).all())
-        .results,
-    ).toEqual([]);
+      (
+        await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id = ? ORDER BY number')
+          .bind(id)
+          .all()
+      ).results,
+    ).toEqual(phases);
+    expect((await get(id)).phases).toEqual(revised.phases);
   });
 
   it.each([1, 2])(
@@ -571,6 +580,7 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
     await applyMigration(app.env.DB, '0026_comments.sql');
     await applyMigration(app.env.DB, '0029_independent_pufus.sql');
+    await upgradeRelationsSchema(app.env.DB);
     const migrated = await get('old-pufu');
     expect(migrated.revision).toBe(7);
     expect(migrated.current_phase).toBe(1);
@@ -704,7 +714,7 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     expect((await get(id)).revision).toBe(1);
   });
 
-  it('メモリが未作成でも生成でき、ストック移動に追従して削除時に関連を消す', async () => {
+  it('メモリが未作成でも生成でき、ストック移動に追従し削除後もプ譜を保持する', async () => {
     await app.env.DB.prepare('DELETE FROM memories').run();
     const id = await make();
     await run(id);
@@ -719,7 +729,22 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     };
     expect(q.question.project_id).toBe('alice-second');
     expect(q.pufus[0].id).toBe(id);
-    await app.request('/api/v1/stocks/stock', { method: 'DELETE' });
+    const before = await get(id);
+    expect((await app.request('/api/v1/stocks/stock', { method: 'DELETE' })).status).toBe(200);
+    const retained = await get(id);
+    expect(retained).toMatchObject({
+      id,
+      project_id: 'alice-second',
+      question_id: 'question',
+      stock_ids: [],
+      stocks: [],
+      score: before.score,
+      phases: before.phases,
+    });
+    expect((await app.request('/api/v1/questions/question')).status).toBe(200);
+    expect((await app.request('/api/v1/projects/alice-second', { method: 'DELETE' })).status).toBe(
+      200,
+    );
     expect((await app.request(`/api/v1/pufus/${id}`)).status).toBe(404);
   });
 

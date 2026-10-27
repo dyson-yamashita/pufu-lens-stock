@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import type { Project, QuestionDetail } from '../shared/domain';
+import RelationPicker, { type RelationOption } from './RelationPicker';
 
 export default function QuestionSettings({
   question,
@@ -11,12 +12,25 @@ export default function QuestionSettings({
   question: QuestionDetail;
   projects: Pick<Project, 'id' | 'name'>[];
   disabled: boolean;
-  onSave: (input: { note: string; project_id: string }) => Promise<void>;
+  onSave: (input: { note: string; project_id: string; stock_ids: string[] }) => Promise<void>;
 }) {
   const [noteDraft, setNote] = useState<string>();
   const [projectDraft, setProjectId] = useState<string>();
+  const [stocksDraft, setStocks] = useState<RelationOption[]>();
+  const stocks =
+    stocksDraft ??
+    (question.stocks
+      ? question.stocks.map((stock) => ({ id: stock.id, label: stock.title }))
+      : question.stock_id
+        ? [{ id: question.stock_id, label: question.article_title ?? '関連するストック' }]
+        : []);
   const note = noteDraft ?? question.note;
   const projectId = projectDraft ?? question.project_id;
+  const savedStockCount = question.stocks?.length ?? (question.stock_id ? 1 : 0);
+  const projectLocked =
+    savedStockCount > 0 ||
+    stocks.length > 0 ||
+    (question.source === 'ai' && Boolean(question.stock_id));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -27,9 +41,10 @@ export default function QuestionSettings({
     setError('');
     setSaved(false);
     try {
-      await onSave({ note, project_id: question.stock_id ? question.project_id : projectId });
+      await onSave({ note, project_id: projectId, stock_ids: stocks.map((stock) => stock.id) });
       setNote(undefined);
       setProjectId(undefined);
+      setStocks(undefined);
       setSaved(true);
     } catch (e) {
       setError((e as Error).message);
@@ -59,9 +74,9 @@ export default function QuestionSettings({
       <label htmlFor="question-project">保存先プロジェクト</label>
       <select
         id="question-project"
-        value={question.stock_id ? question.project_id : projectId}
-        disabled={busy || disabled || Boolean(question.stock_id)}
-        aria-describedby={question.stock_id ? 'question-project-help' : undefined}
+        value={projectId}
+        disabled={busy || disabled || projectLocked}
+        aria-describedby={projectLocked ? 'question-project-help' : undefined}
         onChange={(event) => {
           setProjectId(event.target.value);
           setSaved(false);
@@ -76,11 +91,24 @@ export default function QuestionSettings({
           </option>
         ))}
       </select>
-      {question.stock_id && (
+      {projectLocked && (
         <p className="field-hint" id="question-project-help">
-          保存先は元の記事と同じです。変更するときは、本文タブから元の記事を開いてください。
+          {question.source === 'ai' && question.stock_id
+            ? 'AIが作成した問いの保存先は元の記事と同じです。変更するときは、元の記事を開いてください。'
+            : '保存先は関連するストックと同じです。元の記事から変更するか、ストックの関連を解除して保存してください。'}
         </p>
       )}
+      <RelationPicker
+        key={projectId}
+        kind="stocks"
+        projectId={projectId}
+        value={stocks}
+        disabled={busy || disabled}
+        onChange={(value) => {
+          setStocks(value);
+          setSaved(false);
+        }}
+      />
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -88,7 +116,7 @@ export default function QuestionSettings({
       )}
       {saved && (
         <p className="field-hint" role="status">
-          メモと保存先を保存しました。
+          メモ・保存先・関連を保存しました。
         </p>
       )}
       <div className="form-actions">

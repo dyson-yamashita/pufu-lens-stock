@@ -177,17 +177,20 @@ describe('URLとテキストのストック', () => {
     );
   });
 
-  it('削除でテキストと問いを除去し、R2本文の削除要求を残す', async () => {
+  it('ストック削除でテキストを除去し、問いを保持してR2本文を削除する', async () => {
     const { id } = (await (await save()).json()) as { id: string };
     const job = await run('article');
     await run('question', id);
+    const questions = (await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all())
+      .results;
     expect((await app.request(`/api/v1/stocks/${id}`, { method: 'DELETE' })).status).toBe(200);
     expect(
       (await app.env.DB.prepare('SELECT COUNT(*) AS count FROM articles').first())!.count,
     ).toBe(0);
-    expect(
-      (await app.env.DB.prepare('SELECT COUNT(*) AS count FROM questions').first())!.count,
-    ).toBe(0);
+    expect((await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all()).results).toEqual(
+      questions.map((question) => ({ ...question, stock_id: null })),
+    );
+    expect((await app.env.DB.prepare('SELECT * FROM question_stocks').all()).results).toEqual([]);
     await run('cleanup');
     expect(await app.env.CONTENT.get(`alice/${job.target_id}/1.txt`)).toBeNull();
   });

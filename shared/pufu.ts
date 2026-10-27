@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { relationIdsSchema, type PufuRelations } from './relations';
 import type { ArticleSummary, MemoryData } from './domain';
 
 export const pufuEditorVersion = '0.9.19';
@@ -13,15 +14,25 @@ export const createPufuSchema = z.strictObject({
     .max(1000, '課題は1,000文字以内で入力してください。'),
   request_id: z.uuid(),
 });
+const pufuRelationFields = {
+  question_id: z.string().min(1).max(100).nullable().optional(),
+  question_ids: relationIdsSchema.optional(),
+  stock_ids: relationIdsSchema.optional(),
+};
+export const pufuRelationsSchema = z.strictObject({
+  revision: z.number().int().positive(),
+  question_ids: relationIdsSchema,
+  stock_ids: relationIdsSchema,
+});
 export const savePufuSchema = z.strictObject({
   revision: z.number().int().positive(),
   phase: z.number().int().positive().optional(),
   score: pufuScoreSchema,
-  question_id: z.string().min(1).max(100).nullable().optional(),
+  ...pufuRelationFields,
 });
 export const createSavedPufuSchema = z.strictObject({
   project_id: z.string().min(1).max(100),
-  question_id: z.string().min(1).max(100).nullable().optional(),
+  ...pufuRelationFields,
   score: pufuScoreSchema,
   request_id: z.uuid(),
 });
@@ -44,10 +55,11 @@ export type PufuContext = {
   task: string;
   project: { id: string; name: string; description: string };
   stock: { id: string; title: string; summary: ArticleSummary | null; note: string } | null;
+  stocks?: NonNullable<PufuContext['stock']>[];
   userMemory: MemorySnapshot | null;
   projectMemory: MemorySnapshot | null;
 };
-export type PufuSummary = {
+export type PufuSummary = PufuRelations & {
   id: string;
   question_id: string | null;
   project_id: string;

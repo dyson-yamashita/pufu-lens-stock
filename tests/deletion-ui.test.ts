@@ -296,7 +296,7 @@ it('問い・気づきのメモ保存中は削除を無効にし、保存後は�
   );
   expect(send).toHaveBeenCalledWith(
     '/api/v1/questions/question',
-    { note: '保存中のメモ', project_id: project.id },
+    { note: '保存中のメモ', project_id: project.id, stock_ids: [] },
     'PATCH',
   );
   expect(button('問い・気づきを削除').disabled).toBe(true);

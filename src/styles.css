@@ -2959,6 +2959,79 @@ textarea::placeholder {
 .pufu-list-heading {
   margin-top: 36px;
 }
+.relation-picker {
+  min-width: 0;
+  margin: 24px 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.relation-picker legend {
+  padding: 0 5px;
+  color: var(--text);
+  font-size: 13px;
+}
+.relation-picker legend .optional {
+  display: inline-block;
+}
+.relation-picker .relation-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 4px;
+  font-size: 13px;
+  line-height: 1.8;
+  cursor: pointer;
+}
+.relation-picker .relation-option input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--primary);
+}
+.relation-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.relation-selected .relation-option {
+  border-radius: 5px;
+  background: var(--wash);
+}
+.relation-selected,
+.relation-options {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.relation-options {
+  margin-top: 10px;
+}
+.pufu-relations {
+  margin: 0 0 28px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+}
+.pufu-relations > summary {
+  min-height: 28px;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.pufu-related-stocks {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.pufu-related-stocks ul {
+  margin: 5px 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
 .pufu-list {
   display: grid;
   gap: 12px;

@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
+import { applyMigration, mockEvent, mockStep, testApp, upgradeRelationsSchema } from './helpers';
 import { ArticleWorkflow } from '../server/workflows';
 import type { Question } from '../shared/domain';
 import type { Pufu } from '../shared/pufu';
@@ -134,7 +134,7 @@ describe('プロジェクトに所属する独立した問い', () => {
     expect((await app.request(`/api/v1/questions/${question.id}`)).status).toBe(404);
     expect((await app.request(`/api/v1/pufus/${id}`)).status).toBe(404);
   });
-  it('移行で既存の問い・お気に入り・プ譜・局面を保ち、旧INSERTと移動・削除も維持する', async () => {
+  it('移行で既存の問い・お気に入り・プ譜・局面を保ち、旧INSERT・移動とストック削除後の保持に対応する', async () => {
     await app.dispose();
     const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
       .filter((f) => f.endsWith('.sql') && f < '0014')
@@ -176,6 +176,7 @@ describe('プロジェクトに所属する独立した問い', () => {
     expect(
       await app.env.DB.prepare("SELECT project_id FROM questions WHERE id='ai'").first(),
     ).toEqual({ project_id: 'alice-project' });
+    await upgradeRelationsSchema(app.env.DB);
     expect((await add({ stock_id: 's', project_id: 'alice-second' })).status).toBe(400);
     expect(
       (
@@ -190,7 +191,35 @@ describe('プロジェクトに所属する独立した問い', () => {
         (q) => q.project_id === 'alice-second',
       ),
     ).toBe(true);
-    await app.request('/api/v1/stocks/s', { method: 'DELETE' });
+    const movedQuestions = (await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all())
+      .results;
+    const movedPufus = (await app.env.DB.prepare('SELECT * FROM pufu_scores').all()).results;
+    expect((await app.request('/api/v1/stocks/s', { method: 'DELETE' })).status).toBe(200);
+    expect((await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all()).results).toEqual(
+      movedQuestions.map((question) => ({
+        ...question,
+        stock_id: null,
+        ...(question.source === 'ai'
+          ? {
+              status: 'failed',
+              error: '作成元のストックが削除されたため、問い・気づきの生成を終了しました。',
+              generation: Number(question.generation) + 1,
+              updated_at: expect.any(String),
+            }
+          : {}),
+      })),
+    );
+    expect((await app.env.DB.prepare('SELECT * FROM pufu_scores').all()).results).toEqual(
+      movedPufus,
+    );
+    expect((await app.env.DB.prepare('SELECT * FROM pufu_phases').all()).results).toEqual(
+      phases.results,
+    );
+    expect((await app.env.DB.prepare('SELECT * FROM question_stocks').all()).results).toEqual([]);
+    expect((await app.env.DB.prepare('SELECT * FROM pufu_stocks').all()).results).toEqual([]);
+    expect((await app.request('/api/v1/projects/alice-second', { method: 'DELETE' })).status).toBe(
+      200,
+    );
     expect((await app.env.DB.prepare('SELECT * FROM questions').all()).results).toEqual([]);
     expect((await app.env.DB.prepare('SELECT * FROM pufu_scores').all()).results).toEqual([]);
     expect((await app.env.DB.prepare('SELECT * FROM pufu_phases').all()).results).toEqual([]);

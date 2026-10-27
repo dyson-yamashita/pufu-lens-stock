@@ -408,7 +408,14 @@ function PublicQuestionCard({ question }: { question: PublicQuestion }) {
         question={{ source: question.source, has_pufu: question.pufu_count > 0 ? 1 : 0 }}
       />
       <h3>{question.text}</h3>
-      {question.article_title && <p className="public-help">{question.article_title}</p>}
+      {(
+        question.stocks ??
+        (question.stock_id ? [{ id: question.stock_id, title: question.article_title }] : [])
+      ).map((stock) => (
+        <p key={stock.id} className="public-help">
+          {stock.title}
+        </p>
+      ))}
       <div className="public-card-footer">
         <span>
           {question.pufu_count ? `${question.pufu_count}件のプ譜` : '問い・気づきの詳細を見る'}
@@ -498,6 +505,7 @@ function PublicQuestionDetail({
   const { data, error, reload } = useResource<{
     question: PublicQuestion;
     stock: PublicStock | null;
+    stocks?: PublicStock[];
     pufus: PublicPufuSummary[];
     has_more: boolean;
   }>(`${root}/questions/${encodeURIComponent(id)}?page=${page}`);
@@ -532,15 +540,15 @@ function PublicQuestionDetail({
           </span>
         </div>
         <h3 className="question-text">{data.question.text}</h3>
-        {data.stock && (
-          <div className="question-detail-source">
-            <a href={`#stock/${encodeURIComponent(data.stock.id)}`}>
+        {(data.question.stocks ?? (data.stock ? [data.stock] : [])).map((stock) => (
+          <div className="question-detail-source" key={stock.id}>
+            <a href={`#stock/${encodeURIComponent(stock.id)}`}>
               <BookOpen size={17} aria-hidden="true" />
-              <span>{data.stock.title}</span>
+              <span>{stock.title}</span>
               <ArrowRight size={16} aria-hidden="true" />
             </a>
           </div>
-        )}
+        ))}
         <div className="question-card-footer">
           <time dateTime={data.question.created_at}>
             {new Intl.DateTimeFormat('ja-JP', {
@@ -569,7 +577,6 @@ function PublicQuestionDetail({
                 <strong>{pufu.task}</strong>
                 <small>局面 {pufu.current_phase} · 閲覧のみ</small>
               </span>
-              <ArrowRight size={18} aria-hidden="true" />
             </a>
           ))}
         </div>
@@ -579,18 +586,18 @@ function PublicQuestionDetail({
         </div>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
-      {data.stock && (
-        <>
+      {(data.stocks ?? (data.stock ? [data.stock] : [])).map((stock) => (
+        <div key={stock.id}>
           <h3 className="public-detail-title">ストックした記事</h3>
-          <StockDetails stock={data.stock} heading="h4" />
+          <StockDetails stock={stock} heading="h4" />
           <a
             className="text-link public-detail-link"
-            href={`#stock/${encodeURIComponent(data.stock.id)}`}
+            href={`#stock/${encodeURIComponent(stock.id)}`}
           >
             ストックの詳細を見る <ArrowRight size={16} aria-hidden="true" />
           </a>
-        </>
-      )}
+        </div>
+      ))}
     </section>
   );
 }
@@ -602,12 +609,33 @@ function PublicPufuDetail({ root, id }: { root: string; id: string }) {
     <ResourceState error={error} retry={reload} />
   ) : (
     <section>
-      <a className="text-link" href={`#question/${encodeURIComponent(data.pufu.question_id)}`}>
+      <a
+        className="text-link"
+        href={
+          data.pufu.question_id
+            ? `#question/${encodeURIComponent(data.pufu.question_id)}`
+            : '#questions'
+        }
+      >
         <ArrowLeft size={16} aria-hidden="true" />
-        問い・気づきに戻る
+        {data.pufu.question_id ? '問い・気づきに戻る' : '問い・気づきの一覧に戻る'}
       </a>
       <h2 className="public-detail-title">{data.pufu.task}</h2>
-      <p className="public-help">{data.pufu.question_text}</p>
+      {(
+        data.pufu.questions ??
+        (data.pufu.question_id
+          ? [{ id: data.pufu.question_id, text: data.pufu.question_text }]
+          : [])
+      ).map((question) => (
+        <p key={question.id} className="public-help">
+          <a href={`#question/${encodeURIComponent(question.id)}`}>{question.text}</a>
+        </p>
+      ))}
+      {data.pufu.stocks?.map((stock) => (
+        <p key={stock.id} className="public-help">
+          <a href={`#stock/${encodeURIComponent(stock.id)}`}>{stock.title}</a>
+        </p>
+      ))}
       <p className="public-badge">
         最新の局面 {data.pufu.current_phase} ·{' '}
         {data.pufu.current_phase % 2 === 0 ? '振り返り' : 'プ譜'} · 閲覧のみ

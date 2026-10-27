@@ -20,9 +20,13 @@ const memoryDate = (value: string) =>
 export default function PufuEditor({
   pufu,
   onGuard,
+  onEditingStateChange,
+  onSaved,
 }: {
   pufu: Pufu;
   onGuard: (guard: (() => boolean) | null) => void;
+  onEditingStateChange?: (blocked: boolean) => void;
+  onSaved?: (revision: number) => void;
 }) {
   const { theme } = useTheme();
   const [revision, setRevision] = useState(pufu.revision);
@@ -38,6 +42,10 @@ export default function PufuEditor({
   const [notice, setNotice] = useState('');
   const [dirty, setDirty] = useState(false);
   const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    onEditingStateChange?.(editing || busy);
+    return () => onEditingStateChange?.(false);
+  }, [editing, busy, onEditingStateChange]);
   const savedPhase = phases.find((phase) => phase.number === editor.number)!;
   const baseline = useRef(canonical(JSON.stringify(editor.score)));
   const hasChanges = () => {
@@ -126,6 +134,7 @@ export default function PufuEditor({
       ]);
       baseline.current = canonical(json);
       setRevision(result.revision);
+      onSaved?.(result.revision);
       setDirty(false);
       if (append) setEditor(structuredClone(next));
       setNotice(append ? `第${result.current_phase}局面を追加しました。` : 'プ譜を保存しました。');

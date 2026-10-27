@@ -202,23 +202,28 @@ export default function QuestionPage({
                     ? '問い・気づきを生成できませんでした。'
                     : '問い・気づきを生成しています…')}
               </h2>
-              {question.stock_id && (
-                <div className="question-detail-source">
+              {(
+                question.stocks ??
+                (question.stock_id
+                  ? [{ id: question.stock_id, title: question.article_title }]
+                  : [])
+              ).map((stock) => (
+                <div className="question-detail-source" key={stock.id}>
                   <button
                     onClick={async () => {
                       try {
-                        await onStock(question.stock_id!);
+                        await onStock(stock.id);
                       } catch (e) {
                         setError((e as Error).message);
                       }
                     }}
                   >
                     <BookOpen size={17} aria-hidden="true" />
-                    <span>{question.article_title}</span>
+                    <span>{stock.title}</span>
                     <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </div>
-              )}
+              ))}
               <div className="question-card-footer">
                 <time dateTime={question.created_at}>
                   {new Intl.DateTimeFormat('ja-JP', {
@@ -335,7 +340,6 @@ export default function QuestionPage({
                                 : 'プ譜を生成しています…'}
                           </small>
                         </span>
-                        <ArrowRight size={18} aria-hidden="true" />
                       </button>
                     ))}
                   </div>
@@ -416,7 +420,7 @@ export default function QuestionPage({
                 </p>
                 <p>プロジェクト：{question.project_name}</p>
                 <p>
-                  この問い・気づきと、紐づくすべてのプ譜・局面・コメントを削除します。ストックは残ります。この操作は取り消せません。
+                  この問い・気づきとコメントを削除します。関連するプ譜・局面・ストックは残ります。この操作は取り消せません。
                 </p>
               </DeleteAction>
             </>

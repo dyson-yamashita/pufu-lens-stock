@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
 import type { PufuListItem } from '../shared/pufu';
 import { api } from './api';
 
@@ -100,7 +100,15 @@ export default function Pufus({
             <button key={pufu.id} className="pufu-list-item" onClick={() => onPufu(pufu.id)}>
               <span>
                 <strong>{pufu.task}</strong>
-                {pufu.question_id && <small>問い・気づき：{pufu.question_text}</small>}
+                {(
+                  pufu.questions ??
+                  (pufu.question_id ? [{ id: pufu.question_id, text: pufu.question_text }] : [])
+                ).map((question) => (
+                  <small key={question.id}>問い・気づき：{question.text}</small>
+                ))}
+                {pufu.stocks?.map((stock) => (
+                  <small key={stock.id}>ストック：{stock.title}</small>
+                ))}
                 <small>
                   {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
                 </small>
@@ -113,7 +121,6 @@ export default function Pufus({
                   </time>
                 </small>
               </span>
-              <ArrowRight size={18} aria-hidden="true" />
             </button>
           ))}
         </div>
