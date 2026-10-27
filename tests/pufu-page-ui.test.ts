@@ -107,6 +107,7 @@ async function render() {
           createElement(PufuPage, {
             id: 'pufu',
             onQuestion: vi.fn(),
+            onBack: vi.fn(),
             onGuard: vi.fn(),
           }),
         ),

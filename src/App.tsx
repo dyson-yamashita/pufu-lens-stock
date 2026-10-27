@@ -360,6 +360,7 @@ export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [route, setRoute] = useState<Route>(routeFromHash);
+  const [pufuSourceQuestionId, setPufuSourceQuestionId] = useState<string | null>(null);
   const [questionListContext, setQuestionListContext] = useState({
     view: 'questions' as 'questions' | 'pufus',
     projectId: null as string | null,
@@ -418,6 +419,10 @@ export default function App() {
   };
   const reload = () => setRefresh((value) => value + 1);
   const navigateDetail = (view: 'question' | 'resolve' | 'pufu', id: string) => {
+    if (view === 'pufu')
+      setPufuSourceQuestionId(
+        route.view === 'question' || route.view === 'resolve' ? route.detailId! : null,
+      );
     window.location.hash = id ? `${view}/${encodeURIComponent(id)}` : questionListContext.hash;
     setModal(null);
     setMobileNav(false);
@@ -1144,9 +1149,12 @@ export default function App() {
                 key={route.detailId}
                 id={route.detailId!}
                 onQuestion={(id) => navigateDetail('question', id)}
+                backLabel={pufuSourceQuestionId ? '問い・気づきの詳細に戻る' : 'プ譜の一覧に戻る'}
                 onBack={() => {
-                  window.location.hash =
-                    questionListContext.view === 'pufus' ? questionListContext.hash : '#pufus';
+                  if (pufuSourceQuestionId) navigateDetail('question', pufuSourceQuestionId);
+                  else
+                    window.location.hash =
+                      questionListContext.view === 'pufus' ? questionListContext.hash : '#pufus';
                 }}
                 onGuard={setNavigationGuard}
               />

@@ -18,12 +18,14 @@ const PufuEditor = lazy(async () => {
 export default function PufuPage({
   id,
   onQuestion,
+  backLabel = 'プ譜の一覧に戻る',
   onBack,
   onGuard,
 }: {
   id: string;
   onQuestion: (id: string) => void;
-  onBack?: () => void;
+  backLabel?: string;
+  onBack: () => void;
   onGuard: (guard: (() => boolean) | null) => void;
 }) {
   const [pufu, setPufu] = useState<Pufu>();
@@ -83,12 +85,9 @@ export default function PufuPage({
   }, [id, retry]);
   return (
     <section className="pufu-page" aria-label="プ譜の編集">
-      <button
-        className="back-link"
-        onClick={() => (pufu?.question_id ? onQuestion(pufu.question_id) : onBack?.())}
-      >
+      <button className="back-link" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" />
-        {pufu?.question_id ? '問い・気づきの詳細に戻る' : 'プ譜の一覧に戻る'}
+        {backLabel}
       </button>
       <header className="page-header">
         <div>

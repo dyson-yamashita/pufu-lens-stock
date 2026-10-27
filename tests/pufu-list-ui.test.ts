@@ -154,10 +154,11 @@ beforeEach(() => {
         };
       case '/api/v1/questions':
         return { questions: [], total: 0 };
+      case '/api/v1/questions/other-question':
       case '/api/v1/questions/question':
         return {
           question: {
-            id: 'question',
+            id: url.pathname.endsWith('/other-question') ? 'other-question' : 'question',
             stock_id: null,
             project_id: 'project',
             project_name: summary.project_name,
@@ -378,13 +379,10 @@ it.each(['', '#project/project'])(
     expect(
       document.querySelector(`.breadcrumb a[href="#pufus${hash ? '/project' : ''}"]`),
     ).not.toBeNull();
+    expect(document.querySelector('.pufu-page .back-link')?.textContent).toBe('プ譜の一覧に戻る');
     await act(async () =>
       document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
     );
-    await hashChange();
-    const back = document.querySelector<HTMLButtonElement>('.question-detail-page .back-link')!;
-    expect(back.textContent).toBe('プ譜の一覧に戻る');
-    await act(async () => back.click());
     await hashChange();
     expect(window.location.hash).toBe(hash ? '#pufus/project' : '#pufus');
     expect(document.querySelector('[aria-label="保存したプ譜"]')?.textContent).toContain(
@@ -419,17 +417,78 @@ it.each([0, 1, 3])('カードの関連は各1件だけ表示し、残り%s件の
   );
 });
 
-it('問い一覧からプ譜を開いてもヘッダーはプ譜一覧と詳細を示す', async () => {
-  await render('#question/question');
+it.each(['#question/question', '#question/other-question'])(
+  '問いから開いたプ譜は関連先の先頭ではなく遷移元の問いへ戻る: %s',
+  async (hash) => {
+    await render(hash);
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+        .find((button) => button.textContent?.startsWith('プ譜'))!
+        .click(),
+    );
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+    );
+    await hashChange();
+    expect(document.querySelector('.breadcrumb a[href="#pufus"]')?.textContent).toBe(
+      'すべてのプ譜',
+    );
+    expect(document.querySelector('.breadcrumb [aria-current="page"]')?.textContent).toBe('詳細');
+    expect(document.querySelector('.pufu-page .back-link')?.textContent).toBe(
+      '問い・気づきの詳細に戻る',
+    );
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+    );
+    await hashChange();
+    expect(window.location.hash).toBe(hash);
+  },
+);
+
+it('一覧と関連する問いを行き来しても、直前にプ譜を開いた画面へ戻る', async () => {
+  await render('#pufus/project');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+  await hashChange();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-context-questions button')!.click(),
+  );
+  await hashChange();
   await act(async () =>
     [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
       .find((button) => button.textContent?.startsWith('プ譜'))!
       .click(),
   );
-  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+  );
   await hashChange();
-  expect(document.querySelector('.breadcrumb a[href="#pufus"]')?.textContent).toBe('すべてのプ譜');
-  expect(document.querySelector('.breadcrumb [aria-current="page"]')?.textContent).toBe('詳細');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#question/question');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus/project');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+  await hashChange();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus/project');
+});
+
+it('遷移元がないプ譜の直接リンクからはプ譜一覧へ戻る', async () => {
+  await render('#pufu/pufu');
+  expect(document.querySelector('.pufu-page .back-link')?.textContent).toBe('プ譜の一覧に戻る');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus');
 });
 
 it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {
