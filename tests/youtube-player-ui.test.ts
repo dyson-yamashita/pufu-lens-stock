@@ -75,6 +75,7 @@ beforeEach(() => {
             count: 1,
             ready_count: 0,
             question_count: 0,
+            pufu_count: 0,
             created_at: '2026-10-19',
           },
         ],
@@ -92,6 +93,7 @@ beforeEach(() => {
           public_description: '',
           stock_count: 1,
           question_count: 0,
+          pufu_count: 0,
         },
       };
     if (url.pathname === '/api/public/projects/project/stocks')

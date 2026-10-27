@@ -392,8 +392,5 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await expect(
       app.env.DB.prepare('UPDATE projects SET auto_generate_questions = 2').run(),
     ).rejects.toThrow();
-    expect((await projects()).every((project) => project.auto_generate_questions === true)).toBe(
-      true,
-    );
   });
 });

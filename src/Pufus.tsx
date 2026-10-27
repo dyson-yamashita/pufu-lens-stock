@@ -114,7 +114,7 @@ export default function Pufus({
         !error && (
           <div className="empty-state">
             <span className="empty-icon">
-              <Network size={28} aria-hidden="true" />
+              <Network className="pufu-icon" size={28} aria-hidden="true" />
             </span>
             <h2>プ譜はまだありません</h2>
             <p>

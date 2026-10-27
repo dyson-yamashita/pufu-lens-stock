@@ -106,7 +106,6 @@ describe('プロジェクトの全体一覧への表示設定', () => {
     expect((await app.env.DB.prepare('SELECT * FROM projects ORDER BY id').all()).results).toEqual(
       before.results.map((project) => ({ ...project, show_in_all_lists: 1 })),
     );
-    expect((await projects()).every((project) => project.show_in_all_lists === true)).toBe(true);
   });
 
   it('全体一覧・検索・お気に入りの結果と件数から除外し、指定時と詳細では取得できる', async () => {

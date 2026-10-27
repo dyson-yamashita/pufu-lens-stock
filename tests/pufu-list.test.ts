@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { testApp } from './helpers';
+import type { Project } from '../shared/domain';
 
 let app: Awaited<ReturnType<typeof testApp>>;
 beforeEach(async () => {
@@ -28,6 +29,59 @@ beforeEach(async () => {
   ]);
 });
 afterEach(async () => app.dispose());
+
+it('プロジェクト別のプ譜件数は独立したプ譜も含み、全体一覧と所有者・トークンの範囲に一致する', async () => {
+  await app.env.DB.batch([
+    app.env.DB.prepare(
+      "INSERT INTO projects(id,user_id,name) VALUES ('empty','alice','空のプロジェクト')",
+    ),
+    app.env.DB.prepare(
+      `INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,editor_version)
+      VALUES ('independent','alice','alice-second','独立した案','{}','0.9.19')`,
+    ),
+  ]);
+  const projects = (
+    (await (await app.request('/api/v1/projects')).json()) as {
+      projects: Project[];
+    }
+  ).projects;
+  expect(projects.find((project) => project.id === 'alice-second')).toMatchObject({
+    pufu_count: 28,
+  });
+  expect(projects.find((project) => project.id === 'alice-project')).toMatchObject({
+    pufu_count: 1,
+  });
+  expect(projects.find((project) => project.id === 'empty')).toMatchObject({ pufu_count: 0 });
+  expect(projects.some((project) => project.id === 'bob-project')).toBe(false);
+  const all = (await (await app.request('/api/v1/pufus')).json()) as { total: number };
+  expect(
+    projects
+      .filter((project) => project.show_in_all_lists)
+      .reduce((sum, project) => sum + project.pufu_count, 0),
+  ).toBe(all.total);
+  const { token } = (await (
+    await app.request('/api/v1/tokens', {
+      method: 'POST',
+      body: { name: 'プ譜の件数', project_id: 'alice-project' },
+    })
+  ).json()) as { token: string };
+  expect(
+    await (
+      await app.request('/api/v1/projects', {
+        headers: { Authorization: `Bearer ${token}`, Cookie: '', Origin: '' },
+      })
+    ).json(),
+  ).toMatchObject({ projects: [{ id: 'alice-project', pufu_count: 1 }] });
+  expect(await (await app.request('/api/v1/projects', { user: 'bob' })).json()).toMatchObject({
+    projects: [{ id: 'bob-project', pufu_count: 1 }],
+  });
+  await app.env.DB.prepare("DELETE FROM pufu_scores WHERE id='independent'").run();
+  expect(await (await app.request('/api/v1/projects')).json()).toMatchObject({
+    projects: expect.arrayContaining([
+      expect.objectContaining({ id: 'alice-second', pufu_count: 27 }),
+    ]),
+  });
+});
 
 it('本人のプ譜を状態を問わず新しい順に24件ずつ返し、全体非表示と他人のデータを除外する', async () => {
   const response = await app.request('/api/v1/pufus');

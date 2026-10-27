@@ -359,6 +359,9 @@ p {
   color: var(--primary);
   font-weight: 600;
 }
+.pufu-icon {
+  transform: rotate(90deg);
+}
 .nav-count {
   margin-left: auto;
   font-size: 10px;

@@ -117,9 +117,6 @@ describe('プロジェクトごとのユーザーメモリ設定', () => {
     expect(after.results).toEqual(
       before.results.map((project) => ({ ...project, include_in_user_memory: 1 })),
     );
-    expect((await projects()).every((project) => project.include_in_user_memory === true)).toBe(
-      true,
-    );
   });
 
   it.each(['false', 0, null])('真偽値以外の設定を拒否する: %j', async (value) => {

@@ -732,6 +732,7 @@ export default function App() {
     (count, project) => count + project.question_count,
     0,
   );
+  const allPufuCount = listedProjects.reduce((count, project) => count + project.pufu_count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
       {isMobile && mobileNav && (
@@ -790,8 +791,8 @@ export default function App() {
               navigate('pufus');
             }}
           >
-            <Network size={19} aria-hidden="true" />
-            すべてのプ譜
+            <Network className="pufu-icon" size={19} aria-hidden="true" />
+            すべてのプ譜<span className="nav-count">{allPufuCount}</span>
           </button>
           <button
             className={`nav-item ${route.view === 'memory' && !route.projectId ? 'active' : ''}`}
@@ -1068,7 +1069,7 @@ export default function App() {
                 aria-pressed={route.view === 'pufus'}
                 onClick={() => navigate('pufus', route.projectId)}
               >
-                <Network size={16} aria-hidden="true" />
+                <Network className="pufu-icon" size={16} aria-hidden="true" />
                 プ譜
               </button>
               <button

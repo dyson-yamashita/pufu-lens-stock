@@ -23,6 +23,7 @@ const project: Project = {
   count: 1,
   ready_count: 1,
   question_count: 1,
+  pufu_count: 0,
   created_at: '2026-10-24',
 };
 const stock: Stock = {
