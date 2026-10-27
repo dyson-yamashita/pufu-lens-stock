@@ -225,25 +225,28 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 
 既存Workerの `/mcp` に、OAuth 2.1付きStreamable HTTPサーバーを追加しています。サイドメニューの「MCP連携」で接続URLと連携一覧を確認し、不要な連携を解除できます。
 
-| ツール           | 用途                                                                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `list_projects`  | 許可されたプロジェクトの一覧                                                                                                         |
-| `list_stocks`    | 軽量なストック一覧。検索・絞り込み・件数指定・保存日時順・ページ送り                                                                 |
-| `get_stock`      | ストック詳細。`include_content: true` の場合だけ本文を20,000文字まで取得（超過時は `content_truncated: true`）                       |
-| `add_stock`      | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                                                     |
-| `list_pufus`     | 問いなしのプ譜を含む一覧。プロジェクト絞り込み・ページ送り（`questions:read`）                                                       |
-| `create_pufu`    | プ譜JSONを指定プロジェクトへ保存。問いの紐付けは任意（`pufus:write`）                                                                |
-| `update_pufu`    | revisionを指定して既存プ譜を編集。問いの紐付け・解除（`pufus:write`）                                                                |
-| `list_questions` | 独立した問いを含む検索・絞り込み・ページ送り                                                                                         |
-| `get_question`   | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                                             |
-| `get_pufu`       | プ譜IDで選んだプ譜の最新局面と編集用revision・phase。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）         |
-| `show_pufu`      | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                                                    |
-| `get_pufu_image` | プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                                                |
-| `add_question`   | プロジェクトに問いを追加。関連する `stock_ids`（互換用 `stock_id` も可）と登録時のメモ `note`（2,000文字まで、省略時は空文字）は任意 |
-| `list_comments`  | ストック・問い・プ譜局面のコメントを古い順に50件ずつ取得。同じユーザーの別接続の投稿も含む                                           |
-| `add_comment`    | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                                                 |
+| ツール               | 用途                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `list_projects`      | 許可されたプロジェクトの一覧                                                                                                         |
+| `list_stocks`        | 軽量なストック一覧。検索・絞り込み・件数指定・保存日時順・ページ送り                                                                 |
+| `get_stock`          | ストック詳細。`include_content: true` の場合だけ本文を20,000文字まで取得（超過時は `content_truncated: true`）                       |
+| `add_stock`          | `type: url` と `url`、または `type: text` と `text` で保存。任意のタイトルとメモ                                                     |
+| `list_pufus`         | 問いなしのプ譜を含む一覧。プロジェクト絞り込み・ページ送り（`questions:read`）                                                       |
+| `get_pufu_guideline` | プ譜の意味・記述方針・例・チェック観点を出典付きで取得。MCP認証が必要、追加scope不要                                                 |
+| `create_pufu`        | プ譜JSONを指定プロジェクトへ保存。問いの紐付けは任意（`pufus:write`）                                                                |
+| `update_pufu`        | revisionを指定して既存プ譜を編集。問いの紐付け・解除（`pufus:write`）                                                                |
+| `list_questions`     | 独立した問いを含む検索・絞り込み・ページ送り                                                                                         |
+| `get_question`       | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                                             |
+| `get_pufu`           | プ譜IDで選んだプ譜の最新局面と編集用revision・phase。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）         |
+| `show_pufu`          | 保存済みのプ譜をMCP Appsビューアーで表示。拡大・移動・PNG保存（`questions:read`）                                                    |
+| `get_pufu_image`     | プ譜IDで選んだプ譜の最新局面からリクエスト時にPNG画像を生成・取得（`questions:read`）                                                |
+| `add_question`       | プロジェクトに問いを追加。関連する `stock_ids`（互換用 `stock_id` も可）と登録時のメモ `note`（2,000文字まで、省略時は空文字）は任意 |
+| `list_comments`      | ストック・問い・プ譜局面のコメントを古い順に50件ずつ取得。同じユーザーの別接続の投稿も含む                                           |
+| `add_comment`        | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                                                 |
 
 `list_pufus` は問いなしのプ譜も含む一覧を24件ずつ返し、`project_id` と `page` で絞り込みます（`questions:read`）。`create_pufu` は必須の `project_id`・`projectScore`（ProjectScoreModel）・`request_id`（UUID）で完成済みの第1局面を保存します。`question_ids` と `stock_ids` で複数関連を指定でき、同じ保存先に限ります。新しく追加する問いは完成済みである必要があります。互換用の `question_id` も省略・null可ですが、`question_ids` と同時指定はできません。サーバー側のAI生成・メモリ更新は起動しません。同じrequest_idと作成内容の再送は同じプ譜を返し、その後の編集でも初回の内容と照合します。異なる内容の再使用は409です。
+
+`get_pufu_guideline` はバージョン管理する静的な日本語ガイドラインを返します。`section` は `all / principles / goals / purposes / measures / elements / review`（既定 `all`）、`detail` は `summary / full`（既定 `full`）です。未知の引数・不正値を拒否し、JSONの `version: "1.0.0"`・`language: "ja"`・`section`・`detail`・`guidelines`・`sources`・`attribution` を返します。`goals` は獲得目標と勝利条件、`all` は全項目を含みます。要約は定義と要点、詳細は例・チェック観点・基本原則の推奨作成手順も含みます。呼び出し時にScrapboxへ通信せず、共通の認証・所有権確認を除いて利用者データを読み書きしません。既存MCP認証内で追加scopeなしに取得できます。`create_pufu` / `update_pufu` の説明とサーバーinstructionsで事前参照を案内し、取得・レビューだけでの自動修正は行いません。JSONの形式は既存の作成・編集スキーマを正とし、記述内容や参照の有無で保存を拒否しません。原著の公式仕様そのものではなく、Pufu Lens向けの再構成である旨と参照元URLを返します。
 
 `update_pufu` は `pufu_id`・`revision`・`projectScore` を受け取り、既存の局面保存処理で編集します。`phase` 省略は最新局面、指定時は既存の局面を更新します。局面は追加しません。`question_ids`・`stock_ids` は省略で維持、空配列で解除し、同一プロジェクト内の関連全体を置き換えます。互換用 `question_id` は省略で維持、nullで問いの関連をすべて解除し、IDで1問に置き換えます。既存の関連はAI問いの再生成中や失敗中も維持できます。最新局面の編集では一覧の課題も獲得目標に合わせます。古いrevisionは409、他人・許可外保存先・紐付け先の不一致は404です。作成・編集の本文上限は256KiBです。`get_pufu` で内容とrevisionを取得してから編集してください。作成・編集には新規の `pufus:write` が必要で、既存の許可には追加せず、再認可が必要です。
 
