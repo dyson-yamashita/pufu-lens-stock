@@ -175,31 +175,31 @@ export default function Pufus({
                     <small>
                       {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
                     </small>
-                    <small>
-                      <time dateTime={pufu.created_at}>
-                        {new Intl.DateTimeFormat('ja-JP', {
-                          dateStyle: 'medium',
-                          timeZone: 'Asia/Tokyo',
-                        }).format(new Date(pufu.created_at))}
-                      </time>
-                    </small>
                   </span>
                 </button>
-                <PufuFavoriteButton
-                  pufu={pufu}
-                  onError={setError}
-                  onBusyChange={() => {
-                    favoriteVersion.current += 1;
-                  }}
-                  onSaved={(saved) => {
-                    setPufus((items) =>
-                      items.map((item) =>
-                        item.id === saved.id ? { ...item, is_favorite: saved.is_favorite } : item,
-                      ),
-                    );
-                    setRetry((value) => value + 1);
-                  }}
-                />
+                <div className="pufu-list-footer">
+                  <time dateTime={pufu.created_at}>
+                    {new Intl.DateTimeFormat('ja-JP', {
+                      dateStyle: 'medium',
+                      timeZone: 'Asia/Tokyo',
+                    }).format(new Date(pufu.created_at))}
+                  </time>
+                  <PufuFavoriteButton
+                    pufu={pufu}
+                    onError={setError}
+                    onBusyChange={() => {
+                      favoriteVersion.current += 1;
+                    }}
+                    onSaved={(saved) => {
+                      setPufus((items) =>
+                        items.map((item) =>
+                          item.id === saved.id ? { ...item, is_favorite: saved.is_favorite } : item,
+                        ),
+                      );
+                      setRetry((value) => value + 1);
+                    }}
+                  />
+                </div>
               </article>
             );
           })}

@@ -3057,7 +3057,10 @@ textarea::placeholder {
   padding: 18px 20px;
 }
 article.pufu-list-item {
-  padding: 0 12px 0 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
 }
 .pufu-list-item:hover {
   border-color: var(--field-border);
@@ -3066,9 +3069,18 @@ article.pufu-list-item {
 .pufu-list-open {
   flex: 1;
   min-width: 0;
-  padding: 18px 20px;
+  padding: 18px 20px 4px;
   text-align: left;
   background: transparent;
+}
+.pufu-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px 8px 20px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .pufu-favorite {
   flex-shrink: 0;
