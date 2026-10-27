@@ -3115,6 +3115,8 @@ textarea::placeholder {
   margin-top: 8px;
 }
 .pufu-context-questions .text-link {
+  display: block;
+  padding: 0;
   text-align: left;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
