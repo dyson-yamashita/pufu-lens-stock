@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { act, createElement } from 'react';
+import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import App from '../src/App';
@@ -12,6 +12,19 @@ vi.mock('../src/api', async (original) => ({
   api: vi.fn(),
   send: vi.fn(),
 }));
+vi.mock('../src/PufuEditor', () => ({
+  default: function GuardedEditor({
+    onGuard,
+  }: {
+    onGuard: (guard: (() => boolean) | null) => void;
+  }) {
+    useEffect(() => {
+      onGuard(() => window.confirm('編集内容を破棄しますか？'));
+      return () => onGuard(null);
+    }, [onGuard]);
+    return null;
+  },
+}));
 let root: Root;
 let document: Document;
 let requests: URL[];
@@ -21,6 +34,7 @@ let includeStock: boolean;
 let independent: boolean;
 let projects: Project[];
 let pufuFavorite: 0 | 1;
+let readyPufu: boolean;
 const summary = {
   id: 'pufu',
   question_id: 'question',
@@ -44,8 +58,21 @@ beforeEach(() => {
   vi.stubGlobal('window', dom.window);
   vi.stubGlobal('document', document);
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  let historyState: unknown = null;
   Object.defineProperties(window, {
     location: { configurable: true, value: new URL('https://example.com/') },
+    history: {
+      configurable: true,
+      value: {
+        get state() {
+          return historyState;
+        },
+        replaceState(state: unknown, _title: string, url?: string | URL | null) {
+          historyState = state;
+          if (url) window.location.href = new URL(url, window.location.href).href;
+        },
+      },
+    },
     matchMedia: {
       configurable: true,
       value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
@@ -75,6 +102,7 @@ beforeEach(() => {
     },
   ];
   pufuFavorite = 0;
+  readyPufu = false;
   vi.mocked(send).mockImplementation(async (path, data) => {
     if (path === '/api/v1/pufus/pufu/favorite') {
       pufuFavorite = (data as { is_favorite: boolean }).is_favorite ? 1 : 0;
@@ -154,10 +182,11 @@ beforeEach(() => {
         };
       case '/api/v1/questions':
         return { questions: [], total: 0 };
+      case '/api/v1/questions/other-question':
       case '/api/v1/questions/question':
         return {
           question: {
-            id: 'question',
+            id: url.pathname.endsWith('/other-question') ? 'other-question' : 'question',
             stock_id: null,
             project_id: 'project',
             project_name: summary.project_name,
@@ -191,9 +220,10 @@ beforeEach(() => {
         return {
           pufu: {
             ...summary,
+            status: readyPufu ? 'ready' : summary.status,
             is_favorite: pufuFavorite,
             question_id: independent ? null : summary.question_id,
-            score: null,
+            score: readyPufu ? {} : null,
             phases: [],
             context: {
               question: independent
@@ -378,13 +408,10 @@ it.each(['', '#project/project'])(
     expect(
       document.querySelector(`.breadcrumb a[href="#pufus${hash ? '/project' : ''}"]`),
     ).not.toBeNull();
+    expect(document.querySelector('.pufu-page .back-link')?.textContent).toBe('プ譜の一覧に戻る');
     await act(async () =>
       document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
     );
-    await hashChange();
-    const back = document.querySelector<HTMLButtonElement>('.question-detail-page .back-link')!;
-    expect(back.textContent).toBe('プ譜の一覧に戻る');
-    await act(async () => back.click());
     await hashChange();
     expect(window.location.hash).toBe(hash ? '#pufus/project' : '#pufus');
     expect(document.querySelector('[aria-label="保存したプ譜"]')?.textContent).toContain(
@@ -419,17 +446,143 @@ it.each([0, 1, 3])('カードの関連は各1件だけ表示し、残り%s件の
   );
 });
 
-it('問い一覧からプ譜を開いてもヘッダーはプ譜一覧と詳細を示す', async () => {
-  await render('#question/question');
+it.each(['#question/question', '#question/other-question'])(
+  '問いから開いたプ譜は関連先の先頭ではなく遷移元の問いへ戻る: %s',
+  async (hash) => {
+    await render(hash);
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+        .find((button) => button.textContent?.startsWith('プ譜'))!
+        .click(),
+    );
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+    );
+    await hashChange();
+    expect(document.querySelector('.breadcrumb a[href="#pufus"]')?.textContent).toBe(
+      'すべてのプ譜',
+    );
+    expect(document.querySelector('.breadcrumb [aria-current="page"]')?.textContent).toBe('詳細');
+    expect(document.querySelector('.pufu-page .back-link')?.textContent).toBe(
+      '問い・気づきの詳細に戻る',
+    );
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+    );
+    await hashChange();
+    expect(window.location.hash).toBe(hash);
+  },
+);
+
+it('一覧と関連する問いを行き来しても、直前にプ譜を開いた画面へ戻る', async () => {
+  await render('#pufus/project');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+  await hashChange();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-context-questions button')!.click(),
+  );
+  await hashChange();
   await act(async () =>
     [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
       .find((button) => button.textContent?.startsWith('プ譜'))!
       .click(),
   );
-  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+  );
   await hashChange();
-  expect(document.querySelector('.breadcrumb a[href="#pufus"]')?.textContent).toBe('すべてのプ譜');
-  expect(document.querySelector('.breadcrumb [aria-current="page"]')?.textContent).toBe('詳細');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#question/question');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus/project');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+  await hashChange();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus/project');
+});
+
+it('遷移元がないプ譜の直接リンクからはプ譜一覧へ戻る', async () => {
+  await render('#pufu/pufu');
+  expect(document.querySelector('.pufu-page .back-link')?.textContent).toBe('プ譜の一覧に戻る');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus');
+});
+
+it.each(['#question/other-question', '#pufus/project'])(
+  '同じプ譜を別画面から開いた後も、履歴で再訪すると元の画面へ戻る: %s',
+  async (hash) => {
+    await render(hash);
+    if (hash.startsWith('#question/')) {
+      await act(async () =>
+        [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+          .find((button) => button.textContent?.startsWith('プ譜'))!
+          .click(),
+      );
+      await act(async () =>
+        document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+      );
+    } else
+      await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+    await hashChange();
+    const earlier = { hash: window.location.hash, state: window.history.state };
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.sidebar .nav-item')]
+        .find((button) => button.textContent?.startsWith('すべてのプ譜'))!
+        .click(),
+    );
+    await hashChange();
+    await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+    await hashChange();
+    window.history.replaceState(earlier.state, '', earlier.hash);
+    await act(async () => window.dispatchEvent(new window.Event('popstate')));
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+    );
+    await hashChange();
+    expect(window.location.hash).toBe(hash);
+  },
+);
+
+it('履歴移動の破棄確認は一度だけ行い、拒否後も戻り先を保持する', async () => {
+  readyPufu = true;
+  const confirm = vi.fn(() => false);
+  Object.defineProperty(window, 'confirm', { configurable: true, value: confirm });
+  await render('#question/other-question');
+  await act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+      .find((button) => button.textContent?.startsWith('プ譜'))!
+      .click(),
+  );
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+  );
+  await hashChange();
+  window.history.replaceState(null, '', '#question/other-question');
+  await act(async () => window.dispatchEvent(new window.Event('popstate')));
+  await hashChange();
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(window.location.hash).toBe('#pufu/pufu');
+  await act(async () => root.unmount());
+  root = createRoot(document.getElementById('root')!);
+  confirm.mockReturnValue(true);
+  await render('#pufu/pufu');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#question/other-question');
 });
 
 it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {

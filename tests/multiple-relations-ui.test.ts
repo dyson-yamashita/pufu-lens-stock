@@ -235,7 +235,14 @@ it('問いの保存先は関連解除を保存してから変更できる', asyn
 
 it('プ譜の関連保存で複数の問いとストックを送り、新revisionで再表示する', async () => {
   await act(async () =>
-    root.render(createElement(PufuPage, { id: 'pufu', onQuestion: vi.fn(), onGuard: vi.fn() })),
+    root.render(
+      createElement(PufuPage, {
+        id: 'pufu',
+        onQuestion: vi.fn(),
+        onBack: vi.fn(),
+        onGuard: vi.fn(),
+      }),
+    ),
   );
   await choose('question-b');
   await click('次へ');
@@ -256,7 +263,14 @@ it('プ譜の関連保存で複数の問いとストックを送り、新revisio
 
 it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新revisionで保存する', async () => {
   await act(async () =>
-    root.render(createElement(PufuPage, { id: 'pufu', onQuestion: vi.fn(), onGuard: vi.fn() })),
+    root.render(
+      createElement(PufuPage, {
+        id: 'pufu',
+        onQuestion: vi.fn(),
+        onBack: vi.fn(),
+        onGuard: vi.fn(),
+      }),
+    ),
   );
   await click('編集を開始');
   const save = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
@@ -277,7 +291,14 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
 
 it('関連保存後の取得に失敗した場合は編集を止め、書き込みを繰り返さず再取得できる', async () => {
   await act(async () =>
-    root.render(createElement(PufuPage, { id: 'pufu', onQuestion: vi.fn(), onGuard: vi.fn() })),
+    root.render(
+      createElement(PufuPage, {
+        id: 'pufu',
+        onQuestion: vi.fn(),
+        onBack: vi.fn(),
+        onGuard: vi.fn(),
+      }),
+    ),
   );
   vi.mocked(api).mockRejectedValueOnce(new Error('再取得に失敗しました'));
   await submit();

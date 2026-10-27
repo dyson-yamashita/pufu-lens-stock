@@ -90,6 +90,15 @@ type Route = {
   projectId: string | null;
   detailId?: string;
 };
+type PufuSource = { questionId: string | null; projectId: string | null };
+function pufuSourceFromHistory(): PufuSource {
+  const source = window.history?.state?.pufuSource;
+  return source &&
+    (source.questionId === null || typeof source.questionId === 'string') &&
+    (source.projectId === null || typeof source.projectId === 'string')
+    ? { questionId: source.questionId, projectId: source.projectId }
+    : { questionId: null, projectId: null };
+}
 const headerLabels: Record<Route['view'], string> = {
   stocks: 'ストック',
   questions: '問い・気づき',
@@ -360,6 +369,7 @@ export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [route, setRoute] = useState<Route>(routeFromHash);
+  const [pufuSource, setPufuSource] = useState<PufuSource>(pufuSourceFromHistory);
   const [questionListContext, setQuestionListContext] = useState({
     view: 'questions' as 'questions' | 'pufus',
     projectId: null as string | null,
@@ -369,6 +379,7 @@ export default function App() {
   });
   const navigationGuard = useRef<(() => boolean) | null>(null);
   const previousHash = useRef(window.location.hash);
+  const previousHistoryState = useRef(window.history?.state);
   const setNavigationGuard = useCallback((guard: (() => boolean) | null) => {
     navigationGuard.current = guard;
   }, []);
@@ -419,6 +430,19 @@ export default function App() {
   const reload = () => setRefresh((value) => value + 1);
   const navigateDetail = (view: 'question' | 'resolve' | 'pufu', id: string) => {
     window.location.hash = id ? `${view}/${encodeURIComponent(id)}` : questionListContext.hash;
+    if (view === 'pufu') {
+      const fromQuestion = route.view === 'question' || route.view === 'resolve';
+      window.history.replaceState(
+        {
+          ...window.history.state,
+          pufuSource: {
+            questionId: fromQuestion ? route.detailId! : null,
+            projectId: fromQuestion ? questionListContext.projectId : route.projectId,
+          } satisfies PufuSource,
+        },
+        '',
+      );
+    }
     setModal(null);
     setMobileNav(false);
   };
@@ -460,21 +484,29 @@ export default function App() {
     setStockSource('all');
   };
   useEffect(() => {
-    const listener = () => {
+    const listener = (event: Event) => {
+      if (event.type === 'hashchange' && window.location.hash === previousHash.current) return;
       if (navigationGuard.current && !navigationGuard.current()) {
         window.history.replaceState(
-          null,
+          previousHistoryState.current,
           '',
           `${window.location.pathname}${window.location.search}${previousHash.current}`,
         );
         return;
       }
       previousHash.current = window.location.hash;
-      setRoute(routeFromHash());
+      previousHistoryState.current = window.history?.state;
+      const nextRoute = routeFromHash();
+      if (nextRoute.view === 'pufu') setPufuSource(pufuSourceFromHistory());
+      setRoute(nextRoute);
       setPage(1);
     };
     window.addEventListener('hashchange', listener);
-    return () => window.removeEventListener('hashchange', listener);
+    window.addEventListener('popstate', listener);
+    return () => {
+      window.removeEventListener('hashchange', listener);
+      window.removeEventListener('popstate', listener);
+    };
   }, []);
   useEffect(() => {
     if (questionFlow) window.scrollTo(0, 0);
@@ -1144,9 +1176,11 @@ export default function App() {
                 key={route.detailId}
                 id={route.detailId!}
                 onQuestion={(id) => navigateDetail('question', id)}
+                backLabel={pufuSource.questionId ? '問い・気づきの詳細に戻る' : 'プ譜の一覧に戻る'}
                 onBack={() => {
-                  window.location.hash =
-                    questionListContext.view === 'pufus' ? questionListContext.hash : '#pufus';
+                  if (pufuSource.questionId) navigateDetail('question', pufuSource.questionId);
+                  else
+                    window.location.hash = `#pufus${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
                 }}
                 onGuard={setNavigationGuard}
               />
