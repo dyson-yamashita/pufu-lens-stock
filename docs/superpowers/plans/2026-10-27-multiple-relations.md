@@ -48,5 +48,5 @@
 ### Task 3: 検証とPR
 
 - [x] 型・lint・テスト・format・buildとローカル画面を検証。
-- [ ] standard scoped security-auditと独立した読み取り専用レビューを実施。指摘修正後は再検証・再レビュー。
-- [ ] コミット・push・main向けPRを作成し添付する。
+- [x] standard scoped security-auditと独立した読み取り専用レビューを実施。指摘修正後は再検証・再レビュー。
+- [x] コミット・push・main向けPRを作成し添付する。

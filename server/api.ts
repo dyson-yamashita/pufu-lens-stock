@@ -46,16 +46,13 @@ import {
   createSavedPufuSchema,
   savePufuSchema,
   addPufuPhaseSchema,
-  pufuEditorVersion,
   type PufuContext,
   type PufuSummary,
   type PufuScore,
   type PufuPhase,
-  type MemorySnapshot,
 } from '../shared/pufu';
 import { queuePufuJob, initialPufuPhase } from './pufu';
 import { createSavedPufu } from './pufu-write';
-import { snapshotStocks } from './pufu-context';
 import { pufuRelationsSchema } from '../shared/pufu';
 import {
   pufuRelationsColumns,
@@ -66,6 +63,7 @@ import {
   replaceRelations,
   normalizedQuestionIds,
 } from './relations';
+import { createGeneratedPufu } from './pufu-create';
 import { listStocks } from './stock-search';
 import { SearchError } from './search-ai';
 import { readQuestionPufu } from './pufu-read';
@@ -726,101 +724,23 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ ok: true });
   });
   app.post('/api/v1/questions/:id/pufus', async (c) => {
-    const { user } = c.get('principal');
     const question = await ownedQuestion(c);
     const data = await body(c, createPufuSchema);
-    const id = `pufu-${user.id}-${data.request_id}`;
-    const previous = await c.env.DB.prepare(
-      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ?`,
-    )
-      .bind(id, user.id)
-      .first<PufuSummary>();
-    if (previous) {
-      if (previous.question_id !== question.id || previous.task !== data.task)
-        throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
-      c.executionCtx.waitUntil(dispatchJobs(c.env));
-      return c.json({ id, status: previous.status });
-    }
-    if (question.status !== 'ready' || !question.text)
-      throw new HTTPException(409, {
-        message: '問い・気づきの生成が完了してから、プ譜を作成できます。',
-      });
-    const project = await ownedProject(c.env, user.id, question.project_id);
-    const [stockRows, memoryRows] = await c.env.DB.batch<Record<string, unknown>>([
-      c.env.DB.prepare(
-        'SELECT s.id,COALESCE(s.title,a.title) title,s.note,a.summary_json FROM question_stocks qs JOIN stocks s ON s.id=qs.stock_id JOIN articles a ON a.id=s.article_id WHERE qs.question_id=? AND s.user_id=? ORDER BY s.id',
-      ).bind(question.id, user.id),
-      c.env.DB.prepare(
-        'SELECT id,project_id,revision,text,data_json,updated_at FROM memories WHERE user_id = ? AND (project_id IS NULL OR project_id = ?)',
-      ).bind(user.id, question.project_id),
-    ]);
-    const stock = stockRows.results[0];
-    const snapshot = (projectId: string | null): MemorySnapshot | null => {
-      const row = memoryRows.results.find((item) => item.project_id === projectId);
-      return row
-        ? {
-            id: String(row.id),
-            revision: Number(row.revision),
-            text: String(row.text),
-            data: JSON.parse(String(row.data_json)),
-            updated_at: String(row.updated_at),
-          }
-        : null;
-    };
-    const context: PufuContext = {
-      question: { id: question.id, text: question.text, source: question.source },
-      task: data.task,
-      project: { id: project.id, name: project.name, description: project.description },
-      stock: stock
-        ? {
-            id: String(stock.id),
-            title: String(stock.title),
-            summary: stock.summary_json ? JSON.parse(String(stock.summary_json)) : null,
-            note: String(stock.note),
-          }
-        : null,
-      stocks: snapshotStocks(
-        stockRows.results.map((row) => ({
-          id: String(row.id),
-          title: String(row.title),
-          summary: row.summary_json ? JSON.parse(String(row.summary_json)) : null,
-          note: String(row.note),
-        })),
-      ),
-      userMemory: snapshot(null),
-      projectMemory: snapshot(question.project_id),
-    };
-    const jobId = `pufu-job-${id}-1`;
-    const result = await c.env.DB.batch([
-      reserveOperation(c.env, { id: jobId, user_id: user.id, kind: 'pufu' }),
-      assertOperation(c.env, jobId),
-      c.env.DB.prepare(
-        "INSERT OR IGNORE INTO pufu_scores (id,user_id,question_id,task,input_json,editor_version) SELECT ?,?,?,?,?,? FROM questions q JOIN projects p ON p.id = q.project_id WHERE q.id = ? AND p.user_id = ? AND q.status = 'ready'",
-      ).bind(
-        id,
-        user.id,
-        question.id,
-        data.task,
-        JSON.stringify(context),
-        pufuEditorVersion,
-        question.id,
-        user.id,
-      ),
-      queuePufuJob(c.env, id),
-    ]);
-    const saved = await c.env.DB.prepare(
-      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ?`,
-    )
-      .bind(id, user.id)
-      .first<PufuSummary>();
-    if (!saved)
-      throw new HTTPException(409, {
-        message: '問い・気づきが変更されました。開き直してお試しください。',
-      });
-    if (saved.question_id !== question.id || saved.task !== data.task)
-      throw new HTTPException(409, { message: '同じリクエストIDで異なる課題が送信されました。' });
+    const result = await createGeneratedPufu(
+      c.env,
+      c.get('principal'),
+      question.project_id,
+      data,
+      question,
+    );
     c.executionCtx.waitUntil(dispatchJobs(c.env));
-    return c.json({ id, status: saved.status }, result[2].meta.changes ? 202 : 200);
+    return c.json({ id: result.id, status: result.status }, result.created ? 202 : 200);
+  });
+  app.post('/api/v1/projects/:id/pufus/generate', async (c) => {
+    const data = await body(c, createPufuSchema);
+    const result = await createGeneratedPufu(c.env, c.get('principal'), c.req.param('id'), data);
+    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ id: result.id, status: result.status }, result.created ? 202 : 200);
   });
   app.post('/api/v1/pufus', async (c) => {
     const data = await body(c, createSavedPufuSchema);

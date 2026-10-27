@@ -6,11 +6,13 @@ export default function PufuModal({
   children,
   onClose,
   busy = false,
+  wide = true,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -28,7 +30,7 @@ export default function PufuModal({
   return (
     <dialog
       ref={ref}
-      className="dialog pufu-modal"
+      className={`dialog ${wide ? 'pufu-modal' : 'dialog-wide'}`}
       aria-labelledby={id}
       onCancel={(event) => {
         event.preventDefault();

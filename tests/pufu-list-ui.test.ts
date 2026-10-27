@@ -3,7 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import App from '../src/App';
-import { api } from '../src/api';
+import { api, send } from '../src/api';
 
 vi.mock('../src/api', async (original) => ({
   ...(await original<typeof import('../src/api')>()),
@@ -375,4 +375,82 @@ it('プ譜を見た後にストックから問いを開くと、問い一覧を�
   await act(async () => back.click());
   await hashChange();
   expect(window.location.hash).toBe('#questions');
+});
+
+it.each(['#pufus', '#pufus/project'])(
+  '一覧から保存先・獲得目標・補足を送信してプ譜を開く: %s',
+  async (hash) => {
+    independent = true;
+    vi.mocked(send).mockResolvedValue({ id: 'pufu' });
+    await render(hash);
+    const add = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === 'プ譜を追加',
+    );
+    expect(add).toBeDefined();
+    await act(async () => add!.click());
+    const dialog = document.querySelector('dialog')!;
+    expect(dialog.querySelector('#pufu-project')).not.toBeNull();
+    for (const [selector, value] of [
+      ['#pufu-task', '継続できる仕組みを作る'],
+      ['#pufu-details', '人員2名。毎朝10分の振り返りを予定。'],
+    ]) {
+      await act(async () => {
+        const field = dialog.querySelector<HTMLTextAreaElement>(selector)!;
+        field.value = value;
+        field.dispatchEvent(new window.Event('input', { bubbles: true }));
+      });
+    }
+    await act(async () =>
+      dialog
+        .querySelector('form')!
+        .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+    );
+    expect(send).toHaveBeenCalledWith(
+      '/api/v1/projects/project/pufus/generate',
+      expect.objectContaining({
+        task: '継続できる仕組みを作る',
+        details: '人員2名。毎朝10分の振り返りを予定。',
+        request_id: expect.any(String),
+      }),
+    );
+    await hashChange();
+    expect(window.location.hash).toBe('#pufu/pufu');
+    expect(document.querySelector('dialog')).toBeNull();
+  },
+);
+
+it('送信中は追加ダイアログの閉じる操作とEscapeを無効にする', async () => {
+  let complete!: (value: { id: string }) => void;
+  vi.mocked(send).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+  );
+  await render('#pufus/project');
+  await act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('button')]
+      .find((button) => button.textContent === 'プ譜を追加')!
+      .click(),
+  );
+  const dialog = document.querySelector('dialog')!;
+  await act(async () => {
+    const task = dialog.querySelector<HTMLTextAreaElement>('#pufu-task')!;
+    task.value = '送信中の課題';
+    task.dispatchEvent(new window.Event('input', { bubbles: true }));
+  });
+  await act(async () =>
+    dialog
+      .querySelector('form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+  );
+  expect(dialog.querySelector<HTMLButtonElement>('[aria-label="閉じる"]')!.disabled).toBe(true);
+  await act(async () =>
+    dialog.dispatchEvent(new window.Event('cancel', { bubbles: true, cancelable: true })),
+  );
+  expect(document.querySelector('dialog')).toBe(dialog);
+  await act(async () => complete({ id: 'pufu' }));
+  await hashChange();
+  expect(document.querySelector('dialog')).toBeNull();
+  expect(window.location.hash).toBe('#pufu/pufu');
 });
