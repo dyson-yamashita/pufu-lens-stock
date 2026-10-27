@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import App from '../src/App';
 import { api, send } from '../src/api';
+import type { Project } from '../shared/domain';
 
 vi.mock('../src/api', async (original) => ({
   ...(await original<typeof import('../src/api')>()),
@@ -17,6 +18,7 @@ let listError: boolean;
 let total: number;
 let includeStock: boolean;
 let independent: boolean;
+let projects: Project[];
 const summary = {
   id: 'pufu',
   question_id: 'question',
@@ -55,6 +57,21 @@ beforeEach(() => {
   total = 1;
   includeStock = false;
   independent = false;
+  projects = [
+    {
+      id: 'project',
+      name: '実行のプロジェクト',
+      description: '',
+      show_in_all_lists: true,
+      include_in_user_memory: true,
+      auto_generate_questions: true,
+      count: 0,
+      ready_count: 0,
+      question_count: 1,
+      pufu_count: 1,
+      created_at: summary.created_at,
+    },
+  ];
   Object.defineProperties(window.HTMLElement.prototype, {
     showModal: { configurable: true, value() {} },
     close: { configurable: true, value() {} },
@@ -76,21 +93,7 @@ beforeEach(() => {
           },
         };
       case '/api/v1/projects':
-        return {
-          projects: [
-            {
-              id: 'project',
-              name: '実行のプロジェクト',
-              description: '',
-              show_in_all_lists: true,
-              include_in_user_memory: true,
-              count: 0,
-              ready_count: 0,
-              question_count: 1,
-              created_at: summary.created_at,
-            },
-          ],
-        };
+        return { projects };
       case '/api/v1/stocks':
         return {
           stocks: includeStock
@@ -216,7 +219,7 @@ async function tab(label: string) {
 it('サイドメニューからすべてのプ譜へ移動でき、カードに右矢印を出さない', async () => {
   await render();
   const menu = [...document.querySelectorAll<HTMLButtonElement>('.sidebar .nav-item')].find(
-    (button) => button.textContent === 'すべてのプ譜',
+    (button) => button.textContent?.startsWith('すべてのプ譜'),
   )!;
   expect(menu).toBeDefined();
   await act(async () => menu.click());
@@ -228,6 +231,22 @@ it('サイドメニューからすべてのプ譜へ移動でき、カードに�
   await hashChange();
   expect(menu.getAttribute('aria-current')).toBe('page');
 });
+it.each([0, 29])(
+  'すべてのプ譜の件数は全体非表示を除き、開いている一覧の範囲に影響されない: %i',
+  async (count) => {
+    projects[0].pufu_count = count ? 10 : 0;
+    projects.push(
+      { ...projects[0], id: 'second', pufu_count: count ? 19 : 0 },
+      { ...projects[0], id: 'hidden', show_in_all_lists: false, pufu_count: 99 },
+    );
+    await render('#pufus/project');
+    const menu = [...document.querySelectorAll('.sidebar .nav-item')].find((button) =>
+      button.textContent?.startsWith('すべてのプ譜'),
+    )!;
+    expect(menu.querySelector('.nav-count')?.textContent).toBe(String(count));
+    expect(document.querySelector('.result-count')?.textContent).toBe('1件');
+  },
+);
 it.each(['', '#project/project'])(
   '問いの隣からプ譜一覧を開き、範囲と詳細への戻り先を保つ: %s',
   async (hash) => {
