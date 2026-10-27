@@ -32,6 +32,11 @@ export default function PufuPage({
   const [editorBlocked, setEditorBlocked] = useState(false);
   const [relationsBusy, setRelationsBusy] = useState(false);
   const [editorVersion, setEditorVersion] = useState(0);
+  const questions =
+    pufu?.questions ??
+    (pufu?.question_id
+      ? [{ id: pufu.question_id, text: pufu.context.question?.text ?? '関連する問い・気づき' }]
+      : []);
   const updateRevision = useCallback((revision: number) => {
     setPufu((current) => current && { ...current, revision });
   }, []);
@@ -91,26 +96,20 @@ export default function PufuPage({
       )}
       {pufu && (
         <div className="pufu-context">
-          {(
-            pufu.questions ??
-            (pufu.question_id
-              ? [
-                  {
-                    id: pufu.question_id,
-                    text: pufu.context.question?.text ?? '関連する問い・気づき',
-                  },
-                ]
-              : [])
-          ).map((question) => (
-            <div key={question.id}>
+          {questions.length > 0 && (
+            <div>
               <span className="question-origin pufu-context-label">問い・気づき</span>
-              <p>
-                <button className="text-link" onClick={() => onQuestion(question.id)}>
-                  {question.text}
-                </button>
-              </p>
+              <ul className="pufu-context-questions">
+                {questions.map((question) => (
+                  <li key={question.id}>
+                    <button className="text-link" onClick={() => onQuestion(question.id)}>
+                      {question.text}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          ))}
+          )}
           <div className="pufu-context-task">
             <span className="question-origin pufu-context-label">課題（獲得目標）</span>
             <p>{pufu.task}</p>

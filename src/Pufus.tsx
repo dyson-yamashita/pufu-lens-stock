@@ -124,33 +124,42 @@ export default function Pufus({
         )
       ) : (
         <div className="pufu-list">
-          {pufus.map((pufu) => (
-            <button key={pufu.id} className="pufu-list-item" onClick={() => onPufu(pufu.id)}>
-              <span>
-                <strong>{pufu.task}</strong>
-                {(
-                  pufu.questions ??
-                  (pufu.question_id ? [{ id: pufu.question_id, text: pufu.question_text }] : [])
-                ).map((question) => (
-                  <small key={question.id}>問い・気づき：{question.text}</small>
-                ))}
-                {pufu.stocks?.map((stock) => (
-                  <small key={stock.id}>ストック：{stock.title}</small>
-                ))}
-                <small>
-                  {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
-                </small>
-                <small>
-                  <time dateTime={pufu.created_at}>
-                    {new Intl.DateTimeFormat('ja-JP', {
-                      dateStyle: 'medium',
-                      timeZone: 'Asia/Tokyo',
-                    }).format(new Date(pufu.created_at))}
-                  </time>
-                </small>
-              </span>
-            </button>
-          ))}
+          {pufus.map((pufu) => {
+            const questions =
+              pufu.questions ??
+              (pufu.question_id ? [{ id: pufu.question_id, text: pufu.question_text }] : []);
+            const stocks = pufu.stocks ?? [];
+            return (
+              <button key={pufu.id} className="pufu-list-item" onClick={() => onPufu(pufu.id)}>
+                <span>
+                  <strong>{pufu.task}</strong>
+                  {questions.length > 0 && (
+                    <small>
+                      問い・気づき：{questions[0].text}
+                      {questions.length > 1 && ` (他${questions.length - 1}件)`}
+                    </small>
+                  )}
+                  {stocks.length > 0 && (
+                    <small>
+                      ストック：{stocks[0].title}
+                      {stocks.length > 1 && ` (他${stocks.length - 1}件)`}
+                    </small>
+                  )}
+                  <small>
+                    {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
+                  </small>
+                  <small>
+                    <time dateTime={pufu.created_at}>
+                      {new Intl.DateTimeFormat('ja-JP', {
+                        dateStyle: 'medium',
+                        timeZone: 'Asia/Tokyo',
+                      }).format(new Date(pufu.created_at))}
+                    </time>
+                  </small>
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
       {total > 24 && (

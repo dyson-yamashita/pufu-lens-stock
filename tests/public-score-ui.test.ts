@@ -7,6 +7,9 @@ import { parseHTML } from 'linkedom';
 import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 import { testApp } from './helpers';
 import * as api from '../src/api';
+import { createPufuPng } from '../src/pufu-download';
+
+vi.mock('../src/pufu-download', () => ({ createPufuPng: vi.fn() }));
 
 const require = createRequire(import.meta.url);
 const editorRoot = dirname(require.resolve('@goto-lab/pufu-editor'));
@@ -83,6 +86,12 @@ beforeEach(() => {
   vi.stubGlobal('window', dom.window);
   vi.stubGlobal('document', document);
   vi.stubGlobal('MutationObserver', dom.window.MutationObserver);
+  const snapshot = { theme: 'light', preference: 'light' } as const;
+  window.pufuTheme = { subscribe: () => () => {}, getSnapshot: () => snapshot, setPreference() {} };
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+  });
   containerWidth = 1200;
   resizeCallbacks = new Set();
   Object.defineProperty(window.HTMLElement.prototype, 'clientWidth', {
@@ -445,13 +454,96 @@ it('エディターを一度も開かずに保存済みの局面をJSON出力で
   const { default: PufuEditor } = await import('../src/PufuEditor');
   const input = { ...pufu, id: 'unmounted-export' };
   const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:export');
-  const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   await act(async () => root.render(createElement(PufuEditor, { pufu: input, onGuard: () => {} })));
+  expect(
+    [...document.querySelectorAll('button')].some((button) => button.textContent === 'JSON'),
+  ).toBe(false);
+  await click('ダウンロード');
   await click('JSON');
   expect(document.querySelector('[role="score"]')).toBeNull();
   const blob = createUrl.mock.calls[0][0] as Blob;
   expect(JSON.parse(await blob.text())).toEqual(score);
-  expect(revokeUrl).toHaveBeenCalledWith('blob:export');
+  expect(document.querySelector('dialog')).toBeNull();
+});
+
+it.each([1, 2, 3])('第%s局面で各項目のコメントを開き、修正内容を保存できる', async (number) => {
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { setScore } = require(
+    join(editorRoot, 'components/ProjectScore.js'),
+  ) as typeof import('@goto-lab/pufu-editor');
+  const input = structuredClone(pufu);
+  input.id = `comments-phase-${number}`;
+  input.current_phase = number;
+  input.phases = Array.from({ length: number }, (_, index) => ({
+    ...structuredClone(pufu.phases[0]),
+    number: index + 1,
+  }));
+  const send = vi
+    .spyOn(api, 'send')
+    .mockResolvedValue({ revision: 2, current_phase: number, updated_at: input.updated_at });
+  await act(async () => root.render(createElement(PufuEditor, { pufu: input, onGuard: () => {} })));
+  await click('編集する');
+  const icons = document.querySelectorAll('dialog [aria-label^="comment-icon"]');
+  expect(icons.length).toBe(15);
+  await act(async () =>
+    document
+      .querySelector<HTMLElement>('dialog [role="gaining-goal"][aria-label="comment-icon"]')!
+      .dispatchEvent(new window.Event('click', { bubbles: true })),
+  );
+  const field = document.querySelector<HTMLTextAreaElement>(
+    'textarea[role="gaining-goal-comment"]',
+  )!;
+  expect(field).not.toBeNull();
+  expect(field.hasAttribute('readOnly')).toBe(false);
+  const updated = structuredClone(score);
+  updated.gainingGoal.comment.text = `第${number}局面のコメントを修正`;
+  await act(async () => setScore(`${input.id}-phase-${number}`, JSON.stringify(updated)));
+  expect(field.value).toBe(updated.gainingGoal.comment.text);
+  await click('保存');
+  expect(send).toHaveBeenLastCalledWith(
+    `/api/v1/pufus/${input.id}`,
+    { revision: 1, phase: number, score: updated },
+    'PATCH',
+  );
+  expect(document.querySelector('.pufu-image-preview')?.textContent).toContain(
+    updated.gainingGoal.comment.text,
+  );
+});
+
+it('PNGは選択中の保存済み局面を出力し、失敗時は形式選択から再試行できる', async () => {
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const input = structuredClone(pufu);
+  input.current_phase = 2;
+  const second = structuredClone(score);
+  second.gainingGoal.text = '第2局面の目標';
+  input.phases.push({ ...input.phases[0], number: 2, score: second });
+  const png = new Blob(['png'], { type: 'image/png' });
+  vi.mocked(createPufuPng)
+    .mockRejectedValueOnce(new Error('画像の生成に失敗しました'))
+    .mockResolvedValue(png);
+  const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:png-export');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  const links: string[] = [];
+  vi.spyOn(window.HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    links.push(this.download);
+  });
+  await act(async () => root.render(createElement(PufuEditor, { pufu: input, onGuard: () => {} })));
+  await click('前の局面へ');
+  await click('ダウンロード');
+  await click('画像（PNG）');
+  expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain(
+    '画像の生成に失敗しました',
+  );
+  expect(document.querySelector('dialog button[disabled]')).toBeNull();
+  await click('画像（PNG）');
+  expect(createPufuPng).toHaveBeenLastCalledWith(score, 'light');
+  expect(createUrl).toHaveBeenCalledWith(png);
+  expect(links).toEqual([`${pufu.id}-phase-1.png`]);
+  expect(document.querySelector('dialog')).toBeNull();
+  expect(document.querySelector('[role="score"]')).toBeNull();
 });
 
 it('読み取り専用の取得結果はEditorのJSON出力と一致し、そのまま再読み込みできる', async () => {

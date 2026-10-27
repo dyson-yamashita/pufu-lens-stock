@@ -3105,6 +3105,28 @@ textarea::placeholder {
 .pufu-context-task {
   margin-top: 18px;
 }
+.pufu-context-questions {
+  margin: 10px 0 7px;
+  padding-left: 1.5em;
+  font-size: 16px;
+  line-height: 1.9;
+}
+.pufu-context-questions li + li {
+  margin-top: 8px;
+}
+.pufu-context-questions .text-link {
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pufu-download-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pufu-download-options .button {
+  flex: 1;
+}
 .pufu-toolbar {
   display: flex;
   justify-content: space-between;
