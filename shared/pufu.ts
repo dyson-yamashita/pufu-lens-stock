@@ -63,6 +63,7 @@ export type PufuContext = {
 };
 export type PufuSummary = PufuRelations & {
   id: string;
+  is_favorite: 0 | 1;
   question_id: string | null;
   project_id: string;
   task: string;
