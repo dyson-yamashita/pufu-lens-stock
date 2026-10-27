@@ -57,6 +57,8 @@ import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
 import QuestionPage from './QuestionPage';
 import PufuPage from './PufuPage';
+import PufuForm from './PufuForm';
+import PufuModal from './PufuModal';
 import Comments from './Comments';
 import DeleteAction from './DeleteAction';
 import Pufus from './Pufus';
@@ -124,6 +126,7 @@ type ModalState =
   | { type: 'stock'; stock: Stock; tab?: 'question' }
   | { type: 'token' }
   | { type: 'question' }
+  | { type: 'pufu' }
   | { type: 'memory'; projectId: string | null }
   | null;
 const statusLabels = {
@@ -395,6 +398,7 @@ export default function App() {
   });
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [modal, setModal] = useState<ModalState>(null);
+  const [creatingPufu, setCreatingPufu] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
@@ -1068,6 +1072,16 @@ export default function App() {
                     問い・気づきを追加
                   </button>
                 )}
+                {route.view === 'pufus' && (
+                  <button
+                    className="button primary"
+                    onClick={() => setModal({ type: 'pufu' })}
+                    disabled={!projects.length}
+                  >
+                    <Plus size={18} aria-hidden="true" />
+                    プ譜を追加
+                  </button>
+                )}
               </div>
             </header>
           )}
@@ -1161,7 +1175,6 @@ export default function App() {
           {(route.view === 'pufus' || (questionFlow && questionListContext.view === 'pufus')) && (
             <div hidden={route.view !== 'pufus'}>
               <Pufus
-                projects={projects}
                 key={(questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}
                 projectId={questionFlow ? questionListContext.scope : listProjectId}
                 active={route.view === 'pufus'}
@@ -1453,6 +1466,21 @@ export default function App() {
             }}
           />
         </Modal>
+      )}
+      {modal?.type === 'pufu' && (
+        <PufuModal
+          title="プ譜を追加"
+          wide={false}
+          busy={creatingPufu}
+          onClose={() => setModal(null)}
+        >
+          <PufuForm
+            projects={projects}
+            projectId={listProjectId}
+            onBusyChange={setCreatingPufu}
+            onDone={openPufu}
+          />
+        </PufuModal>
       )}
       {modal?.type === 'stock' && (
         <Modal title="ストックした記事" wide onClose={() => setModal(null)}>
