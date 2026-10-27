@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
-import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
+import { applyMigration, mockEvent, mockStep, testApp, upgradeRelationsSchema } from './helpers';
 import { queueQuestionStatements } from '../server/db';
 import { ArticleWorkflow } from '../server/workflows';
 import type { Job } from '../server/env';
@@ -73,31 +73,60 @@ describe('問いの削除', () => {
     expect((await remove('manual-first')).status).toBe(404);
   });
 
-  it('紐づく複数のプ譜と処理を削除・終了し、別の問いのプ譜は保持する', async () => {
+  it('問いを削除しても複数のプ譜・局面を保持し、未完了の生成処理を継続する', async () => {
     const first = await plan('question-stock-first');
     const second = await plan('question-stock-first');
     const manual = await plan('manual-first');
-    const job = await app.env.DB.prepare(
-      "SELECT * FROM processing_jobs WHERE kind='pufu' AND target_id=?",
-    )
+    const job = async (id: string) =>
+      (await app.env.DB.prepare("SELECT * FROM processing_jobs WHERE kind='pufu' AND target_id=?")
+        .bind(id)
+        .first<Job>())!;
+    const firstJob = await job(first);
+    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(firstJob.id), mockStep());
+    const firstPufu = await app.env.DB.prepare('SELECT * FROM pufu_scores WHERE id=?')
       .bind(first)
-      .first<Job>();
-    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
+      .first();
+    const phases = (
+      await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?').bind(first).all()
+    ).results;
+    const queuedJob = await job(second);
     expect((await remove('question-stock-first')).status).toBe(200);
     for (const id of [first, second]) {
-      expect((await app.request(`/api/v1/pufus/${id}`)).status).toBe(404);
-      expect(
-        (await app.env.DB.prepare(
-          "SELECT status FROM processing_jobs WHERE kind='pufu' AND target_id=?",
-        )
-          .bind(id)
-          .first())!.status,
-      ).toBe('done');
+      const response = await app.request(`/api/v1/pufus/${id}`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        pufu: { id, question_id: null, question_ids: [], questions: [] },
+      });
     }
+    expect(
+      await app.env.DB.prepare('SELECT * FROM pufu_scores WHERE id=?').bind(first).first(),
+    ).toEqual({
+      ...firstPufu,
+      question_id: null,
+    });
+    expect(
+      (await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?').bind(first).all())
+        .results,
+    ).toEqual(phases);
+    expect(await job(second)).toEqual(queuedJob);
+    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(queuedJob.id), mockStep());
+    expect((await job(second)).status).toBe('done');
+    expect(
+      await app.env.DB.prepare('SELECT status,question_id FROM pufu_scores WHERE id=?')
+        .bind(second)
+        .first(),
+    ).toEqual({
+      status: 'ready',
+      question_id: null,
+    });
+    expect(
+      (await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?').bind(second).all())
+        .results,
+    ).toHaveLength(1);
     expect((await app.request(`/api/v1/pufus/${manual}`)).status).toBe(200);
     expect((await questions()).questions.map((q) => q.id)).toEqual(['manual-first']);
-    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
-    expect((await app.env.DB.prepare('SELECT COUNT(*) AS n FROM pufu_scores').first())!.n).toBe(1);
+    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(firstJob.id), mockStep());
+    expect((await app.env.DB.prepare('SELECT COUNT(*) AS n FROM pufu_scores').first())!.n).toBe(3);
   });
 
   it('生成待ちのAIの問いを削除しても、記事処理の完了やジョブ再実行で復活しない', async () => {
@@ -190,6 +219,7 @@ describe('問いの削除', () => {
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
     await applyMigration(app.env.DB, '0028_question_notes.sql');
+    await upgradeRelationsSchema(app.env.DB);
     expect((await remove('manual-first')).status).toBe(200);
   });
 });

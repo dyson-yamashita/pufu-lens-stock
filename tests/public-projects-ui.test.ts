@@ -120,6 +120,31 @@ it('問い一覧にはAI・プ譜のラベルを表示し、要点は問いの�
   expect(document.body.textContent).toContain('問いから考える課題');
   expect(document.querySelector('.question-labels')?.textContent).toBe('AIプ譜');
 });
+it('公開した問いの複数のストックを表示し、プ譜カードの右矢印を出さない', async () => {
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (url, options) => {
+    if (url.includes('/questions/ai?'))
+      return {
+        question: {
+          ...aiQuestion,
+          stocks: [
+            { id: 'stock', title: stock.title },
+            { id: 'second', title: '二つ目の記事' },
+          ],
+        },
+        stock,
+        stocks: [stock, { ...stock, id: 'second', title: '二つ目の記事' }],
+        pufus: [
+          { id: 'pufu', task: '問いから考える課題', current_phase: 1, updated_at: '2026-10-18' },
+        ],
+        has_more: false,
+      };
+    return load(url, options);
+  });
+  await render('#question/ai');
+  expect(document.querySelector('a[href="#stock/second"]')?.textContent).toContain('二つ目の記事');
+  expect(document.querySelector('.pufu-list-item .lucide-arrow-right')).toBeNull();
+});
 it.each([
   ['#stocks', '#stock/stock', 'stocks'],
   ['#questions', '#question/ai', 'questions'],

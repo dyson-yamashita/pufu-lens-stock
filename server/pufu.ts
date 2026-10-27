@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { parseAiJson } from './ai';
+import { promptStocks } from './pufu-context';
 import type { Env, Job } from './env';
 import { isDemo } from './env';
 import { now, jobFailureStatements } from './db';
@@ -93,6 +94,7 @@ export async function generatePufu(env: Env, context: PufuContext): Promise<Pufu
           role: 'user',
           content: JSON.stringify({
             ...context,
+            ...(context.stocks ? { stock: null, stocks: promptStocks(context.stocks) } : {}),
             userMemory: memoryInput(context.userMemory),
             projectMemory: memoryInput(context.projectMemory),
           }),

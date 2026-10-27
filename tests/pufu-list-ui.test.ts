@@ -213,6 +213,21 @@ async function tab(label: string) {
   await act(async () => button.click());
   await hashChange();
 }
+it('サイドメニューからすべてのプ譜へ移動でき、カードに右矢印を出さない', async () => {
+  await render();
+  const menu = [...document.querySelectorAll<HTMLButtonElement>('.sidebar .nav-item')].find(
+    (button) => button.textContent === 'すべてのプ譜',
+  )!;
+  expect(menu).toBeDefined();
+  await act(async () => menu.click());
+  await hashChange();
+  expect(window.location.hash).toBe('#pufus');
+  expect(menu.getAttribute('aria-current')).toBe('page');
+  expect(document.querySelector('.pufu-list-item .lucide-arrow-right')).toBeNull();
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await hashChange();
+  expect(menu.getAttribute('aria-current')).toBe('page');
+});
 it.each(['', '#project/project'])(
   '問いの隣からプ譜一覧を開き、範囲と詳細への戻り先を保つ: %s',
   async (hash) => {

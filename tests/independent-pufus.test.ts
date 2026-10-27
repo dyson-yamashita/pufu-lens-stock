@@ -88,7 +88,7 @@ it('同じプロジェクトの問いへ紐付け・解除でき、所有権・�
 it('既存のプ譜・局面・コメント・画像リンクを移行で保全し、問いの移動に保存先が追随する', async () => {
   await app.dispose();
   const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
-    .filter((name) => name.endsWith('.sql') && !name.startsWith('0029'))
+    .filter((name) => name.endsWith('.sql') && name < '0029')
     .sort();
   app = await testApp({ migrations });
   await app.env.DB.batch([
@@ -109,6 +109,7 @@ it('既存のプ譜・局面・コメント・画像リンクを移行で保全�
     ),
   ]);
   await applyMigration(app.env.DB, '0029_independent_pufus.sql');
+  await applyMigration(app.env.DB, '0030_multiple_relations.sql');
   expect(
     await app.env.DB.prepare(
       "SELECT project_id,question_id FROM pufu_scores WHERE id='old-pufu'",

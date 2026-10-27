@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import { createSavedPufuSchema, pufuEditorVersion, type PufuContext } from '../shared/pufu';
 import type { Env, Principal } from './env';
 import { now } from './db';
+import { normalizedQuestionIds, validateRelations } from './relations';
 
 export async function createSavedPufu(
   env: Env,
@@ -16,10 +17,14 @@ export async function createSavedPufu(
     .first<{ id: string; name: string; description: string }>();
   if (!project) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
   const id = `pufu-${principal.user.id}-${data.request_id}`;
-  const questionId = data.question_id ?? null;
+  const questionIds = normalizedQuestionIds(data);
+  const stockIds = data.stock_ids ?? [];
+  const questionId = questionIds[0] ?? null;
   const requestJson = JSON.stringify({
     project_id: project.id,
-    question_id: questionId,
+    ...(data.question_ids === undefined && data.stock_ids === undefined
+      ? { question_id: questionId }
+      : { question_ids: questionIds, stock_ids: stockIds }),
     score: data.score,
   });
   const load = () =>
@@ -41,10 +46,14 @@ export async function createSavedPufu(
     const { request_json, ...pufu } = row;
     if (row.project_id !== project.id || request_json !== requestJson)
       throw new HTTPException(409, { message: '同じリクエストIDで異なるプ譜が送信されました。' });
-    return { pufu, created };
+    return {
+      pufu: { ...pufu, task: data.score.gainingGoal.text, question_id: questionId },
+      created,
+    };
   };
   const previous = await load();
   if (previous) return response(previous, false);
+  await validateRelations(env, project.id, questionIds, stockIds);
   const question =
     questionId === null
       ? null

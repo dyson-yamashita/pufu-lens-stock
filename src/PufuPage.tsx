@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, LoaderCircle, RefreshCw } from 'lucide-react';
 import type { Pufu } from '../shared/pufu';
 import { api, send } from './api';
 import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
+import PufuRelations from './PufuRelations';
 
 const PufuEditor = lazy(async () => {
   try {
@@ -28,6 +29,12 @@ export default function PufuPage({
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [editorBlocked, setEditorBlocked] = useState(false);
+  const [relationsBusy, setRelationsBusy] = useState(false);
+  const [editorVersion, setEditorVersion] = useState(0);
+  const updateRevision = useCallback((revision: number) => {
+    setPufu((current) => current && { ...current, revision });
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     let complete = false,
@@ -84,22 +91,53 @@ export default function PufuPage({
       )}
       {pufu && (
         <div className="pufu-context">
-          {pufu.question_id && (
-            <>
+          {(
+            pufu.questions ??
+            (pufu.question_id
+              ? [
+                  {
+                    id: pufu.question_id,
+                    text: pufu.context.question?.text ?? '関連する問い・気づき',
+                  },
+                ]
+              : [])
+          ).map((question) => (
+            <div key={question.id}>
               <span className="question-origin pufu-context-label">問い・気づき</span>
               <p>
-                {pufu.context.question?.id === pufu.question_id
-                  ? pufu.context.question.text
-                  : '関連する問い・気づき'}
+                <button className="text-link" onClick={() => onQuestion(question.id)}>
+                  {question.text}
+                </button>
               </p>
-            </>
-          )}
+            </div>
+          ))}
           <div className="pufu-context-task">
             <span className="question-origin pufu-context-label">課題（獲得目標）</span>
             <p>{pufu.task}</p>
           </div>
           <span className="field-hint">{pufu.context.project.name}</span>
+          {(pufu.stocks ?? (pufu.context.stock ? [pufu.context.stock] : [])).length > 0 && (
+            <div className="pufu-related-stocks">
+              <span className="field-hint">関連するストック</span>
+              <ul>
+                {(pufu.stocks ?? [pufu.context.stock!]).map((stock) => (
+                  <li key={stock.id}>{stock.title}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
+      )}
+      {pufu && (
+        <PufuRelations
+          pufu={pufu}
+          blocked={editorBlocked || pufu.status === 'queued' || pufu.status === 'generating'}
+          onBusy={setRelationsBusy}
+          onSaved={(saved) => {
+            setPufu(saved);
+            setEditorVersion((value) => value + 1);
+          }}
+        />
       )}
       {pufu?.status === 'ready' && pufu.score ? (
         <Suspense
@@ -110,7 +148,15 @@ export default function PufuPage({
             </p>
           }
         >
-          <PufuEditor key={id} pufu={pufu} onGuard={onGuard} />
+          <div inert={relationsBusy} aria-busy={relationsBusy}>
+            <PufuEditor
+              key={`${id}-${editorVersion}`}
+              pufu={pufu}
+              onGuard={onGuard}
+              onEditingStateChange={setEditorBlocked}
+              onSaved={updateRevision}
+            />
+          </div>
         </Suspense>
       ) : pufu?.status === 'failed' ? (
         <div className="empty-state">

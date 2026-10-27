@@ -11,6 +11,7 @@ import {
 import type { Env, Principal } from './env';
 import { reserveOperation, assertOperation } from './usage';
 import { queuePufuJob } from './pufu';
+import { snapshotStocks } from './pufu-context';
 
 export async function createGeneratedPufu(
   env: Env,
@@ -57,15 +58,13 @@ export async function createGeneratedPufu(
     });
   const [stockRows, memoryRows] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare(
-      'SELECT note, summary_json FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
-    ).bind(question?.stock_id ?? null, principal.user.id),
+      'SELECT s.id,COALESCE(s.title,a.title) title,s.note,a.summary_json FROM question_stocks qs JOIN stocks s ON s.id=qs.stock_id JOIN articles a ON a.id=s.article_id WHERE qs.question_id=? AND s.user_id=? AND s.project_id=? ORDER BY s.id',
+    ).bind(question?.id ?? null, principal.user.id, project.id),
     env.DB.prepare(
       'SELECT id,project_id,revision,text,data_json,updated_at FROM memories WHERE user_id = ? AND (project_id IS NULL OR project_id = ?)',
     ).bind(principal.user.id, project.id),
   ]);
   const stock = stockRows.results[0];
-  if (question?.stock_id && !stock)
-    throw new HTTPException(404, { message: 'ストックが見つかりません。' });
   const snapshot = (memoryProjectId: string | null): MemorySnapshot | null => {
     const row = memoryRows.results.find((item) => item.project_id === memoryProjectId);
     return row
@@ -83,15 +82,22 @@ export async function createGeneratedPufu(
     task: data.task,
     details: data.details ?? '',
     project,
-    stock:
-      question?.stock_id && stock
-        ? {
-            id: question.stock_id,
-            title: question.article_title ?? '',
-            summary: stock.summary_json ? JSON.parse(String(stock.summary_json)) : null,
-            note: String(stock.note),
-          }
-        : null,
+    stock: stock
+      ? {
+          id: String(stock.id),
+          title: String(stock.title),
+          summary: stock.summary_json ? JSON.parse(String(stock.summary_json)) : null,
+          note: String(stock.note),
+        }
+      : null,
+    stocks: snapshotStocks(
+      stockRows.results.map((row) => ({
+        id: String(row.id),
+        title: String(row.title),
+        summary: row.summary_json ? JSON.parse(String(row.summary_json)) : null,
+        note: String(row.note),
+      })),
+    ),
     userMemory: snapshot(null),
     projectMemory: snapshot(project.id),
   };

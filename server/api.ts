@@ -53,6 +53,16 @@ import {
 } from '../shared/pufu';
 import { queuePufuJob, initialPufuPhase } from './pufu';
 import { createSavedPufu } from './pufu-write';
+import { pufuRelationsSchema } from '../shared/pufu';
+import {
+  pufuRelationsColumns,
+  stockRelationsColumn,
+  withRelations,
+  pufuRelations,
+  validateRelations,
+  replaceRelations,
+  normalizedQuestionIds,
+} from './relations';
 import { createGeneratedPufu } from './pufu-create';
 import { listStocks } from './stock-search';
 import { SearchError } from './search-ai';
@@ -70,7 +80,9 @@ const projectSchema = z.object({
   auto_generate_questions: z.boolean().optional(),
 });
 const questionColumns =
-  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, COALESCE(s.title, a.title) AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE pf.question_id = q.id AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu";
+  "q.id, q.stock_id, q.source, q.is_favorite, q.text, q.status, q.error, q.model, q.created_at, q.updated_at, q.project_id, p.name AS project_name, COALESCE(s.title, a.title) AS article_title, a.status AS article_status, a.domain, EXISTS (SELECT 1 FROM pufu_scores pf WHERE EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pf.id AND pq.question_id=q.id) AND pf.user_id = p.user_id AND pf.status = 'ready') AS has_pufu" +
+  ',' +
+  stockRelationsColumn('q');
 const questionJoins =
   'questions q JOIN projects p ON p.id = q.project_id LEFT JOIN stocks s ON s.id = q.stock_id LEFT JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
@@ -585,7 +597,7 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<QuestionDetail>();
     if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
-    return question;
+    return withRelations(question);
   }
   async function ownedPufu(c: import('hono').Context<AppEnv>) {
     const pufu = await c.env.DB.prepare(
@@ -604,9 +616,9 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/questions/:id', async (c) => {
     const question = await ownedQuestion(c);
     const pufus = await c.env.DB.prepare(
-      `SELECT ${pufuColumns} FROM pufu_scores WHERE question_id = ? AND user_id = ? ORDER BY created_at DESC,id DESC`,
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pufu_scores.id AND pq.question_id=?) AND user_id = ? AND project_id=? ORDER BY created_at DESC,id DESC`,
     )
-      .bind(question.id, c.get('principal').user.id)
+      .bind(question.id, c.get('principal').user.id, question.project_id)
       .all<PufuSummary>();
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ question, pufus: pufus.results });
@@ -621,13 +633,30 @@ export function createApp(trustedPrincipal?: Principal) {
       throw new HTTPException(409, {
         message: '記事に紐づく問い・気づきの保存先は、元の記事で変更してください。',
       });
-    const updated = await c.env.DB.prepare(
-      `UPDATE questions SET note = COALESCE(?, note), project_id = ?, updated_at = ?
+    if (data.stock_ids !== undefined) await validateRelations(c.env, projectId, [], data.stock_ids);
+    if (projectId !== question.project_id && question.stocks?.length)
+      throw new HTTPException(409, {
+        message: '保存先を変更する前に、ストックの関連を解除してください。',
+      });
+    const condition =
+      'SELECT 1 FROM questions q JOIN projects p ON p.id=q.project_id WHERE q.id=? AND q.project_id=? AND p.user_id=? AND q.stock_id IS ?';
+    const results = await c.env.DB.batch([
+      ...replaceRelations(
+        c.env,
+        'question',
+        question.id,
+        { stock_ids: data.stock_ids },
+        condition,
+        [question.id, question.project_id, user.id, question.stock_id],
+      ),
+      c.env.DB.prepare(
+        `UPDATE questions SET stock_id=CASE WHEN source='user' AND ?=1 THEN ? ELSE stock_id END, note = COALESCE(?, note), project_id = ?, updated_at = ?
        WHERE id = ? AND project_id = ? AND stock_id IS ?
        AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?)
        AND EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ?) RETURNING id`,
-    )
-      .bind(
+      ).bind(
+        data.stock_ids !== undefined ? 1 : 0,
+        data.stock_ids?.[0] ?? null,
         data.note ?? null,
         projectId,
         now(),
@@ -637,9 +666,9 @@ export function createApp(trustedPrincipal?: Principal) {
         user.id,
         projectId,
         user.id,
-      )
-      .first();
-    if (!updated)
+      ),
+    ]);
+    if (!results.at(-1)!.results[0])
       throw new HTTPException(409, {
         message: '問い・気づきの保存先が変更されました。再読み込みしてお試しください。',
       });
@@ -687,9 +716,6 @@ export function createApp(trustedPrincipal?: Principal) {
       );
     }
     statements.push(
-      c.env.DB.prepare(
-        "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE user_id = ? AND kind = 'pufu' AND target_id IN (SELECT id FROM pufu_scores WHERE question_id = ? AND user_id = ?) AND status != 'done'",
-      ).bind(now(), user.id, question.id, user.id),
       c.env.DB.prepare(
         'DELETE FROM questions WHERE id = ? AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?)',
       ).bind(question.id, user.id),
@@ -743,6 +769,7 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({
       pufu: {
         ...pufu,
+        ...(await pufuRelations(c.env, id)),
         score: score_json ? (JSON.parse(score_json) as PufuScore) : null,
         phases: phaseRows.map(({ score_json, ...phase }) => ({
           ...phase,
@@ -770,24 +797,30 @@ export function createApp(trustedPrincipal?: Principal) {
           .split(',')
           .map((column) => `pf.${column}`)
           .join(',')},
-          p.name AS project_name,q.text AS question_text
+          p.name AS project_name,q.text AS question_text,${pufuRelationsColumns('pf')}
           FROM ${joins} WHERE ${where} ORDER BY pf.created_at DESC,pf.id DESC LIMIT 24 OFFSET ?`,
       ).bind(...params, (page - 1) * 24),
       c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${joins} WHERE ${where}`).bind(...params),
     ]);
-    return c.json({ pufus: rows.results, total: totals.results[0].count, page, pageSize: 24 });
+    return c.json({
+      pufus: rows.results.map(withRelations),
+      total: totals.results[0].count,
+      page,
+      pageSize: 24,
+    });
   });
   async function savePufu(c: import('hono').Context<AppEnv>, append: boolean) {
     const pufu = await ownedPufu(c);
     const data = await body(c, append ? addPufuPhaseSchema : savePufuSchema);
-    const questionId = data.question_id === undefined ? pufu.question_id : data.question_id;
-    if (
-      questionId !== null &&
-      !(await c.env.DB.prepare('SELECT id FROM questions WHERE id=? AND project_id=?')
-        .bind(questionId, pufu.project_id)
-        .first())
-    )
-      throw new HTTPException(404, { message: '紐付け先の問い・気づきが見つかりません。' });
+    const currentRelations = await pufuRelations(c.env, pufu.id);
+    const questionIds = normalizedQuestionIds(data, currentRelations.question_ids);
+    const questionId = questionIds[0] ?? null;
+    await validateRelations(
+      c.env,
+      pufu.project_id,
+      questionIds.filter((id) => !currentRelations.question_ids.includes(id)),
+      data.stock_ids ?? currentRelations.stock_ids,
+    );
     if (pufu.status !== 'ready')
       throw new HTTPException(409, { message: 'プ譜の生成が完了してから保存してください。' });
     const phase = data.phase ?? pufu.current_phase;
@@ -828,6 +861,22 @@ export function createApp(trustedPrincipal?: Principal) {
         ).bind(json, timestamp, timestamp, ...values),
       );
     statements.push(
+      ...replaceRelations(
+        c.env,
+        'pufu',
+        pufu.id,
+        {
+          question_ids:
+            data.question_ids !== undefined || data.question_id !== undefined
+              ? questionIds
+              : undefined,
+          stock_ids: data.stock_ids,
+        },
+        `SELECT 1 FROM pufu_scores WHERE ${condition}`,
+        values,
+      ),
+    );
+    statements.push(
       c.env.DB.prepare(
         `UPDATE pufu_scores SET score_json = CASE WHEN current_phase = ? THEN ? ELSE score_json END, task = CASE WHEN current_phase = ? THEN ? ELSE task END, question_id=?, current_phase = current_phase + ?, revision = revision + 1, updated_at = ? WHERE ${condition} RETURNING revision,current_phase,updated_at`,
       ).bind(
@@ -853,6 +902,32 @@ export function createApp(trustedPrincipal?: Principal) {
       });
     return c.json(result, append ? 201 : 200);
   }
+  app.patch('/api/v1/pufus/:id/relations', async (c) => {
+    const pufu = await ownedPufu(c);
+    const data = await body(c, pufuRelationsSchema);
+    const currentRelations = await pufuRelations(c.env, pufu.id);
+    await validateRelations(
+      c.env,
+      pufu.project_id,
+      data.question_ids.filter((id) => !currentRelations.question_ids.includes(id)),
+      data.stock_ids,
+    );
+    const guard =
+      'SELECT 1 FROM pufu_scores WHERE id=? AND user_id=? AND revision=? AND project_id=?';
+    const values = [pufu.id, c.get('principal').user.id, data.revision, pufu.project_id];
+    const results = await c.env.DB.batch([
+      ...replaceRelations(c.env, 'pufu', pufu.id, data, guard, values),
+      c.env.DB.prepare(
+        `UPDATE pufu_scores SET question_id=?,revision=revision+1,updated_at=? WHERE id=? AND user_id=? AND revision=? AND project_id=? RETURNING revision`,
+      ).bind(data.question_ids[0] ?? null, now(), ...values),
+    ]);
+    const result = results.at(-1)!.results[0];
+    if (!result)
+      throw new HTTPException(409, {
+        message: '別の画面で更新されています。再読み込みしてください。',
+      });
+    return c.json(result);
+  });
   app.patch('/api/v1/pufus/:id', (c) => savePufu(c, false));
   app.post('/api/v1/pufus/:id/phases', (c) => savePufu(c, true));
   app.post('/api/v1/pufus/:id/retry', async (c) => {
@@ -908,14 +983,62 @@ export function createApp(trustedPrincipal?: Principal) {
       ),
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
-    return c.json({ questions: rows.results, total: totals.results[0].count, page, pageSize: 24 });
+    return c.json({
+      questions: rows.results.map(withRelations),
+      total: totals.results[0].count,
+      page,
+      pageSize: 24,
+    });
   });
   app.post('/api/v1/questions', async (c) => {
-    const { user } = c.get('principal');
+    const principal = c.get('principal');
+    const { user } = principal;
     const data = await body(c, userQuestionSchema);
-    const stockId = data.stock_id ?? null;
+    const stockIds = data.stock_ids ?? (data.stock_id ? [data.stock_id] : []);
+    const stockId = stockIds[0] ?? null;
+    const id = `user-${user.id}-${data.request_id ?? crypto.randomUUID()}`;
+    const requestJson = (projectId: string) =>
+      JSON.stringify({
+        project_id: projectId,
+        stock_ids: stockIds,
+        text: data.text,
+        note: data.note,
+      });
+    const load = () =>
+      c.env.DB.prepare(
+        `SELECT ${questionColumns},q.note,q.request_json FROM ${questionJoins} WHERE q.id=? AND p.user_id=?`,
+      )
+        .bind(id, user.id)
+        .first<QuestionDetail & { request_json: string | null }>();
+    const respond = (
+      row: NonNullable<Awaited<ReturnType<typeof load>>>,
+      projectId: string,
+      created: boolean,
+    ) => {
+      if (principal.tokenProjectId && row.project_id !== principal.tokenProjectId)
+        throw new HTTPException(404);
+      if (row.request_json !== requestJson(projectId))
+        throw new HTTPException(409, {
+          message: '同じリクエストIDで異なる問い・気づきが送信されました。',
+        });
+      const { request_json, ...question } = row;
+      void request_json;
+      return c.json({ question: withRelations(question) }, created ? 201 : 200);
+    };
+    // 成功した作成の再送は、関連先が後で削除されても同じ問いへ到達できる。
+    const previous = await load();
+    if (previous) {
+      const original = previous.request_json
+        ? (JSON.parse(previous.request_json) as { project_id: string })
+        : null;
+      return respond(
+        previous,
+        data.project_id ?? original?.project_id ?? previous.project_id,
+        false,
+      );
+    }
     const stock = stockId
-      ? await c.env.DB.prepare('SELECT project_id FROM stocks WHERE id = ? AND user_id = ?')
+      ? await c.env.DB.prepare('SELECT project_id FROM stocks WHERE id=? AND user_id=?')
           .bind(stockId, user.id)
           .first<{ project_id: string }>()
       : null;
@@ -925,29 +1048,15 @@ export function createApp(trustedPrincipal?: Principal) {
       throw new HTTPException(400, { message: 'ストックとプロジェクトが一致しません。' });
     const projectId = data.project_id ?? stock!.project_id;
     await ownedProject(c.env, user.id, projectId);
-    const id = `user-${user.id}-${data.request_id ?? crypto.randomUUID()}`;
+    await validateRelations(c.env, projectId, [], stockIds);
     const result = await c.env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, text, note, source, status) SELECT ?, id, ?, ?, ?, 'user', 'ready' FROM projects WHERE id = ? AND user_id = ?",
+      "INSERT OR IGNORE INTO questions(id,project_id,stock_id,text,note,source,status,request_json) SELECT ?,id,?,?,?,'user','ready',? FROM projects WHERE id=? AND user_id=?",
     )
-      .bind(id, stockId, data.text, data.note, projectId, user.id)
+      .bind(id, stockId, data.text, data.note, requestJson(projectId), projectId, user.id)
       .run();
-    const question = await c.env.DB.prepare(
-      `SELECT ${questionColumns}, q.note FROM ${questionJoins} WHERE q.id = ? AND p.user_id = ?`,
-    )
-      .bind(id, user.id)
-      .first<QuestionDetail>();
-    if (!question) throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
-    if (
-      question.stock_id !== stockId ||
-      question.project_id !== projectId ||
-      question.text !== data.text ||
-      question.note !== data.note ||
-      question.source !== 'user'
-    )
-      throw new HTTPException(409, {
-        message: '同じリクエストIDで異なる問い・気づきが送信されました。',
-      });
-    return c.json({ question }, result.meta.changes ? 201 : 200);
+    const row = await load();
+    if (!row) throw new HTTPException(404, { message: '紐づけるストックが見つかりません。' });
+    return respond(row, projectId, !!result.meta.changes);
   });
   app.patch('/api/v1/questions/:id/favorite', async (c) => {
     const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));
@@ -998,15 +1107,18 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/stocks/:id/question', async (c) => {
     await ownedStock(c);
     const rows = await c.env.DB.prepare(
-      `SELECT ${questionColumns} FROM ${questionJoins} WHERE s.id = ? AND s.user_id = ? ORDER BY q.created_at DESC, q.id DESC`,
+      `SELECT ${questionColumns} FROM ${questionJoins} WHERE EXISTS (SELECT 1 FROM question_stocks qs WHERE qs.question_id=q.id AND qs.stock_id=?) AND p.user_id = ? ORDER BY q.created_at DESC, q.id DESC`,
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .all<Question>();
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({
-      question:
-        rows.results.find((question) => question.source === 'ai') ?? rows.results[0] ?? null,
-      questions: rows.results,
+      question: rows.results[0]
+        ? withRelations(
+            rows.results.find((question) => question.source === 'ai') ?? rows.results[0],
+          )
+        : null,
+      questions: rows.results.map(withRelations),
     });
   });
   app.post('/api/v1/stocks/:id/question/retry', async (c) => {
@@ -1313,6 +1425,14 @@ export function createApp(trustedPrincipal?: Principal) {
   app.notFound((c) => c.json({ error: '見つかりません。' }, 404));
   app.onError(async (error, c) => {
     const errorDetail = `${error.message} ${error.cause instanceof Error ? error.cause.message : ''}`;
+    if (errorDetail.includes('linked_project_move'))
+      return c.json(
+        {
+          error:
+            '複数のデータと関連しているため移動できません。関連を解除してから移動してください。',
+        },
+        409,
+      );
     const stockLimit = errorDetail.includes('stock_quota');
     if (stockLimit || errorDetail.includes('ai_quota')) {
       const at = await retryAt(

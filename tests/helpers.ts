@@ -230,3 +230,18 @@ export const mockEvent = (jobId: string) =>
     timestamp: new Date(),
     instanceId: jobId,
   }) as import('cloudflare:workers').WorkflowEvent<{ jobId: string }>;
+
+// 過去の移行そのものを検証した後、現在のAPIを呼ぶテスト用に後続の関連スキーマを適用する。
+export async function upgradeRelationsSchema(DB: D1Database) {
+  const columns = async (table: string) =>
+    (await DB.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>()).results.map(
+      (row) => row.name,
+    );
+  if (!(await columns('questions')).includes('note'))
+    await applyMigration(DB, '0028_question_notes.sql');
+  if (!(await columns('comments')).length) await applyMigration(DB, '0026_comments.sql');
+  if (!(await columns('pufu_scores')).includes('project_id'))
+    await applyMigration(DB, '0029_independent_pufus.sql');
+  if (!(await columns('questions')).includes('request_json'))
+    await applyMigration(DB, '0030_multiple_relations.sql');
+}

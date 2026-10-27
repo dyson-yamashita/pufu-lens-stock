@@ -150,7 +150,7 @@ it('タブ切り替えと定期取得で下書きを保持し、メモと保存�
   await submit();
   expect(send).toHaveBeenCalledWith(
     '/api/v1/questions/question',
-    { note: '書きかけのメモ', project_id: 'other' },
+    { note: '書きかけのメモ', project_id: 'other', stock_ids: [] },
     'PATCH',
   );
   expect(panel().querySelector('[role="status"]')?.textContent).toContain('保存しました');
@@ -169,7 +169,7 @@ it('保存失敗では入力を残して再試行でき、空のメモも保存�
   await submit();
   expect(send).toHaveBeenLastCalledWith(
     '/api/v1/questions/question',
-    { note: '', project_id: 'project' },
+    { note: '', project_id: 'project', stock_ids: [] },
     'PATCH',
   );
 });
@@ -190,7 +190,7 @@ it('別の画面で保存先が変わった場合、編集中のメモを保ち�
   await submit();
   expect(send).toHaveBeenLastCalledWith(
     '/api/v1/questions/question',
-    { note: '編集中のメモ', project_id: 'other' },
+    { note: '編集中のメモ', project_id: 'other', stock_ids: [] },
     'PATCH',
   );
 });

@@ -124,15 +124,28 @@ describe('本人用の時系列コメント', () => {
     ).toBe(403);
   });
 
-  it('対象・プロジェクト・ユーザー削除でコメントを消し、無関係な対象を保持する', async () => {
+  it('削除対象だけのコメントを消し、関連先のコメントはプロジェクト・ユーザー削除まで保持する', async () => {
     const independent: Target = { target_type: 'question', target_id: 'independent' };
-    for (const target of [stock, question, pufu, independent])
-      expect((await add(target)).status).toBe(201);
+    const retained = [question, pufu, { ...pufu, phase: 2 }, independent];
+    for (const target of [stock, ...retained]) expect((await add(target)).status).toBe(201);
+    const comments = async (target: Target) =>
+      (await (await list(target)).json()) as {
+        comments: Comment[];
+      };
+    const before = await Promise.all(retained.map(comments));
     expect((await app.request('/api/v1/stocks/stock', { method: 'DELETE' })).status).toBe(200);
+    expect((await app.env.DB.prepare('SELECT COUNT(*) AS n FROM comments').first())!.n).toBe(4);
+    expect(await Promise.all(retained.map(comments))).toEqual(before);
+    expect((await app.request('/api/v1/questions/question', { method: 'DELETE' })).status).toBe(
+      200,
+    );
+    expect((await app.env.DB.prepare('SELECT COUNT(*) AS n FROM comments').first())!.n).toBe(3);
+    expect(await Promise.all(retained.slice(1).map(comments))).toEqual(before.slice(1));
+    await app.env.DB.prepare("DELETE FROM projects WHERE id='alice-project'").run();
     expect((await app.env.DB.prepare('SELECT target_id FROM comments').all()).results).toEqual([
       { target_id: 'independent' },
     ]);
-    await app.env.DB.prepare("DELETE FROM projects WHERE id='alice-second'").run();
+    await app.env.DB.prepare("DELETE FROM users WHERE id='alice'").run();
     expect((await app.env.DB.prepare('SELECT * FROM comments').all()).results).toEqual([]);
   });
 

@@ -1,3 +1,4 @@
+import type { PufuRelations, StockRelations } from './relations';
 import type { ArticleSummary } from './domain';
 import type { PufuScore } from './pufu';
 
@@ -23,7 +24,7 @@ export type PublicStock = {
   created_at: string;
   summary: ArticleSummary | null;
 };
-export type PublicQuestion = {
+export type PublicQuestion = StockRelations & {
   id: string;
   text: string;
   source: 'ai' | 'user';
@@ -38,11 +39,12 @@ export type PublicPufuSummary = {
   current_phase: number;
   updated_at: string;
 };
-export type PublicPufu = PublicPufuSummary & {
-  question_id: string;
-  question_text: string;
-  score: PufuScore;
-};
+export type PublicPufu = PufuRelations &
+  PublicPufuSummary & {
+    question_id: string;
+    question_text: string;
+    score: PufuScore;
+  };
 export type PublicList<T> = { items: T[]; total: number; page: number; has_more: boolean };
 
 export type PublicStockDetail = {

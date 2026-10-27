@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { testApp, applyMigration, mockEvent, mockStep } from './helpers';
+import { testApp, applyMigration, mockEvent, mockStep, upgradeRelationsSchema } from './helpers';
 import { ArticleWorkflow } from '../server/workflows';
 import { queueQuestionStatements } from '../server/db';
 import type { Question, QuestionDetail } from '../shared/domain';
@@ -172,7 +172,7 @@ describe('ユーザーの問いの追加', () => {
     expect(first.question.id).not.toBe(second.question.id);
     expect((await userQuestions()).questions.map((item) => item.text)).toEqual(['Aliceの問い？']);
   });
-  it('ストックの移動に追従し、削除でAIとユーザーの問いをまとめて削除する', async () => {
+  it('ストックの移動に追従し、削除後もAIとユーザーの問いを保持する', async () => {
     const id = await save();
     await add(id);
     await app.request(`/api/v1/stocks/${id}`, {
@@ -182,11 +182,24 @@ describe('ユーザーの問いの追加', () => {
     expect(
       (await questions(id)).questions.every((item) => item.project_id === 'alice-second'),
     ).toBe(true);
-    await app.request(`/api/v1/stocks/${id}`, { method: 'DELETE' });
-    expect((await userQuestions()).total).toBe(0);
-    expect(
-      (await app.env.DB.prepare('SELECT COUNT(*) AS count FROM questions').first())!.count,
-    ).toBe(0);
+    const before = (await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all()).results;
+    expect((await app.request(`/api/v1/stocks/${id}`, { method: 'DELETE' })).status).toBe(200);
+    expect((await userQuestions()).total).toBe(1);
+    expect((await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all()).results).toEqual(
+      before.map((question) => ({
+        ...question,
+        stock_id: null,
+        ...(question.source === 'ai'
+          ? {
+              status: 'failed',
+              error: '作成元のストックが削除されたため、問い・気づきの生成を終了しました。',
+              generation: Number(question.generation) + 1,
+              updated_at: expect.any(String),
+            }
+          : {}),
+      })),
+    );
+    expect((await app.env.DB.prepare('SELECT * FROM question_stocks').all()).results).toEqual([]);
   });
   it('移行で既存の問いを保ち、AIは1件・ユーザーは複数件の制約にする', async () => {
     await app.dispose();
@@ -224,6 +237,7 @@ describe('ユーザーの問いの追加', () => {
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
     await applyMigration(app.env.DB, '0028_question_notes.sql');
+    await upgradeRelationsSchema(app.env.DB);
     expect((await add(id, '追加1？')).status).toBe(201);
     expect((await add(id, '追加2？')).status).toBe(201);
     await expect(

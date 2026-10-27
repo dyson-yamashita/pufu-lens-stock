@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { relationIdsSchema, type StockRelations } from './relations';
 
 export const summarySchema = z.object({
   overview: z.string().min(1).max(1600),
@@ -54,15 +55,19 @@ export const userQuestionSchema = questionSchema
   .extend({
     project_id: z.string().trim().min(1, 'プロジェクトを選択してください。').max(100).optional(),
     stock_id: z.string().trim().min(1).max(100).nullable().optional(),
+    stock_ids: relationIdsSchema.optional(),
     note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').default(''),
     request_id: z.uuid().optional(),
   })
   .strict()
-  .refine((input) => input.project_id || input.stock_id, {
+  .refine((input) => input.stock_id === undefined || input.stock_ids === undefined, {
+    message: 'stock_idとstock_idsは同時に指定できません。',
+  })
+  .refine((input) => input.project_id || input.stock_id || input.stock_ids?.length, {
     message: 'プロジェクトを選択してください。',
     path: ['project_id'],
   });
-export type Question = {
+export type Question = StockRelations & {
   id: string;
   stock_id: string | null;
   source: 'ai' | 'user';
@@ -85,8 +90,12 @@ export const questionSettingsSchema = z
   .strictObject({
     note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').optional(),
     project_id: z.string().trim().min(1).max(100).optional(),
+    stock_ids: relationIdsSchema.optional(),
   })
-  .refine((input) => input.note !== undefined || input.project_id !== undefined);
+  .refine(
+    (input) =>
+      input.note !== undefined || input.project_id !== undefined || input.stock_ids !== undefined,
+  );
 export const memorySchema = z.object({
   interests: z.array(z.string().min(1).max(300)).max(8),
   knowledge: z

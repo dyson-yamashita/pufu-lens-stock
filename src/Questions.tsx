@@ -300,14 +300,19 @@ export default function Questions({
                 </button>
               </div>
               <QuestionBody question={question} onOpen={() => onQuestion(question.id)} />
-              {question.stock_id && (
-                <div className="question-detail-source">
+              {(
+                question.stocks ??
+                (question.stock_id
+                  ? [{ id: question.stock_id, title: question.article_title }]
+                  : [])
+              ).map((stock) => (
+                <div className="question-detail-source" key={stock.id}>
                   <button
                     disabled={opening !== null}
                     onClick={async () => {
-                      setOpening(question.stock_id);
+                      setOpening(stock.id);
                       try {
-                        await onOpen(question.stock_id!);
+                        await onOpen(stock.id);
                       } catch (e) {
                         setError((e as Error).message);
                       } finally {
@@ -316,15 +321,15 @@ export default function Questions({
                     }}
                   >
                     <BookOpen size={17} aria-hidden="true" />
-                    <span>{question.article_title}</span>
-                    {opening === question.stock_id ? (
+                    <span>{stock.title}</span>
+                    {opening === stock.id ? (
                       <LoaderCircle className="spin" size={16} aria-hidden="true" />
                     ) : (
                       <ArrowRight size={16} aria-hidden="true" />
                     )}
                   </button>
                 </div>
-              )}
+              ))}
               <div className="question-card-footer">
                 <time dateTime={question.created_at}>
                   {new Intl.DateTimeFormat('ja-JP', {

@@ -2,16 +2,11 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { AppEnv } from './env';
-import type {
-  Publication,
-  PublicProject,
-  PublicStock,
-  PublicQuestion,
-  PublicPufu,
-} from '../shared/public-project';
+import type { Publication, PublicProject, PublicStock, PublicPufu } from '../shared/public-project';
 import type { ArticleSummary } from '../shared/domain';
 import { pufuScoreSchema } from '../shared/pufu';
 import { now } from './db';
+import { stockRelationsColumn, pufuRelationsColumns, withRelations } from './relations';
 
 const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
@@ -25,7 +20,7 @@ const stockColumns =
 const stockJoins =
   'stocks s JOIN projects p ON p.id=s.project_id JOIN articles a ON a.id=s.article_id';
 const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.title) AS article_title,q.created_at,
-  (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.question_id=q.id AND pf.user_id=p.user_id AND pf.status='ready') AS pufu_count`;
+  (SELECT COUNT(*) FROM pufu_scores pf WHERE EXISTS(SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pf.id AND pq.question_id=q.id) AND pf.user_id=p.user_id AND pf.status='ready') AS pufu_count,${stockRelationsColumn('q')}`;
 const questionJoins =
   'questions q JOIN projects p ON p.id=q.project_id LEFT JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id';
 const publicWhere = 'p.public_id=? AND p.is_public=1';
@@ -106,17 +101,17 @@ export function publicProjectsApp() {
         `SELECT ${stockColumns} FROM ${stockJoins} WHERE ${publicWhere} AND s.id=?`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND s.id=? AND ${publicQuestionWhere} ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND EXISTS(SELECT 1 FROM question_stocks qs WHERE qs.question_id=q.id AND qs.stock_id=?) AND ${publicQuestionWhere} ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
       c.env.DB.prepare(
-        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id WHERE ${publicWhere} AND s.id=? AND ${publicQuestionWhere}`,
+        `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND EXISTS(SELECT 1 FROM question_stocks qs WHERE qs.question_id=q.id AND qs.stock_id=?) AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
     ]);
     if (!stocks.results.length) throw notFound();
     const total = Number(count.results[0].total);
     return c.json({
       stock: stock(stocks.results[0] as Parameters<typeof stock>[0]),
-      questions: questions.results as PublicQuestion[],
+      questions: questions.results.map(withRelations),
       total,
       page,
       has_more: page * limit < total,
@@ -136,7 +131,7 @@ export function publicProjectsApp() {
     if (!project.results.length) throw notFound();
     const total = Number(count.results[0].total);
     return c.json({
-      items: rows.results as PublicQuestion[],
+      items: rows.results.map(withRelations),
       total,
       page,
       has_more: page * limit < total,
@@ -149,16 +144,17 @@ export function publicProjectsApp() {
         `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT ${stockColumns} FROM ${stockJoins} JOIN questions q ON q.stock_id=s.id AND q.project_id=p.id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
+        `SELECT ${stockColumns} FROM ${stockJoins} JOIN question_stocks qs ON qs.stock_id=s.id JOIN questions q ON q.id=qs.question_id AND q.project_id=p.id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
+        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN pufu_questions pq ON pq.pufu_id=pf.id JOIN questions q ON q.id=pq.question_id JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
     ]);
     if (!questions.results.length) throw notFound();
     return c.json({
-      question: questions.results[0],
+      question: withRelations(questions.results[0]),
       stock: stocks.results[0] ? stock(stocks.results[0] as Parameters<typeof stock>[0]) : null,
+      stocks: stocks.results.map((row) => stock(row as Parameters<typeof stock>[0])),
       pufus: pufus.results,
       page,
       has_more: page * limit < Number(questions.results[0].pufu_count),
@@ -167,18 +163,25 @@ export function publicProjectsApp() {
   app.get('/projects/:key/pufus/:id', async (c) => {
     // 公開の読み取りでは局面の初期化・ジョブ起動・コンテキスト取得を一切行わない。
     const row = await c.env.DB.prepare(
-      `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at,q.id AS question_id,q.text AS question_text,
+      `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at,q.id AS question_id,q.text AS question_text,${pufuRelationsColumns('pf')},
       COALESCE(ph.score_json,pf.score_json) AS score_json FROM pufu_scores pf
-      JOIN questions q ON q.id=pf.question_id JOIN projects p ON p.id=q.project_id
+      JOIN projects p ON p.id=pf.project_id JOIN questions q ON q.id=(SELECT pq.question_id FROM pufu_questions pq JOIN questions visible ON visible.id=pq.question_id WHERE pq.pufu_id=pf.id AND (visible.status='ready' OR (visible.source='ai' AND visible.text IS NOT NULL)) ORDER BY pq.question_id LIMIT 1)
       LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
       WHERE ${publicWhere} AND pf.id=? AND pf.user_id=p.user_id AND pf.status='ready' AND ${publicQuestionWhere}`,
     )
       .bind(c.req.param('key'), c.req.param('id'))
-      .first<Omit<PublicPufu, 'score'> & { score_json: string | null }>();
+      .first<
+        Omit<PublicPufu, 'score'> & {
+          score_json: string | null;
+          questions_json: string;
+          stocks_json: string;
+        }
+      >();
     if (!row?.score_json) throw notFound();
     const score = pufuScoreSchema.parse(JSON.parse(row.score_json));
     return c.json({
       pufu: {
+        ...withRelations({ questions_json: row.questions_json, stocks_json: row.stocks_json }),
         id: row.id,
         task: row.task,
         current_phase: row.current_phase,

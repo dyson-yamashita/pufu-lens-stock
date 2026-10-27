@@ -422,6 +422,9 @@ describe('MCPによるストックと問いの取得・追加', () => {
         app.env.DB.prepare('SELECT * FROM pufu_phases ORDER BY pufu_id,number'),
         app.env.DB.prepare('SELECT * FROM processing_jobs ORDER BY id'),
         app.env.DB.prepare('SELECT * FROM ai_calls ORDER BY id'),
+        app.env.DB.prepare('SELECT * FROM question_stocks ORDER BY question_id,stock_id'),
+        app.env.DB.prepare('SELECT * FROM pufu_questions ORDER BY pufu_id,question_id'),
+        app.env.DB.prepare('SELECT * FROM pufu_stocks ORDER BY pufu_id,stock_id'),
       ]).then((results) => results.map((item) => item.results));
     const before = await snapshot();
     const run = vi.fn();
@@ -431,6 +434,10 @@ describe('MCPによるストックと問いの取得・追加', () => {
     expect(response.isError).not.toBe(true);
     expect(response.structuredContent).toEqual({
       question_id: question.id,
+      question_ids: [question.id],
+      stock_ids: [],
+      questions: [{ id: question.id, source: 'user', text: '保存したプ譜をレビューしたい' }],
+      stocks: [],
       project_id: 'alice-project',
       updated_at: before[0].find((row) => row.id === pufuId)!.updated_at,
       projectScore: saved,
@@ -455,6 +462,10 @@ describe('MCPによるストックと問いの取得・追加', () => {
       expect((await call(token, 'get_pufu', { question_id: questionId })).result).toMatchObject({
         structuredContent: {
           question_id: questionId,
+          question_ids: [],
+          stock_ids: [],
+          questions: [],
+          stocks: [],
           project_id: 'alice-project',
           updated_at: null,
           projectScore: null,
@@ -481,6 +492,10 @@ describe('MCPによるストックと問いの取得・追加', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       question_id: question.id,
+      question_ids: [question.id],
+      stock_ids: [],
+      questions: [{ id: question.id, source: 'user', text: '旧データ' }],
+      stocks: [],
       project_id: 'alice-project',
       updated_at: null,
       projectScore: saved,
