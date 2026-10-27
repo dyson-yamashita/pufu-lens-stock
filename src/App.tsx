@@ -1107,6 +1107,7 @@ export default function App() {
           {(route.view === 'pufus' || (questionFlow && questionListContext.view === 'pufus')) && (
             <div hidden={route.view !== 'pufus'}>
               <Pufus
+                projects={projects}
                 key={(questionFlow ? questionListContext.scope : listProjectId) ?? 'all'}
                 projectId={questionFlow ? questionListContext.scope : listProjectId}
                 active={route.view === 'pufus'}

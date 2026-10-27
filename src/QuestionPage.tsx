@@ -1,12 +1,13 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Folder, LoaderCircle, Plus, Star } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, BookOpen, Folder, LoaderCircle, Star } from 'lucide-react';
 import type { Project, Question, QuestionDetail } from '../shared/domain';
-import { createPufuSchema, type PufuSummary } from '../shared/pufu';
-import { api, createRequestId, send } from './api';
+import { type PufuSummary } from '../shared/pufu';
+import { api, send } from './api';
 import QuestionLabels from './QuestionLabels';
 import Comments from './Comments';
 import DeleteAction from './DeleteAction';
 import QuestionSettings from './QuestionSettings';
+import PufuForm from './PufuForm';
 
 const detailTabs = [
   ['body', '本文'],
@@ -42,13 +43,10 @@ export default function QuestionPage({
   const [tab, setTab] = useState<(typeof detailTabs)[number][0]>('body');
   const tabsId = useId();
   const [pufus, setPufus] = useState<PufuSummary[]>([]);
-  const [task, setTask] = useState('');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const request = useRef<{ task: string; id: string } | null>(null);
   const detailsVersion = useRef(0);
   useEffect(() => {
     if (deleting) return;
@@ -82,30 +80,6 @@ export default function QuestionPage({
       window.clearInterval(timer);
     };
   }, [id, deleting]);
-  async function generate(event: FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    const text = task.trim();
-    if (request.current?.task !== text) request.current = { task: text, id: createRequestId() };
-    const input = createPufuSchema.safeParse({ task: text, request_id: request.current.id });
-    if (!input.success) {
-      setError(input.error.issues[0].message);
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      const result = await send<{ id: string }>(
-        `/api/v1/questions/${encodeURIComponent(id)}/pufus`,
-        input.data,
-      );
-      onPufu(result.id);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <section
       className="question-detail-page"
@@ -265,42 +239,13 @@ export default function QuestionPage({
             </article>
           </div>
           {resolve ? (
-            <form className="pufu-task-form" onSubmit={generate}>
-              <label htmlFor="pufu-task">
-                問い・気づきから考える課題<span className="task-caption">獲得目標</span>
-              </label>
-              <p className="field-hint" id="pufu-task-help">
-                この問い・気づきから、どんな状態を実現したいですか？
-                入力した内容を、そのままプ譜の獲得目標にします。
-              </p>
-              <textarea
-                id="pufu-task"
-                aria-describedby="pufu-task-help"
-                value={task}
-                onChange={(event) => setTask(event.target.value)}
-                rows={5}
-                maxLength={1000}
-                required
-                disabled={busy}
-                placeholder="例：記事の取得が途中で失敗しても、要約まで確実に完了できる仕組みをつくる。"
-              />
-              <p className="field-hint">
-                問い・気づき・プロジェクトの説明・あなたとプロジェクトのメモリを参考に、勝利条件や施策を生成します。関連するストックがあれば、その要約とメモも使います。
-              </p>
-              <div className="form-actions">
-                <button
-                  className="button primary"
-                  disabled={busy || question.status !== 'ready' || !task.trim()}
-                >
-                  {busy ? (
-                    <LoaderCircle className="spin" size={18} aria-hidden="true" />
-                  ) : (
-                    <Plus size={18} aria-hidden="true" />
-                  )}
-                  {busy ? '作成を受け付けています…' : 'プ譜を作成'}
-                </button>
-              </div>
-            </form>
+            <PufuForm
+              projects={projects}
+              projectId={question.project_id}
+              questionId={id}
+              disabled={question.status !== 'ready' || !question.text}
+              onDone={onPufu}
+            />
           ) : (
             <>
               <div

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, LoaderCircle, Network, Plus } from 'lucide-react';
 import type { PufuListItem } from '../shared/pufu';
 import { api } from './api';
+import type { Project } from '../shared/domain';
+import PufuForm from './PufuForm';
+import PufuModal from './PufuModal';
 
 const statusLabels = {
   queued: '生成待ち',
@@ -11,15 +14,19 @@ const statusLabels = {
 };
 export default function Pufus({
   projectId,
+  projects,
   refresh,
   active,
   onPufu,
 }: {
   projectId: string | null;
+  projects: Pick<Project, 'id' | 'name'>[];
   refresh: number;
   active: boolean;
   onPufu: (id: string) => void;
 }) {
+  const [adding, setAdding] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [pufus, setPufus] = useState<PufuListItem[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -68,7 +75,28 @@ export default function Pufus({
     <section className="questions-page" aria-label="保存したプ譜">
       <div className="filter-row">
         <span className="result-count">{total}件</span>
+        <button
+          className="button primary"
+          onClick={() => setAdding(true)}
+          disabled={!projects.length}
+        >
+          <Plus size={18} aria-hidden="true" />
+          プ譜を追加
+        </button>
       </div>
+      {adding && (
+        <PufuModal title="プ譜を追加" wide={false} busy={creating} onClose={() => setAdding(false)}>
+          <PufuForm
+            projects={projects}
+            projectId={projectId}
+            onBusyChange={setCreating}
+            onDone={(id) => {
+              setAdding(false);
+              onPufu(id);
+            }}
+          />
+        </PufuModal>
+      )}
       {error && (
         <div className="form-error" role="alert">
           {error}
@@ -90,7 +118,7 @@ export default function Pufus({
             </span>
             <h2>プ譜はまだありません</h2>
             <p>
-              「問い・気づき」タブで問い・気づきを開き、「問い・気づきから考える」からプ譜を作成できます。
+              「プ譜を追加」から獲得目標を入力して作成できます。問い・気づきからも作成できます。
             </p>
           </div>
         )
