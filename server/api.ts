@@ -86,7 +86,7 @@ const questionColumns =
 const questionJoins =
   'questions q JOIN projects p ON p.id = q.project_id LEFT JOIN stocks s ON s.id = q.stock_id LEFT JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
-  'id,question_id,project_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
+  'id,is_favorite,question_id,project_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
 async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
   let value: unknown;
   try {
@@ -781,6 +781,8 @@ export function createApp(trustedPrincipal?: Principal) {
   });
   app.get('/api/v1/pufus', async (c) => {
     const { user, tokenProjectId } = c.get('principal');
+    const favorite = c.req.query('favorite') ?? 'false';
+    if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const requested = c.req.query('project_id') || null;
     if (tokenProjectId && requested && requested !== tokenProjectId) throw new HTTPException(404);
     const projectId = tokenProjectId ?? requested;
@@ -789,7 +791,8 @@ export function createApp(trustedPrincipal?: Principal) {
     const joins =
       'pufu_scores pf JOIN projects p ON p.id=pf.project_id LEFT JOIN questions q ON q.id=pf.question_id';
     const where =
-      'pf.user_id=? AND p.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR p.id=?)';
+      'pf.user_id=? AND p.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR p.id=?)' +
+      (favorite === 'true' ? ' AND pf.is_favorite=1' : '');
     const params = [user.id, user.id, projectId, projectId];
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
@@ -808,6 +811,17 @@ export function createApp(trustedPrincipal?: Principal) {
       page,
       pageSize: 24,
     });
+  });
+  app.patch('/api/v1/pufus/:id/favorite', async (c) => {
+    const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));
+    const userId = c.get('principal').user.id;
+    const pufu = await c.env.DB.prepare(
+      'UPDATE pufu_scores SET is_favorite=? WHERE id=? AND user_id=? AND EXISTS (SELECT 1 FROM projects WHERE id=pufu_scores.project_id AND user_id=?) RETURNING id,is_favorite',
+    )
+      .bind(Number(data.is_favorite), c.req.param('id'), userId, userId)
+      .first<Pick<PufuSummary, 'id' | 'is_favorite'>>();
+    if (!pufu) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
+    return c.json(pufu);
   });
   async function savePufu(c: import('hono').Context<AppEnv>, append: boolean) {
     const pufu = await ownedPufu(c);

@@ -3,6 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import App from '../src/App';
+import Pufus from '../src/Pufus';
 import { api, send } from '../src/api';
 import type { Project } from '../shared/domain';
 
@@ -19,6 +20,7 @@ let total: number;
 let includeStock: boolean;
 let independent: boolean;
 let projects: Project[];
+let pufuFavorite: 0 | 1;
 const summary = {
   id: 'pufu',
   question_id: 'question',
@@ -72,6 +74,14 @@ beforeEach(() => {
       created_at: summary.created_at,
     },
   ];
+  pufuFavorite = 0;
+  vi.mocked(send).mockImplementation(async (path, data) => {
+    if (path === '/api/v1/pufus/pufu/favorite') {
+      pufuFavorite = (data as { is_favorite: boolean }).is_favorite ? 1 : 0;
+      return { id: 'pufu', is_favorite: pufuFavorite };
+    }
+    throw new Error('想定外の送信先: ' + path);
+  });
   Object.defineProperties(window.HTMLElement.prototype, {
     showModal: { configurable: true, value() {} },
     close: { configurable: true, value() {} },
@@ -170,11 +180,18 @@ beforeEach(() => {
         return { memory: null, pending: false, error: null };
       case '/api/v1/pufus':
         if (listError) throw new Error('一覧を取得できませんでした');
-        return { pufus: total ? [summary] : [], total };
+        return {
+          pufus:
+            total && (url.searchParams.get('favorite') !== 'true' || pufuFavorite)
+              ? [{ ...summary, is_favorite: pufuFavorite }]
+              : [],
+          total: url.searchParams.get('favorite') === 'true' && !pufuFavorite ? 0 : total,
+        };
       case '/api/v1/pufus/pufu':
         return {
           pufu: {
             ...summary,
+            is_favorite: pufuFavorite,
             question_id: independent ? null : summary.question_id,
             score: null,
             phases: [],
@@ -199,7 +216,8 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   vi.unstubAllGlobals();
-  vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.resetAllMocks();
 });
 async function render(hash = '') {
   window.location.hash = hash;
@@ -216,6 +234,90 @@ async function tab(label: string) {
   await act(async () => button.click());
   await hashChange();
 }
+it('一覧の星で登録・解除し、お気に入りだけに絞り込める', async () => {
+  await render('#pufus');
+  const star = document.querySelector<HTMLButtonElement>('.pufu-favorite')!;
+  expect(star).not.toBeNull();
+  expect(star.closest('button')).toBe(star);
+  await act(async () => star.click());
+  expect(window.location.hash).toBe('#pufus');
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+  const filter = [...document.querySelectorAll<HTMLButtonElement>('.filters button')].find(
+    (button) => button.textContent === 'お気に入り',
+  )!;
+  await act(async () => filter.click());
+  expect(
+    requests
+      .filter((url) => url.pathname === '/api/v1/pufus')
+      .at(-1)
+      ?.searchParams.get('favorite'),
+  ).toBe('true');
+  expect(filter.getAttribute('aria-pressed')).toBe('true');
+  const scope = document.querySelector<HTMLElement>('#project-scope')!;
+  Object.defineProperty(scope, 'value', { configurable: true, value: 'project' });
+  await act(async () => scope.dispatchEvent(new window.Event('change', { bubbles: true })));
+  const request = requests.filter((url) => url.pathname === '/api/v1/pufus').at(-1)!;
+  expect(request.searchParams.get('project_id')).toBe('project');
+  expect(request.searchParams.get('favorite')).toBe('true');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-favorite')!.click());
+  expect(document.querySelector('.pufu-list-item')).toBeNull();
+  expect(document.querySelector('.result-count')?.textContent).toBe('0件');
+  expect(document.body.textContent).toContain('お気に入りのプ譜はありません');
+});
+
+it('登録中の二重操作を防ぎ、失敗しても星を戻して再試行できる', async () => {
+  let reject!: (error: Error) => void;
+  vi.mocked(send).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  await render('#pufus');
+  const star = document.querySelector<HTMLButtonElement>('.pufu-favorite')!;
+  expect(star).not.toBeNull();
+  await act(async () => star.click());
+  expect(star.disabled).toBe(true);
+  await act(async () => reject(new Error('お気に入りの保存に失敗しました')));
+  expect(star.getAttribute('aria-pressed')).toBe('false');
+  expect(star.disabled).toBe(false);
+  expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+    'お気に入りの保存に失敗しました',
+  );
+  await act(async () => star.click());
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+});
+
+it('登録前に始まった古いポーリングで星の状態を上書きしない', async () => {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+  const intervals = vi.spyOn(window, 'setInterval');
+  await act(async () =>
+    root.render(
+      createElement(Pufus, {
+        projectId: null,
+        projects: [{ id: 'project', name: '実行のプロジェクト' }],
+        active: true,
+        refresh: 0,
+        onPufu: vi.fn(),
+      }),
+    ),
+  );
+  let resolve!: (value: unknown) => void;
+  vi.mocked(api).mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const poll = intervals.mock.calls[0][0];
+  await act(async () => poll());
+  const star = document.querySelector<HTMLButtonElement>('.pufu-favorite')!;
+  expect(star).not.toBeNull();
+  await act(async () => star.click());
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+  await act(async () => resolve({ pufus: [{ ...summary, is_favorite: 0 }], total: 1 }));
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+});
 it('サイドメニューからすべてのプ譜へ移動でき、カードに右矢印を出さない', async () => {
   await render();
   const menu = [...document.querySelectorAll<HTMLButtonElement>('.sidebar .nav-item')].find(
@@ -227,7 +329,7 @@ it('サイドメニューからすべてのプ譜へ移動でき、カードに�
   expect(window.location.hash).toBe('#pufus');
   expect(menu.getAttribute('aria-current')).toBe('page');
   expect(document.querySelector('.pufu-list-item .lucide-arrow-right')).toBeNull();
-  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
   await hashChange();
   expect(menu.getAttribute('aria-current')).toBe('page');
 });
@@ -267,7 +369,7 @@ it.each(['', '#project/project'])(
     expect(list.textContent).toContain(summary.task);
     expect(list.textContent).toContain(summary.question_text);
     expect(list.textContent).toContain('生成中');
-    const item = list.querySelector<HTMLButtonElement>('.pufu-list-item')!;
+    const item = list.querySelector<HTMLButtonElement>('.pufu-list-open')!;
     await act(async () => item.click());
     await hashChange();
     expect(window.location.hash).toBe('#pufu/pufu');
@@ -333,7 +435,7 @@ it('問い一覧からプ譜を開いてもヘッダーはプ譜一覧と詳細�
 it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {
   independent = true;
   await render('#pufus/project');
-  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
   await hashChange();
   const back = document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!;
   expect(back.textContent).toBe('プ譜の一覧に戻る');
@@ -413,7 +515,7 @@ it('次のページを開き、プロジェクト変更時は先頭ページに�
 
 it('プ譜を見た後にストックから問いを開くと、問い一覧を戻り先にする', async () => {
   await render('#pufus');
-  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
   await hashChange();
   includeStock = true;
   window.location.hash = '';

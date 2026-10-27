@@ -1130,7 +1130,7 @@ export default function App() {
             <div hidden={route.view !== 'pufus'}>
               <Pufus
                 projects={projects}
-                key={(questionFlow ? questionListContext.scope : listProjectId) ?? 'all'}
+                key={(questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}
                 projectId={questionFlow ? questionListContext.scope : listProjectId}
                 active={route.view === 'pufus'}
                 refresh={refresh}

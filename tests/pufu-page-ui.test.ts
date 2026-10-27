@@ -3,7 +3,7 @@ import { act, createElement, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PufuPage from '../src/PufuPage';
-import { api } from '../src/api';
+import { api, send } from '../src/api';
 import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 
 vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
@@ -24,6 +24,7 @@ const score: PufuScore = {
 };
 const pufu: Pufu = {
   id: 'pufu',
+  is_favorite: 0,
   question_id: 'question',
   project_id: 'project',
   task: '作成した課題',
@@ -90,7 +91,8 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   vi.unstubAllGlobals();
-  vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.resetAllMocks();
 });
 async function render() {
   await act(async () => {
@@ -112,6 +114,44 @@ async function render() {
     );
   });
 }
+
+it('プ譜の詳細でもお気に入りを登録・解除でき、本文を保持する', async () => {
+  vi.mocked(send)
+    .mockResolvedValueOnce({ id: 'pufu', is_favorite: 1 })
+    .mockResolvedValueOnce({ id: 'pufu', is_favorite: 0 });
+  await render();
+  const star = document.querySelector<HTMLButtonElement>('.pufu-favorite')!;
+  expect(star).not.toBeNull();
+  await act(async () => star.click());
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+  expect(document.body.textContent).toContain('作成した課題');
+  await act(async () => star.click());
+  expect(star.getAttribute('aria-pressed')).toBe('false');
+});
+
+it('生成中の詳細でも古いポーリングが登録済みの星を上書きしない', async () => {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+  const intervals = vi.spyOn(window, 'setInterval');
+  const generating = { ...pufu, status: 'generating', score: null };
+  vi.mocked(api).mockResolvedValue({ pufu: generating });
+  vi.mocked(send).mockResolvedValue({ id: 'pufu', is_favorite: 1 });
+  await render();
+  let resolve!: (value: unknown) => void;
+  vi.mocked(api).mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const poll = intervals.mock.calls.at(-1)![0];
+  await act(async () => poll());
+  const star = document.querySelector<HTMLButtonElement>('.pufu-favorite')!;
+  await act(async () => star.click());
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+  await act(async () => resolve({ pufu: generating }));
+  expect(star.getAttribute('aria-pressed')).toBe('true');
+  expect(document.body.textContent).toContain('作成した課題');
+});
 
 it('エディター取得失敗でも画面と保存済みの文脈を残し、自動再読み込みは1回だけ行う', async () => {
   await render();

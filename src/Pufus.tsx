@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LoaderCircle, Network, Plus } from 'lucide-react';
 import type { PufuListItem } from '../shared/pufu';
 import { api } from './api';
 import type { Project } from '../shared/domain';
 import PufuForm from './PufuForm';
 import PufuModal from './PufuModal';
+import PufuFavoriteButton from './PufuFavoriteButton';
 
 const statusLabels = {
   queued: '生成待ち',
@@ -33,6 +34,9 @@ export default function Pufus({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const favoriteVersion = useRef(0);
+  useEffect(() => setPage(1), [projectId]);
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -41,14 +45,16 @@ export default function Pufus({
     const load = async () => {
       if (inFlight) return;
       inFlight = true;
+      const version = favoriteVersion.current;
       const params = new URLSearchParams({ page: String(page) });
+      if (favoritesOnly) params.set('favorite', 'true');
       if (projectId) params.set('project_id', projectId);
       try {
         const result = await api<{ pufus: PufuListItem[]; total: number }>(
           `/api/v1/pufus?${params}`,
           { signal: controller.signal },
         );
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && version === favoriteVersion.current) {
           setPufus(result.pufus);
           setTotal(result.total);
           setError('');
@@ -70,10 +76,28 @@ export default function Pufus({
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [projectId, page, refresh, retry, active]);
+  }, [projectId, page, refresh, retry, active, favoritesOnly]);
   return (
     <section className="questions-page" aria-label="保存したプ譜">
       <div className="filter-row">
+        <div className="filters" aria-label="プ譜のフィルター">
+          {[
+            [false, 'すべて'],
+            [true, 'お気に入り'],
+          ].map(([value, label]) => (
+            <button
+              key={String(value)}
+              aria-pressed={favoritesOnly === value}
+              className={favoritesOnly === value ? 'selected' : ''}
+              onClick={() => {
+                setFavoritesOnly(value === true);
+                setPage(1);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <span className="result-count">{total}件</span>
         <button
           className="button primary"
@@ -116,9 +140,11 @@ export default function Pufus({
             <span className="empty-icon">
               <Network className="pufu-icon" size={28} aria-hidden="true" />
             </span>
-            <h2>プ譜はまだありません</h2>
+            <h2>{favoritesOnly ? 'お気に入りのプ譜はありません' : 'プ譜はまだありません'}</h2>
             <p>
-              「プ譜を追加」から獲得目標を入力して作成できます。問い・気づきからも作成できます。
+              {favoritesOnly
+                ? 'プ譜の星ボタンからお気に入りに追加できます。'
+                : '「プ譜を追加」から獲得目標を入力して作成できます。問い・気づきからも作成できます。'}
             </p>
           </div>
         )
@@ -130,34 +156,51 @@ export default function Pufus({
               (pufu.question_id ? [{ id: pufu.question_id, text: pufu.question_text }] : []);
             const stocks = pufu.stocks ?? [];
             return (
-              <button key={pufu.id} className="pufu-list-item" onClick={() => onPufu(pufu.id)}>
-                <span>
-                  <strong>{pufu.task}</strong>
-                  {questions.length > 0 && (
+              <article key={pufu.id} className="pufu-list-item">
+                <button type="button" className="pufu-list-open" onClick={() => onPufu(pufu.id)}>
+                  <span>
+                    <strong>{pufu.task}</strong>
+                    {questions.length > 0 && (
+                      <small>
+                        問い・気づき：{questions[0].text}
+                        {questions.length > 1 && ` (他${questions.length - 1}件)`}
+                      </small>
+                    )}
+                    {stocks.length > 0 && (
+                      <small>
+                        ストック：{stocks[0].title}
+                        {stocks.length > 1 && ` (他${stocks.length - 1}件)`}
+                      </small>
+                    )}
                     <small>
-                      問い・気づき：{questions[0].text}
-                      {questions.length > 1 && ` (他${questions.length - 1}件)`}
+                      {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
                     </small>
-                  )}
-                  {stocks.length > 0 && (
                     <small>
-                      ストック：{stocks[0].title}
-                      {stocks.length > 1 && ` (他${stocks.length - 1}件)`}
+                      <time dateTime={pufu.created_at}>
+                        {new Intl.DateTimeFormat('ja-JP', {
+                          dateStyle: 'medium',
+                          timeZone: 'Asia/Tokyo',
+                        }).format(new Date(pufu.created_at))}
+                      </time>
                     </small>
-                  )}
-                  <small>
-                    {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
-                  </small>
-                  <small>
-                    <time dateTime={pufu.created_at}>
-                      {new Intl.DateTimeFormat('ja-JP', {
-                        dateStyle: 'medium',
-                        timeZone: 'Asia/Tokyo',
-                      }).format(new Date(pufu.created_at))}
-                    </time>
-                  </small>
-                </span>
-              </button>
+                  </span>
+                </button>
+                <PufuFavoriteButton
+                  pufu={pufu}
+                  onError={setError}
+                  onBusyChange={() => {
+                    favoriteVersion.current += 1;
+                  }}
+                  onSaved={(saved) => {
+                    setPufus((items) =>
+                      items.map((item) =>
+                        item.id === saved.id ? { ...item, is_favorite: saved.is_favorite } : item,
+                      ),
+                    );
+                    setRetry((value) => value + 1);
+                  }}
+                />
+              </article>
             );
           })}
         </div>

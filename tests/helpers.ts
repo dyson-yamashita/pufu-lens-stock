@@ -244,4 +244,6 @@ export async function upgradeRelationsSchema(DB: D1Database) {
     await applyMigration(DB, '0029_independent_pufus.sql');
   if (!(await columns('questions')).includes('request_json'))
     await applyMigration(DB, '0030_multiple_relations.sql');
+  if (!(await columns('pufu_scores')).includes('is_favorite'))
+    await applyMigration(DB, '0031_pufu_favorites.sql');
 }

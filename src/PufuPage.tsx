@@ -1,9 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, LoaderCircle, RefreshCw } from 'lucide-react';
 import type { Pufu } from '../shared/pufu';
 import { api, send } from './api';
 import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
 import PufuRelations from './PufuRelations';
+import PufuFavoriteButton from './PufuFavoriteButton';
 
 const PufuEditor = lazy(async () => {
   try {
@@ -37,6 +38,7 @@ export default function PufuPage({
     (pufu?.question_id
       ? [{ id: pufu.question_id, text: pufu.context.question?.text ?? '関連する問い・気づき' }]
       : []);
+  const favoriteVersion = useRef(0);
   const updateRevision = useCallback((revision: number) => {
     setPufu((current) => current && { ...current, revision });
   }, []);
@@ -47,13 +49,18 @@ export default function PufuPage({
     const load = async () => {
       if (complete || inFlight) return;
       inFlight = true;
+      const version = favoriteVersion.current;
       try {
         const result = await api<{ pufu: Pufu }>(`/api/v1/pufus/${encodeURIComponent(id)}`, {
           signal: controller.signal,
         });
         if (!controller.signal.aborted) {
           complete = result.pufu.status === 'ready' || result.pufu.status === 'failed';
-          setPufu(result.pufu);
+          setPufu((current) =>
+            current?.id === result.pufu.id && version !== favoriteVersion.current
+              ? { ...result.pufu, is_favorite: current.is_favorite }
+              : result.pufu,
+          );
           setError('');
         }
       } catch (e) {
@@ -88,6 +95,21 @@ export default function PufuPage({
           <h1>プ譜</h1>
           <p>問い・気づきから、実行に向けた一枚へ。</p>
         </div>
+        {pufu && (
+          <PufuFavoriteButton
+            key={pufu.id}
+            pufu={pufu}
+            onError={setError}
+            onBusyChange={() => {
+              favoriteVersion.current += 1;
+            }}
+            onSaved={(saved) => {
+              setPufu((current) =>
+                current?.id === saved.id ? { ...current, is_favorite: saved.is_favorite } : current,
+              );
+            }}
+          />
+        )}
       </header>
       {error && (
         <p className="form-error" role="alert">
@@ -133,7 +155,9 @@ export default function PufuPage({
           blocked={editorBlocked || pufu.status === 'queued' || pufu.status === 'generating'}
           onBusy={setRelationsBusy}
           onSaved={(saved) => {
-            setPufu(saved);
+            setPufu((current) =>
+              current?.id === saved.id ? { ...saved, is_favorite: current.is_favorite } : saved,
+            );
             setEditorVersion((value) => value + 1);
           }}
         />

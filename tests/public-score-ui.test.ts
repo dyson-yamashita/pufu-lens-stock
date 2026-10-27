@@ -52,6 +52,7 @@ const score: PufuScore = {
   elements: Object.fromEntries(elementKeys.map((key) => [key, node(key)])) as PufuScore['elements'],
 };
 const pufu: Pufu = {
+  is_favorite: 0,
   id: 'private-edit-mode',
   question_id: 'question',
   project_id: 'project',
