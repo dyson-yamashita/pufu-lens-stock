@@ -132,6 +132,26 @@ it('問いなしのプ譜でも課題を表示し、プ譜一覧への戻り先�
   await render();
   expect(document.body.textContent).toContain('作成した課題');
   expect(document.querySelector('.back-link')?.textContent).toContain('プ譜の一覧に戻る');
+  expect(document.querySelector('.pufu-context-questions')).toBeNull();
+});
+
+it('問い・気づきはラベル1つの下に全件を箇条書きで表示する', async () => {
+  const questions = [
+    { id: 'question', text: '保存した問い' },
+    { id: 'question-2', text: '別の気づき' },
+    { id: 'question-3', text: '3つ目の問い' },
+  ];
+  vi.mocked(api).mockResolvedValue({ pufu: { ...pufu, questions } });
+  await render();
+  const context = document.querySelector('.pufu-context')!;
+  expect(
+    [...context.querySelectorAll('.pufu-context-label')].filter(
+      (label) => label.textContent === '問い・気づき',
+    ),
+  ).toHaveLength(1);
+  expect(
+    [...context.querySelectorAll('.pufu-context-questions li')].map((li) => li.textContent),
+  ).toEqual(questions.map((question) => question.text));
 });
 
 it('再読み込み後も失敗した場合はループせず、画面のボタンから再試行できる', async () => {

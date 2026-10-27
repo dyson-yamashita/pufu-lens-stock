@@ -36,12 +36,12 @@ export default function PufuEditor({
   const editorKey = `${pufu.id}-phase-${editor.number}`;
   const currentPhase = phases.at(-1)!.number;
   const isLatest = editor.number === currentPhase;
-  const feedback = editor.number % 2 === 0;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [dirty, setDirty] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
   useEffect(() => {
     onEditingStateChange?.(editing || busy);
     return () => onEditingStateChange?.(false);
@@ -144,6 +144,30 @@ export default function PufuEditor({
       setBusy(false);
     }
   }
+  async function download(format: 'json' | 'png') {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const blob =
+        format === 'json'
+          ? new Blob([JSON.stringify(savedPhase.score)], { type: 'application/json' })
+          : await (await import('./pufu-download')).createPufuPng(savedPhase.score, theme);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${pufu.id}-phase-${editor.number}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDownloadOpen(false);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <>
       {pufu.model === 'local-pufu-template' && (
@@ -182,18 +206,14 @@ export default function PufuEditor({
         <div>
           <button
             className="button secondary"
+            disabled={busy}
             onClick={() => {
-              const json = JSON.stringify(savedPhase.score);
-              const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `${pufu.id}-phase-${editor.number}.json`;
-              link.click();
-              URL.revokeObjectURL(url);
+              setError('');
+              setDownloadOpen(true);
             }}
           >
             <Download size={16} aria-hidden="true" />
-            JSON
+            ダウンロード
           </button>
           {isLatest && (
             <button className="button secondary" disabled={busy} onClick={() => save(true)}>
@@ -205,12 +225,12 @@ export default function PufuEditor({
       </div>
       {isLatest && (
         <p className="field-hint pufu-phase-help">
-          奇数局面は編集、偶数局面はフィードバックです。局面を追加すると、現在の内容を保存して次の局面へ引き継ぎます。
+          すべての局面で本文とコメントを編集できます。局面を追加すると、現在の内容を保存して次の局面へ引き継ぎます。
         </p>
       )}
       <PufuImagePreview score={savedPhase.score} phase={editor.number} onEdit={openEditor} />
       <Comments targetType="pufu" targetId={pufu.id} phase={editor.number} />
-      {!editing && error && (
+      {!editing && !downloadOpen && error && (
         <p className="form-error" role="alert">
           {error}
         </p>
@@ -220,6 +240,34 @@ export default function PufuEditor({
           <Check size={17} aria-hidden="true" />
           {notice}
         </p>
+      )}
+      {downloadOpen && (
+        <PufuModal
+          title="ダウンロード形式を選択"
+          wide={false}
+          busy={busy}
+          onClose={() => setDownloadOpen(false)}
+        >
+          <div className="pufu-download-options" aria-busy={busy}>
+            <button className="button secondary" disabled={busy} onClick={() => download('json')}>
+              JSON
+            </button>
+            <button className="button secondary" disabled={busy} onClick={() => download('png')}>
+              画像（PNG）
+            </button>
+          </div>
+          {busy && (
+            <p className="content-loading" role="status">
+              <LoaderCircle className="spin" size={17} aria-hidden="true" />
+              ダウンロードを準備しています…
+            </p>
+          )}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+        </PufuModal>
       )}
       {editing && (
         <PufuModal title={`第${editor.number}局面のプ譜を編集`} onClose={closeEditor} busy={busy}>
@@ -253,7 +301,7 @@ export default function PufuEditor({
               uniqueKey={editorKey}
               initScore={editor.score}
               lang="ja"
-              feedback={feedback}
+              feedback
               dark={theme === 'dark'}
             />
           </div>

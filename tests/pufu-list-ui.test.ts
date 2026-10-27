@@ -252,6 +252,7 @@ it.each(['', '#project/project'])(
     await act(async () => item.click());
     await hashChange();
     expect(window.location.hash).toBe('#pufu/pufu');
+    expect(document.querySelector('.breadcrumb [aria-current="page"]')?.textContent).toBe('詳細');
     expect(document.querySelector('.pufu-page')?.textContent).toContain(summary.task);
     expect(
       document.querySelector(`.breadcrumb a[href="#pufus${hash ? '/project' : ''}"]`),
@@ -270,6 +271,45 @@ it.each(['', '#project/project'])(
     );
   },
 );
+
+it.each([0, 1, 3])('カードの関連は各1件だけ表示し、残り%s件の件数を正しく示す', async (count) => {
+  const questions = Array.from({ length: count }, (_, index) => ({
+    id: `question-${index}`,
+    text: `問い${index + 1}`,
+  }));
+  const stocks = Array.from({ length: count }, (_, index) => ({
+    id: `stock-${index}`,
+    title: `記事${index + 1}`,
+  }));
+  const original = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (path, options) =>
+    new URL(path, 'https://example.com').pathname === '/api/v1/pufus'
+      ? { pufus: [{ ...summary, questions, stocks }], total: 1 }
+      : original(path, options),
+  );
+  await render('#pufus');
+  const card = document.querySelector('.pufu-list-item')!;
+  const lines = [...card.querySelectorAll('small')].map((line) => line.textContent);
+  expect(lines.filter((line) => line?.startsWith('問い・気づき：'))).toEqual(
+    count ? [`問い・気づき：問い1${count > 1 ? ` (他${count - 1}件)` : ''}`] : [],
+  );
+  expect(lines.filter((line) => line?.startsWith('ストック：'))).toEqual(
+    count ? [`ストック：記事1${count > 1 ? ` (他${count - 1}件)` : ''}`] : [],
+  );
+});
+
+it('問い一覧からプ譜を開いてもヘッダーはプ譜一覧と詳細を示す', async () => {
+  await render('#question/question');
+  await act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+      .find((button) => button.textContent?.startsWith('プ譜'))!
+      .click(),
+  );
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-item')!.click());
+  await hashChange();
+  expect(document.querySelector('.breadcrumb a[href="#pufus"]')?.textContent).toBe('すべてのプ譜');
+  expect(document.querySelector('.breadcrumb [aria-current="page"]')?.textContent).toBe('詳細');
+});
 
 it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {
   independent = true;

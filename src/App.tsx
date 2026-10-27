@@ -101,7 +101,7 @@ const headerLabels: Record<Route['view'], string> = {
   shortcuts: 'ショートカット',
   question: '詳細',
   resolve: 'プ譜を作成',
-  pufu: 'プ譜',
+  pufu: '詳細',
 };
 const globalHeaderLabels: Partial<Record<Route['view'], string>> = {
   stocks: 'すべてのストック',
@@ -713,9 +713,14 @@ export default function App() {
     (project) => project.id === questionListContext.projectId,
   );
   const listLabel = questionListContext.view === 'pufus' ? 'プ譜' : '問い・気づき';
+  const breadcrumbListLabel = route.view === 'pufu' ? 'プ譜' : listLabel;
+  const breadcrumbListHash =
+    route.view === 'pufu'
+      ? `#pufus${questionListContext.projectId ? `/${encodeURIComponent(questionListContext.projectId)}` : ''}`
+      : questionListContext.hash;
   const questionListHeading = questionListProject
-    ? `${questionListProject.name}の${listLabel}`
-    : `すべての${listLabel}`;
+    ? `${questionListProject.name}の${breadcrumbListLabel}`
+    : `すべての${breadcrumbListLabel}`;
   const headerProjectId = questionFlow ? questionListContext.projectId : route.projectId;
   const headerProject = questionFlow ? questionListProject : selected;
   const headerLabel = headerProjectId
@@ -940,8 +945,8 @@ export default function App() {
             )}
             {questionFlow ? (
               <>
-                <a href={questionListContext.hash} title={questionListHeading}>
-                  {headerProjectId ? listLabel : `すべての${listLabel}`}
+                <a href={breadcrumbListHash} title={questionListHeading}>
+                  {headerProjectId ? breadcrumbListLabel : `すべての${breadcrumbListLabel}`}
                 </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
                 <a
