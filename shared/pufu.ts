@@ -11,6 +11,7 @@ export const createPufuSchema = z.strictObject({
     .trim()
     .min(1, '課題を入力してください。')
     .max(1000, '課題は1,000文字以内で入力してください。'),
+  details: z.string().trim().max(4000, '補足は4,000文字以内で入力してください。').optional(),
   request_id: z.uuid(),
 });
 export const savePufuSchema = z.strictObject({
@@ -40,6 +41,7 @@ export type MemorySnapshot = {
   updated_at: string;
 };
 export type PufuContext = {
+  details?: string;
   question: { id: string; text: string; source: 'ai' | 'user' } | null;
   task: string;
   project: { id: string; name: string; description: string };

@@ -256,3 +256,35 @@ it('課題の作成画面ではタブを出さずに既存フォームを表示�
   expect(document.querySelector('#pufu-task')).not.toBeNull();
   expect(document.body.textContent).toContain('問いの本文');
 });
+
+it('問いから補足を送信し、失敗後の同内容は同じID、補足変更は新しいIDで再送する', async () => {
+  vi.mocked(send).mockRejectedValue(new Error('通信に失敗しました'));
+  await render({ resolve: true });
+  await input('達成したい状態', '#pufu-task');
+  expect(document.querySelector('#pufu-details')).not.toBeNull();
+  await input('人員2名。試験運用を行う。', '#pufu-details');
+  const generate = async () =>
+    act(async () =>
+      document
+        .querySelector('.pufu-task-form')!
+        .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+    );
+  await generate();
+  expect(document.querySelector('[role="alert"]')?.textContent).toContain('通信に失敗しました');
+  const first = vi.mocked(send).mock.calls[0][1] as { request_id: string };
+  expect(send).toHaveBeenLastCalledWith(
+    '/api/v1/questions/question/pufus',
+    expect.objectContaining({ task: '達成したい状態', details: '人員2名。試験運用を行う。' }),
+  );
+  await generate();
+  expect((vi.mocked(send).mock.calls[1][1] as { request_id: string }).request_id).toBe(
+    first.request_id,
+  );
+  await input('人員3名。', '#pufu-details');
+  vi.mocked(send).mockResolvedValue({ id: 'created-pufu' });
+  await generate();
+  expect((vi.mocked(send).mock.calls[2][1] as { request_id: string }).request_id).not.toBe(
+    first.request_id,
+  );
+  expect(props.onPufu).toHaveBeenCalledWith('created-pufu');
+});
