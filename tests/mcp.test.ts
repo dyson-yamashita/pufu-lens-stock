@@ -53,6 +53,176 @@ describe('MCPによるストックと問いの取得・追加', () => {
   }
   const call = (token: string, name: string, args: unknown = {}) =>
     rpc(token, 'tools/call', { name, arguments: args });
+  it('ガイドラインの全詳細を追加の閲覧権限なしで取得し、保存済みデータを変更しない', async () => {
+    const token = await mcpToken(app, 'alice-project', ['pufus:write']);
+    await call(token, 'create_pufu', {
+      project_id: 'alice-project',
+      projectScore: score(),
+      request_id: crypto.randomUUID(),
+    });
+    const snapshot = async () =>
+      (
+        await app.env.DB.batch([
+          app.env.DB.prepare('SELECT * FROM pufu_scores ORDER BY id'),
+          app.env.DB.prepare('SELECT * FROM pufu_phases ORDER BY pufu_id, number'),
+          app.env.DB.prepare('SELECT * FROM projects ORDER BY id'),
+        ])
+      ).map((row) => row.results);
+    const before = await snapshot();
+    const response = (await call(token, 'get_pufu_guideline')).result;
+    expect(response, 'ガイドライン取得ツールの応答').toBeDefined();
+    expect(response.isError).not.toBe(true);
+    expect(response.structuredContent).toMatchObject({
+      version: '1.0.0',
+      language: 'ja',
+      section: 'all',
+      detail: 'full',
+    });
+    const guidelines = response.structuredContent.guidelines as Record<string, unknown>;
+    expect(Object.keys(guidelines).sort()).toEqual(
+      [
+        'principles',
+        'gainingGoal',
+        'winCondition',
+        'purposes',
+        'measures',
+        'elements',
+        'review',
+      ].sort(),
+    );
+    expect(guidelines.gainingGoal).toMatchObject({
+      label: '獲得目標',
+      definition: expect.any(String),
+      guidance: expect.any(Array),
+      examples: expect.any(Array),
+      checks: expect.any(Array),
+    });
+    expect(response.structuredContent.sources).toHaveLength(7);
+    expect(JSON.parse(response.content![0].text)).toEqual(response.structuredContent);
+    expect(await snapshot()).toEqual(before);
+    const listed = await rpc(token, 'tools/list');
+    expect(listed.result.tools).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'get_pufu_guideline',
+          annotations: expect.objectContaining({ readOnlyHint: true, openWorldHint: false }),
+          securitySchemes: [{ type: 'oauth2', scopes: [] }],
+          inputSchema: expect.objectContaining({ additionalProperties: false }),
+        }),
+      ]),
+    );
+  });
+  it('ガイドラインは全section/detailで対象項目だけを返し、要約でも八要素の定義を保持する', async () => {
+    const token = await mcpToken(app, null, ['stocks:read']);
+    const sections = {
+      all: [
+        'principles',
+        'gainingGoal',
+        'winCondition',
+        'purposes',
+        'measures',
+        'elements',
+        'review',
+      ],
+      principles: ['principles'],
+      goals: ['gainingGoal', 'winCondition'],
+      purposes: ['purposes'],
+      measures: ['measures'],
+      elements: ['elements'],
+      review: ['review'],
+    };
+    type Entry = {
+      definition: string;
+      guidance: string[];
+      examples?: string[];
+      checks?: string[];
+      items?: Record<string, Entry>;
+      process?: string[];
+    };
+    for (const [section, keys] of Object.entries(sections)) {
+      const responses: Record<string, unknown>[] = [];
+      for (const detail of ['summary', 'full']) {
+        const response = (await call(token, 'get_pufu_guideline', { section, detail })).result;
+        expect(response, `${section}/${detail}のツール応答`).toBeDefined();
+        expect(response.isError, `${section}/${detail}`).not.toBe(true);
+        const data = response.structuredContent;
+        expect(data).toMatchObject({ section, detail });
+        const guidelines = data.guidelines as Record<string, Entry>;
+        expect(Object.keys(guidelines).sort()).toEqual([...keys].sort());
+        const entries = Object.values(guidelines).flatMap((entry) => [
+          entry,
+          ...Object.values(entry.items ?? {}),
+        ]);
+        for (const entry of entries) {
+          expect(entry.definition.length).toBeGreaterThan(0);
+          expect(entry.guidance.length).toBeGreaterThan(0);
+          if (detail === 'summary') {
+            expect(entry).not.toHaveProperty('examples');
+            expect(entry).not.toHaveProperty('checks');
+            expect(entry).not.toHaveProperty('process');
+          } else {
+            expect(entry.checks!.length).toBeGreaterThan(0);
+          }
+        }
+        if (section === 'all' || section === 'elements')
+          expect(Object.keys(guidelines.elements.items!).sort()).toEqual(
+            [
+              'people',
+              'money',
+              'time',
+              'quality',
+              'businessScheme',
+              'environment',
+              'rival',
+              'foreignEnemy',
+            ].sort(),
+          );
+        expect((data.sources as string[]).length).toBeGreaterThan(0);
+        responses.push(data);
+      }
+      expect(JSON.stringify(responses[0]).length).toBeLessThan(JSON.stringify(responses[1]).length);
+    }
+    const goals = (await call(token, 'get_pufu_guideline', { section: 'goals' })).result;
+    expect(goals.structuredContent).toMatchObject({ detail: 'full' });
+    expect(goals.structuredContent.sources).toEqual([
+      'https://scrapbox.io/ProjectScore/獲得目標',
+      'https://scrapbox.io/ProjectScore/勝利条件',
+    ]);
+    expect(
+      (await call(token, 'get_pufu_guideline', { detail: 'summary' })).result.structuredContent,
+    ).toMatchObject({ section: 'all', detail: 'summary' });
+  });
+  it('ガイドラインは不正なsection/detail・null・余分な引数を拒否する', async () => {
+    const token = await mcpToken(app);
+    for (const args of [
+      { section: 'unknown' },
+      { detail: 'verbose' },
+      { section: null },
+      { detail: 1 },
+      { project_id: 'bob-project' },
+    ]) {
+      const response = (await call(token, 'get_pufu_guideline', args)).result;
+      expect(response, '不正引数に対するツール応答').toBeDefined();
+      expect(response.isError, JSON.stringify(args)).toBe(true);
+    }
+  });
+  it('ガイドライン取得にもMCPの認証が必要', async () => {
+    const response = await worker.fetch(
+      new Request(`${app.env.APP_URL}/mcp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'get_pufu_guideline', arguments: {} },
+        }),
+      }),
+      app.env,
+      app.ctx,
+    );
+    expect(response.status).toBe(401);
+  });
   it('192KiBを超えるプ譜もMCPの作成で保存できる', async () => {
     const token = await mcpToken(app, 'alice-project', ['pufus:write']);
     const projectScore = score();
@@ -765,6 +935,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'add_stock',
       'create_pufu',
       'get_pufu',
+      'get_pufu_guideline',
       'get_pufu_image',
       'get_question',
       'get_stock',
