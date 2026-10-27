@@ -325,7 +325,6 @@ it('登録前に始まった古いポーリングで星の状態を上書きし�
     root.render(
       createElement(Pufus, {
         projectId: null,
-        projects: [{ id: 'project', name: '実行のプロジェクト' }],
         active: true,
         refresh: 0,
         onPufu: vi.fn(),

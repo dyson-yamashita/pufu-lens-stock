@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, LoaderCircle, Network, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
 import type { PufuListItem } from '../shared/pufu';
 import { api } from './api';
-import type { Project } from '../shared/domain';
-import PufuForm from './PufuForm';
-import PufuModal from './PufuModal';
 import PufuFavoriteButton from './PufuFavoriteButton';
 
 const statusLabels = {
@@ -15,19 +12,15 @@ const statusLabels = {
 };
 export default function Pufus({
   projectId,
-  projects,
   refresh,
   active,
   onPufu,
 }: {
   projectId: string | null;
-  projects: Pick<Project, 'id' | 'name'>[];
   refresh: number;
   active: boolean;
   onPufu: (id: string) => void;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [pufus, setPufus] = useState<PufuListItem[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -99,28 +92,7 @@ export default function Pufus({
           ))}
         </div>
         <span className="result-count">{total}件</span>
-        <button
-          className="button primary"
-          onClick={() => setAdding(true)}
-          disabled={!projects.length}
-        >
-          <Plus size={18} aria-hidden="true" />
-          プ譜を追加
-        </button>
       </div>
-      {adding && (
-        <PufuModal title="プ譜を追加" wide={false} busy={creating} onClose={() => setAdding(false)}>
-          <PufuForm
-            projects={projects}
-            projectId={projectId}
-            onBusyChange={setCreating}
-            onDone={(id) => {
-              setAdding(false);
-              onPufu(id);
-            }}
-          />
-        </PufuModal>
-      )}
       {error && (
         <div className="form-error" role="alert">
           {error}
