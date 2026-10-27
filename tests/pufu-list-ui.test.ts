@@ -44,8 +44,21 @@ beforeEach(() => {
   vi.stubGlobal('window', dom.window);
   vi.stubGlobal('document', document);
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  let historyState: unknown = null;
   Object.defineProperties(window, {
     location: { configurable: true, value: new URL('https://example.com/') },
+    history: {
+      configurable: true,
+      value: {
+        get state() {
+          return historyState;
+        },
+        replaceState(state: unknown, _title: string, url?: string | URL | null) {
+          historyState = state;
+          if (url) window.location.href = new URL(url, window.location.href).href;
+        },
+      },
+    },
     matchMedia: {
       configurable: true,
       value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
@@ -490,6 +503,41 @@ it('遷移元がないプ譜の直接リンクからはプ譜一覧へ戻る', a
   await hashChange();
   expect(window.location.hash).toBe('#pufus');
 });
+
+it.each(['#question/other-question', '#pufus/project'])(
+  '同じプ譜を別画面から開いた後も、履歴で再訪すると元の画面へ戻る: %s',
+  async (hash) => {
+    await render(hash);
+    if (hash.startsWith('#question/')) {
+      await act(async () =>
+        [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+          .find((button) => button.textContent?.startsWith('プ譜'))!
+          .click(),
+      );
+      await act(async () =>
+        document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+      );
+    } else
+      await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+    await hashChange();
+    const earlier = { hash: window.location.hash, state: window.history.state };
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.sidebar .nav-item')]
+        .find((button) => button.textContent?.startsWith('すべてのプ譜'))!
+        .click(),
+    );
+    await hashChange();
+    await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+    await hashChange();
+    window.history.replaceState(earlier.state, '', earlier.hash);
+    await hashChange();
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+    );
+    await hashChange();
+    expect(window.location.hash).toBe(hash);
+  },
+);
 
 it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {
   independent = true;
