@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { act, createElement } from 'react';
+import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import App from '../src/App';
@@ -12,6 +12,19 @@ vi.mock('../src/api', async (original) => ({
   api: vi.fn(),
   send: vi.fn(),
 }));
+vi.mock('../src/PufuEditor', () => ({
+  default: function GuardedEditor({
+    onGuard,
+  }: {
+    onGuard: (guard: (() => boolean) | null) => void;
+  }) {
+    useEffect(() => {
+      onGuard(() => window.confirm('編集内容を破棄しますか？'));
+      return () => onGuard(null);
+    }, [onGuard]);
+    return null;
+  },
+}));
 let root: Root;
 let document: Document;
 let requests: URL[];
@@ -21,6 +34,7 @@ let includeStock: boolean;
 let independent: boolean;
 let projects: Project[];
 let pufuFavorite: 0 | 1;
+let readyPufu: boolean;
 const summary = {
   id: 'pufu',
   question_id: 'question',
@@ -88,6 +102,7 @@ beforeEach(() => {
     },
   ];
   pufuFavorite = 0;
+  readyPufu = false;
   vi.mocked(send).mockImplementation(async (path, data) => {
     if (path === '/api/v1/pufus/pufu/favorite') {
       pufuFavorite = (data as { is_favorite: boolean }).is_favorite ? 1 : 0;
@@ -205,9 +220,10 @@ beforeEach(() => {
         return {
           pufu: {
             ...summary,
+            status: readyPufu ? 'ready' : summary.status,
             is_favorite: pufuFavorite,
             question_id: independent ? null : summary.question_id,
-            score: null,
+            score: readyPufu ? {} : null,
             phases: [],
             context: {
               question: independent
@@ -530,7 +546,7 @@ it.each(['#question/other-question', '#pufus/project'])(
     await act(async () => document.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
     await hashChange();
     window.history.replaceState(earlier.state, '', earlier.hash);
-    await hashChange();
+    await act(async () => window.dispatchEvent(new window.Event('popstate')));
     await act(async () =>
       document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
     );
@@ -538,6 +554,36 @@ it.each(['#question/other-question', '#pufus/project'])(
     expect(window.location.hash).toBe(hash);
   },
 );
+
+it('履歴移動の破棄確認は一度だけ行い、拒否後も戻り先を保持する', async () => {
+  readyPufu = true;
+  const confirm = vi.fn(() => false);
+  Object.defineProperty(window, 'confirm', { configurable: true, value: confirm });
+  await render('#question/other-question');
+  await act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+      .find((button) => button.textContent?.startsWith('プ譜'))!
+      .click(),
+  );
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .pufu-list-item')!.click(),
+  );
+  await hashChange();
+  window.history.replaceState(null, '', '#question/other-question');
+  await act(async () => window.dispatchEvent(new window.Event('popstate')));
+  await hashChange();
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(window.location.hash).toBe('#pufu/pufu');
+  await act(async () => root.unmount());
+  root = createRoot(document.getElementById('root')!);
+  confirm.mockReturnValue(true);
+  await render('#pufu/pufu');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.pufu-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#question/other-question');
+});
 
 it('問いなしのプ譜から元のプロジェクトのプ譜一覧へ戻る', async () => {
   independent = true;

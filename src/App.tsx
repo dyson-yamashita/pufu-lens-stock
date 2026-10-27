@@ -484,7 +484,8 @@ export default function App() {
     setStockSource('all');
   };
   useEffect(() => {
-    const listener = () => {
+    const listener = (event: Event) => {
+      if (event.type === 'hashchange' && window.location.hash === previousHash.current) return;
       if (navigationGuard.current && !navigationGuard.current()) {
         window.history.replaceState(
           previousHistoryState.current,
@@ -501,7 +502,11 @@ export default function App() {
       setPage(1);
     };
     window.addEventListener('hashchange', listener);
-    return () => window.removeEventListener('hashchange', listener);
+    window.addEventListener('popstate', listener);
+    return () => {
+      window.removeEventListener('hashchange', listener);
+      window.removeEventListener('popstate', listener);
+    };
   }, []);
   useEffect(() => {
     if (questionFlow) window.scrollTo(0, 0);
