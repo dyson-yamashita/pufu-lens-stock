@@ -12,11 +12,17 @@ import { HTTPException } from 'hono/http-exception';
 import { generateQuestionPufuImage } from './pufu-images';
 import { readQuestionPufu } from './pufu-read';
 import { getPufuGuideline, pufuGuidelineSchema } from './pufu-guideline';
+import { appendSavedPufuPhase } from './pufu-phases';
 import { issuePufuImageLink } from './pufu-image-links';
 import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { registerPufuViewer } from './pufu-viewer';
 import { pufuViewerSchema, pufuViewerUri } from '../shared/pufu-viewer';
-import { createSavedPufuSchema, savePufuSchema, pufuScoreSchema } from '../shared/pufu';
+import {
+  appendSavedPufuPhaseSchema,
+  createSavedPufuSchema,
+  savePufuSchema,
+  pufuScoreSchema,
+} from '../shared/pufu';
 import { createApp } from './api';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
@@ -74,7 +80,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     { name: 'pufu-lens-stock', version: '1.0.0' },
     {
       instructions:
-        '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+        '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
     },
   );
   const api = createApp(principal);
@@ -175,7 +181,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜の記述ガイドライン',
       description:
-        'プ譜の作成・編集・レビューに必要な意味と記述方針を、出典付きの日本語JSONで取得します。create_pufu / update_pufuの前に参照し、獲得目標・勝利条件・中間目的・施策・廟算八要素の違いと関係を確認してください。sectionで範囲、detailで要約か詳細を指定できます。取得だけで既存プ譜を変更してはいけません。形式制約は作成・編集ツールの入力スキーマが正です。',
+        'プ譜の作成・編集・レビューに必要な意味と記述方針を、出典付きの日本語JSONで取得します。create_pufu / update_pufu / add_pufu_phaseの前に参照し、獲得目標・勝利条件・中間目的・施策・廟算八要素の違いと関係を確認してください。sectionで範囲、detailで要約か詳細を指定できます。取得だけで既存プ譜を変更してはいけません。形式制約は作成・編集ツールの入力スキーマが正です。',
       inputSchema: pufuGuidelineSchema,
       annotations: read,
       _meta: { securitySchemes: [{ type: 'oauth2', scopes: [] }] },
@@ -372,7 +378,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜一覧',
       description:
-        '本人のプ譜を24件ずつ取得します。問いへの紐付けがないプ譜も含みます。idをget_pufu/show_pufu/update_pufuのpufu_idに指定してください。全体一覧に非表示のプロジェクトは、project_idを指定すると取得できます。',
+        '本人のプ譜を24件ずつ取得します。問いへの紐付けがないプ譜も含みます。idをget_pufu/show_pufu/update_pufu/add_pufu_phaseのpufu_idに指定してください。全体一覧に非表示のプロジェクトは、project_idを指定すると取得できます。',
       inputSchema: z.object({ project_id: filters.project_id, page: filters.page }),
       annotations: read,
       _meta: security('questions:read'),
@@ -421,6 +427,18 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       run('pufus:write', () =>
         invoke(`pufus/${encodeURIComponent(pufu_id)}`, 'PATCH', { ...data, score: projectScore }),
       ),
+  );
+  register(
+    'add_pufu_phase',
+    {
+      title: 'プ譜の局面追加',
+      description:
+        '既存局面を書き換えず、最新局面を土台に次の局面を追加します。事前にget_pufu_guidelineとget_pufuで方針・最新内容・revisionを確認してください。projectScore省略時は最新局面をそのまま複製します。変更時は取得したJSONの必要箇所だけを差し替え、変更しないUUID・コメント・色・進捗・配列順を保持した完全なProjectScoreModelを渡します。reasonは任意のきっかけ（2,000文字以内）で、新局面の最初の時系列コメントに保存します。revisionと新規操作ごとのrequest_id（UUID）は必須です。同じ入力の再送は同じrequest_idで元の結果を返し、異なる入力での再使用と更新競合は409です。問い・ストックの紐付けは維持し、AI生成は行いません。上限256KiB、pufus:write権限が必要です。既存局面の編集にはupdate_pufuを使います。',
+      inputSchema: appendSavedPufuPhaseSchema,
+      annotations: { ...add, openWorldHint: false },
+      _meta: security('pufus:write'),
+    },
+    (data) => run('pufus:write', () => appendSavedPufuPhase(env, principal, data)),
   );
   register(
     'get_pufu',

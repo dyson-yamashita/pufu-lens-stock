@@ -38,6 +38,13 @@ export const createSavedPufuSchema = z.strictObject({
   request_id: z.uuid(),
 });
 export const addPufuPhaseSchema = savePufuSchema.extend({ phase: z.number().int().positive() });
+export const appendSavedPufuPhaseSchema = z.strictObject({
+  pufu_id: z.string().min(1).max(100),
+  revision: z.number().int().positive(),
+  request_id: z.uuid(),
+  projectScore: pufuScoreSchema.optional(),
+  reason: z.string().trim().min(1).max(2000).optional(),
+});
 export type PufuPhase = {
   number: number;
   score: PufuScore;
