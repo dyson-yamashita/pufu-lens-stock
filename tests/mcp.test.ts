@@ -931,6 +931,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
     const listed = await rpc(token, 'tools/list');
     expect(listed.result.tools?.map((tool) => tool.name).sort()).toEqual([
       'add_comment',
+      'add_pufu_phase',
       'add_question',
       'add_stock',
       'create_pufu',

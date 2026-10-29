@@ -235,6 +235,7 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 | `get_pufu_guideline` | プ譜の意味・記述方針・例・チェック観点を出典付きで取得。MCP認証が必要、追加scope不要                                                 |
 | `create_pufu`        | プ譜JSONを指定プロジェクトへ保存。問いの紐付けは任意（`pufus:write`）                                                                |
 | `update_pufu`        | revisionを指定して既存プ譜を編集。問いの紐付け・解除（`pufus:write`）                                                                |
+| `add_pufu_phase`     | 既存局面を保持して次局面を追加。revision・request_id必須、任意のprojectScoreときっかけコメント（`pufus:write`）                      |
 | `list_questions`     | 独立した問いを含む検索・絞り込み・ページ送り                                                                                         |
 | `get_question`       | 問いの詳細と任意の関連ストックID、紐づくプ譜一覧 `pufus`                                                                             |
 | `get_pufu`           | プ譜IDで選んだプ譜の最新局面と編集用revision・phase。`projectScore`にEditorのProjectScoreModel形式で取得（`questions:read`）         |
@@ -245,6 +246,8 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 | `add_comment`        | 対象へ本人用コメントを追加。プ譜は`phase`必須、`body`は2,000文字まで                                                                 |
 
 `list_pufus` は問いなしのプ譜も含む一覧を24件ずつ返し、`project_id` と `page` で絞り込みます（`questions:read`）。`create_pufu` は必須の `project_id`・`projectScore`（ProjectScoreModel）・`request_id`（UUID）で完成済みの第1局面を保存します。`question_ids` と `stock_ids` で複数関連を指定でき、同じ保存先に限ります。新しく追加する問いは完成済みである必要があります。互換用の `question_id` も省略・null可ですが、`question_ids` と同時指定はできません。サーバー側のAI生成・メモリ更新は起動しません。同じrequest_idと作成内容の再送は同じプ譜を返し、その後の編集でも初回の内容と照合します。異なる内容の再使用は409です。
+
+`add_pufu_phase` は `pufu_id`・最新の `revision`・操作ごとの `request_id`（UUID）を受け取り、最新局面の次の番号へ追加します。`projectScore` 省略時は最新局面を複製し、指定時は取得したJSONを土台に変更箇所だけを差し替えた完全なProjectScoreModelを保存します。既存局面の本文・コメント・日時・問いとストックの関連は変更しません。`reason`（任意、1〜2,000文字）は新局面の最初の時系列コメントとして、局面・本体・再送記録と同じD1トランザクションで保存します。AI生成は行いません。古いrevision・同じrequest_idで異なる入力は409、同じ入力の再送は局面を重複させず元の `phase`・`revision`・`updated_at` と `created: false` を返します。再送結果の `current_phase` も当該操作で作成した番号です。現在の最新状態は `get_pufu` で再取得します。新規作成時は `created: true`、理由ありの場合は `comment_id` も返します。`pufus:write` が必要で、再送時にも現在の所有者と接続のプロジェクト制限を検証します。入力・保存サイズの上限は256KiBです。再送記録はプ譜・アカウントの削除時に連鎖削除します。Webの局面追加は従来の保存・複製動作を維持します。
 
 `get_pufu_guideline` はバージョン管理する静的な日本語ガイドラインを返します。`section` は `all / principles / goals / purposes / measures / elements / review`（既定 `all`）、`detail` は `summary / full`（既定 `full`）です。未知の引数・不正値を拒否し、JSONの `version: "1.0.0"`・`language: "ja"`・`section`・`detail`・`guidelines`・`sources`・`attribution` を返します。`goals` は獲得目標と勝利条件、`all` は全項目を含みます。要約は定義と要点、詳細は例・チェック観点・基本原則の推奨作成手順も含みます。呼び出し時にScrapboxへ通信せず、共通の認証・所有権確認を除いて利用者データを読み書きしません。既存MCP認証内で追加scopeなしに取得できます。`create_pufu` / `update_pufu` の説明とサーバーinstructionsで事前参照を案内し、取得・レビューだけでの自動修正は行いません。JSONの形式は既存の作成・編集スキーマを正とし、記述内容や参照の有無で保存を拒否しません。原著の公式仕様そのものではなく、Pufu Lens向けの再構成である旨と参照元URLを返します。
 
