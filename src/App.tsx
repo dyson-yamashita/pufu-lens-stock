@@ -707,7 +707,14 @@ export default function App() {
       <div className="boot">
         <Brand />
         <p>{error || '知識の棚を開いています…'}</p>
-        {!error && <Spinner />}
+        {!error && (
+          <span className="boot-loader" role="status" aria-label="読み込み中">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle className="boot-loader-track" cx="24" cy="24" r="19" />
+              <circle className="boot-loader-arc" cx="24" cy="24" r="19" pathLength="100" />
+            </svg>
+          </span>
+        )}
       </div>
     );
   if (!user)

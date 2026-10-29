@@ -311,6 +311,63 @@ p {
   font-size: 14px;
   color: var(--muted);
 }
+.boot-loader {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 48px;
+  color: var(--primary);
+}
+.boot-loader svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  animation: rotate 1.8s linear infinite;
+}
+.boot-loader-track {
+  opacity: 0.12;
+}
+.boot-loader-arc {
+  stroke-linecap: round;
+  stroke-dasharray: 28 72;
+  animation: boot-sweep 1.8s ease-in-out infinite;
+}
+.boot-loader::after {
+  content: '';
+  position: absolute;
+  inset: 21px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: boot-breathe 1.8s ease-in-out infinite;
+}
+@keyframes boot-sweep {
+  0% {
+    stroke-dasharray: 12 88;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 64 36;
+    stroke-dashoffset: -18;
+  }
+  100% {
+    stroke-dasharray: 12 88;
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes boot-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
 .app-shell {
   display: flex;
   min-height: 100vh;
