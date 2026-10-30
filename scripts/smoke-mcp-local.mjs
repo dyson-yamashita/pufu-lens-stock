@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { randomUUID, createHash } from 'node:crypto';
 import { URL, URLSearchParams } from 'node:url';
+import { legalVersions } from '../shared/legal.ts';
 
 const base = process.env.SMOKE_BASE_URL ?? 'http://localhost:5173';
 assert.equal(
@@ -29,6 +30,14 @@ async function api(path, method = 'GET', body) {
 let projectId;
 let grantId;
 try {
+  if (!(await api('/me')).user.onboarding_completed_at)
+    await api('/onboarding', 'POST', {
+      name: 'ローカル検証',
+      terms_accepted: true,
+      privacy_accepted: true,
+      terms_version: legalVersions.terms,
+      privacy_version: legalVersions.privacy,
+    });
   projectId = (await api('/projects', 'POST', { name: 'MCP動作確認（一時データ）' })).id;
   const registered = await fetch(`${base}/oauth/register`, {
     method: 'POST',

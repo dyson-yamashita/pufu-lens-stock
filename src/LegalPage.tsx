@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { ArrowUp } from 'lucide-react';
 import LegalLinks from './LegalLinks';
+import { legalVersions } from '../shared/legal';
 
 type Section = { id: string; title: string; content: ReactNode };
 
@@ -34,13 +35,13 @@ const privacySections: Section[] = [
       <ul>
         <li>
           <strong>Googleログイン情報：</strong>
-          Googleアカウントの識別子、メールアドレス、名前、プロフィール画像のURLを取得・保存します。
-          アクセス権限は本人確認と基本プロフィールの取得に限られ、GmailやGoogleドライブの内容を取得しません。
+          本人を識別するため、Googleアカウントの識別子のみを取得・保存します。
+          Googleのメールアドレス・名前・プロフィール画像は要求せず、保存・利用しません。GmailやGoogleドライブの内容を取得しません。
           Googleのパスワード、アクセストークン、リフレッシュトークンは保存しません。
         </li>
         <li>
           <strong>利用者が登録する情報：</strong>
-          プロフィールの名前・自己紹介、プロジェクト名・概要・公開設定・紹介文、保存したURL・テキスト・メモ・お気に入り、問い・気づき、課題、プ譜、振り返りなどを保存します。
+          利用者が入力したニックネーム（表示名）・自己紹介、プロジェクト名・概要・公開設定・紹介文、保存したURL・テキスト・メモ・コメント・お気に入り、問い・気づき、課題、プ譜、振り返りなどを保存します。利用開始時に同意した利用規約・プライバシーポリシーの版と同意日時を記録します。
         </li>
         <li>
           <strong>記事の取得情報と生成結果：</strong>
@@ -63,7 +64,7 @@ const privacySections: Section[] = [
         <p>
           Pufu
           Lensは、利用者がGoogleの同意画面で許可した場合に、Googleログインを通じて情報を取得します。
-          要求する権限は<code>openid email profile</code>
+          要求する権限は<code>openid</code>
           のみです。Gmail、Googleドライブ、GoogleカレンダーなどのGoogle
           Workspaceのデータにアクセスする権限は要求しません。
         </p>
@@ -71,21 +72,20 @@ const privacySections: Section[] = [
           <li>
             <strong>取得する情報と用途：</strong>
             Googleアカウントの識別子（sub）をアカウントの識別と保存データの紐付けに使います。
-            メールアドレスとその確認済み状態をログイン時の本人確認に使い、メールアドレス・名前・プロフィール画像のURLをアカウント情報の表示に使います。
+            Googleのメールアドレス・名前・プロフィール画像は要求せず、以前の許可などで認証応答に含まれた場合も保存・利用しません。
             Googleのパスワードは取得しません。
           </li>
           <li>
             <strong>保存と保護：</strong>
-            Googleアカウントの識別子・メールアドレス・名前・プロフィール画像のURLをCloudflare
+            Googleアカウントの識別子をCloudflare
             D1データベースに保存し、利用者ごとのアクセス制御とHTTPS通信で保護します。
             Googleが発行する認証用トークンはログイン処理で一時的に扱い、継続アクセス用には保存しません。
           </li>
           <li>
             <strong>AI処理への送信：</strong>
-            プロフィールの表示名（初回はGoogleから取得した名前）と自己紹介は、利用者自身のメモリを生成するためCloudflare
-            Workers AIへ送信します。表示名は「プロフィール」で変更できます。
-            Googleから名前が提供されない場合は、メールアドレスが初期表示名となります。メールアドレスを表示名として設定している場合も、その表示名が送信されます。
-            Googleアカウントの識別子・プロフィール画像のURLは、AI生成の入力に使用しません。
+            Googleから取得した識別子はAI生成の入力に使用しません。
+            ユーザーメモリ生成には利用者自身が入力した自己紹介をCloudflare Workers
+            AIへ送信します。ニックネームはユーザーメモリ生成の入力に使用しません。
           </li>
           <li>
             <strong>共有と利用の制限：</strong>
@@ -132,7 +132,7 @@ const privacySections: Section[] = [
         <p>
           本サービスはCloudflareの配信・データベース・ストレージ・AI処理基盤を利用します。
           AI生成に必要な範囲で、記事本文・タイトル・要約、メモ、プロジェクト名・概要、自己紹介、メモリ、問い・気づき、課題、プ譜などをCloudflare
-          Workers AIに送信します。プロフィールの表示名と自己紹介はユーザーメモリの生成に利用します。
+          Workers AIに送信します。プロフィールの自己紹介はユーザーメモリの生成に利用します。
           機密情報や、送信する権限のない個人情報を入力しないでください。
         </p>
         <p>
@@ -282,7 +282,7 @@ const termsSections: Section[] = [
         この利用規約（以下「本規約」）は、Pufu Lens 運営者（以下「運営者」）が提供する「Pufu
         Lens」（以下「本サービス」）の利用条件を定めます。 利用者は、本規約と
         <a href="/privacy">プライバシーポリシー</a>
-        を確認し、同意のうえで本サービスを利用してください。
+        を確認し、初回ログイン後の画面でニックネーム（表示名）を入力し、両方への同意にチェックして「OK」を押すと利用を開始できます。登録と同意が完了するまでは、再度ログインしても同じ画面を表示します。
       </p>
     ),
   },
@@ -432,7 +432,7 @@ const termsSections: Section[] = [
 
 export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
   const title = page === 'privacy' ? 'プライバシーポリシー' : '利用規約';
-  const updated = page === 'privacy' ? '2026-10-23' : '2026-10-19';
+  const updated = legalVersions[page];
   const sections = page === 'privacy' ? privacySections : termsSections;
   useEffect(() => {
     const previousTitle = document.title;

@@ -4,7 +4,7 @@ import type { ArticleSummary } from '../shared/domain';
 export async function seedDemo(env: Env) {
   const proposedId = `local-demo-${crypto.randomUUID()}`;
   const inserted = await env.DB.prepare(
-    "INSERT OR IGNORE INTO users (id, google_sub, name, email) VALUES (?, 'local-demo', 'デモユーザー', 'demo@localhost')",
+    "INSERT OR IGNORE INTO users (id, google_sub, name) VALUES (?, 'local-demo', '')",
   )
     .bind(proposedId)
     .run();

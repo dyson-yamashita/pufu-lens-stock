@@ -291,7 +291,12 @@ describe('永続利用量制限', () => {
     const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
       .filter((f) => f.endsWith('.sql') && f < '0013')
       .sort();
-    app = await testApp({ migrations, usageMigration: false, quotaDefaults: true });
+    app = await testApp({
+      migrations,
+      usageMigration: false,
+      onboardingMigration: false,
+      quotaDefaults: true,
+    });
     await app.env.DB.batch([
       app.env.DB.prepare(
         "INSERT INTO articles (id,user_id,canonical_url,source_url,title,domain) VALUES ('old','alice','https://example.com/old','https://example.com/old','以前の記事','example.com')",
@@ -304,6 +309,17 @@ describe('永続利用量制限', () => {
     await applyMigration(app.env.DB, '0014_job_retry_limits.sql');
     await applyMigration(app.env.DB, '0015_incremental_memory.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
+    await applyMigration(app.env.DB, '0033_privacy_onboarding.sql');
+    await app.request('/api/v1/onboarding', {
+      method: 'POST',
+      body: {
+        name: 'Alice',
+        terms_accepted: true,
+        privacy_accepted: true,
+        terms_version: '2026-10-30',
+        privacy_version: '2026-10-30',
+      },
+    });
     expect(
       await app.env.DB.prepare(
         "SELECT stock_id,user_id FROM stock_usage WHERE stock_id='old-stock'",

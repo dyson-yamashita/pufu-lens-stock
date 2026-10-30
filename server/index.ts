@@ -10,6 +10,10 @@ export { ArticleWorkflow, MemoryWorkflow } from './workflows';
 
 const app = createApp();
 const entry = new Hono<AppEnv>();
+entry.onError((_error, c) => {
+  console.error('worker_request_failed');
+  return c.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, 500);
+});
 entry.use(
   '/mcp',
   bodyLimit({

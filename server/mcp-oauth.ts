@@ -41,6 +41,10 @@ function authorizationApp() {
       return c.redirect('/api/auth/google');
     }
     if (principal.kind !== 'session') throw new HTTPException(403);
+    if (!principal.user.onboarding_completed_at) {
+      await rememberMcpLogin(c);
+      return c.redirect('/');
+    }
     const details = await oauth.describeConsent(authRequest);
     const consent = await oauth.beginConsent(authRequest);
     await c.env.OAUTH_KV!.put(`mcp-consent-user:${await hash(consent.handle)}`, principal.user.id, {
@@ -77,6 +81,7 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
   app.post('/oauth/authorize', async (c) => {
     const principal = await authenticate(c);
     if (principal.kind !== 'session') throw new HTTPException(403);
+    if (!principal.user.onboarding_completed_at) throw new HTTPException(403);
     const form = await c.req.parseBody({ all: true });
     const handle = typeof form.handle === 'string' ? form.handle : '';
     const key = `mcp-consent-user:${await hash(handle)}`;
@@ -124,6 +129,7 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
   app.use('/api/v1/mcp/*', async (c, next) => {
     const principal = await authenticate(c);
     if (principal.kind !== 'session') throw new HTTPException(403);
+    if (!principal.user.onboarding_completed_at) throw new HTTPException(403);
     c.set('principal', principal);
     await next();
   });
@@ -170,7 +176,7 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
     if (error instanceof AuthorizationError || error instanceof CimdFetchError)
       return c.json({ error: '認可要求が無効か期限切れです。接続先からやり直してください。' }, 400);
     if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
-    console.error('MCP authorization failed', error);
+    console.error('mcp_authorization_failed');
     return c.json({ error: '連携の認可処理に失敗しました。' }, 500);
   });
   return app;
@@ -233,6 +239,9 @@ export function createMcpOAuthProvider(
       }
       let exchangeUserId: string | undefined;
       const provider = new OAuthProvider<Env>({
+        onError: () => {
+          console.warn('oauth_request_failed');
+        },
         apiRoute: '/mcp',
         apiHandler,
         authorizeEndpoint: '/oauth/authorize',

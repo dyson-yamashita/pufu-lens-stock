@@ -5,6 +5,7 @@ import { cleanupDeletedAccounts } from './account';
 import { MAX_ATTEMPTS, MAX_WAIT_MS, stopWaitingJob, deferJob } from './job-retries';
 import { syncSearchIndex } from './search-index';
 import { cleanupExpiredPufuImageLinks } from './pufu-image-links';
+import { cleanupLegacyUserMemory } from './privacy';
 
 export async function dispatchJobs(env: Env): Promise<void> {
   // 未開始の古い世代だけを集約する。最新の要求は上限時もpendingのまま残す。
@@ -69,6 +70,7 @@ export async function dispatchJobs(env: Env): Promise<void> {
   }
 }
 export async function scheduledMaintenance(env: Env): Promise<void> {
+  await cleanupLegacyUserMemory(env);
   await env.DB.prepare(
     "UPDATE ai_calls SET status='failed',retry_blocked=1 WHERE status='running' AND job_id IN ('search-query','search-index') AND updated_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 minutes')",
   ).run();

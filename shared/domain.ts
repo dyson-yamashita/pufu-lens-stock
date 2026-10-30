@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { legalVersions } from './legal';
 import { relationIdsSchema, type StockRelations } from './relations';
 
 export const summarySchema = z.object({
@@ -133,9 +134,16 @@ export type User = {
   id: string;
   name: string;
   bio: string;
-  email: string;
+  onboarding_completed_at: string | null;
   avatar_url: string | null;
 };
+export const onboardingSchema = z.strictObject({
+  name: profileSchema.shape.name,
+  terms_accepted: z.literal(true),
+  privacy_accepted: z.literal(true),
+  terms_version: z.literal(legalVersions.terms),
+  privacy_version: z.literal(legalVersions.privacy),
+});
 export type Project = {
   id: string;
   name: string;

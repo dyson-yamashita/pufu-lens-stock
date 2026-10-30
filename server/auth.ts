@@ -41,7 +41,7 @@ export async function googleLogin(c: Context<AppEnv>) {
   const nonce = oidc.randomNonce();
   const url = oidc.buildAuthorizationUrl(await google(c), {
     redirect_uri: `${c.env.APP_URL}/api/auth/google/callback`,
-    scope: 'openid email profile',
+    scope: 'openid',
     state,
     nonce,
     code_challenge: await oidc.calculatePKCECodeChallenge(verifier),
@@ -83,30 +83,21 @@ export async function googleCallback(c: Context<AppEnv>) {
     });
     const payload = tokens.claims();
     if (!payload) throw new Error('missing_identity');
-    if (
-      payload.nonce !== saved.nonce ||
-      !payload.sub ||
-      typeof payload.email !== 'string' ||
-      payload.email_verified !== true
-    )
+    if (payload.nonce !== saved.nonce || typeof payload.sub !== 'string' || !payload.sub)
       throw new Error('invalid_identity');
     const proposedId = crypto.randomUUID();
     await c.env.DB.prepare(
-      'INSERT INTO users (id, google_sub, name, email, avatar_url) VALUES (?, ?, ?, ?, ?) ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, avatar_url = excluded.avatar_url',
+      "INSERT INTO users (id, google_sub, name) VALUES (?, ?, '') ON CONFLICT(google_sub) DO NOTHING",
     )
-      .bind(
-        proposedId,
-        payload.sub,
-        typeof payload.name === 'string' ? payload.name : payload.email,
-        payload.email,
-        typeof payload.picture === 'string' ? payload.picture : null,
-      )
+      .bind(proposedId, payload.sub)
       .run();
-    const user = await c.env.DB.prepare('SELECT id FROM users WHERE google_sub = ?')
+    const user = await c.env.DB.prepare(
+      'SELECT id,onboarding_completed_at FROM users WHERE google_sub = ?',
+    )
       .bind(payload.sub)
-      .first<{ id: string }>();
+      .first<{ id: string; onboarding_completed_at: string | null }>();
     await createSession(c, user!.id);
-    return c.redirect((await consumeMcpLogin(c)) ?? '/');
+    return c.redirect(user!.onboarding_completed_at ? ((await consumeMcpLogin(c)) ?? '/') : '/');
   } catch {
     return c.redirect('/?login_error=1');
   }
@@ -139,7 +130,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
     const match = /^Bearer ([A-Za-z0-9_-]{20,160})$/i.exec(authorization);
     if (!match) throw new HTTPException(401, { message: 'Bearerトークンを確認してください。' });
     const token = await c.env.DB.prepare(
-      'SELECT t.id AS token_id, t.project_id, u.id, u.name, u.bio, u.email, u.avatar_url FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > ?)',
+      'SELECT t.id AS token_id, t.project_id, u.id, u.name, u.bio, u.onboarding_completed_at, u.avatar_url FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > ?)',
     )
       .bind(await hash(match[1]), now())
       .first<{
@@ -148,7 +139,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
         id: string;
         name: string;
         bio: string;
-        email: string;
+        onboarding_completed_at: string | null;
         avatar_url: string | null;
       }>();
     if (!token)
@@ -163,7 +154,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
         id: token.id,
         name: token.name,
         bio: token.bio,
-        email: token.email,
+        onboarding_completed_at: token.onboarding_completed_at,
         avatar_url: token.avatar_url,
       },
       kind: 'token',
@@ -173,7 +164,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
   const cookie = getCookie(c, cookieName(c));
   const user = cookie
     ? await c.env.DB.prepare(
-        'SELECT u.id, u.name, u.bio, u.email, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?',
+        'SELECT u.id, u.name, u.bio, u.onboarding_completed_at, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?',
       )
         .bind(await hash(cookie), now())
         .first<Principal['user']>()
@@ -189,6 +180,7 @@ export async function logout(c: Context<AppEnv>) {
       .bind(await hash(cookie))
       .run();
   clearSessionCookies(c);
+  await consumeMcpLogin(c);
   return c.json({ ok: true });
 }
 export function clearSessionCookies(c: Context<AppEnv>) {

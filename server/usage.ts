@@ -196,9 +196,15 @@ export async function aiStep<T extends object>(
         throw error;
       }
       await env.DB.prepare(
-        "UPDATE ai_calls SET status='done',result_json=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+        job.kind === 'user_memory'
+          ? "UPDATE ai_calls SET status='done',result_json=CASE WHEN EXISTS(SELECT 1 FROM users WHERE id=? AND memory_revision=? AND onboarding_completed_at IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM privacy_cleanup_jobs WHERE id=?) THEN ? ELSE NULL END,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?"
+          : "UPDATE ai_calls SET status='done',result_json=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
       )
-        .bind(JSON.stringify(result), id)
+        .bind(
+          ...(job.kind === 'user_memory'
+            ? [job.user_id, job.revision, job.id, JSON.stringify(result), id]
+            : [JSON.stringify(result), id]),
+        )
         .run();
       return { retryAt: null, json: JSON.stringify(result) };
     },

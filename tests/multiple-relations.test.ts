@@ -424,7 +424,13 @@ it('限定接続の読み取り途中に移動しても、移動先で追加さ�
     {
       kind: 'mcp',
       tokenProjectId: 'alice-project',
-      user: { id: 'alice', name: 'Alice', email: 'alice@example.com', bio: '', avatar_url: null },
+      user: {
+        id: 'alice',
+        name: 'Alice',
+        onboarding_completed_at: '2026-10-30T00:00:00Z',
+        bio: '',
+        avatar_url: null,
+      },
     },
     'q1',
     id,

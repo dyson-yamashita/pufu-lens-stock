@@ -11,3 +11,9 @@
 `tests/miniflare-sync.test.ts` は待機が早く解除される状態を再現し、実際のD1呼び出しと後続の呼び出しが成功することを確認します。パッチ適用前はCIと同じ検証エラーで失敗します。
 
 修正を含む安定版に更新する際は、このパッチと登録を削除し、回帰テストの成功を確認してください。
+
+## OAuthエラーログの個人情報保護
+
+`@cloudflare__workers-oauth-provider@1.2.3.patch` は、OAuth SDKが直接出力する認可失効・クライアント登録更新・CIMDメタデータ取得の失敗ログを、入力値や例外を含まない固定コードに置き換えます。SDKの標準エラー応答はアプリ側の `onError` で同様に処理します。認証・認可の動作は変更しません。
+
+バージョンは1.2.3のまま、`patchedDependencies` とロックファイルで適用します。元パッケージのMITライセンスを [workers-oauth-provider-LICENSE](workers-oauth-provider-LICENSE) に保持しています。`tests/onboarding.test.ts` はメールアドレス入りの不正パラメーター・CIMD URL・例外で、ログへ出力されないことを検証します。上流でログ出力が修正された場合はパッチの撤去を検討してください。

@@ -30,4 +30,5 @@ allowBuilds:
   workerd: true
 
 patchedDependencies:
+  '@cloudflare/workers-oauth-provider@1.2.3': patches/@cloudflare__workers-oauth-provider@1.2.3.patch
   miniflare@4.20260730.0: patches/miniflare@4.20260730.0.patch
