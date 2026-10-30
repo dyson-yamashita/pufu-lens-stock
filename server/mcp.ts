@@ -144,7 +144,12 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
             ? {
                 issues: parsed.issues.map((issue) => ({
                   ...issue,
-                  message: errorMessage(issue.message, 400),
+                  // Zod's standard diagnostics already describe the English
+                  // constraint; retain them instead of hiding the repair hint.
+                  message:
+                    language === 'en' && !/[\u3040-\u30ff\u3400-\u9fff]/u.test(issue.message)
+                      ? issue.message
+                      : errorMessage(issue.message, 400),
                 })),
               }
             : parsed;

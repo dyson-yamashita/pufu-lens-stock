@@ -121,6 +121,14 @@ describe('MCP account language', () => {
     expect(english.isError).toBe(true);
     expect(JSON.stringify(english)).not.toMatch(/[\u3040-\u30ff\u3400-\u9fff]/u);
     expect(JSON.stringify(japanese)).toContain('プ譜には局面番号');
+    const revision = await call(en, 'update_pufu', {
+      pufu_id: 'missing',
+      revision: 0,
+      projectScore: score,
+    });
+    expect(revision.isError).toBe(true);
+    expect(JSON.stringify(revision)).toContain('revision');
+    expect(JSON.stringify(revision)).toMatch(/revision:.*(?:>0|>=1)/);
   });
   it('English presentation preserves raw saved score, comments and resource safety', async () => {
     const token = await mcpToken(app, 'alice-project', ['questions:read', 'pufus:write']);
