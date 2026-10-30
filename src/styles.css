@@ -291,12 +291,16 @@ p {
   object-fit: contain;
 }
 .boot {
+  background: linear-gradient(145deg, #f5f9ff, #eaf3ff 50%, #dcecff);
   display: flex;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 24px;
+}
+:root[data-theme='dark'] .boot {
+  background: linear-gradient(145deg, #101b2e, #152a45 50%, #1b3553);
 }
 .boot .brand {
   gap: 14px;
@@ -309,7 +313,52 @@ p {
 }
 .boot p {
   font-size: 14px;
-  color: var(--muted);
+  color: var(--text);
+}
+.boot-status {
+  position: relative;
+  display: grid;
+  white-space: pre;
+}
+.boot-message-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.boot-message-space,
+.boot-message-typing {
+  grid-area: 1 / 1;
+}
+.boot-message-space {
+  visibility: hidden;
+  padding-right: 5px;
+}
+.boot-message-typing {
+  text-align: center;
+}
+.boot-composing {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.boot-converted {
+  background: var(--selected);
+  border-radius: 3px;
+}
+.boot-caret {
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.1em;
+  background: currentColor;
+  animation: boot-caret 1s step-end infinite;
+}
+@keyframes boot-caret {
+  50% {
+    opacity: 0;
+  }
 }
 .app-shell {
   display: flex;

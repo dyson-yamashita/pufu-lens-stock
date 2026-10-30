@@ -37,6 +37,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
+import { BootMessage } from './BootMessage';
 import type {
   Config,
   Memory,
@@ -706,8 +707,7 @@ export default function App() {
     return (
       <div className="boot">
         <Brand />
-        <p>{error || '知識の棚を開いています…'}</p>
-        {!error && <Spinner />}
+        {error ? <p role="status">{error}</p> : <BootMessage />}
       </div>
     );
   if (!user)
