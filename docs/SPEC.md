@@ -212,7 +212,11 @@ D1の`comments`テーブルに`target_type`（`stock / question / pufu`）、`ta
 - 公開後の追加・編集も反映されます。非公開にするとトップ掲載とURLからの参照が停止します。再公開時は同じURLを使います。
 - 公開ページと `/api/public/projects` 以下のAPIは参照専用です。公開設定は所有者のログインセッションからのみ変更でき、MCPやショートカットのトークンでは変更できません。
 
-[本番環境の設定](#cloudflareの本番設定)に沿って本番ビルドを行った後、デプロイ前に `pnpm run db:migrate:production` で `0020_public_projects.sql` を含む未適用のマイグレーションを適用してください。既存プロジェクトも非公開のまま移行します。
+トップページの公開一覧（`GET /api/public/projects`）だけは、ページごとのJSONをWorkers Cache APIに60秒保存します。各取得でD1の最新revisionを1行確認し、キャッシュがあれば一覧の取得・件数集計を省きます。公開プロジェクトの追加・公開設定・名前・紹介文・削除と、公開プロジェクト内のストック・問いの追加・削除・所属・公開件数の変更は、DBトリガーが同じトランザクションでrevisionを更新します。非公開化や退会後の取得では、他拠点に残る旧revisionのキャッシュも再利用しません。キャッシュ投入が更新より遅れても旧revisionにだけ保存します。
+
+共有するのは従来の公開フィールドだけです。Cookieや認証情報をキャッシュキー・保存レスポンスに含めず、キーにはサーバー設定のorigin・revision・正規化したページ番号だけを使います。ブラウザ向けは引き続き`Cache-Control: no-store`です。個別の公開ページAPIと認証済みAPIはキャッシュしません。Cache APIが利用できない環境や読み書き障害時はDBから取得し、revisionを確認できない場合は旧キャッシュを返さずエラーにします。追加Secret・bindingは不要です。
+
+[本番環境の設定](#cloudflareの本番設定)に沿って本番ビルドを行った後、デプロイ前に `pnpm run db:migrate:production` で `0020_public_projects.sql`・`0033_public_directory_cache.sql` を含む未適用のマイグレーションを適用してください。既存プロジェクトも非公開のまま移行します。
 
 ## X連携
 

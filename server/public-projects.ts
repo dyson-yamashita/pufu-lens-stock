@@ -51,6 +51,30 @@ export function publicProjectsApp() {
   const app = new Hono<AppEnv>();
   app.get('/projects', async (c) => {
     const { page, limit, offset } = pageOptions(c.req.query('page'));
+    let cache: Cache | undefined;
+    try {
+      if (typeof caches !== 'undefined') cache = await caches.open('public-project-directory');
+    } catch {
+      console.warn('public_directory_cache_open_failed');
+    }
+    let cacheKey: Request | undefined;
+    if (cache) {
+      // 通常のD1 bindingの読み取りはprimaryを使う。各拠点で公開停止後の旧世代を使わない。
+      const revision = await c.env.DB.prepare(
+        'SELECT revision FROM public_directory_revision WHERE id=1',
+      ).first<string>('revision');
+      if (!revision) throw new Error('Public directory revision is missing');
+      cacheKey = new Request(
+        new URL(`/__cache/public-projects/v1/${revision}?page=${page}`, c.env.APP_URL),
+      );
+      try {
+        const cached = await cache.match(cacheKey);
+        if (cached?.body)
+          return c.body(cached.body, 200, { 'Content-Type': 'application/json; charset=UTF-8' });
+      } catch {
+        console.warn('public_directory_cache_read_failed');
+      }
+    }
     const [rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
         `SELECT ${projectColumns} FROM projects p WHERE p.is_public=1 ORDER BY p.published_at DESC,p.public_id DESC LIMIT ? OFFSET ?`,
@@ -58,12 +82,29 @@ export function publicProjectsApp() {
       c.env.DB.prepare('SELECT COUNT(*) AS total FROM projects WHERE is_public=1'),
     ]);
     const total = Number(count.results[0].total);
-    return c.json({
+    const response = c.json({
       items: rows.results as PublicProject[],
       total,
       page,
       has_more: page * limit < total,
     });
+    if (cache && cacheKey) {
+      // 保存用だけをキャッシュ可能にする。ブラウザ向けno-storeとセキュリティヘッダーは維持する。
+      c.executionCtx.waitUntil(
+        cache
+          .put(
+            cacheKey,
+            new Response(response.clone().body, {
+              headers: {
+                'Content-Type': 'application/json; charset=UTF-8',
+                'Cache-Control': 'public, max-age=60',
+              },
+            }),
+          )
+          .catch(() => console.warn('public_directory_cache_write_failed')),
+      );
+    }
+    return response;
   });
   app.get('/projects/:key', async (c) => {
     const project = await c.env.DB.prepare(

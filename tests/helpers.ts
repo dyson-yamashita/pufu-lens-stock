@@ -212,6 +212,7 @@ export async function testApp(
     env,
     ctx,
     request,
+    getCaches: () => runtime.getCaches(),
     dispose: async () => {
       await drain();
       await runtime.dispose();
