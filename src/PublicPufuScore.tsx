@@ -1,24 +1,49 @@
-import { useId, useState } from 'react';
-import type { PufuScore } from '../shared/pufu';
-import { useTheme } from './theme';
-import ResponsivePufuScore from './ResponsivePufuScore';
+import { Fragment } from 'react';
+import { elementKeys, type PufuScore } from '../shared/pufu';
+import PufuImagePreview from './PufuImagePreview';
 
-export default function PublicPufuScore({ score }: { score: PufuScore }) {
-  const id = useId();
-  const { theme } = useTheme();
-  // エディター内部のストアとAPIから取得した公開データの参照を分ける。
-  const [initialScore] = useState(() => structuredClone(score));
+const elementLabels = {
+  people: 'ひと',
+  money: 'お金',
+  time: '時間',
+  quality: 'クオリティ',
+  businessScheme: '商流 / 座組',
+  environment: '環境',
+  rival: 'ライバル',
+  foreignEnemy: '外敵',
+};
+
+export default function PublicPufuScore({ score, phase }: { score: PufuScore; phase: number }) {
+  const entries: { label: string; node: PufuScore['gainingGoal'] }[] = [
+    { label: '獲得目標', node: score.gainingGoal },
+    { label: '勝利条件', node: score.winCondition },
+    ...elementKeys.map((key) => ({ label: elementLabels[key], node: score.elements[key] })),
+    ...score.purposes.flatMap((purpose, index) => [
+      { label: `中間目的 ${index + 1}`, node: purpose },
+      ...purpose.measures.map((measure, measureIndex) => ({
+        label: `施策 ${index + 1}-${measureIndex + 1}`,
+        node: measure,
+      })),
+    ]),
+  ];
   return (
     <>
-      <div className="pufu-editor-shell public-pufu-preview" aria-label="プ譜（閲覧のみ）">
-        <ResponsivePufuScore
-          uniqueKey={`public-${id}`}
-          initScore={initialScore}
-          preview
-          showProgress
-          lang="ja"
-          dark={theme === 'dark'}
-        />
+      <div className="public-pufu-preview" aria-label="プ譜（閲覧のみ）">
+        <PufuImagePreview score={score} phase={phase} />
+        <section className="public-pufu-text" aria-label={`第${phase}局面のプ譜の内容`}>
+          <h3>プ譜の内容</h3>
+          <dl>
+            {entries.map(({ label, node }) => (
+              <Fragment key={label}>
+                <dt>{label}</dt>
+                <dd>
+                  <p>{node.text}</p>
+                  {node.comment.text && <p>コメント：{node.comment.text}</p>}
+                </dd>
+              </Fragment>
+            ))}
+          </dl>
+        </section>
       </div>
       <p className="pufu-credit">
         <a href="https://github.com/goto-lab/pufu-editor" target="_blank" rel="noreferrer">

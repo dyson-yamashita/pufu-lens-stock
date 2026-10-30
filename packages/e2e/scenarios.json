@@ -27,11 +27,18 @@
   {
     "id": "PUBLIC-001",
     "title": "公開の確認と非公開化",
-    "sources": ["src/PublicProjects.tsx", "server/public-projects.ts", "server/privacy.ts"],
+    "sources": [
+      "src/PublicProjects.tsx",
+      "src/PublicPufuScore.tsx",
+      "src/PufuImagePreview.tsx",
+      "server/public-projects.ts",
+      "server/privacy.ts"
+    ],
     "aspects": [
       "確認前は匿名で取得できない",
       "確認後に匿名で閲覧できる",
       "公開プ譜タブから詳細を開いて一覧へ戻る",
+      "公開プ譜の画像表示・拡大、課題と問いのラベル、進捗非表示",
       "非公開化後は匿名で取得できない"
     ]
   }

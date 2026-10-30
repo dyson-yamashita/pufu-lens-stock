@@ -12,7 +12,7 @@ export default function PufuImagePreview({
 }: {
   score: PufuScore;
   phase: number;
-  onEdit: () => void;
+  onEdit?: () => void;
 }) {
   const { theme } = useTheme();
   const [expanded, setExpanded] = useState(false);
@@ -39,21 +39,24 @@ export default function PufuImagePreview({
         </button>
       ) : (
         <p className="field-hint" role="status">
-          プ譜の画像を表示できません。「編集する」から内容を確認・編集できます。
+          プ譜の画像を表示できません。
+          {onEdit ? '「編集する」から内容を確認・編集できます。' : '公開元で内容の確認が必要です。'}
         </p>
       )}
-      <div className="pufu-image-actions">
-        <button
-          className="button secondary"
-          onClick={(event) => {
-            event.currentTarget.focus({ preventScroll: true });
-            onEdit();
-          }}
-        >
-          <Pencil size={16} aria-hidden="true" />
-          編集する
-        </button>
-      </div>
+      {onEdit && (
+        <div className="pufu-image-actions">
+          <button
+            className="button secondary"
+            onClick={(event) => {
+              event.currentTarget.focus({ preventScroll: true });
+              onEdit();
+            }}
+          >
+            <Pencil size={16} aria-hidden="true" />
+            編集する
+          </button>
+        </div>
+      )}
       {expanded && image && (
         <PufuImageModal image={image} phase={phase} onClose={() => setExpanded(false)} />
       )}

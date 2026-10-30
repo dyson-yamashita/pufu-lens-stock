@@ -47,7 +47,7 @@ const PublicPufuScore = lazy(async () => {
     return {
       default: () => (
         <ResourceState
-          error="プ譜エディターを読み込めませんでした。再読み込みしてください。"
+          error="プ譜の画像を読み込めませんでした。再読み込みしてください。"
           retry={() => window.location.reload()}
         />
       ),
@@ -159,7 +159,6 @@ export function PublicProjectDirectory() {
                     <CircleHelp size={16} aria-hidden="true" />
                     {project.question_count} 問い・気づき
                   </span>
-                  <ArrowRight size={18} aria-hidden="true" />
                 </div>
               </a>
             ))}
@@ -484,7 +483,6 @@ function StockCard({ stock }: { stock: PublicStock }) {
       <StockTopics stock={stock} />
       <div className="public-card-footer">
         <span>ストックの詳細を見る</span>
-        <ArrowRight size={18} aria-hidden="true" />
       </div>
     </a>
   );
@@ -556,7 +554,6 @@ function PublicQuestionCard({ question }: { question: PublicQuestion }) {
         <span>
           {question.pufu_count ? `${question.pufu_count}件のプ譜` : '問い・気づきの詳細を見る'}
         </span>
-        <ArrowRight size={18} aria-hidden="true" />
       </div>
     </a>
   );
@@ -649,7 +646,6 @@ function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             </p>
             <div className="public-card-footer">
               <time>{new Date(pufu.updated_at).toLocaleDateString('ja-JP')}</time>
-              <ArrowRight size={18} aria-hidden="true" />
             </div>
           </a>
         ))}
@@ -793,28 +789,58 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
             ? '問い・気づきに戻る'
             : '問い・気づきの一覧に戻る'}
       </a>
-      <h2 className="public-detail-title">{data.pufu.task}</h2>
-      {(
-        data.pufu.questions ??
-        (data.pufu.question_id
-          ? [{ id: data.pufu.question_id, text: data.pufu.question_text }]
-          : [])
-      ).map((question) => (
-        <p key={question.id} className="public-help">
-          <a href={`#question/${encodeURIComponent(question.id)}`}>{question.text}</a>
-        </p>
-      ))}
-      {data.pufu.stocks?.map((stock) => (
-        <p key={stock.id} className="public-help">
-          <a href={`#stock/${encodeURIComponent(stock.id)}`}>{stock.title}</a>
-        </p>
-      ))}
+      <h2 className="public-detail-title">プ譜</h2>
+      <div className="pufu-context public-pufu-context">
+        <section aria-label="課題">
+          <h3 className="question-origin pufu-context-label">課題</h3>
+          <ul className="pufu-context-questions">
+            <li>{data.pufu.task}</li>
+          </ul>
+        </section>
+        {(data.pufu.questions?.length || data.pufu.question_id) && (
+          <section aria-label="問い・気づき">
+            <h3 className="question-origin pufu-context-label">問い・気づき</h3>
+            <ul className="pufu-context-questions">
+              {(
+                data.pufu.questions ??
+                (data.pufu.question_id
+                  ? [{ id: data.pufu.question_id, text: data.pufu.question_text }]
+                  : [])
+              ).map((question) => (
+                <li key={question.id}>
+                  <a className="text-link" href={`#question/${encodeURIComponent(question.id)}`}>
+                    {question.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {Boolean(data.pufu.stocks?.length) && (
+          <section aria-label="関連するストック">
+            <h3 className="question-origin pufu-context-label">関連するストック</h3>
+            <ul className="pufu-context-questions">
+              {data.pufu.stocks?.map((stock) => (
+                <li key={stock.id}>
+                  <a className="text-link" href={`#stock/${encodeURIComponent(stock.id)}`}>
+                    {stock.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
       <p className="public-badge">
         最新の局面 {data.pufu.current_phase} ·{' '}
         {data.pufu.current_phase % 2 === 0 ? '振り返り' : 'プ譜'} · 閲覧のみ
       </p>
       <Suspense fallback={<ResourceState retry={reload} />}>
-        <PublicPufuScore key={`${id}-${data.pufu.current_phase}`} score={data.pufu.score} />
+        <PublicPufuScore
+          key={`${id}-${data.pufu.current_phase}`}
+          score={data.pufu.score}
+          phase={data.pufu.current_phase}
+        />
       </Suspense>
     </section>
   );
