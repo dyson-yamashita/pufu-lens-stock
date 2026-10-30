@@ -1,3 +1,4 @@
+import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import {
   lazy,
   Suspense,
@@ -39,7 +40,6 @@ import QuestionLabels from './QuestionLabels';
 import YouTubePlayer from './YouTubePlayer';
 import YouTubeThumbnail from './YouTubeThumbnail';
 import { isYouTubeUrl, youtubeDisplayTitle } from '../shared/youtube';
-
 const PublicPufuScore = lazy(async () => {
   try {
     return await import('./PublicPufuScore');
@@ -47,16 +47,19 @@ const PublicPufuScore = lazy(async () => {
     return {
       default: () => (
         <ResourceState
-          error="プ譜の画像を読み込めませんでした。再読み込みしてください。"
+          error={t('ui.public_projects.could_not_load_the_pufu_image_please_reload')}
           retry={() => window.location.reload()}
         />
       ),
     };
   }
 });
-
 function useResource<T>(path: string) {
-  const [state, setState] = useState<{ path: string; data?: T; error?: string }>({ path });
+  const [state, setState] = useState<{
+    path: string;
+    data?: T;
+    error?: string;
+  }>({ path });
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
@@ -73,21 +76,23 @@ function useResource<T>(path: string) {
   return { ...(state.path === path ? state : { path }), reload: () => setRetry((v) => v + 1) };
 }
 function ResourceState({ error, retry }: { error?: string; retry: () => void }) {
+  useLanguage();
   return error ? (
     <div role="alert" className="public-message">
       <p>{error}</p>
       <button className="button secondary" onClick={retry}>
-        再読み込み
+        {t('ui.app.reload')}
       </button>
     </div>
   ) : (
     <p role="status" className="public-message">
       <LoaderCircle className="spin" size={18} aria-hidden="true" />
-      読み込んでいます…
+      {t('ui.public_projects.loading')}
     </p>
   );
 }
 function PublicBrand() {
+  useLanguage();
   return (
     <a href="/" className="brand">
       <img src="/pufu-lens-logo.png" alt="" width="38" height="38" />
@@ -104,20 +109,22 @@ function Pagination({
   hasMore: boolean;
   onChange: (page: number) => void;
 }) {
+  useLanguage();
   if (page === 1 && !hasMore) return null;
   return (
-    <nav className="public-pagination" aria-label="ページ切り替え">
+    <nav className="public-pagination" aria-label={t('ui.public_projects.pagination')}>
       <button className="button secondary" disabled={page === 1} onClick={() => onChange(page - 1)}>
-        前へ
+        {t('ui.app.previous')}
       </button>
-      <span>{page}ページ</span>
+      <span>{t('pagination.page', { page })}</span>
       <button className="button secondary" disabled={!hasMore} onClick={() => onChange(page + 1)}>
-        次へ
+        {t('ui.app.next')}
       </button>
     </nav>
   );
 }
 export function PublicProjectDirectory() {
+  useLanguage();
   const [page, setPage] = useState(1);
   const { data, error, reload } = useResource<PublicList<PublicProject>>(
     `/api/public/projects?page=${page}`,
@@ -125,10 +132,10 @@ export function PublicProjectDirectory() {
   return (
     <section className="public-directory" aria-labelledby="public-directory-heading">
       <div className="public-section-heading">
-        <h2 id="public-directory-heading">公開プロジェクト</h2>
+        <h2 id="public-directory-heading">{t('ui.public_projects.public_projects')}</h2>
       </div>
       <p className="public-lead">
-        誰かの関心から、次のアイデアへ。ストックと問い・気づき、その先のプ譜をのぞいてみませんか。
+        {t('ui.public_projects.discover_your_next_idea_through_someone_else_s_interests')}
       </p>
       {!data ? (
         <ResourceState error={error} retry={reload} />
@@ -143,28 +150,32 @@ export function PublicProjectDirectory() {
               >
                 <span className="public-badge">
                   <Globe size={13} aria-hidden="true" />
-                  公開
+                  {t('ui.public_projects.public')}
                 </span>
                 <h3 title={project.name}>{project.name}</h3>
                 <p>
                   {project.public_description ||
-                    '集めたストックと、そこから生まれた問い・気づきを公開しています。'}
+                    t(
+                      'ui.public_projects.sharing_collected_stocks_and_the_questions_and_insights_they',
+                    )}
                 </p>
                 <div className="public-card-footer">
                   <span>
                     <Layers size={16} aria-hidden="true" />
-                    {project.stock_count} ストック
+                    {project.stock_count}
+                    {t('ui.public_projects.stocks')}
                   </span>
                   <span>
                     <CircleHelp size={16} aria-hidden="true" />
-                    {project.question_count} 問い・気づき
+                    {project.question_count}
+                    {t('ui.public_projects.questions_insights')}
                   </span>
                 </div>
               </a>
             ))}
           </div>
           {data.items.length === 0 && (
-            <p className="public-message">公開プロジェクトはまだありません。</p>
+            <p className="public-message">{t('ui.public_projects.no_public_projects_yet')}</p>
           )}
           <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
         </>
@@ -173,16 +184,17 @@ export function PublicProjectDirectory() {
   );
 }
 export function ProjectPublicationSettings({ projectId }: { projectId: string }) {
+  useLanguage();
   const id = useId();
-  const { data, error, reload } = useResource<{ publication: Publication }>(
-    `/api/v1/projects/${encodeURIComponent(projectId)}/publication`,
-  );
+  const { data, error, reload } = useResource<{
+    publication: Publication;
+  }>(`/api/v1/projects/${encodeURIComponent(projectId)}/publication`);
   return (
     <section className="publication-settings" aria-labelledby={`${id}-title`}>
       <div className="public-section-heading">
         <h2 id={`${id}-title`}>
           <Globe size={20} aria-hidden="true" />
-          公開設定
+          {t('ui.public_projects.publication_settings')}
         </h2>
       </div>
       {data ? (
@@ -198,6 +210,7 @@ export function ProjectPublicationSettings({ projectId }: { projectId: string })
   );
 }
 function PublicationForm({ initial, projectId }: { initial: Publication; projectId: string }) {
+  useLanguage();
   const id = useId();
   const [saved, setSaved] = useState(initial);
   const [enabled, setEnabled] = useState(initial.is_public);
@@ -216,7 +229,9 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
     setError('');
     setMessage('');
     try {
-      const result = await send<{ publication: Publication }>(
+      const result = await send<{
+        publication: Publication;
+      }>(
         `/api/v1/projects/${encodeURIComponent(projectId)}/publication`,
         { is_public: enabled, public_description: description },
         'PATCH',
@@ -226,11 +241,11 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
       setConfirming(false);
       setMessage(
         result.publication.is_public
-          ? '公開設定を保存しました。トップページにも掲載されています。'
-          : '非公開にしました。公開URLからも閲覧できません。',
+          ? t('ui.public_projects.publication_settings_saved_the_project_is_also_listed_on')
+          : t('ui.public_projects.the_project_is_private_its_public_url_is_no'),
       );
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -249,7 +264,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         }}
       >
         <label className="project-memory-toggle" htmlFor={`${id}-toggle`}>
-          <span>プロジェクトを公開する</span>
+          <span>{t('ui.public_projects.publish_a_project')}</span>
           <input
             id={`${id}-toggle`}
             type="checkbox"
@@ -264,25 +279,30 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
           />
         </label>
         <p className="public-help" id={`${id}-scope`}>
-          公開すると、ログインなしで閲覧できるURLが発行され、トップページの公開プロジェクト一覧に掲載されます。
+          {t('ui.public_projects.publishing_creates_a_url_viewable_without_sign_in_and')}
         </p>
         <div className="publication-scope">
-          <strong>公開する内容</strong>
+          <strong>{t('ui.public_projects.what_will_be_published')}</strong>
           <ul>
-            <li>プロジェクト名と公開用の紹介文</li>
-            <li>ストックのタイトル・URL・要約・要点・トピック</li>
-            <li>問い・気づきと、紐づくプ譜の最新局面・振り返り</li>
+            <li>{t('ui.public_projects.project_name_and_public_introduction')}</li>
+            <li>{t('ui.public_projects.stock_titles_urls_summaries_key_points_and_topics')}</li>
+            <li>
+              {t('ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of')}
+            </li>
           </ul>
           <p>
             <LockKeyhole size={15} aria-hidden="true" />
-            メモリ、個人メモ、取得した本文、内部用のプロジェクト概要は公開しません。
+            {t(
+              'ui.public_projects.memories_private_notes_retrieved_article_text_and_internal_project',
+            )}
           </p>
         </div>
         <p className="public-help">
-          公開中に追加・変更した内容も反映されます。プ譜に書かれた内容も公開されるため、公開前に各内容を確認してください。
+          {t('ui.public_projects.additions_and_changes_made_while_published_are_also_reflected')}
         </p>
         <label htmlFor={`${id}-description`}>
-          公開用の紹介文 <span className="optional">任意</span>
+          {t('ui.public_projects.public_introduction')}
+          <span className="optional">{t('ui.app.optional')}</span>
         </label>
         <textarea
           id={`${id}-description`}
@@ -290,17 +310,17 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
           maxLength={1000}
           value={description}
           disabled={busy}
-          placeholder="このプロジェクトで集めているテーマや、公開する目的など"
+          placeholder={t('ui.public_projects.themes_collected_in_this_project_or_why_you_are')}
           onChange={(e) => setDescription(e.target.value)}
         />
         {saved.is_public && url && (
           <div className="publication-url">
-            <label htmlFor={`${id}-url`}>公開URL</label>
+            <label htmlFor={`${id}-url`}>{t('ui.public_projects.public_url')}</label>
             <input id={`${id}-url`} readOnly value={url} />
             <div>
               <a className="button secondary" href={url} target="_blank" rel="noreferrer">
                 <ExternalLink size={16} aria-hidden="true" />
-                公開ページを確認
+                {t('ui.public_projects.view_public_page')}
               </a>
               <button
                 className="button subtle"
@@ -308,14 +328,14 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(url);
-                    setMessage('公開URLをコピーしました。');
+                    setMessage(t('ui.public_projects.public_url_copied'));
                   } catch {
-                    setError('URLを選択してコピーしてください。');
+                    setError(t('ui.mcp_connections.select_and_copy_the_url'));
                   }
                 }}
               >
                 <Copy size={16} aria-hidden="true" />
-                コピー
+                {t('ui.public_projects.copy')}
               </button>
             </div>
           </div>
@@ -332,9 +352,12 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
           </p>
         )}
         <div className="form-actions">
-          <span className="public-help">現在：{saved.is_public ? '公開中' : '非公開'}</span>
+          <span className="public-help">
+            {t('ui.public_projects.current_status')}
+            {saved.is_public ? t('ui.public_projects.published') : t('ui.public_projects.private')}
+          </span>
           <button ref={saveRef} className="button primary" disabled={busy}>
-            {busy ? '保存中…' : '公開設定を保存'}
+            {busy ? t('ui.app.saving') : t('ui.public_projects.save_publication_settings')}
           </button>
         </div>
       </form>
@@ -354,10 +377,10 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
     </>
   );
 }
-const publicationChecks = [
-  '公開する内容に、個人情報や公開を控えたい情報が含まれていないことを確認しました。',
-  '公開する文章や画像などが、著作権をはじめとする第三者の権利を侵害していないことを確認しました。',
-  '公開すると、ログインしていない方も閲覧でき、トップページの公開プロジェクト一覧に掲載されることを確認しました。',
+const publicationChecks = () => [
+  t('ui.public_projects.i_have_checked_that_the_published_content_contains_no'),
+  t('ui.public_projects.i_have_checked_that_the_text_images_and_other'),
+  t('ui.public_projects.i_understand_that_anyone_can_view_the_project_without'),
 ];
 function PublicationConfirmation({
   triggerRef,
@@ -372,10 +395,11 @@ function PublicationConfirmation({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  useLanguage();
   const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const [checked, setChecked] = useState(publicationChecks.map(() => false));
+  const [checked, setChecked] = useState(publicationChecks().map(() => false));
   const allChecked = checked.every(Boolean);
   useEffect(() => {
     const dialog = dialogRef.current!;
@@ -400,13 +424,13 @@ function PublicationConfirmation({
       }}
     >
       <div className="dialog-head">
-        <h2 id={`${id}-title`}>公開前のご確認</h2>
+        <h2 id={`${id}-title`}>{t('ui.public_projects.before_publishing')}</h2>
       </div>
       <p id={`${id}-intro`} className="public-help">
-        安心して共有いただくために、公開する内容をご確認のうえ、すべての項目にチェックを入れて「OK」を押してください。
+        {t('ui.public_projects.review_the_content_for_safe_sharing_check_every_box')}
       </p>
       <div className="publication-checks">
-        {publicationChecks.map((text, index) => (
+        {publicationChecks().map((text, index) => (
           <label key={text} className="publication-check">
             <input
               type="checkbox"
@@ -434,7 +458,7 @@ function PublicationConfirmation({
           disabled={busy}
           onClick={onClose}
         >
-          キャンセル
+          {t('ui.app.cancel')}
         </button>
         <button
           type="button"
@@ -444,13 +468,14 @@ function PublicationConfirmation({
             if (allChecked && !busy) onConfirm();
           }}
         >
-          {busy ? '保存中…' : 'OK'}
+          {busy ? t('ui.app.saving') : 'OK'}
         </button>
       </div>
     </dialog>
   );
 }
 function StockTopics({ stock }: { stock: PublicStock }) {
+  useLanguage();
   return (
     stock.summary && (
       <div className="public-topics">
@@ -462,6 +487,7 @@ function StockTopics({ stock }: { stock: PublicStock }) {
   );
 }
 function StockCard({ stock }: { stock: PublicStock }) {
+  useLanguage();
   const youtube = Boolean(stock.source_url && isYouTubeUrl(stock.source_url));
   return (
     <a
@@ -470,19 +496,19 @@ function StockCard({ stock }: { stock: PublicStock }) {
     >
       <p className="public-meta">
         <BookOpen size={16} aria-hidden="true" />
-        {stock.domain || 'テキスト'}
-        <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
+        {stock.domain || t('ui.app.text')}
+        <time>{new Date(stock.created_at).toLocaleDateString(intlLocale())}</time>
       </p>
       <h3>{youtube ? youtubeDisplayTitle(stock.title) : stock.title}</h3>
       {youtube && <YouTubeThumbnail url={stock.source_url!} />}
       <p className="public-summary">
         {youtube
-          ? 'YouTubeのリンクを保存しています。'
-          : stock.summary?.overview || '要約はまだありません。'}
+          ? t('ui.public_projects.youtube_link_saved')
+          : stock.summary?.overview || t('ui.public_projects.no_summary_yet')}
       </p>
       <StockTopics stock={stock} />
       <div className="public-card-footer">
-        <span>ストックの詳細を見る</span>
+        <span>{t('ui.public_projects.view_stock_details')}</span>
       </div>
     </a>
   );
@@ -494,6 +520,7 @@ function StockDetails({
   stock: PublicStock;
   heading?: 'h3' | 'h4';
 }) {
+  useLanguage();
   const href = stock.source_url && /^https?:\/\//i.test(stock.source_url) ? stock.source_url : null;
   const youtube = Boolean(href && isYouTubeUrl(href));
   const PointsHeading = Heading === 'h4' ? 'h5' : 'h4';
@@ -501,8 +528,8 @@ function StockDetails({
     <article className="public-content-card public-stock-detail">
       <p className="public-meta">
         <BookOpen size={16} aria-hidden="true" />
-        {stock.domain || 'テキスト'}
-        <time>{new Date(stock.created_at).toLocaleDateString('ja-JP')}</time>
+        {stock.domain || t('ui.app.text')}
+        <time>{new Date(stock.created_at).toLocaleDateString(intlLocale())}</time>
       </p>
       <Heading className="public-stock-title">
         {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
@@ -510,11 +537,13 @@ function StockDetails({
       {youtube ? (
         <YouTubePlayer url={href!} />
       ) : (
-        <p className="public-summary">{stock.summary?.overview || '要約はまだありません。'}</p>
+        <p className="public-summary">
+          {stock.summary?.overview || t('ui.public_projects.no_summary_yet')}
+        </p>
       )}
       {!youtube && stock.summary && (
-        <section className="public-stock-points" aria-label="要点">
-          <PointsHeading>要点</PointsHeading>
+        <section className="public-stock-points" aria-label={t('ui.public_projects.key_points')}>
+          <PointsHeading>{t('ui.public_projects.key_points')}</PointsHeading>
           <ul>
             {stock.summary.keyPoints.map((point, i) => (
               <li key={i}>{point}</li>
@@ -525,7 +554,7 @@ function StockDetails({
       <StockTopics stock={stock} />
       {href && (
         <a className="text-link" href={href} target="_blank" rel="noreferrer">
-          {youtube ? 'YouTubeで開く' : '元の記事を開く'}{' '}
+          {youtube ? t('ui.app.open_on_youtube') : t('ui.app.open_original_article')}{' '}
           <ExternalLink size={14} aria-hidden="true" />
         </a>
       )}
@@ -533,6 +562,7 @@ function StockDetails({
   );
 }
 function PublicQuestionCard({ question }: { question: PublicQuestion }) {
+  useLanguage();
   return (
     <a
       className="public-content-card public-question-card"
@@ -552,13 +582,16 @@ function PublicQuestionCard({ question }: { question: PublicQuestion }) {
       ))}
       <div className="public-card-footer">
         <span>
-          {question.pufu_count ? `${question.pufu_count}件のプ譜` : '問い・気づきの詳細を見る'}
+          {question.pufu_count
+            ? t('ui.public_projects.value_pufu', { value0: question.pufu_count })
+            : t('ui.public_projects.view_question_or_insight_details')}
         </span>
       </div>
     </a>
   );
 }
 function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
+  useLanguage();
   const [page, setPage] = useState(1);
   const { data, error, reload } = useResource<PublicStockDetail>(
     `${root}/stocks/${encodeURIComponent(id)}?page=${page}`,
@@ -566,28 +599,35 @@ function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
   return !data ? (
     <ResourceState error={error} retry={reload} />
   ) : (
-    <section aria-label="ストックの詳細">
+    <section aria-label={t('ui.public_projects.stock_details')}>
       <a className="text-link" href="#stocks">
         <ArrowLeft size={16} aria-hidden="true" />
-        ストックの一覧へ
+        {t('ui.public_projects.back_to_stocks')}
       </a>
-      <h2 className="public-detail-title">ストックの詳細</h2>
+      <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
       <StockDetails stock={data.stock} />
-      <h3 className="public-detail-title">関連する問い・気づき</h3>
+      <h3 className="public-detail-title">{t('ui.public_projects.related_questions_insights')}</h3>
       <div className="public-content-grid">
         {data.questions.map((question) => (
           <PublicQuestionCard key={question.id} question={question} />
         ))}
       </div>
       {!data.questions.length && (
-        <p className="public-message">このストックには公開できる問い・気づきがまだありません。</p>
+        <p className="public-message">
+          {t('ui.public_projects.this_stock_has_no_questions_or_insights_available_for')}
+        </p>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
     </section>
   );
 }
-type PublicListProps = { root: string; page: number; onPageChange: (page: number) => void };
+type PublicListProps = {
+  root: string;
+  page: number;
+  onPageChange: (page: number) => void;
+};
 function PublicStockList({ root, page, onPageChange }: PublicListProps) {
+  useLanguage();
   const { data, error, reload } = useResource<PublicList<PublicStock>>(
     `${root}/stocks?page=${page}`,
   );
@@ -600,12 +640,15 @@ function PublicStockList({ root, page, onPageChange }: PublicListProps) {
           <StockCard key={stock.id} stock={stock} />
         ))}
       </div>
-      {!data.items.length && <p className="public-message">ストックはまだありません。</p>}
+      {!data.items.length && (
+        <p className="public-message">{t('ui.public_projects.no_stocks_yet')}</p>
+      )}
       <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
     </>
   );
 }
 function PublicQuestionList({ root, page, onPageChange }: PublicListProps) {
+  useLanguage();
   const { data, error, reload } = useResource<PublicList<PublicQuestion>>(
     `${root}/questions?page=${page}`,
   );
@@ -619,13 +662,16 @@ function PublicQuestionList({ root, page, onPageChange }: PublicListProps) {
         ))}
       </div>
       {!data.items.length && (
-        <p className="public-message">公開できる問い・気づきはまだありません。</p>
+        <p className="public-message">
+          {t('ui.public_projects.no_questions_or_insights_available_for_publication_yet')}
+        </p>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
     </>
   );
 }
 function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
+  useLanguage();
   const { data, error, reload } = useResource<PublicList<PublicPufuSummary>>(
     `${root}/pufus?page=${page}`,
   );
@@ -642,15 +688,21 @@ function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
           >
             <h3>{pufu.task}</h3>
             <p className="public-help">
-              第{pufu.current_phase}局面 · {pufu.current_phase % 2 === 0 ? '振り返り' : 'プ譜'}
+              {t('phase.number', { number: pufu.current_phase })}
+              {t('ui.public_projects.separator')}
+              {pufu.current_phase % 2 === 0 ? t('ui.public_projects.reflection') : t('ui.app.pufu')}
             </p>
             <div className="public-card-footer">
-              <time>{new Date(pufu.updated_at).toLocaleDateString('ja-JP')}</time>
+              <time>{new Date(pufu.updated_at).toLocaleDateString(intlLocale())}</time>
             </div>
           </a>
         ))}
       </div>
-      {!data.items.length && <p className="public-message">公開できるプ譜はまだありません。</p>}
+      {!data.items.length && (
+        <p className="public-message">
+          {t('ui.public_projects.no_pufu_available_for_publication_yet')}
+        </p>
+      )}
       <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
     </>
   );
@@ -664,6 +716,7 @@ function PublicQuestionDetail({
   id: string;
   projectName: string;
 }) {
+  useLanguage();
   const [page, setPage] = useState(1);
   const { data, error, reload } = useResource<{
     question: PublicQuestion;
@@ -677,16 +730,16 @@ function PublicQuestionDetail({
   ) : (
     <section
       className="question-detail-page public-question-detail"
-      aria-label="問い・気づきの詳細"
+      aria-label={t('ui.public_projects.question_or_insight_details')}
     >
       <a className="back-link" href="#questions">
         <ArrowLeft size={16} aria-hidden="true" />
-        問い・気づきの一覧に戻る
+        {t('ui.public_projects.back_to_questions_insights')}
       </a>
       <header className="page-header">
         <div>
-          <h2 className="page-title">問い・気づきの詳細</h2>
-          <p>問い・気づきを見つめ直し、次の一歩へ。</p>
+          <h2 className="page-title">{t('ui.public_projects.question_or_insight_details')}</h2>
+          <p>{t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}</p>
         </div>
       </header>
       <article className="question-detail-card">
@@ -714,7 +767,7 @@ function PublicQuestionDetail({
         ))}
         <div className="question-card-footer">
           <time dateTime={data.question.created_at}>
-            {new Intl.DateTimeFormat('ja-JP', {
+            {new Intl.DateTimeFormat(intlLocale(), {
               dateStyle: 'medium',
               timeZone: 'Asia/Tokyo',
             }).format(new Date(data.question.created_at))}
@@ -723,10 +776,14 @@ function PublicQuestionDetail({
       </article>
       <div className="section-head pufu-list-heading">
         <div>
-          <h3 className="section-title">この問い・気づきのプ譜</h3>
-          <p>課題ごとにまとめられた案を閲覧できます。</p>
+          <h3 className="section-title">
+            {t('ui.public_projects.pufu_for_this_question_or_insight')}
+          </h3>
+          <p>{t('ui.public_projects.view_ideas_organized_by_task')}</p>
         </div>
-        <span className="result-count">{data.question.pufu_count}件</span>
+        <span className="result-count">
+          {t('count.items', { count: data.question.pufu_count })}
+        </span>
       </div>
       {data.pufus.length ? (
         <div className="pufu-list">
@@ -738,26 +795,30 @@ function PublicQuestionDetail({
             >
               <span>
                 <strong>{pufu.task}</strong>
-                <small>局面 {pufu.current_phase} · 閲覧のみ</small>
+                <small>
+                  {t('phase.number', { number: pufu.current_phase })}
+                  {t('ui.public_projects.read_only')}
+                </small>
               </span>
             </a>
           ))}
         </div>
       ) : (
         <div className="pufu-empty">
-          <p>この問い・気づきのプ譜はまだありません。</p>
+          <p>{t('ui.public_projects.no_pufu_for_this_question_or_insight_yet')}</p>
         </div>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
       {(data.stocks ?? (data.stock ? [data.stock] : [])).map((stock) => (
         <div key={stock.id}>
-          <h3 className="public-detail-title">ストックした記事</h3>
+          <h3 className="public-detail-title">{t('ui.app.source_articles')}</h3>
           <StockDetails stock={stock} heading="h4" />
           <a
             className="text-link public-detail-link"
             href={`#stock/${encodeURIComponent(stock.id)}`}
           >
-            ストックの詳細を見る <ArrowRight size={16} aria-hidden="true" />
+            {t('ui.public_projects.view_stock_details_2')}
+            <ArrowRight size={16} aria-hidden="true" />
           </a>
         </div>
       ))}
@@ -765,9 +826,10 @@ function PublicQuestionDetail({
   );
 }
 function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fromList: boolean }) {
-  const { data, error, reload } = useResource<{ pufu: PublicPufu }>(
-    `${root}/pufus/${encodeURIComponent(id)}`,
-  );
+  useLanguage();
+  const { data, error, reload } = useResource<{
+    pufu: PublicPufu;
+  }>(`${root}/pufus/${encodeURIComponent(id)}`);
   return !data ? (
     <ResourceState error={error} retry={reload} />
   ) : (
@@ -784,22 +846,22 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
       >
         <ArrowLeft size={16} aria-hidden="true" />
         {fromList
-          ? 'プ譜の一覧に戻る'
+          ? t('ui.app.back_to_pufu_list')
           : data.pufu.question_id
-            ? '問い・気づきに戻る'
-            : '問い・気づきの一覧に戻る'}
+            ? t('ui.public_projects.back_to_question_or_insight')
+            : t('ui.public_projects.back_to_questions_insights')}
       </a>
-      <h2 className="public-detail-title">プ譜</h2>
+      <h2 className="public-detail-title">{t('ui.app.pufu')}</h2>
       <div className="pufu-context public-pufu-context">
-        <section aria-label="課題">
-          <h3 className="question-origin pufu-context-label">課題</h3>
+        <section aria-label={t('ui.public_projects.task')}>
+          <h3 className="question-origin pufu-context-label">{t('ui.public_projects.task')}</h3>
           <ul className="pufu-context-questions">
             <li>{data.pufu.task}</li>
           </ul>
         </section>
         {(data.pufu.questions?.length || data.pufu.question_id) && (
-          <section aria-label="問い・気づき">
-            <h3 className="question-origin pufu-context-label">問い・気づき</h3>
+          <section aria-label={t('ui.app.questions_insights')}>
+            <h3 className="question-origin pufu-context-label">{t('ui.app.questions_insights')}</h3>
             <ul className="pufu-context-questions">
               {(
                 data.pufu.questions ??
@@ -817,8 +879,10 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
           </section>
         )}
         {Boolean(data.pufu.stocks?.length) && (
-          <section aria-label="関連するストック">
-            <h3 className="question-origin pufu-context-label">関連するストック</h3>
+          <section aria-label={t('ui.public_projects.related_stocks')}>
+            <h3 className="question-origin pufu-context-label">
+              {t('ui.public_projects.related_stocks')}
+            </h3>
             <ul className="pufu-context-questions">
               {data.pufu.stocks?.map((stock) => (
                 <li key={stock.id}>
@@ -832,8 +896,10 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
         )}
       </div>
       <p className="public-badge">
-        最新の局面 {data.pufu.current_phase} ·{' '}
-        {data.pufu.current_phase % 2 === 0 ? '振り返り' : 'プ譜'} · 閲覧のみ
+        {t('ui.public_projects.latest_phase')}
+        {data.pufu.current_phase} ·{' '}
+        {data.pufu.current_phase % 2 === 0 ? t('ui.public_projects.reflection') : t('ui.app.pufu')}
+        {t('ui.public_projects.read_only')}
       </p>
       <Suspense fallback={<ResourceState retry={reload} />}>
         <PublicPufuScore
@@ -846,8 +912,11 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
   );
 }
 export default function PublicProjectPage({ publicId }: { publicId: string }) {
+  useLanguage();
   const root = `/api/public/projects/${encodeURIComponent(publicId)}`;
-  const { data, error, reload } = useResource<{ project: PublicProjectDetail }>(root);
+  const { data, error, reload } = useResource<{
+    project: PublicProjectDetail;
+  }>(root);
   const [hash, setHash] = useState(window.location.hash);
   const [stockPage, setStockPage] = useState(1);
   const [questionPage, setQuestionPage] = useState(1);
@@ -890,7 +959,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
       <header className="public-header">
         <PublicBrand />
         <a className="text-link" href="/">
-          トップへ
+          {t('ui.public_projects.home')}
           <ArrowRight size={16} aria-hidden="true" />
         </a>
       </header>
@@ -901,13 +970,13 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
           <>
             <span className="public-badge">
               <Globe size={14} aria-hidden="true" />
-              公開
+              {t('ui.public_projects.public')}
             </span>
             <h1>{data.project.name}</h1>
             {data.project.public_description && (
               <p className="public-lead">{data.project.public_description}</p>
             )}
-            <nav className="public-tabs" aria-label="公開プロジェクト">
+            <nav className="public-tabs" aria-label={t('ui.public_projects.public_projects')}>
               <a
                 href="#stocks"
                 aria-current={
@@ -917,7 +986,8 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 }
               >
                 <Layers size={18} aria-hidden="true" />
-                ストック<span>{data.project.stock_count}</span>
+                {t('ui.app.stocks')}
+                <span>{data.project.stock_count}</span>
               </a>
               <a
                 href="#questions"
@@ -926,21 +996,25 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 }
               >
                 <CircleHelp size={18} aria-hidden="true" />
-                問い・気づき<span>{data.project.question_count}</span>
+                {t('ui.app.questions_insights')}
+                <span>{data.project.question_count}</span>
               </a>
               <a
                 href="#pufus"
                 aria-current={hash === '#pufus' || match?.[1] === 'pufu' ? 'page' : undefined}
               >
                 <Network size={18} aria-hidden="true" />
-                プ譜<span>{data.project.pufu_count}</span>
+                {t('ui.app.pufu')}
+                <span>{data.project.pufu_count}</span>
               </a>
             </nav>
             {content}
           </>
         )}
       </main>
-      <footer className="public-footer">Pufu Lens · 集めた知識を、つながる記憶に。</footer>
+      <footer className="public-footer">
+        {t('ui.public_projects.pufu_lens_connect_knowledge_into_memory')}
+      </footer>
     </div>
   );
 }

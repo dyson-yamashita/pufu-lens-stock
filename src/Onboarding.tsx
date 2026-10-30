@@ -1,9 +1,10 @@
+import { applicationError, t, useLanguage, setLanguage, legalHref } from './i18n';
+import LanguageSelect from './LanguageSelect';
 import { useState, type FormEvent } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { onboardingSchema, type User } from '../shared/domain';
 import { legalVersions } from '../shared/legal';
 import { send } from './api';
-
 export default function Onboarding({
   onComplete,
   onLogout,
@@ -11,6 +12,9 @@ export default function Onboarding({
   onComplete: (user: User) => void;
   onLogout: () => void;
 }) {
+  useLanguage();
+  const { language: currentLanguage } = useLanguage();
+  const [language, chooseLanguage] = useState(currentLanguage);
   const [name, setName] = useState('');
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
@@ -18,6 +22,7 @@ export default function Onboarding({
   const [error, setError] = useState('');
   const input = {
     name,
+    language,
     terms_accepted: terms,
     privacy_accepted: privacy,
     terms_version: legalVersions.terms,
@@ -31,28 +36,40 @@ export default function Onboarding({
     setBusy(true);
     setError('');
     try {
-      const result = await send<{ user: User; redirect_to: string | null }>(
-        '/api/v1/onboarding',
-        parsed.data,
-      );
+      const result = await send<{
+        user: User;
+        redirect_to: string | null;
+      }>('/api/v1/onboarding', parsed.data);
+      setLanguage(result.user.language ?? language);
       if (result.redirect_to) window.location.assign(result.redirect_to);
       else onComplete(result.user);
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(applicationError((caught as Error).message));
       setBusy(false);
     }
   }
   return (
     <div className="onboarding-page">
-      <a className="brand" href="/" aria-label="Pufu Lens ホーム">
+      <a className="brand" href="/" aria-label={t('ui.app.pufu_lens_home')}>
         <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
         <span>Pufu Lens</span>
       </a>
       <main className="onboarding-card" aria-labelledby="onboarding-title">
-        <h1 id="onboarding-title">Pufu Lensへようこそ</h1>
+        <h1 id="onboarding-title">{t('ui.onboarding.welcome_to_pufu_lens')}</h1>
         <form onSubmit={submit} noValidate aria-busy={busy}>
+          <LanguageSelect
+            id="onboarding-language"
+            value={language}
+            onChange={(next) => {
+              chooseLanguage(next);
+              setLanguage(next);
+            }}
+            disabled={busy}
+            hint
+          />
           <label htmlFor="onboarding-name">
-            ニックネーム（表示名）<span className="profile-required">必須</span>
+            {t('ui.onboarding.nickname_display_name')}
+            <span className="profile-required">{t('ui.onboarding.required')}</span>
           </label>
           <input
             id="onboarding-name"
@@ -65,10 +82,10 @@ export default function Onboarding({
             aria-describedby="onboarding-name-hint"
           />
           <p id="onboarding-name-hint" className="profile-hint">
-            アプリ内で使う名前です。本名である必要はありません。80文字まで。
+            {t('ui.onboarding.the_name_used_in_the_app_it_does_not')}
           </p>
           <fieldset className="onboarding-consents" disabled={busy}>
-            <legend>利用条件への同意</legend>
+            <legend>{t('ui.onboarding.agree_to_the_terms')}</legend>
             <div className="onboarding-consent">
               <input
                 id="onboarding-terms"
@@ -78,10 +95,11 @@ export default function Onboarding({
                 onChange={(event) => setTerms(event.currentTarget.checked)}
               />
               <label htmlFor="onboarding-terms">
-                <a href="/terms" target="_blank" rel="noreferrer">
-                  利用規約
+                {t('consent.prefix')}
+                <a href={legalHref('terms')} target="_blank" rel="noreferrer">
+                  {t('ui.legal_links.terms_of_service')}
                 </a>
-                に同意します
+                {t('consent.suffix')}
               </label>
             </div>
             <div className="onboarding-consent">
@@ -93,14 +111,15 @@ export default function Onboarding({
                 onChange={(event) => setPrivacy(event.currentTarget.checked)}
               />
               <label htmlFor="onboarding-privacy">
-                <a href="/privacy" target="_blank" rel="noreferrer">
-                  プライバシーポリシー
+                {t('consent.prefix')}
+                <a href={legalHref('privacy')} target="_blank" rel="noreferrer">
+                  {t('ui.legal_links.privacy_policy')}
                 </a>
-                に同意します
+                {t('consent.suffix')}
               </label>
             </div>
             <p className="profile-hint">
-              リンク先は新しいタブで開きます。両方の内容をご確認ください。
+              {t('ui.onboarding.links_open_in_a_new_tab_please_review_both')}
             </p>
           </fieldset>
           {error && (
@@ -126,12 +145,12 @@ export default function Onboarding({
               await send('/api/v1/logout');
               onLogout();
             } catch (caught) {
-              setError((caught as Error).message);
+              setError(applicationError((caught as Error).message));
               setBusy(false);
             }
           }}
         >
-          ログアウト
+          {t('ui.app.sign_out')}
         </button>
       </main>
     </div>

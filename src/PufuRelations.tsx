@@ -1,9 +1,9 @@
+import { applicationError, t, useLanguage } from './i18n';
 import { useState, type FormEvent } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import type { Pufu } from '../shared/pufu';
 import { api, send } from './api';
 import RelationPicker, { type RelationOption } from './RelationPicker';
-
 export default function PufuRelations({
   pufu,
   blocked,
@@ -15,6 +15,7 @@ export default function PufuRelations({
   onBusy: (busy: boolean) => void;
   onSaved: (pufu: Pufu) => void;
 }) {
+  useLanguage();
   const [questionDraft, setQuestions] = useState<RelationOption[]>();
   const [stockDraft, setStocks] = useState<RelationOption[]>();
   const questions =
@@ -22,7 +23,13 @@ export default function PufuRelations({
     (pufu.questions
       ? pufu.questions.map((question) => ({ id: question.id, label: question.text }))
       : pufu.question_id
-        ? [{ id: pufu.question_id, label: pufu.context.question?.text ?? '関連する問い・気づき' }]
+        ? [
+            {
+              id: pufu.question_id,
+              label:
+                pufu.context.question?.text ?? t('ui.public_projects.related_questions_insights'),
+            },
+          ]
         : []);
   const stocks =
     stockDraft ??
@@ -57,7 +64,9 @@ export default function PufuRelations({
         awaitingReload = true;
         setReloadPending(true);
       }
-      const result = await api<{ pufu: Pufu }>(`/api/v1/pufus/${encodeURIComponent(pufu.id)}`);
+      const result = await api<{
+        pufu: Pufu;
+      }>(`/api/v1/pufus/${encodeURIComponent(pufu.id)}`);
       onSaved(result.pufu);
       awaitingReload = false;
       setReloadPending(false);
@@ -65,7 +74,7 @@ export default function PufuRelations({
       setStocks(undefined);
       setSaved(true);
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);
       onBusy(awaitingReload);
@@ -73,10 +82,10 @@ export default function PufuRelations({
   }
   return (
     <details className="pufu-relations">
-      <summary>問い・気づきとストックの関連を編集</summary>
+      <summary>{t('ui.pufu_relations.edit_related_questions_insights_and_stocks')}</summary>
       <form onSubmit={save}>
         <p className="field-hint">
-          同じプロジェクトの問い・気づきとストックを複数選べます。関連を変えても、保存済みのプ譜や生成時の参照内容は変わりません。
+          {t('ui.pufu_relations.select_multiple_questions_insights_and_stocks_in_the_same')}
         </p>
         <RelationPicker
           kind="questions"
@@ -99,23 +108,29 @@ export default function PufuRelations({
           disabled={busy || blocked || reloadPending}
         />
         {blocked && (
-          <p className="field-hint">プ譜の編集を保存して閉じてから、関連を保存してください。</p>
+          <p className="field-hint">
+            {t('ui.pufu_relations.save_and_close_the_pufu_editor_before_saving_relations')}
+          </p>
         )}
         {error && (
           <p className="form-error" role="alert">
-            {reloadPending && '関連は保存されました。プ譜を再読み込みしてください。'}
+            {reloadPending && t('ui.pufu_relations.relations_saved_please_reload_the_pufu')}
             {error}
           </p>
         )}
         {saved && (
           <p className="field-hint" role="status">
-            関連を保存しました。
+            {t('ui.pufu_relations.relations_saved')}
           </p>
         )}
         <div className="form-actions">
           <button className="button primary" disabled={busy || blocked}>
             {busy && <LoaderCircle className="spin" size={17} aria-hidden="true" />}
-            {busy ? '保存中…' : reloadPending ? 'プ譜を再読み込み' : '関連を保存'}
+            {busy
+              ? t('ui.app.saving')
+              : reloadPending
+                ? t('ui.pufu_relations.reload_pufu')
+                : t('ui.pufu_relations.save_relations')}
           </button>
         </div>
       </form>

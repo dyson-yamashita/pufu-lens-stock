@@ -1,3 +1,5 @@
+import { applicationError, t, intlLocale, useLanguage } from './i18n';
+import { languages } from '../shared/locale';
 import { useEffect, useRef, useState } from 'react';
 import { getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
@@ -8,11 +10,10 @@ import PufuImagePreview from './PufuImagePreview';
 import PufuModal from './PufuModal';
 import ResponsivePufuScore from './ResponsivePufuScore';
 import Comments from './Comments';
-
 const canonical = (json: string) =>
   JSON.stringify(JSON.parse(json), (key, value) => (key === 'id' ? undefined : value));
 const memoryDate = (value: string) =>
-  new Intl.DateTimeFormat('ja-JP', {
+  new Intl.DateTimeFormat(intlLocale(), {
     dateStyle: 'short',
     timeStyle: 'short',
     timeZone: 'Asia/Tokyo',
@@ -28,6 +29,7 @@ export default function PufuEditor({
   onEditingStateChange?: (blocked: boolean) => void;
   onSaved?: (revision: number) => void;
 }) {
+  const { language } = useLanguage();
   const { theme } = useTheme();
   const [revision, setRevision] = useState(pufu.revision);
   const [phases, setPhases] = useState(pufu.phases);
@@ -60,7 +62,9 @@ export default function PufuEditor({
       return Boolean(json && canonical(json) !== baseline.current);
     };
     onGuard(
-      () => !changed() || window.confirm('保存していない変更があります。保存せずに移動しますか？'),
+      () =>
+        !changed() ||
+        window.confirm(t('ui.pufu_editor.you_have_unsaved_changes_leave_without_saving')),
     );
     const unload = (event: BeforeUnloadEvent) => {
       if (changed()) {
@@ -87,7 +91,10 @@ export default function PufuEditor({
   }
   function closeEditor() {
     if (busy) return;
-    if (hasChanges() && !window.confirm('保存していない変更があります。保存せずに閉じますか？'))
+    if (
+      hasChanges() &&
+      !window.confirm(t('ui.pufu_editor.you_have_unsaved_changes_close_without_saving'))
+    )
       return;
     setEditing(false);
     setEditor(structuredClone(savedPhase));
@@ -98,7 +105,7 @@ export default function PufuEditor({
     if (number === editor.number || busy) return;
     if (
       hasChanges() &&
-      !window.confirm('保存していない変更があります。保存せずに局面を切り替えますか？')
+      !window.confirm(t('ui.pufu_editor.you_have_unsaved_changes_switch_phases_without_saving'))
     )
       return;
     const phase = phases.find((phase) => phase.number === number)!;
@@ -115,13 +122,15 @@ export default function PufuEditor({
     setNotice('');
     try {
       const json = editing ? getScoreJson(editorKey) : JSON.stringify(savedPhase.score);
-      if (!json) throw new Error('編集内容を読み取れませんでした。');
+      if (!json) throw new Error(t('ui.pufu_editor.could_not_read_the_edited_content'));
       const input = pufuScoreSchema.safeParse(JSON.parse(json));
       if (!input.success)
-        throw new Error(
-          '文章は各1,200文字以内、コメントは600文字以内、中間目的と各施策は12件以内で入力してください。',
-        );
-      const result = await send<{ revision: number; current_phase: number; updated_at: string }>(
+        throw new Error(t('ui.pufu_editor.keep_each_text_within_1_200_characters_each_comment'));
+      const result = await send<{
+        revision: number;
+        current_phase: number;
+        updated_at: string;
+      }>(
         `/api/v1/pufus/${encodeURIComponent(pufu.id)}${append ? '/phases' : ''}`,
         { revision, phase: editor.number, score: input.data },
         append ? 'POST' : 'PATCH',
@@ -137,9 +146,13 @@ export default function PufuEditor({
       onSaved?.(result.revision);
       setDirty(false);
       if (append) setEditor(structuredClone(next));
-      setNotice(append ? `第${result.current_phase}局面を追加しました。` : 'プ譜を保存しました。');
+      setNotice(
+        append
+          ? t('ui.pufu_editor.phase_value_added', { value0: result.current_phase })
+          : t('ui.pufu_editor.pufu_saved'),
+      );
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);
     }
@@ -152,7 +165,9 @@ export default function PufuEditor({
       const blob =
         format === 'json'
           ? new Blob([JSON.stringify(savedPhase.score)], { type: 'application/json' })
-          : await (await import('./pufu-download')).createPufuPng(savedPhase.score, theme);
+          : await (
+              await import('./pufu-download')
+            ).createPufuPng(savedPhase.score, theme, language);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -163,7 +178,7 @@ export default function PufuEditor({
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setDownloadOpen(false);
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);
     }
@@ -172,15 +187,19 @@ export default function PufuEditor({
     <>
       {pufu.model === 'local-pufu-template' && (
         <p className="pufu-demo-note">
-          ローカルデモ：AI未接続のため、問い・気づき・課題・メモリから定型の案を作成しています。
+          {t('ui.pufu_editor.local_demo_without_ai_a_template_proposal_is_created')}
         </p>
       )}
       <div className="pufu-phase-bar">
-        <div className="pufu-phase-navigation" role="group" aria-label="局面の切り替え">
+        <div
+          className="pufu-phase-navigation"
+          role="group"
+          aria-label={t('ui.pufu_editor.switch_phase')}
+        >
           {editor.number > 1 && (
             <button
               className="icon-button pufu-phase-previous"
-              aria-label="前の局面へ"
+              aria-label={t('ui.pufu_editor.previous_phase')}
               disabled={busy}
               onClick={() => selectPhase(editor.number - 1)}
             >
@@ -188,12 +207,12 @@ export default function PufuEditor({
             </button>
           )}
           <span className="pufu-phase-number" aria-live="polite">
-            第{editor.number}局面
+            {t('phase.number', { number: editor.number })}
           </span>
           {editor.number < currentPhase && (
             <button
               className="icon-button pufu-phase-next"
-              aria-label="次の局面へ"
+              aria-label={t('ui.pufu_editor.next_phase')}
               disabled={busy}
               onClick={() => selectPhase(editor.number + 1)}
             >
@@ -213,19 +232,19 @@ export default function PufuEditor({
             }}
           >
             <Download size={16} aria-hidden="true" />
-            ダウンロード
+            {t('ui.pufu_editor.download')}
           </button>
           {isLatest && (
             <button className="button secondary" disabled={busy} onClick={() => save(true)}>
               <Plus size={17} aria-hidden="true" />
-              局面を追加
+              {t('ui.pufu_editor.add_phase')}
             </button>
           )}
         </div>
       </div>
       {isLatest && (
         <p className="field-hint pufu-phase-help">
-          すべての局面で本文とコメントを編集できます。局面を追加すると、現在の内容を保存して次の局面へ引き継ぎます。
+          {t('ui.pufu_editor.you_can_edit_text_and_comments_in_every_phase')}
         </p>
       )}
       <PufuImagePreview score={savedPhase.score} phase={editor.number} onEdit={openEditor} />
@@ -243,7 +262,7 @@ export default function PufuEditor({
       )}
       {downloadOpen && (
         <PufuModal
-          title="ダウンロード形式を選択"
+          title={t('ui.pufu_editor.choose_download_format')}
           wide={false}
           busy={busy}
           onClose={() => setDownloadOpen(false)}
@@ -253,13 +272,13 @@ export default function PufuEditor({
               JSON
             </button>
             <button className="button secondary" disabled={busy} onClick={() => download('png')}>
-              画像（PNG）
+              {t('ui.pufu_editor.image_png')}
             </button>
           </div>
           {busy && (
             <p className="content-loading" role="status">
               <LoaderCircle className="spin" size={17} aria-hidden="true" />
-              ダウンロードを準備しています…
+              {t('ui.pufu_editor.preparing_download')}
             </p>
           )}
           {error && (
@@ -270,10 +289,14 @@ export default function PufuEditor({
         </PufuModal>
       )}
       {editing && (
-        <PufuModal title={`第${editor.number}局面のプ譜を編集`} onClose={closeEditor} busy={busy}>
+        <PufuModal
+          title={t('ui.pufu_editor.edit_pufu_phase_value', { value0: editor.number })}
+          onClose={closeEditor}
+          busy={busy}
+        >
           <div className="pufu-toolbar">
             <span className="field-hint" role="status">
-              {dirty ? '未保存の変更があります' : '保存済み'}
+              {dirty ? t('ui.pufu_editor.unsaved_changes') : t('ui.pufu_editor.saved')}
             </span>
             <button className="button primary" disabled={busy} onClick={() => save()}>
               {busy ? (
@@ -281,7 +304,7 @@ export default function PufuEditor({
               ) : (
                 <Save size={17} aria-hidden="true" />
               )}
-              {busy ? '保存中…' : '保存'}
+              {busy ? t('ui.app.saving') : t('ui.app.save')}
             </button>
           </div>
           {error && (
@@ -300,7 +323,7 @@ export default function PufuEditor({
               key={editorKey}
               uniqueKey={editorKey}
               initScore={editor.score}
-              lang="ja"
+              lang={languages[language].editorLanguage}
               feedback
               dark={theme === 'dark'}
             />
@@ -308,18 +331,22 @@ export default function PufuEditor({
         </PufuModal>
       )}
       <p className="pufu-memory-caption">
-        生成に参照したメモリ：あなた{' '}
+        {t('ui.pufu_editor.memory_used_for_generation_you')}{' '}
         {pufu.context.userMemory
-          ? `${memoryDate(pufu.context.userMemory.updated_at)} 時点`
-          : '未作成'}{' '}
-        ／ プロジェクト{' '}
+          ? t('ui.pufu_editor.as_of_value', {
+              value0: memoryDate(pufu.context.userMemory.updated_at),
+            })
+          : t('ui.pufu_editor.not_created')}{' '}
+        {t('ui.pufu_editor.project')}{' '}
         {pufu.context.projectMemory
-          ? `${memoryDate(pufu.context.projectMemory.updated_at)} 時点`
-          : '未作成'}
+          ? t('ui.pufu_editor.as_of_value', {
+              value0: memoryDate(pufu.context.projectMemory.updated_at),
+            })
+          : t('ui.pufu_editor.not_created')}
       </p>
       <p className="pufu-credit">
         <a href="https://github.com/goto-lab/pufu-editor" target="_blank" rel="noreferrer">
-          プ譜エディター
+          {t('ui.public_pufu_score.pufu_editor')}
         </a>{' '}
         © 2024 Gotolab ·{' '}
         <a href="/licenses/pufu-editor.txt" target="_blank" rel="noreferrer">

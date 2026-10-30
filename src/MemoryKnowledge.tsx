@@ -1,5 +1,5 @@
+import { t, useLanguage } from './i18n';
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-
 export default function MemoryKnowledge({
   text,
   children,
@@ -7,11 +7,11 @@ export default function MemoryKnowledge({
   text: string;
   children?: ReactNode;
 }) {
+  useLanguage();
   const id = useId();
   const paragraph = useRef<HTMLParagraphElement>(null);
   const [canExpand, setCanExpand] = useState(false);
   const [expanded, setExpanded] = useState(false);
-
   useLayoutEffect(() => {
     setExpanded(false);
     const element = paragraph.current;
@@ -35,7 +35,6 @@ export default function MemoryKnowledge({
       document.fonts?.removeEventListener('loadingdone', measure);
     };
   }, [text]);
-
   return (
     <>
       <p id={id} ref={paragraph} className={`knowledge-text${expanded ? ' expanded' : ''}`}>
@@ -49,7 +48,7 @@ export default function MemoryKnowledge({
             aria-controls={id}
             onClick={() => setExpanded((value) => !value)}
           >
-            {expanded ? '閉じる' : '続きを読む'}
+            {expanded ? t('ui.app.close') : t('ui.memory_knowledge.read_more')}
           </button>
         )}
         {children}

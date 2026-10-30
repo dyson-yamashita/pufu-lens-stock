@@ -1,8 +1,8 @@
+import { applicationError, t, useLanguage } from './i18n';
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { LoaderCircle, Trash2 } from 'lucide-react';
-
 export default function DeleteAction({
-  summary = 'その他の操作',
+  summary = t('ui.delete_action.other_actions'),
   label,
   title,
   children,
@@ -16,6 +16,7 @@ export default function DeleteAction({
   disabled?: boolean;
   onDelete: () => Promise<void>;
 }) {
+  useLanguage();
   const [confirming, setConfirming] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   return (
@@ -47,7 +48,6 @@ export default function DeleteAction({
     </>
   );
 }
-
 function DeleteDialog({
   title,
   label,
@@ -63,6 +63,7 @@ function DeleteDialog({
   onClose: () => void;
   onDelete: () => Promise<void>;
 }) {
+  useLanguage();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
@@ -87,7 +88,7 @@ function DeleteDialog({
       await onDelete();
       onClose();
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -124,7 +125,7 @@ function DeleteDialog({
             if (!inFlight.current) onClose();
           }}
         >
-          キャンセル
+          {t('ui.app.cancel')}
         </button>
         <button
           type="button"
@@ -137,7 +138,7 @@ function DeleteDialog({
           ) : (
             <Trash2 size={16} aria-hidden="true" />
           )}
-          {busy ? '削除中…' : label}
+          {busy ? t('ui.delete_action.deleting') : label}
         </button>
       </div>
     </dialog>

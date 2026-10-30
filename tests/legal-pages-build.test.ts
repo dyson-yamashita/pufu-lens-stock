@@ -96,3 +96,26 @@ it('トップの初期HTMLにサービス説明と法的文書へのリンクを
   }
   expect(document.querySelector('script[type="module"]')).not.toBeNull();
 });
+
+it.each([
+  ['privacy', 'Privacy Policy', 'google-user-data'],
+  ['terms', 'Terms of Service', 'application'],
+])(
+  'builds complete English %s without JavaScript and links to the governing original',
+  (page, title, section) => {
+    const html = assets.get(`en/${page}/index.html`);
+    expect(html).toBeDefined();
+    const { document } = parseHTML(html!);
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toBe(`${title} | Pufu Lens`);
+    expect(document.querySelector('main h1')?.textContent).toBe(title);
+    expect(document.querySelector(`#${section} h2`)).not.toBeNull();
+    expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
+    expect(document.querySelector(`a[href="/${page}"]`)).not.toBeNull();
+    for (const path of ['/en/privacy', '/en/terms'])
+      expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
+    expect(document.querySelector('script[type="module"]')).toBeNull();
+    expect(document.querySelector('script[src="/theme.js"]')).not.toBeNull();
+    expect(document.querySelector('main')?.textContent).toContain('Japanese original');
+  },
+);

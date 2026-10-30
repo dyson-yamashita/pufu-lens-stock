@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLanguage, translateUi } from './i18n';
+import type { Language } from '../shared/locale';
 
-const initialMessage = '知識の棚を開いています...';
-const waitingMessage = '棚の準備に時間がかかっています。\nしばらくお待ちください';
 const waitingDelay = 4000;
 type Frame = { text: string; delay: number | null; composition?: string; converted?: boolean };
-function makeFrames(): Frame[] {
+function makeFrames(language: Language): Frame[] {
+  const initialMessage = translateUi(language, 'boot.initial');
+  const waitingMessage = translateUi(language, 'boot.waiting');
   const result: Frame[] = [{ text: initialMessage, delay: waitingDelay }];
   for (let length = initialMessage.length - 1; length >= 0; length--)
     result.push({ text: initialMessage.slice(0, length), delay: length ? 55 : 200 });
+  if (language !== 'ja') {
+    for (let length = 1; length <= waitingMessage.length; length++)
+      result.push({ text: waitingMessage.slice(0, length), delay: 55 });
+    result.push({ text: waitingMessage, delay: null });
+    return result;
+  }
   let text = '';
   for (const part of [
     { kana: 'たなのじゅんび', converted: '棚の準備' },
@@ -23,11 +31,15 @@ function makeFrames(): Frame[] {
   result.push({ text: waitingMessage, delay: null });
   return result;
 }
-const frames = makeFrames();
 
 export function BootMessage() {
+  const { language } = useLanguage();
+  const initialMessage = translateUi(language, 'boot.initial');
+  const waitingMessage = translateUi(language, 'boot.waiting');
+  const frames = useMemo(() => makeFrames(language), [language]);
   const [index, setIndex] = useState(0);
   useEffect(() => {
+    setIndex(0);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let timer: ReturnType<typeof setTimeout> | undefined;
     const startedAt = Date.now();
@@ -66,8 +78,8 @@ export function BootMessage() {
       clearTimeout(timer);
       reducedMotion.removeEventListener('change', schedule);
     };
-  }, []);
-  const frame = frames[index];
+  }, [frames]);
+  const frame = frames[index] ?? frames[0];
   return (
     <p className="boot-status" role="status">
       <span className="boot-message-label">{index === 0 ? initialMessage : waitingMessage}</span>

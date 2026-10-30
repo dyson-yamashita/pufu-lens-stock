@@ -1,4 +1,13 @@
 import {
+  applicationError,
+  t,
+  intlLocale,
+  initializeLanguage,
+  applyAccountLanguage,
+  useLanguage,
+} from './i18n';
+import LanguageSelect from './LanguageSelect';
+import {
   useCallback,
   useEffect,
   useId,
@@ -71,7 +80,6 @@ import ScrollHeader from './ScrollHeader';
 import LegalLinks from './LegalLinks';
 import { PublicProjectDirectory, ProjectPublicationSettings } from './PublicProjects';
 import shortcutSetupImage from './assets/shortcut-setup.png';
-
 type MemoryResponse = {
   memory: Memory | null;
   pending: boolean;
@@ -94,7 +102,10 @@ type Route = {
   projectId: string | null;
   detailId?: string;
 };
-type PufuSource = { questionId: string | null; projectId: string | null };
+type PufuSource = {
+  questionId: string | null;
+  projectId: string | null;
+};
 function pufuSourceFromHistory(): PufuSource {
   const source = window.history?.state?.pufuSource;
   return source &&
@@ -103,49 +114,67 @@ function pufuSourceFromHistory(): PufuSource {
     ? { questionId: source.questionId, projectId: source.projectId }
     : { questionId: null, projectId: null };
 }
-const headerLabels: Record<Route['view'], string> = {
-  stocks: 'ストック',
-  questions: '問い・気づき',
-  pufus: 'プ譜',
-  memory: 'メモリ',
-  settings: '設定',
-  profile: 'プロフィール',
-  mcp: '外部連携',
-  shortcuts: 'ショートカット',
-  question: '詳細',
-  resolve: 'プ譜を作成',
-  pufu: '詳細',
-};
-const globalHeaderLabels: Partial<Record<Route['view'], string>> = {
-  stocks: 'すべてのストック',
-  questions: 'すべての問い・気づき',
-  pufus: 'すべてのプ譜',
-  memory: 'あなたのメモリ',
-};
+const headerLabels = (): Record<Route['view'], string> => ({
+  stocks: t('ui.app.stocks'),
+  questions: t('ui.app.questions_insights'),
+  pufus: t('ui.app.pufu'),
+  memory: t('ui.app.memory'),
+  settings: t('ui.app.settings'),
+  profile: t('ui.app.profile'),
+  mcp: t('ui.app.integrations'),
+  shortcuts: t('ui.app.shortcuts'),
+  question: t('ui.app.details'),
+  resolve: t('ui.app.create_pufu'),
+  pufu: t('ui.app.details'),
+});
+const globalHeaderLabels = (): Partial<Record<Route['view'], string>> => ({
+  stocks: t('ui.app.all_stocks'),
+  questions: t('ui.app.all_questions_insights'),
+  pufus: t('ui.app.all_pufu'),
+  memory: t('ui.app.your_memory'),
+});
 type ModalState =
-  | { type: 'project'; project?: Project }
-  | { type: 'save' }
-  | { type: 'stock'; stock: Stock; tab?: 'question' }
-  | { type: 'token' }
-  | { type: 'question' }
-  | { type: 'pufu' }
-  | { type: 'memory'; projectId: string | null }
+  | {
+      type: 'project';
+      project?: Project;
+    }
+  | {
+      type: 'save';
+    }
+  | {
+      type: 'stock';
+      stock: Stock;
+      tab?: 'question';
+    }
+  | {
+      type: 'token';
+    }
+  | {
+      type: 'question';
+    }
+  | {
+      type: 'pufu';
+    }
+  | {
+      type: 'memory';
+      projectId: string | null;
+    }
   | null;
-const statusLabels = {
-  queued: '処理待ち',
-  extracting: '本文を取得中',
-  summarizing: '要約を生成中',
-  ready: '要約済み',
-  failed: '取得失敗',
-};
+const statusLabels = () => ({
+  queued: t('ui.app.queued'),
+  extracting: t('ui.app.retrieving_article'),
+  summarizing: t('ui.app.generating_summary'),
+  ready: t('ui.app.summarized'),
+  failed: t('ui.app.retrieval_failed'),
+});
 const date = (value: string) =>
-  new Intl.DateTimeFormat('ja-JP', {
+  new Intl.DateTimeFormat(intlLocale(), {
     month: 'short',
     day: 'numeric',
     timeZone: 'Asia/Tokyo',
   }).format(new Date(value));
 const fullDate = (value: string) =>
-  new Intl.DateTimeFormat('ja-JP', {
+  new Intl.DateTimeFormat(intlLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Tokyo',
@@ -180,14 +209,16 @@ function routeFromHash(): Route {
   };
 }
 function Brand() {
+  useLanguage();
   return (
-    <a className="brand" href="#" aria-label="Pufu Lens ホーム">
+    <a className="brand" href="#" aria-label={t('ui.app.pufu_lens_home')}>
       <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
       <span>Pufu Lens</span>
     </a>
   );
 }
 function Spinner() {
+  useLanguage();
   return <LoaderCircle className="spin" size={17} aria-hidden="true" />;
 }
 function Modal({
@@ -201,6 +232,7 @@ function Modal({
   onClose: () => void;
   wide?: boolean;
 }) {
+  useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
@@ -217,7 +249,7 @@ function Modal({
     >
       <div className="dialog-head">
         <h2 id={id}>{title}</h2>
-        <button className="icon-button" onClick={onClose} aria-label="閉じる">
+        <button className="icon-button" onClick={onClose} aria-label={t('ui.app.close')}>
           <X size={20} />
         </button>
       </div>
@@ -226,6 +258,7 @@ function Modal({
   );
 }
 function FormError({ error }: { error: string }) {
+  useLanguage();
   return error ? (
     <p className="form-error" role="alert">
       {error}
@@ -233,11 +266,13 @@ function FormError({ error }: { error: string }) {
   ) : null;
 }
 function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<void> }) {
+  useLanguage();
+  const { language, setLanguage } = useLanguage();
   const withdrawn = new URLSearchParams(window.location.search).get('withdrawn');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(
     new URLSearchParams(window.location.search).has('login_error')
-      ? 'Googleログインを完了できませんでした。もう一度お試しください。'
+      ? t('ui.app.google_sign_in_could_not_be_completed_please_try')
       : '',
   );
   return (
@@ -245,26 +280,29 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
       <header>
         <Brand />
         <div className="login-header-links">
-          <span className="login-caption">読む。集める。つながる。</span>
+          <LanguageSelect id="site-language" value={language} onChange={setLanguage} />
+          <span className="login-caption">{t('ui.app.read_collect_connect')}</span>
           <a className="text-link" href="/manual">
             <BookOpen size={17} aria-hidden="true" />
-            マニュアル
+            {t('ui.app.manual')}
           </a>
         </div>
       </header>
       <main className="login-main">
         <div className="login-copy">
           <h1>
-            集めた知識を、
+            {t('ui.app.turn_collected_knowledge')}
             <br />
-            つながる<span>記憶</span>に。
+            {t('ui.app.into_connected')}
+            <span>{t('ui.app.memory_2')}</span>
+            {t('ui.app.separator')}
           </h1>
           <p>
-            気になった記事を、プロジェクトへ。
+            {t('ui.app.save_interesting_articles_to_projects')}
             <br />
-            記事の要点も、あなたの関心も、
+            {t('ui.app.connect_their_key_points_with_your_interests')}
             <br />
-            少しずつひとつのメモリに育てます。
+            {t('ui.app.and_grow_them_into_a_shared_memory')}
           </p>
           <a
             className={`button primary google-button ${!config.googleConfigured ? 'disabled' : ''}`}
@@ -274,14 +312,14 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             <span className="google-g" aria-hidden="true">
               G
             </span>
-            Googleでログイン
+            {t('ui.app.sign_in_with_google')}
             <ArrowRight size={18} aria-hidden="true" />
           </a>
           {!config.googleConfigured && (
             <p className="login-help">
               {config.demo
-                ? 'ローカルでは、デモでアプリをお試しいただけます。'
-                : 'ログインの準備中です。管理者にお問い合わせください。'}
+                ? t('ui.app.try_the_app_with_the_local_demo')
+                : t('ui.app.sign_in_is_being_prepared_please_contact_the_administrator')}
             </p>
           )}
           {config.demo && (
@@ -294,37 +332,38 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
                 try {
                   await onLogin();
                 } catch (e) {
-                  setError((e as Error).message);
+                  setError(applicationError((e as Error).message));
                 } finally {
                   setBusy(false);
                 }
               }}
             >
-              {busy ? <Spinner /> : <BookOpen size={18} aria-hidden="true" />}ローカルデモを開く
+              {busy ? <Spinner /> : <BookOpen size={18} aria-hidden="true" />}
+              {t('ui.app.open_local_demo')}
             </button>
           )}
           {['complete', 'pending'].includes(withdrawn ?? '') && (
             <p className="withdrawal-notice" role="status">
               {withdrawn === 'pending'
                 ? config.demo
-                  ? '退会しました。残りのデモデータは、次回デモ開始時にも削除を進めます。'
-                  : '退会しました。残りのデータの削除は自動で継続します。'
-                : '退会が完了し、登録したデータを削除しました。'}
+                  ? t('ui.app.your_account_was_deleted_remaining_demo_data_will_also')
+                  : t('ui.app.your_account_was_deleted_remaining_data_will_continue_to')
+                : t('ui.app.your_account_and_registered_data_have_been_deleted')}
             </p>
           )}
           <FormError error={error} />
           <div className="login-features">
             <span>
               <Folder size={17} aria-hidden="true" />
-              プロジェクトで整理
+              {t('ui.app.organize_with_projects')}
             </span>
             <span>
               <Sparkles size={17} aria-hidden="true" />
-              記事からメモリへ
+              {t('ui.app.from_articles_to_memory')}
             </span>
             <span>
               <Network size={17} aria-hidden="true" />
-              MCPでAIと連携
+              {t('ui.app.connect_ai_with_mcp')}
             </span>
           </div>
         </div>
@@ -333,19 +372,19 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
           <div className="orbit orbit-two" />
           <div className="floating-tag">
             <Bookmark size={16} />
-            読んだ先に、つながりがある。
+            {t('ui.app.find_connections_beyond_what_you_read')}
           </div>
           <div className="art-article">
             <h3>
-              明日のアイデアにつながる、
+              {t('ui.app.today_s_article')}
               <br />
-              今日のひと記事。
+              {t('ui.app.tomorrow_s_idea')}
             </h3>
             <div className="art-rule" />
             <div className="art-rule short" />
             <div className="art-tags">
-              <span>気になること</span>
-              <span>新しい視点</span>
+              <span>{t('ui.app.interests')}</span>
+              <span>{t('ui.app.fresh_perspectives')}</span>
             </div>
           </div>
           <div className="art-memory">
@@ -353,8 +392,8 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
               <Sparkles size={21} />
             </div>
             <div>
-              <h3>関心と知識が、少しずつ育つ。</h3>
-              <p>保存した記事から、テーマと論点を整理。</p>
+              <h3>{t('ui.app.grow_your_interests_and_knowledge')}</h3>
+              <p>{t('ui.app.organize_themes_and_questions_from_saved_articles')}</p>
             </div>
             <ArrowUpRight size={20} />
           </div>
@@ -367,8 +406,9 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
     </div>
   );
 }
-
 export default function App() {
+  useState(initializeLanguage);
+  useLanguage();
   const [config, setConfig] = useState<Config | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [route, setRoute] = useState<Route>(routeFromHash);
@@ -545,7 +585,9 @@ export default function App() {
     let active = true;
     void Promise.all([
       api<Config>('/api/config'),
-      api<{ user: User }>('/api/v1/me').catch((e) => {
+      api<{
+        user: User;
+      }>('/api/v1/me').catch((e) => {
         if ((e as ApiError).status !== 401) throw e;
         return { user: null };
       }),
@@ -553,11 +595,12 @@ export default function App() {
       .then(([settings, identity]) => {
         if (active) {
           setConfig(settings);
+          applyAccountLanguage(identity.user);
           setUser(identity.user);
         }
       })
       .catch((e) => {
-        if (active) setError((e as Error).message);
+        if (active) setError(applicationError((e as Error).message));
       });
     return () => {
       active = false;
@@ -581,8 +624,13 @@ export default function App() {
       if (listProjectId) params.set('project_id', listProjectId);
       try {
         const [projectData, stockData, memoryData, tokenData] = await Promise.all([
-          api<{ projects: Project[] }>('/api/v1/projects', { signal: controller.signal }),
-          api<{ stocks: Stock[]; total: number }>(`/api/v1/stocks?${params}`, {
+          api<{
+            projects: Project[];
+          }>('/api/v1/projects', { signal: controller.signal }),
+          api<{
+            stocks: Stock[];
+            total: number;
+          }>(`/api/v1/stocks?${params}`, {
             signal: controller.signal,
           }),
           api<MemoryResponse>(
@@ -590,7 +638,9 @@ export default function App() {
             { signal: controller.signal },
           ),
           route.view === 'shortcuts'
-            ? api<{ tokens: TokenInfo[] }>('/api/v1/tokens', { signal: controller.signal })
+            ? api<{
+                tokens: TokenInfo[];
+              }>('/api/v1/tokens', { signal: controller.signal })
             : Promise.resolve({ tokens: [] }),
         ]);
         if (!controller.signal.aborted) {
@@ -610,7 +660,7 @@ export default function App() {
         if ((e as ApiError).status === 401) setUser(null);
         else if ((e as ApiError).status === 404 && route.projectId) navigate('stocks');
         else if ((e as ApiError).status === 404 && libraryProjectId) filterProject(null);
-        else setError((e as Error).message);
+        else setError(applicationError((e as Error).message));
       } finally {
         inFlight = false;
         if (!controller.signal.aborted) setLoading(false);
@@ -694,12 +744,12 @@ export default function App() {
   };
   const evidence = async (articleId: string) => {
     try {
-      const { stock } = await api<{ stock: Stock }>(
-        `/api/v1/articles/${encodeURIComponent(articleId)}`,
-      );
+      const { stock } = await api<{
+        stock: Stock;
+      }>(`/api/v1/articles/${encodeURIComponent(articleId)}`);
       setModal({ type: 'stock', stock });
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     }
   };
   if (!config || user === undefined)
@@ -715,54 +765,66 @@ export default function App() {
         config={config}
         onLogin={async () => {
           await send('/api/auth/demo');
-          const data = await api<{ user: User }>('/api/v1/me');
+          const data = await api<{
+            user: User;
+          }>('/api/v1/me');
+          applyAccountLanguage(data.user);
           setUser(data.user);
         }}
       />
     );
   if (!user.onboarding_completed_at)
-    return <Onboarding onComplete={setUser} onLogout={() => setUser(null)} />;
+    return (
+      <Onboarding
+        onComplete={(savedUser) => {
+          applyAccountLanguage(savedUser);
+          setUser(savedUser);
+        }}
+        onLogout={() => setUser(null)}
+      />
+    );
   const heading =
     route.view === 'settings'
       ? selected
-        ? `${selected.name}の設定`
-        : 'プロジェクト設定'
+        ? t('ui.app.settings_for_value', { value0: selected.name })
+        : t('ui.app.project_settings')
       : route.view === 'questions'
         ? selected
-          ? `${selected.name}の問い・気づき`
-          : 'すべての問い・気づき'
+          ? t('ui.app.questions_insights_in_value', { value0: selected.name })
+          : t('ui.app.all_questions_insights')
         : route.view === 'pufus'
           ? selected
-            ? `${selected.name}のプ譜`
-            : 'すべてのプ譜'
+            ? t('ui.app.pufu_in_value', { value0: selected.name })
+            : t('ui.app.all_pufu')
           : route.view === 'profile'
-            ? 'プロフィール'
+            ? t('ui.app.profile')
             : route.view === 'mcp'
-              ? '外部連携'
+              ? t('ui.app.integrations')
               : route.view === 'shortcuts'
-                ? 'ショートカット連携'
+                ? t('ui.app.shortcut_integration')
                 : route.view === 'memory'
                   ? selected
-                    ? `${selected.name}のメモリ`
-                    : 'あなたのメモリ'
-                  : (selected?.name ?? 'すべてのストック');
+                    ? t('ui.app.memory_for_value', { value0: selected.name })
+                    : t('ui.app.your_memory')
+                  : (selected?.name ?? t('ui.app.all_stocks'));
   const questionListProject = projects.find(
     (project) => project.id === questionListContext.projectId,
   );
-  const listLabel = questionListContext.view === 'pufus' ? 'プ譜' : '問い・気づき';
-  const breadcrumbListLabel = route.view === 'pufu' ? 'プ譜' : listLabel;
+  const listLabel =
+    questionListContext.view === 'pufus' ? t('ui.app.pufu') : t('ui.app.questions_insights');
+  const breadcrumbListLabel = route.view === 'pufu' ? t('ui.app.pufu') : listLabel;
   const breadcrumbListHash =
     route.view === 'pufu'
       ? `#pufus${questionListContext.projectId ? `/${encodeURIComponent(questionListContext.projectId)}` : ''}`
       : questionListContext.hash;
   const questionListHeading = questionListProject
-    ? `${questionListProject.name}の${breadcrumbListLabel}`
-    : `すべての${breadcrumbListLabel}`;
+    ? t('ui.app.value_in_value', { value0: questionListProject.name, value1: breadcrumbListLabel })
+    : t('ui.app.all_value', { value0: breadcrumbListLabel });
   const headerProjectId = questionFlow ? questionListContext.projectId : route.projectId;
   const headerProject = questionFlow ? questionListProject : selected;
   const headerLabel = headerProjectId
-    ? headerLabels[route.view]
-    : (globalHeaderLabels[route.view] ?? headerLabels[route.view]);
+    ? headerLabels()[route.view]
+    : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
   const listedProjects = projects.filter((project) => project.show_in_all_lists !== false);
   const allCount = listedProjects.reduce((count, project) => count + project.count, 0);
   const allQuestionCount = listedProjects.reduce(
@@ -775,7 +837,7 @@ export default function App() {
       {isMobile && mobileNav && (
         <button
           className="nav-scrim"
-          aria-label="メニューを閉じる"
+          aria-label={t('ui.app.close_menu')}
           onClick={() => setMobileNav(false)}
         />
       )}
@@ -784,7 +846,7 @@ export default function App() {
         <button
           id="sidebar-close"
           className="icon-button sidebar-close"
-          aria-label="メニューを閉じる"
+          aria-label={t('ui.app.close_menu')}
           onClick={() => {
             if (isMobile) setMobileNav(false);
             else {
@@ -797,7 +859,7 @@ export default function App() {
         >
           <X size={19} aria-hidden="true" />
         </button>
-        <nav aria-label="メインナビゲーション">
+        <nav aria-label={t('ui.app.main_navigation')}>
           <button
             className={`nav-item ${route.view === 'stocks' && !route.projectId ? 'active' : ''}`}
             aria-current={route.view === 'stocks' && !route.projectId ? 'page' : undefined}
@@ -807,7 +869,8 @@ export default function App() {
             }}
           >
             <Layers size={19} aria-hidden="true" />
-            すべてのストック<span className="nav-count">{allCount}</span>
+            {t('ui.app.all_stocks')}
+            <span className="nav-count">{allCount}</span>
           </button>
           <button
             className={`nav-item ${allQuestionsActive ? 'active' : ''}`}
@@ -818,7 +881,8 @@ export default function App() {
             }}
           >
             <CircleHelp size={19} aria-hidden="true" />
-            すべての問い・気づき<span className="nav-count">{allQuestionCount}</span>
+            {t('ui.app.all_questions_insights')}
+            <span className="nav-count">{allQuestionCount}</span>
           </button>
           <button
             className={`nav-item ${allPufusActive ? 'active' : ''}`}
@@ -829,20 +893,21 @@ export default function App() {
             }}
           >
             <Network className="pufu-icon" size={19} aria-hidden="true" />
-            すべてのプ譜<span className="nav-count">{allPufuCount}</span>
+            {t('ui.app.all_pufu')}
+            <span className="nav-count">{allPufuCount}</span>
           </button>
           <button
             className={`nav-item ${route.view === 'memory' && !route.projectId ? 'active' : ''}`}
             onClick={() => navigate('memory')}
           >
             <Sparkles size={19} aria-hidden="true" />
-            あなたのメモリ
+            {t('ui.app.your_memory')}
           </button>
           <div className="nav-section">
-            <span>プロジェクト</span>
+            <span>{t('ui.app.projects')}</span>
             <button
               className="icon-button small"
-              aria-label="プロジェクトを作成"
+              aria-label={t('ui.app.create_project')}
               onClick={() => {
                 setModal({ type: 'project' });
                 setMobileNav(false);
@@ -864,14 +929,14 @@ export default function App() {
           ))}
           {!projects.length && (
             <p className="sidebar-empty">
-              最初のプロジェクトを
+              {t('ui.app.create_your')}
               <br />
-              つくってみましょう。
+              {t('ui.app.first_project')}
             </p>
           )}
           <button className="new-project" onClick={() => setModal({ type: 'project' })}>
             <Plus size={17} aria-hidden="true" />
-            プロジェクトを追加
+            {t('ui.app.add_project')}
           </button>
         </nav>
         <div className="sidebar-bottom">
@@ -880,10 +945,10 @@ export default function App() {
             href="/manual"
             target="_blank"
             rel="noreferrer"
-            aria-label="ユーザーマニュアル（新しいタブで開く）"
+            aria-label={t('ui.app.user_manual_opens_in_a_new_tab')}
           >
             <BookOpen size={18} aria-hidden="true" />
-            ユーザーマニュアル
+            {t('ui.app.user_manual')}
           </a>
           <button
             className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
@@ -891,14 +956,14 @@ export default function App() {
             onClick={() => navigate('profile')}
           >
             <UserRound size={18} aria-hidden="true" />
-            プロフィール
+            {t('ui.app.profile')}
           </button>
           <button
             className={`nav-item ${route.view === 'shortcuts' ? 'active' : ''}`}
             onClick={() => navigate('shortcuts')}
           >
             <KeyRound size={18} aria-hidden="true" />
-            ショートカット連携
+            {t('ui.app.shortcut_integration')}
           </button>
           <button
             className={`nav-item ${route.view === 'mcp' ? 'active' : ''}`}
@@ -906,23 +971,23 @@ export default function App() {
             onClick={() => navigate('mcp')}
           >
             <Layers size={18} aria-hidden="true" />
-            外部連携
+            {t('ui.app.integrations')}
           </button>
           <div className="user-row">
             <div className="avatar">{user.name.slice(0, 1)}</div>
             <div className="user-info">
               <strong>{user.name}</strong>
-              {config.demo && <span>ローカルデモ</span>}
+              {config.demo && <span>{t('ui.app.local_demo')}</span>}
             </div>
             <button
               className="icon-button"
-              aria-label="ログアウト"
+              aria-label={t('ui.app.sign_out')}
               onClick={async () => {
                 try {
                   await send('/api/v1/logout');
                   setUser(null);
                 } catch (e) {
-                  setError((e as Error).message);
+                  setError(applicationError((e as Error).message));
                 }
               }}
             >
@@ -937,7 +1002,7 @@ export default function App() {
             <button
               id="sidebar-toggle"
               className="icon-button sidebar-toggle"
-              aria-label="メニューを開く"
+              aria-label={t('ui.app.open_menu')}
               aria-controls="sidebar"
               aria-expanded={false}
               onClick={() => {
@@ -953,7 +1018,7 @@ export default function App() {
               <Menu size={22} aria-hidden="true" />
             </button>
           )}
-          <nav className="breadcrumb" aria-label="パンくずリスト">
+          <nav className="breadcrumb" aria-label={t('ui.app.breadcrumbs')}>
             <a href="#">
               {!sidebarOpen && (
                 <img
@@ -964,7 +1029,7 @@ export default function App() {
                   height="28"
                 />
               )}
-              トップ
+              {t('ui.app.home')}
             </a>{' '}
             <span aria-hidden="true">/</span>{' '}
             {headerProjectId && (
@@ -972,10 +1037,10 @@ export default function App() {
                 <a
                   className="breadcrumb-project"
                   href={`#project/${encodeURIComponent(headerProjectId)}`}
-                  title={headerProject?.name ?? 'プロジェクト'}
+                  title={headerProject?.name ?? t('ui.app.projects')}
                 >
                   <span className="breadcrumb-project-name">
-                    {headerProject?.name ?? 'プロジェクト'}
+                    {headerProject?.name ?? t('ui.app.projects')}
                   </span>
                 </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
@@ -984,7 +1049,9 @@ export default function App() {
             {questionFlow ? (
               <>
                 <a href={breadcrumbListHash} title={questionListHeading}>
-                  {headerProjectId ? breadcrumbListLabel : `すべての${breadcrumbListLabel}`}
+                  {headerProjectId
+                    ? breadcrumbListLabel
+                    : t('ui.app.all_value', { value0: breadcrumbListLabel })}
                 </a>{' '}
                 <span aria-hidden="true">/</span>{' '}
                 <a
@@ -1006,8 +1073,8 @@ export default function App() {
             <BookOpen size={15} aria-hidden="true" />
             <span>
               {config.aiEnabled
-                ? 'ローカルデモ · サンプル記事を含みます。新しいストックのAI生成にはWorkers AIを使用します。'
-                : 'ローカルデモ · サンプル記事を含みます。新しい記事の要約はAI未接続の本文抜粋です。'}
+                ? t('ui.app.local_demo_includes_sample_articles_new_ai_generation_uses')
+                : t('ui.app.local_demo_includes_sample_articles_without_ai_new_summaries')}
             </span>
           </div>
         )}
@@ -1019,33 +1086,35 @@ export default function App() {
                 {route.view !== 'profile' && (
                   <p>
                     {route.view === 'questions'
-                      ? '日常やストックから生まれた問い・気づきを集める。'
+                      ? t('ui.app.collect_questions_and_insights_from_everyday_life_and_saved')
                       : route.view === 'pufus'
-                        ? '問い・気づきから生まれた解決の案を、一覧で振り返る。'
+                        ? t('ui.app.review_ideas_for_solutions_inspired_by_your_questions_and')
                         : route.view === 'settings'
-                          ? 'プロジェクトの設定を編集できます。'
+                          ? t('ui.app.edit_this_project_s_settings')
                           : route.view === 'mcp'
-                            ? '会話から、ストックと問い・気づきにつなげる。'
+                            ? t('ui.app.connect_conversations_with_stocks_questions_and_insights')
                             : route.view === 'shortcuts'
-                              ? 'iPhoneで見つけた記事を、プロジェクトへそのままストック。'
+                              ? t('ui.app.save_articles_from_your_iphone_directly_to_a_project')
                               : route.view === 'memory'
-                                ? '集めた記事から見えてきた関心と知識。根拠とともに、少しずつ更新されます。'
+                                ? t(
+                                    'ui.app.interests_and_knowledge_from_your_articles_gradually_updated_with',
+                                  )
                                 : selected?.description ||
-                                  '気になった記事と、生まれたアイデアをひとつの場所に。'}
+                                  t('ui.app.keep_interesting_articles_and_new_ideas_together')}
                   </p>
                 )}
               </div>
               <div className="header-actions">
                 {libraryView && (
                   <div className="header-project-select">
-                    <label htmlFor="project-scope">プロジェクト</label>
+                    <label htmlFor="project-scope">{t('ui.app.projects')}</label>
                     <div className="project-select-control">
                       <select
                         id="project-scope"
                         value={libraryProjectId ?? ''}
                         onChange={(event) => filterProject(event.target.value || null)}
                       >
-                        <option value="">すべてのプロジェクト</option>
+                        <option value="">{t('ui.app.all_projects')}</option>
                         {projects.map((project) => (
                           <option key={project.id} value={project.id}>
                             {project.name}
@@ -1064,13 +1133,13 @@ export default function App() {
                     }
                   >
                     <Plus size={18} aria-hidden="true" />
-                    {projects.length ? '記事をストック' : 'プロジェクトを作成'}
+                    {projects.length ? t('ui.app.save_article') : t('ui.app.create_project')}
                   </button>
                 )}
                 {route.view === 'questions' && (
                   <button className="button primary" onClick={() => setModal({ type: 'question' })}>
                     <Plus size={18} aria-hidden="true" />
-                    問い・気づきを追加
+                    {t('ui.app.add_question_or_insight')}
                   </button>
                 )}
                 {route.view === 'pufus' && (
@@ -1080,7 +1149,7 @@ export default function App() {
                     disabled={!projects.length}
                   >
                     <Plus size={18} aria-hidden="true" />
-                    プ譜を追加
+                    {t('ui.app.add_pufu')}
                   </button>
                 )}
               </div>
@@ -1093,7 +1162,7 @@ export default function App() {
             route.view === 'memory') && (
             <div
               className={`detail-tabs library-tabs${route.projectId ? ' project-tabs' : ''}`}
-              aria-label={route.projectId ? 'プロジェクトの表示内容' : '全体の表示内容'}
+              aria-label={route.projectId ? t('ui.app.project_views') : t('ui.app.library_views')}
             >
               <button
                 className={route.view === 'stocks' ? 'active' : ''}
@@ -1101,7 +1170,7 @@ export default function App() {
                 onClick={() => navigate('stocks', route.projectId)}
               >
                 <Bookmark size={16} aria-hidden="true" />
-                ストック
+                {t('ui.app.stocks')}
               </button>
               <button
                 className={route.view === 'questions' ? 'active' : ''}
@@ -1109,7 +1178,7 @@ export default function App() {
                 onClick={() => navigate('questions', route.projectId)}
               >
                 <CircleHelp size={16} aria-hidden="true" />
-                問い・気づき
+                {t('ui.app.questions_insights')}
               </button>
               <button
                 className={route.view === 'pufus' ? 'active' : ''}
@@ -1117,7 +1186,7 @@ export default function App() {
                 onClick={() => navigate('pufus', route.projectId)}
               >
                 <Network className="pufu-icon" size={16} aria-hidden="true" />
-                プ譜
+                {t('ui.app.pufu')}
               </button>
               <button
                 className={route.view === 'memory' ? 'active' : ''}
@@ -1125,7 +1194,7 @@ export default function App() {
                 onClick={() => navigate('memory', route.projectId)}
               >
                 <Sparkles size={16} aria-hidden="true" />
-                メモリ
+                {t('ui.app.memory')}
               </button>
               {route.projectId && (
                 <button
@@ -1134,7 +1203,7 @@ export default function App() {
                   onClick={() => navigate('settings', route.projectId)}
                 >
                   <Settings size={16} aria-hidden="true" />
-                  設定
+                  {t('ui.app.settings')}
                 </button>
               )}
             </div>
@@ -1149,7 +1218,7 @@ export default function App() {
             <div className="error-banner" role="alert">
               {error}
               <button className="button text-button" onClick={reload}>
-                再読み込み
+                {t('ui.app.reload')}
               </button>
             </div>
           )}
@@ -1167,7 +1236,9 @@ export default function App() {
                   else navigate('questions', id);
                 }}
                 onOpen={async (id) => {
-                  const { stock } = await api<{ stock: Stock }>(`/api/v1/stocks/${id}`);
+                  const { stock } = await api<{
+                    stock: Stock;
+                  }>(`/api/v1/stocks/${id}`);
                   setModal({ type: 'stock', stock, tab: 'question' });
                 }}
               />
@@ -1190,7 +1261,11 @@ export default function App() {
                 key={route.detailId}
                 id={route.detailId!}
                 onQuestion={(id) => navigateDetail('question', id)}
-                backLabel={pufuSource.questionId ? '問い・気づきの詳細に戻る' : 'プ譜の一覧に戻る'}
+                backLabel={
+                  pufuSource.questionId
+                    ? t('ui.app.back_to_question_or_insight')
+                    : t('ui.app.back_to_pufu_list')
+                }
                 onBack={() => {
                   if (pufuSource.questionId) navigateDetail('question', pufuSource.questionId);
                   else
@@ -1205,7 +1280,7 @@ export default function App() {
                 projects={projects}
                 resolve={route.view === 'resolve'}
                 onUpdated={reload}
-                backLabel={`${listLabel}の一覧に戻る`}
+                backLabel={t('ui.app.back_to_value_list', { value0: listLabel })}
                 onBack={() => {
                   if (route.view === 'resolve') navigateDetail('question', route.detailId!);
                   else window.location.hash = questionListContext.hash;
@@ -1213,27 +1288,27 @@ export default function App() {
                 onResolve={() => navigateDetail('resolve', route.detailId!)}
                 onPufu={(id) => navigateDetail('pufu', id)}
                 onDeleted={() => {
-                  setNotice('問い・気づきを削除しました。');
+                  setNotice(t('ui.app.question_or_insight_deleted'));
                   reload();
                   window.location.hash = questionListContext.hash;
                 }}
                 onStock={async (id) => {
-                  const { stock } = await api<{ stock: Stock }>(
-                    `/api/v1/stocks/${encodeURIComponent(id)}`,
-                  );
+                  const { stock } = await api<{
+                    stock: Stock;
+                  }>(`/api/v1/stocks/${encodeURIComponent(id)}`);
                   setModal({ type: 'stock', stock });
                 }}
               />
             )
           ) : route.view === 'settings' ? (
-            <section className="project-settings" aria-label="プロジェクト設定">
+            <section className="project-settings" aria-label={t('ui.app.project_settings')}>
               {selected ? (
                 <ProjectForm
                   key={selected.id}
                   project={selected}
-                  onDone={() => completed('プロジェクトの設定を保存しました。')}
+                  onDone={() => completed(t('ui.app.project_settings_saved'))}
                   onDelete={() => {
-                    completed('プロジェクトを削除しました。');
+                    completed(t('ui.app.project_deleted'));
                     filterProject(null);
                     navigate('stocks');
                   }}
@@ -1241,7 +1316,7 @@ export default function App() {
               ) : (
                 <p className="content-loading">
                   <Spinner />
-                  プロジェクトを読み込んでいます…
+                  {t('ui.app.loading_project')}
                 </p>
               )}
             </section>
@@ -1250,8 +1325,9 @@ export default function App() {
             <Profile
               user={user}
               onSave={(savedUser) => {
+                applyAccountLanguage(savedUser);
                 setUser(savedUser);
-                setNotice('プロフィールを保存しました。');
+                setNotice(t('ui.app.profile_saved'));
               }}
             />
           ) : route.view === 'mcp' ? (
@@ -1265,10 +1341,10 @@ export default function App() {
               onRevoke={async (id) => {
                 try {
                   await api(`/api/v1/tokens/${id}`, { method: 'DELETE' });
-                  setNotice('トークンを失効しました。');
+                  setNotice(t('ui.app.token_revoked'));
                   reload();
                 } catch (e) {
-                  setError((e as Error).message);
+                  setError(applicationError((e as Error).message));
                 }
               }}
             />
@@ -1284,10 +1360,10 @@ export default function App() {
             </div>
           ) : (
             <div className="content-layout">
-              <section className="stock-section" aria-label="保存した記事">
+              <section className="stock-section" aria-label={t('ui.app.saved_articles')}>
                 <SearchField
-                  label="記事を検索"
-                  placeholder="タイトル、要約、メモから検索"
+                  label={t('ui.app.search_articles')}
+                  placeholder={t('ui.app.search_titles_summaries_and_notes')}
                   value={query}
                   clearable={Boolean(query || search)}
                   onChange={setQuery}
@@ -1304,12 +1380,12 @@ export default function App() {
                   }}
                 />
                 <div className="filter-row">
-                  <div className="filters" aria-label="ストックのフィルター">
+                  <div className="filters" aria-label={t('ui.app.stock_filters')}>
                     {[
-                      ['all', 'すべて'],
+                      ['all', t('ui.app.all')],
                       ['web', 'web'],
-                      ['user', 'テキスト'],
-                      ['favorites', 'お気に入り'],
+                      ['user', t('ui.app.text')],
+                      ['favorites', t('ui.app.favorites')],
                     ].map(([value, label]) => (
                       <button
                         key={value}
@@ -1324,12 +1400,12 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <span className="result-count">{total}件</span>
+                  <span className="result-count">{t('count.items', { count: total })}</span>
                 </div>
                 {loading && !stocks.length ? (
                   <div className="empty-state">
                     <Spinner />
-                    <p>記事を読み込んでいます。</p>
+                    <p>{t('ui.app.loading_articles')}</p>
                   </div>
                 ) : !stocks.length ? (
                   <div className="empty-state">
@@ -1338,13 +1414,13 @@ export default function App() {
                     </span>
                     <h2>
                       {search || stockSource !== 'all'
-                        ? '該当する記事はありません'
-                        : 'ここから、知識が育ちはじめます'}
+                        ? t('ui.app.no_matching_articles')
+                        : t('ui.app.start_growing_your_knowledge_here')}
                     </h2>
                     <p>
                       {search || stockSource !== 'all'
-                        ? '検索語やフィルターを変えてお試しください。'
-                        : 'URLやテキストを保存してみましょう。要約とメモリは自動で更新されます。'}
+                        ? t('ui.app.try_a_different_search_or_filter')
+                        : t('ui.app.save_a_url_or_text_summaries_and_memory_update')}
                     </p>
                     {!search && stockSource === 'all' && (
                       <button
@@ -1354,7 +1430,9 @@ export default function App() {
                         }
                       >
                         <Plus size={17} aria-hidden="true" />
-                        {projects.length ? '最初の記事をストック' : 'プロジェクトを作成'}
+                        {projects.length
+                          ? t('ui.app.save_your_first_article')
+                          : t('ui.app.create_project')}
                       </button>
                     )}
                   </div>
@@ -1367,7 +1445,9 @@ export default function App() {
                         onOpen={() => setModal({ type: 'stock', stock })}
                         favoriteBusy={savingStockFavorites.includes(stock.id)}
                         onFavorite={() => {
-                          void toggleStockFavorite(stock).catch((e: Error) => setError(e.message));
+                          void toggleStockFavorite(stock).catch((e: Error) =>
+                            setError(applicationError(e.message)),
+                          );
                         }}
                       />
                     ))}
@@ -1381,7 +1461,7 @@ export default function App() {
                       onClick={() => setPage((value) => value - 1)}
                     >
                       <ChevronLeft size={17} aria-hidden="true" />
-                      前へ
+                      {t('ui.app.previous')}
                     </button>
                     <span>
                       {page} / {Math.ceil(total / 24)}
@@ -1391,7 +1471,7 @@ export default function App() {
                       disabled={page * 24 >= total}
                       onClick={() => setPage((value) => value + 1)}
                     >
-                      次へ
+                      {t('ui.app.next')}
                       <ChevronRight size={17} aria-hidden="true" />
                     </button>
                   </div>
@@ -1408,59 +1488,57 @@ export default function App() {
         </div>
       </main>
       {modal?.type === 'memory' && (
-        <Modal title="メモリの更新方法" onClose={() => setModal(null)}>
+        <Modal title={t('ui.app.how_to_update_memory')} onClose={() => setModal(null)}>
           <MemoryRebuildForm
             projectId={modal.projectId}
             projectName={projects.find((project) => project.id === modal.projectId)?.name}
             onClose={() => setModal(null)}
-            onDone={() => completed('メモリの更新を受け付けました。')}
+            onDone={() => completed(t('ui.app.memory_update_accepted'))}
           />
         </Modal>
       )}
       {modal?.type === 'project' && (
         <Modal
-          title={modal.project ? 'プロジェクトを編集' : '新しいプロジェクト'}
+          title={modal.project ? t('ui.app.edit_project') : t('ui.app.new_project')}
           onClose={() => setModal(null)}
         >
           <ProjectForm
             project={modal.project}
             onDone={(id) => {
-              completed(
-                modal.project ? 'プロジェクトを更新しました。' : 'プロジェクトを作成しました。',
-              );
+              completed(modal.project ? t('ui.app.project_updated') : t('ui.app.project_created'));
               navigate('stocks', id);
             }}
             onDelete={() => {
-              completed('プロジェクトを削除しました。');
+              completed(t('ui.app.project_deleted'));
               navigate('stocks');
             }}
           />
         </Modal>
       )}
       {modal?.type === 'save' && (
-        <Modal title="記事をストック" onClose={() => setModal(null)}>
+        <Modal title={t('ui.app.save_article')} onClose={() => setModal(null)}>
           <SaveForm
             projects={projects}
             projectId={listProjectId}
             onDone={(duplicate, youtube) =>
               completed(
                 youtube
-                  ? 'YouTubeのURLを保存しました。'
+                  ? t('ui.app.youtube_url_saved')
                   : duplicate
-                    ? 'この記事はすでに保存されています。'
-                    : '記事を保存しました。要約を自動で生成します。',
+                    ? t('ui.app.this_article_is_already_saved')
+                    : t('ui.app.article_saved_its_summary_will_be_generated_automatically'),
               )
             }
           />
         </Modal>
       )}
       {modal?.type === 'question' && (
-        <Modal title="問い・気づきを追加" onClose={() => setModal(null)}>
+        <Modal title={t('ui.app.add_question_or_insight')} onClose={() => setModal(null)}>
           <QuestionForm
             projects={projects}
             projectId={listProjectId}
             onDone={(projectId) => {
-              completed('問い・気づきを追加しました。');
+              completed(t('ui.app.question_or_insight_added'));
               setQuestionCreation((value) => value + 1);
               if (route.projectId) navigate('questions', projectId);
               else if (libraryProjectId) filterProject(projectId);
@@ -1470,7 +1548,7 @@ export default function App() {
       )}
       {modal?.type === 'pufu' && (
         <PufuModal
-          title="プ譜を追加"
+          title={t('ui.app.add_pufu')}
           wide={false}
           busy={creatingPufu}
           onClose={() => setModal(null)}
@@ -1484,7 +1562,7 @@ export default function App() {
         </PufuModal>
       )}
       {modal?.type === 'stock' && (
-        <Modal title="ストックした記事" wide onClose={() => setModal(null)}>
+        <Modal title={t('ui.app.source_articles')} wide onClose={() => setModal(null)}>
           <StockDetail
             key={modal.stock.id}
             stock={stocks.find((stock) => stock.id === modal.stock.id) ?? modal.stock}
@@ -1500,7 +1578,7 @@ export default function App() {
       )}
       {modal?.type === 'token' && (
         <Modal
-          title="ショートカット用トークンを発行"
+          title={t('ui.app.create_shortcut_token')}
           onClose={() => {
             setModal(null);
             reload();
@@ -1523,6 +1601,7 @@ function ArticleCard({
   onFavorite: () => void;
   favoriteBusy: boolean;
 }) {
+  useLanguage();
   const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
   return (
     <article className="article-card">
@@ -1535,12 +1614,12 @@ function ArticleCard({
           )}
         </span>
         <span className="domain truncate">
-          {stock.source_type === 'text' ? 'テキスト' : stock.domain.replace('www.', '')}
+          {stock.source_type === 'text' ? t('ui.app.text') : stock.domain.replace('www.', '')}
         </span>
         {stock.status !== 'ready' && !youtube && (
           <span className={`status status-${stock.status}`}>
             {stock.status !== 'failed' && <span className="status-dot" />}
-            {statusLabels[stock.status]}
+            {statusLabels()[stock.status]}
           </span>
         )}
         <span className="article-project">
@@ -1556,19 +1635,21 @@ function ArticleCard({
         </h2>
         <p className="article-summary">
           {youtube
-            ? 'YouTubeのリンクを保存しています。詳細から動画や元のページを開けます。'
+            ? t('ui.app.youtube_link_saved_open_the_details_to_view_the')
             : (stock.summary?.overview ??
-              stock.error ??
+              (applicationError(stock.error) || undefined) ??
               (stock.source_type === 'text'
-                ? '保存したテキストから、要点をまとめています。'
-                : '記事本文を取得して、要点をまとめています。保存したURLはいつでも開けます。'))}
+                ? t('ui.app.summarizing_the_key_points_from_your_saved_text')
+                : t('ui.app.retrieving_the_article_and_summarizing_its_key_points_you')))}
         </p>
       </div>
       {youtube && (
         <button
           type="button"
           className="youtube-thumbnail"
-          aria-label={`${youtubeDisplayTitle(stock.title)}の詳細を開く`}
+          aria-label={t('ui.app.open_details_for_value', {
+            value0: youtubeDisplayTitle(stock.title),
+          })}
           onClick={onOpen}
         >
           <YouTubeThumbnail url={stock.source_url} />
@@ -1581,7 +1662,7 @@ function ArticleCard({
       </div>
       <footer>
         <time dateTime={stock.created_at}>
-          {new Intl.DateTimeFormat('ja-JP', {
+          {new Intl.DateTimeFormat(intlLocale(), {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -1604,11 +1685,14 @@ function StockFavoriteButton({
   onClick: () => void;
   showLabel?: boolean;
 }) {
+  useLanguage();
   return (
     <button
       type="button"
       className="stock-favorite"
-      aria-label={stock.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+      aria-label={
+        stock.is_favorite ? t('ui.app.remove_from_favorites') : t('ui.app.add_to_favorites')
+      }
       aria-pressed={Boolean(stock.is_favorite)}
       aria-busy={busy}
       disabled={busy}
@@ -1619,7 +1703,7 @@ function StockFavoriteButton({
       ) : (
         <Star size={20} strokeWidth={1.5} aria-hidden="true" />
       )}
-      {showLabel && <span>お気に入り</span>}
+      {showLabel && <span>{t('ui.app.favorites')}</span>}
     </button>
   );
 }
@@ -1636,6 +1720,7 @@ function MemoryPanel({
   onRebuild?: () => void;
   onEvidence: (id: string) => Promise<void>;
 }) {
+  useLanguage();
   const memory = response.memory;
   const data = memory?.data;
   return (
@@ -1646,24 +1731,26 @@ function MemoryPanel({
         </span>
         <div>
           <div className="eyebrow">GROWING MEMORY</div>
-          <h2>{project ? 'プロジェクトのメモリ' : 'あなたのメモリ'}</h2>
+          <h2>{project ? t('ui.app.project_memory') : t('ui.app.your_memory')}</h2>
         </div>
         {response.pending && (
-          <span className="memory-pending" aria-label="メモリを更新中">
+          <span className="memory-pending" aria-label={t('ui.app.updating_memory')}>
             <Spinner />
           </span>
         )}
       </div>
       <p className="memory-caption">
-        {project ? 'このプロジェクトで集めた記事から。' : '対象のプロジェクトを横断した関心。'}
+        {project
+          ? t('ui.app.from_the_articles_collected_in_this_project')
+          : t('ui.app.interests_across_eligible_projects')}
       </p>
       {response.coverage?.full_rebuild_reason && (
-        <p className="update-note">{response.coverage.full_rebuild_reason}</p>
+        <p className="update-note">{applicationError(response.coverage.full_rebuild_reason)}</p>
       )}
-      {response.pending && <p className="update-note">新しい記事を反映しています…</p>}
+      {response.pending && <p className="update-note">{t('ui.app.incorporating_new_articles')}</p>}
       {response.error && (
         <p className="form-error" role="alert">
-          {response.error}
+          {applicationError(response.error)}
         </p>
       )}
       {!data?.interests.length && !data?.knowledge.length ? (
@@ -1674,9 +1761,9 @@ function MemoryPanel({
             <span />
           </div>
           <p>
-            記事の要約が増えると、
+            {t('ui.app.as_your_article_collection_grows')}
             <br />
-            関心と知識がここにつながります。
+            {t('ui.app.your_interests_and_knowledge_connect_here')}
           </p>
         </div>
       ) : (
@@ -1684,7 +1771,7 @@ function MemoryPanel({
           <div className="memory-block">
             <h3>
               <span />
-              興味の傾向
+              {t('ui.app.interest_patterns')}
             </h3>
             <ul>
               {data.interests.slice(0, full ? 8 : 3).map((interest, index) => (
@@ -1695,7 +1782,7 @@ function MemoryPanel({
           <div className="memory-block knowledge">
             <h3>
               <BookOpen size={14} aria-hidden="true" />
-              記事から得た知識
+              {t('ui.app.knowledge_from_articles')}
             </h3>
             <ul>
               {data.knowledge.slice(0, full ? 12 : 2).map((item, index) => (
@@ -1703,7 +1790,8 @@ function MemoryPanel({
                   <MemoryKnowledge text={item.text}>
                     {item.articleIds.slice(0, full ? 5 : 1).map((id, sourceIndex) => (
                       <button key={id} onClick={() => void onEvidence(id)}>
-                        ストックした記事{item.articleIds.length > 1 ? ` ${sourceIndex + 1}` : ''}
+                        {t('ui.app.source_articles')}
+                        {item.articleIds.length > 1 ? ` ${sourceIndex + 1}` : ''}
                         <ArrowUpRight size={11} aria-hidden="true" />
                       </button>
                     ))}
@@ -1714,7 +1802,7 @@ function MemoryPanel({
           </div>
           {full && data.questions.length > 0 && (
             <div className="memory-block">
-              <h3>未解決の論点</h3>
+              <h3>{t('ui.app.open_questions')}</h3>
               <ul>
                 {data.questions.map((question, index) => (
                   <li key={index}>{question}</li>
@@ -1727,19 +1815,22 @@ function MemoryPanel({
       <div className="memory-foot">
         <span>
           {memory
-            ? `${memory.article_count}記事から生成 · ${date(memory.updated_at)}更新`
-            : '記事の要約後に更新'}
+            ? t('ui.app.generated_from_value_articles_updated_value', {
+                value0: memory.article_count,
+                value1: date(memory.updated_at),
+              })
+            : t('ui.app.updates_after_article_summaries')}
         </span>
       </div>
       {full && (
         <>
           <p className="memory-disclaimer">
-            記事の保存は、その主張への賛同を意味しません。ここには、保存の傾向と記事から収集した情報を整理しています。
+            {t('ui.app.saving_an_article_does_not_imply_agreement_with_its')}
           </p>
           <div className="memory-controls">
             <button className="button secondary" disabled={response.pending} onClick={onRebuild}>
               <RefreshCw size={16} aria-hidden="true" />
-              再生成
+              {t('ui.app.regenerate')}
             </button>
             {memory && (
               <button
@@ -1749,13 +1840,15 @@ function MemoryPanel({
                   const url = URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
-                  link.download = `${project?.name ?? 'ユーザー'}-メモリ.txt`;
+                  link.download = t('ui.app.value_memory_txt', {
+                    value0: project?.name ?? t('ui.app.user'),
+                  });
                   link.click();
                   URL.revokeObjectURL(url);
                 }}
               >
                 <ArrowDownToLine size={16} aria-hidden="true" />
-                テキストを保存
+                {t('ui.app.save_text')}
               </button>
             )}
           </div>
@@ -1773,6 +1866,7 @@ function ProjectForm({
   onDone: (id: string) => void;
   onDelete: () => void;
 }) {
+  useLanguage();
   const [name, setName] = useState(project?.name ?? '');
   const nameId = useId();
   const [description, setDescription] = useState(project?.description ?? '');
@@ -1799,7 +1893,9 @@ function ProjectForm({
           setBusy(true);
           setError('');
           try {
-            const data = await send<{ id: string }>(
+            const data = await send<{
+              id: string;
+            }>(
               project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
               {
                 name,
@@ -1812,7 +1908,7 @@ function ProjectForm({
             );
             onDone(project?.id ?? data.id);
           } catch (e) {
-            setError((e as Error).message);
+            setError(applicationError((e as Error).message));
           } finally {
             setBusy(false);
           }
@@ -1820,20 +1916,20 @@ function ProjectForm({
       >
         <p className="form-intro">
           {project
-            ? 'プロジェクト名と概要を変更できます。内容はメモリの整理にも使われます。'
-            : '集めたいテーマに名前をつけましょう。目的を書くと、メモリの整理にも使われます。'}
+            ? t('ui.app.change_the_project_s_name_and_description_these_are')
+            : t('ui.app.name_the_theme_you_want_to_collect_the_purpose')}
         </p>
         {project && (
           <>
             <dl className="project-id">
-              <dt>プロジェクトID</dt>
+              <dt>{t('ui.app.project_id')}</dt>
               <dd className="project-id-row">
                 <span className="project-id-value">{project.id}</span>
                 <button
                   type="button"
                   className="icon-button"
-                  aria-label="プロジェクトIDをコピー"
-                  title="プロジェクトIDをコピー"
+                  aria-label={t('ui.app.copy_project_id')}
+                  title={t('ui.app.copy_project_id')}
                   onClick={async () => {
                     setIdCopied(false);
                     setIdCopyError('');
@@ -1841,9 +1937,7 @@ function ProjectForm({
                       await navigator.clipboard.writeText(project.id);
                       setIdCopied(true);
                     } catch {
-                      setIdCopyError(
-                        'コピーできませんでした。プロジェクトIDを選択してコピーしてください。',
-                      );
+                      setIdCopyError(t('ui.app.could_not_copy_select_and_copy_the_project_id'));
                     }
                   }}
                 >
@@ -1852,12 +1946,12 @@ function ProjectForm({
               </dd>
             </dl>
             <p className="guide-note" role="status">
-              {idCopied && 'プロジェクトIDをコピーしました。'}
+              {idCopied && t('ui.app.project_id_copied')}
             </p>
             <FormError error={idCopyError} />
           </>
         )}
-        <label htmlFor={nameId}>プロジェクト名</label>
+        <label htmlFor={nameId}>{t('ui.app.project_name')}</label>
         <input
           id={nameId}
           value={name}
@@ -1866,10 +1960,11 @@ function ProjectForm({
           required
           maxLength={80}
           autoFocus
-          placeholder="例：次のアプリ開発"
+          placeholder={t('ui.app.example_building_the_next_app')}
         />
         <label htmlFor={descriptionId}>
-          プロジェクト概要 <span className="optional">任意</span>
+          {t('ui.app.project_description')}
+          <span className="optional">{t('ui.app.optional')}</span>
         </label>
         <textarea
           id={descriptionId}
@@ -1878,17 +1973,12 @@ function ProjectForm({
           onChange={(e) => setDescription(e.target.value)}
           maxLength={1000}
           rows={8}
-          placeholder={`以下について書いてみましょう。
-
-・実現したいこと、取り組む目的
-・使える時間や予算
-・利用できる技術や道具、活動環境
-・競合する活動、気になる問題`}
+          placeholder={t('ui.app.try_writing_about_what_you_want_to_achieve_and')}
         />
         <details className="project-advanced">
-          <summary>詳細設定</summary>
+          <summary>{t('ui.app.advanced_settings')}</summary>
           <label className="project-memory-toggle" htmlFor={listVisibilityId}>
-            <span>すべてのストック・問い・気づき・プ譜の一覧に表示する</span>
+            <span>{t('ui.app.include_in_all_stocks_questions_insights_and_pufu_lists')}</span>
             <input
               id={listVisibilityId}
               type="checkbox"
@@ -1900,10 +1990,10 @@ function ProjectForm({
             />
           </label>
           <p id={`${listVisibilityId}-hint`} className="project-memory-hint">
-            オフにすると、このプロジェクトのストック・問い・気づき・プ譜を全体の一覧から外します。プロジェクトを指定すると表示できます。メモリの更新設定や公開設定には影響しません。
+            {t('ui.app.when_off_this_project_s_stocks_questions_insights_and')}
           </p>
           <label className="project-memory-toggle" htmlFor={userMemoryId}>
-            <span>ストック追加時にユーザーのメモリを更新する</span>
+            <span>{t('ui.app.update_your_memory_when_adding_stocks')}</span>
             <input
               id={userMemoryId}
               type="checkbox"
@@ -1915,11 +2005,11 @@ function ProjectForm({
             />
           </label>
           <p id={`${userMemoryId}-hint`} className="project-memory-hint">
-            オフでもプロジェクトのメモリは更新します。このプロジェクトの記事は「あなたのメモリ」の生成対象から外れます。
-            {project && '保存すると、既存のメモリにも変更を反映します。'}
+            {t('ui.app.project_memory_still_updates_when_off_articles_in_this')}
+            {project && t('ui.app.saving_also_applies_changes_to_existing_memory')}
           </p>
           <label className="project-memory-toggle" htmlFor={autoQuestionsId}>
-            <span>ストックから問い・気づきを自動生成する</span>
+            <span>{t('ui.app.automatically_generate_questions_and_insights_from_stocks')}</span>
             <input
               id={autoQuestionsId}
               type="checkbox"
@@ -1931,14 +2021,14 @@ function ProjectForm({
             />
           </label>
           <p id={`${autoQuestionsId}-hint`} className="project-memory-hint">
-            オフにすると、このプロジェクトのストックから問い・気づきを自動生成しません。生成済みの問い・気づきは残り、手動で問い・気づきを追加できます。要約とメモリの更新設定は変わりません。
+            {t('ui.app.when_off_no_questions_or_insights_are_automatically_generated')}
           </p>
         </details>
         <FormError error={error} />
         <div className="form-actions">
           <button className="button primary" disabled={busy}>
             {busy ? <Spinner /> : <Check size={17} aria-hidden="true" />}
-            {project ? '保存' : 'プロジェクトを作成'}
+            {project ? t('ui.app.save') : t('ui.app.create_project')}
           </button>
         </div>
       </form>
@@ -1946,9 +2036,9 @@ function ProjectForm({
         <>
           <ProjectPublicationSettings key={project.id} projectId={project.id} />
           <DeleteAction
-            summary="プロジェクトの削除"
-            label="プロジェクトを削除"
-            title="プロジェクトを削除しますか？"
+            summary={t('ui.app.project_deletion')}
+            label={t('ui.app.delete_project')}
+            title={t('ui.app.delete_this_project')}
             disabled={busy}
             onDelete={async () => {
               await api(`/api/v1/projects/${project.id}`, { method: 'DELETE' });
@@ -1956,10 +2046,8 @@ function ProjectForm({
             }}
           >
             <p className="delete-target">{project.name}</p>
-            <p>
-              このプロジェクトのストック・問い・気づき・プ譜（すべての局面）・コメント・メモリを削除します。他のプロジェクトに保存した記事は残ります。
-            </p>
-            <p>公開中の場合は公開ページも閲覧できなくなります。この操作は取り消せません。</p>
+            <p>{t('ui.app.delete_this_project_s_stocks_questions_insights_pufu_all')}</p>
+            <p>{t('ui.app.if_published_its_public_page_will_also_become_unavailable')}</p>
           </DeleteAction>
         </>
       )}
@@ -1975,6 +2063,7 @@ function SaveForm({
   projectId: string | null;
   onDone: (duplicate: boolean, youtube: boolean) => void;
 }) {
+  useLanguage();
   const [type, setType] = useState<'url' | 'text'>('url');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -2002,22 +2091,24 @@ function SaveForm({
         if (!parsed.success) {
           setError(
             type !== 'url' && !text.trim()
-              ? '本文を入力してください。'
-              : '入力内容を確認してください。文字数または形式が正しくありません。',
+              ? t('ui.app.enter_the_article_text')
+              : t('ui.app.check_your_input_the_length_or_format_is_incorrect'),
           );
           document.getElementById(type !== 'url' ? 'stock-text' : 'stock-url')?.focus();
           return;
         }
         setBusy(true);
         try {
-          const result = await api<{ duplicate: boolean }>('/api/v1/stocks', {
+          const result = await api<{
+            duplicate: boolean;
+          }>('/api/v1/stocks', {
             method: 'POST',
             headers: { 'Idempotency-Key': key.current },
             body: JSON.stringify(parsed.data),
           });
           onDone(result.duplicate, parsed.data.type === 'url' && isYouTubeUrl(parsed.data.url));
         } catch (e) {
-          setError((e as Error).message);
+          setError(applicationError((e as Error).message));
           if ((e as ApiError).status === 409) key.current = createRequestId();
         } finally {
           setBusy(false);
@@ -2025,14 +2116,14 @@ function SaveForm({
       }}
     >
       <p className="form-intro">
-        URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。
+        {t('ui.app.saving_a_url_or_text_generates_a_summary_and')}
         {projects.find((project) => project.id === target)?.auto_generate_questions !== false &&
-          '問い・気づきも自動で生成します。'}
+          t('ui.app.questions_and_insights_are_also_generated_automatically')}
       </p>
       <div
         className="stock-source-tabs"
         role="tablist"
-        aria-label="種別"
+        aria-label={t('ui.app.type')}
         onKeyDown={(event) => {
           if (busy || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
           event.preventDefault();
@@ -2053,7 +2144,7 @@ function SaveForm({
         {(
           [
             ['url', 'URL'],
-            ['text', 'テキスト'],
+            ['text', t('ui.app.text')],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -2077,7 +2168,7 @@ function SaveForm({
         ))}
       </div>
       <div id="stock-source-panel" role="tabpanel" aria-labelledby={`stock-source-tab-${type}`}>
-        <label htmlFor="stock-project">保存先プロジェクト</label>
+        <label htmlFor="stock-project">{t('ui.app.destination_project')}</label>
         <select
           id="stock-project"
           value={target}
@@ -2087,7 +2178,7 @@ function SaveForm({
             key.current = createRequestId();
           }}
         >
-          {!target && <option value="">プロジェクトを選択してください</option>}
+          {!target && <option value="">{t('ui.app.select_a_project')}</option>}
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
@@ -2096,7 +2187,7 @@ function SaveForm({
         </select>
         {type === 'url' ? (
           <>
-            <label htmlFor="stock-url">投稿URL</label>
+            <label htmlFor="stock-url">{t('ui.app.post_url')}</label>
             <input
               id="stock-url"
               type="url"
@@ -2110,11 +2201,13 @@ function SaveForm({
               maxLength={4096}
               placeholder="https://…"
             />
-            <p className="profile-hint">Xは「外部連携」でBearer Tokenを登録すると取得できます。</p>
+            <p className="profile-hint">
+              {t('ui.app.to_retrieve_x_posts_register_a_bearer_token_in')}
+            </p>
           </>
         ) : (
           <>
-            <label htmlFor="stock-text">本文</label>
+            <label htmlFor="stock-text">{t('ui.app.content')}</label>
             <textarea
               id="stock-text"
               value={text}
@@ -2128,23 +2221,24 @@ function SaveForm({
               maxLength={stockTextLimit}
               rows={6}
               aria-describedby="stock-text-hint"
-              placeholder="ストックしたい文章を入力、または貼り付けてください"
+              placeholder={t('ui.app.enter_or_paste_the_text_you_want_to_save')}
             />
             <p id="stock-text-hint" className="profile-hint profile-bio-hint">
-              <span>20,000文字まで。</span>
-              <span>{text.length.toLocaleString()} / 20,000</span>
+              <span>{t('ui.app.up_to_20_000_characters')}</span>
+              <span>{text.length.toLocaleString(intlLocale())} / 20,000</span>
             </p>
           </>
         )}
         <details className="stock-details">
           <summary>
-            詳細
+            {t('ui.app.details')}
             <ChevronDown size={18} aria-hidden="true" />
           </summary>
           {type === 'text' && (
             <>
               <label htmlFor="stock-text-title">
-                タイトル <span className="optional">任意</span>
+                {t('ui.app.title')}
+                <span className="optional">{t('ui.app.optional')}</span>
               </label>
               <input
                 id="stock-text-title"
@@ -2155,12 +2249,13 @@ function SaveForm({
                   key.current = createRequestId();
                 }}
                 maxLength={200}
-                placeholder="未入力の場合は本文の先頭行から付けます"
+                placeholder={t('ui.app.if_empty_the_first_line_of_the_text_is')}
               />
             </>
           )}
           <label htmlFor="stock-note">
-            メモ <span className="optional">任意</span>
+            {t('ui.app.note')}
+            <span className="optional">{t('ui.app.optional')}</span>
           </label>
           <textarea
             id="stock-note"
@@ -2172,7 +2267,7 @@ function SaveForm({
             }}
             maxLength={2000}
             rows={3}
-            placeholder="気になった理由、あとで考えたいことなど"
+            placeholder={t('ui.app.why_it_caught_your_attention_or_what_you_want')}
           />
         </details>
       </div>
@@ -2180,7 +2275,7 @@ function SaveForm({
       <div className="form-actions">
         <button className="button primary" disabled={busy || !target}>
           {busy ? <Spinner /> : <Bookmark size={17} aria-hidden="true" />}
-          {busy ? '保存中…' : 'ストックする'}
+          {busy ? t('ui.app.saving') : t('ui.app.save_stock')}
         </button>
       </div>
     </form>
@@ -2205,6 +2300,7 @@ function StockDetail({
   favoriteBusy: boolean;
   onRename: (stock: Stock, title: string) => Promise<void>;
 }) {
+  useLanguage();
   const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
   const displayTitle = youtube ? youtubeDisplayTitle(stock.title) : stock.title;
   const [tab, setTab] = useState<string>(youtube ? 'summary' : initialTab);
@@ -2238,12 +2334,14 @@ function StockDetail({
   useEffect(() => {
     let active = true;
     if (tab === 'content' && content === undefined)
-      void api<{ content: string | null }>(`/api/v1/stocks/${stock.id}/content`)
+      void api<{
+        content: string | null;
+      }>(`/api/v1/stocks/${stock.id}/content`)
         .then((result) => {
           if (active) setContent(result.content);
         })
         .catch((e) => {
-          if (active) setError((e as Error).message);
+          if (active) setError(applicationError((e as Error).message));
         });
     return () => {
       active = false;
@@ -2252,9 +2350,9 @@ function StockDetail({
   return (
     <div className="stock-detail">
       <div className="detail-domain">
-        {stock.source_type === 'text' ? 'テキスト' : stock.domain}{' '}
+        {stock.source_type === 'text' ? t('ui.app.text') : stock.domain}{' '}
         {stock.status !== 'ready' && !youtube && (
-          <span className={`status status-${stock.status}`}>{statusLabels[stock.status]}</span>
+          <span className={`status status-${stock.status}`}>{statusLabels()[stock.status]}</span>
         )}
       </div>
       {editingTitle ? (
@@ -2268,7 +2366,7 @@ function StockDetail({
               await onRename(stock, title.trim());
               finishEditingTitle();
             } catch (e) {
-              setTitleError((e as Error).message);
+              setTitleError(applicationError((e as Error).message));
             } finally {
               setBusy(false);
             }
@@ -2281,7 +2379,7 @@ function StockDetail({
             }
           }}
         >
-          <label htmlFor={titleId}>タイトル</label>
+          <label htmlFor={titleId}>{t('ui.app.title_2')}</label>
           <input
             ref={titleInput}
             id={titleId}
@@ -2301,11 +2399,11 @@ function StockDetail({
               disabled={busy}
               onClick={finishEditingTitle}
             >
-              キャンセル
+              {t('ui.app.cancel')}
             </button>
             <button className="button primary" disabled={busy || !title.trim()}>
               {busy ? <Spinner /> : <Check size={16} aria-hidden="true" />}
-              {busy ? '保存中…' : '保存'}
+              {busy ? t('ui.app.saving') : t('ui.app.save')}
             </button>
           </div>
         </form>
@@ -2316,8 +2414,8 @@ function StockDetail({
             ref={titleButton}
             type="button"
             className="icon-button"
-            aria-label="タイトルを編集"
-            title="タイトルを編集"
+            aria-label={t('ui.app.edit_title')}
+            title={t('ui.app.edit_title')}
             disabled={busy}
             onClick={() => {
               setTitle(displayTitle);
@@ -2337,7 +2435,7 @@ function StockDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            {youtube ? 'YouTubeで開く' : '元の記事を開く'}
+            {youtube ? t('ui.app.open_on_youtube') : t('ui.app.open_original_article')}
             <ExternalLink size={14} aria-hidden="true" />
           </a>
         )}
@@ -2350,24 +2448,29 @@ function StockDetail({
             try {
               await onFavorite(stock);
             } catch (e) {
-              setError((e as Error).message);
+              setError(applicationError((e as Error).message));
             }
           }}
         />
       </div>
-      <div className="detail-tabs" aria-label="記事の表示内容">
+      <div className="detail-tabs" aria-label={t('ui.app.article_views')}>
         {(youtube
           ? [
-              ['summary', '動画'],
-              ['comments', 'コメント'],
-              ['note', 'メモ・保存先'],
+              ['summary', t('ui.app.video')],
+              ['comments', t('ui.app.comments')],
+              ['note', t('ui.app.note_destination')],
             ]
           : [
-              ['summary', '要約'],
-              ['question', '問い・気づき'],
-              ['comments', 'コメント'],
-              ['content', stock.source_type === 'text' ? '入力した本文' : '取得した本文'],
-              ['note', 'メモ・保存先'],
+              ['summary', t('ui.app.summary')],
+              ['question', t('ui.app.questions_insights')],
+              ['comments', t('ui.app.comments')],
+              [
+                'content',
+                stock.source_type === 'text'
+                  ? t('ui.app.entered_text')
+                  : t('ui.app.retrieved_text'),
+              ],
+              ['note', t('ui.app.note_destination')],
             ]
         ).map(([value, label]) => (
           <button
@@ -2389,18 +2492,18 @@ function StockDetail({
               <p>{stock.summary.overview}</p>
               {stock.summary.shortSource && (
                 <div className="local-model-note">
-                  <p>短い本文のため、推測を加えず原文を表示しています。</p>
+                  <p>{t('ui.app.this_text_is_short_so_the_original_is_shown')}</p>
                   {!stock.note.trim() && (
                     <>
-                      <p>なぜ気になったかを一言残すと、問い・気づきとメモリに反映されます。</p>
+                      <p>{t('ui.app.leave_a_short_note_about_why_it_caught_your')}</p>
                       <button className="button secondary" onClick={() => setTab('note')}>
-                        ひとことメモを残す
+                        {t('ui.app.leave_a_short_note')}
                       </button>
                     </>
                   )}
                 </div>
               )}
-              <h4>この記事の要点</h4>
+              <h4>{t('ui.app.key_points')}</h4>
               <ul>
                 {stock.summary.keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>
@@ -2413,18 +2516,23 @@ function StockDetail({
               </div>
               {stock.model?.startsWith('local') || stock.model === 'demo-fixture' ? (
                 <p className="local-model-note">
-                  デモ用の要約です。新しく保存した記事では本文の抜粋を表示します。
+                  {t('ui.app.this_is_a_demo_summary_newly_saved_articles_show')}
                 </p>
               ) : null}
             </>
           ) : (
-            <p>{stock.error ?? '要約を生成しています。少しお待ちください。'}</p>
+            <p>
+              {(applicationError(stock.error) || undefined) ??
+                t('ui.app.generating_the_summary_please_wait')}
+            </p>
           )}
           {stock.status === 'failed' && !youtube && (
             <>
               {stock.source_type === 'url' && (
                 <>
-                  <label htmlFor="retry-content">本文を補完して再試行（任意）</label>
+                  <label htmlFor="retry-content">
+                    {t('ui.app.supply_article_text_and_retry_optional')}
+                  </label>
                   <textarea
                     id="retry-content"
                     value={supplemental}
@@ -2447,21 +2555,21 @@ function StockDetail({
                     );
                     onDone(
                       stock.source_type === 'text'
-                        ? 'テキストの要約の再試行を受け付けました。'
-                        : '記事の再取得を受け付けました。',
+                        ? t('ui.app.summary_retry_accepted')
+                        : t('ui.app.article_retrieval_retry_accepted'),
                     );
                   } catch (e) {
-                    setError((e as Error).message);
+                    setError(applicationError((e as Error).message));
                     setBusy(false);
                   }
                 }}
               >
                 <RefreshCw size={16} aria-hidden="true" />
                 {supplemental.trim()
-                  ? 'この本文で再試行'
+                  ? t('ui.app.retry_with_this_text')
                   : stock.source_type === 'text'
-                    ? '要約を再試行'
-                    : '取得を再試行'}
+                    ? t('ui.app.retry_summary')
+                    : t('ui.app.retry_retrieval')}
               </button>
             </>
           )}
@@ -2472,11 +2580,11 @@ function StockDetail({
         content === undefined ? (
           <p className="content-loading">
             <Spinner />
-            本文を読み込んでいます…
+            {t('ui.app.loading_article_text')}
           </p>
         ) : (
           <pre className="article-body">
-            {content ?? '取得した本文はありません。サンプル記事では元の記事をご覧ください。'}
+            {content ?? t('ui.app.no_retrieved_text_is_available_for_sample_articles_open')}
           </pre>
         )
       ) : tab === 'note' ? (
@@ -2489,22 +2597,23 @@ function StockDetail({
               await send(`/api/v1/stocks/${stock.id}`, { note, project_id: projectId }, 'PATCH');
               onDone(
                 stock.summary?.shortSource && note !== stock.note
-                  ? 'メモを保存しました。問い・気づきとメモリに反映します。'
-                  : 'メモと保存先を更新しました。',
+                  ? t('ui.app.note_saved_it_will_inform_questions_insights_and_memory')
+                  : t('ui.app.note_and_destination_updated'),
               );
             } catch (e) {
-              setError((e as Error).message);
+              setError(applicationError((e as Error).message));
               setBusy(false);
             }
           }}
         >
           <label htmlFor="edit-note">
-            {stock.summary?.shortSource ? 'なぜ気になった？（メモ）' : 'メモ'}
+            {stock.summary?.shortSource
+              ? t('ui.app.why_did_it_catch_your_attention_note')
+              : t('ui.app.note_2')}
           </label>
           {stock.summary?.shortSource && (
             <p id={noteHintId} className="local-model-note">
-              気になった理由を一言残すと、問い・気づきとメモリに反映されます。原文はそのまま残ります。
-              プロジェクトの公開時は、メモをもとに作った問い・気づきも公開されます。
+              {t('ui.app.leave_a_short_note_to_inform_questions_insights_and')}
             </p>
           )}
           <textarea
@@ -2517,7 +2626,7 @@ function StockDetail({
             maxLength={2000}
             disabled={busy}
           />
-          <label htmlFor="edit-project">保存先プロジェクト</label>
+          <label htmlFor="edit-project">{t('ui.app.destination_project')}</label>
           <select
             id="edit-project"
             value={projectId}
@@ -2531,7 +2640,8 @@ function StockDetail({
           </select>
           <div className="form-actions">
             <button className="button primary" disabled={busy}>
-              {busy && <Spinner />}変更を保存
+              {busy && <Spinner />}
+              {t('ui.app.save_changes')}
             </button>
           </div>
         </form>
@@ -2541,23 +2651,27 @@ function StockDetail({
       </div>
       <FormError error={error} />
       <div className="detail-footer">
-        <span>{fullDate(stock.created_at)} に保存</span>
+        <span>
+          {fullDate(stock.created_at)}
+          {t('ui.app.saved_in')}
+        </span>
       </div>
       <DeleteAction
-        label="このストックを削除"
-        title="このストックを削除しますか？"
+        label={t('ui.app.delete_this_stock')}
+        title={t('ui.app.delete_this_stock_2')}
         disabled={busy || favoriteBusy}
         onDelete={async () => {
           await api(`/api/v1/stocks/${stock.id}`, { method: 'DELETE' });
-          onDone('記事を削除し、メモリの更新を受け付けました。');
+          onDone(t('ui.app.article_deleted_and_memory_update_accepted'));
         }}
       >
         <p className="delete-target">{displayTitle}</p>
-        <p>保存先：{stock.project_name}</p>
         <p>
-          このプロジェクトのストックとコメントを削除します。関連する問い・気づき・プ譜（すべての局面）は残ります。他のプロジェクトに保存した同じ記事は残ります。
+          {t('ui.app.destination')}
+          {stock.project_name}
         </p>
-        <p>この操作は取り消せません。</p>
+        <p>{t('ui.app.delete_this_project_s_stock_and_its_comments_related')}</p>
+        <p>{t('ui.app.this_cannot_be_undone')}</p>
       </DeleteAction>
     </div>
   );
@@ -2575,13 +2689,14 @@ function Shortcuts({
   onCreate: () => void;
   onRevoke: (id: string) => Promise<void>;
 }) {
+  useLanguage();
   const base = baseUrl;
   const [projectId, setProjectId] = useState('');
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
   const example = JSON.stringify(
     {
-      url: '手順03で取得した記事URL（マジック変数）',
+      url: t('ui.app.article_url_from_step_03_magic_variable'),
       ...(projectId ? { project_id: projectId } : {}),
       note: '',
     },
@@ -2596,83 +2711,61 @@ function Shortcuts({
             <ArrowDownToLine size={23} aria-hidden="true" />
           </span>
           <div>
-            <h2>共有メニューから、記事をストック。</h2>
-            <p>記事を読んでいる途中でも、共有メニューから保存できます。</p>
+            <h2>{t('ui.app.save_articles_from_the_share_menu')}</h2>
+            <p>{t('ui.app.save_an_article_from_the_share_menu_while_reading')}</p>
           </div>
         </div>
         <ol className="setup-steps">
           <li>
             <span>01</span>
             <div>
-              <h3>トークンを発行する</h3>
-              <p>
-                下の「トークンを発行」から作成します。保存先を特定のプロジェクトに限定することもできます。
-              </p>
+              <h3>{t('ui.app.create_a_token')}</h3>
+              <p>{t('ui.app.use_create_token_below_you_can_restrict_the_destination')}</p>
             </div>
           </li>
           <li>
             <span>02</span>
             <div>
-              <h3>共有シートからURLを受け取る</h3>
-              <p>
-                iPhoneの「ショートカット」アプリで「＋」から作成し、詳細で「共有シートに表示」をオンにします。受け取る種類は「URL」と「SafariのWebページ」を選びます。
-              </p>
-              <p>
-                先頭に「共有シートから…を受け取る」と表示されます。名前は「Pufu
-                Lens共有」などにします。
-              </p>
+              <h3>{t('ui.app.receive_urls_from_the_share_sheet')}</h3>
+              <p>{t('ui.app.in_the_iphone_shortcuts_app_create_a_shortcut_with')}</p>
+              <p>{t('ui.app.the_first_action_says_receive_from_share_sheet_give')}</p>
             </div>
           </li>
           <li>
             <span>03</span>
             <div>
-              <h3>「入力からURLを取得」を追加する</h3>
-              <p>
-                アクションを追加して「URLを取得」を検索し、入力に「ショートカットの入力」を指定します。共有された記事からURLを取り出すためのアクションです。
-              </p>
-              <p>
-                記事は1件ずつ共有します。複数のURLがある場合は「リストから項目を取得」で最初の項目を選びます。
-              </p>
+              <h3>{t('ui.app.add_get_urls_from_input')}</h3>
+              <p>{t('ui.app.add_an_action_search_for_get_urls_and_set')}</p>
+              <p>{t('ui.app.share_one_article_at_a_time_if_there_are')}</p>
             </div>
           </li>
           <li>
             <span>04</span>
             <div>
-              <h3>「URLの内容を取得」でPOSTする</h3>
-              <p>
-                次に「URLの内容を取得」を追加し、URL欄には下の保存APIのURLを貼り付けます。詳細を開いて「方法」をPOST、「本文を要求」をJSONにし、下のヘッダと本文を設定します。
-              </p>
-              <p>
-                JSONのurl欄は「テキスト」型を選び、値には手順03で取得した記事URLのマジック変数（複数時は先頭の1件を選んだ結果）を指定します。設定例の説明文をそのまま入力しないでください。Authorizationには「Bearer
-                」に続けて発行したトークンを貼り付けます。
-              </p>
-              <p>
-                トークンの送信先は下の保存APIです。共有された記事のURLを「URLの内容を取得」の送信先に設定しないでください。
-              </p>
-              <p>
-                project_idは任意です。省略すると、プロジェクト限定トークンでは限定先に、限定なしトークンでは自分の全プロジェクトに保存します。限定先と異なるIDは指定できません。
-              </p>
+              <h3>{t('ui.app.post_with_get_contents_of_url')}</h3>
+              <p>{t('ui.app.add_get_contents_of_url_and_paste_the_save')}</p>
+              <p>{t('ui.app.choose_text_for_the_json_url_field_and_use')}</p>
+              <p>{t('ui.app.send_the_token_to_the_save_api_below_do')}</p>
+              <p>{t('ui.app.project_id_is_optional_if_omitted_a_project_restricted')}</p>
               <details>
-                <summary>ショートカットの実行時に保存先を選ぶ場合</summary>
-                <p>
-                  同じAuthorizationヘッダを付けて次のURLをGETし、返されたprojectsから名前を選び、そのidをproject_idに指定します。
-                </p>
+                <summary>{t('ui.app.choose_a_destination_when_running_the_shortcut')}</summary>
+                <p>{t('ui.app.get_the_following_url_with_the_same_authorization_header')}</p>
                 <code>{base}/api/v1/projects</code>
               </details>
             </div>
           </li>
         </ol>
         <figure className="shortcut-setup-figure">
-          <figcaption>ショートカットの設定イメージ</figcaption>
+          <figcaption>{t('ui.app.shortcut_setup_example')}</figcaption>
           <img
             src={shortcutSetupImage}
             width={881}
             height={1785}
             loading="lazy"
             decoding="async"
-            alt="共有シートでURL・SafariのWebページを受け取り、ショートカットの入力からURLを取得します。続く「URLの内容を取得」は方法POST、ヘッダはAuthorizationにBearerと発行したトークン、Content-Typeにapplication/json。本文を要求はJSON、urlには「URL」のマジック変数を指定する設定例です。"
+            alt={t('ui.app.receive_urls_and_safari_web_pages_from_the_share')}
           />
-          <p>図の「保存APIのURL」には、次のURLを設定します。</p>
+          <p>{t('ui.app.use_the_following_url_for_the_save_api_url')}</p>
           <code>{base}/api/v1/stocks</code>
         </figure>
         <div className="api-example">
@@ -2681,16 +2774,14 @@ function Shortcuts({
             <code>{base}/api/v1/stocks</code>
             <button
               className="icon-button small"
-              aria-label="保存APIのURLをコピー"
+              aria-label={t('ui.app.copy_save_api_url')}
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(`${base}/api/v1/stocks`);
                   setCopied(true);
                   setCopyError('');
                 } catch {
-                  setCopyError(
-                    'コピーできませんでした。表示されたURLを選択してコピーしてください。',
-                  );
+                  setCopyError(t('ui.app.could_not_copy_select_and_copy_the_displayed_url'));
                 }
               }}
             >
@@ -2698,47 +2789,44 @@ function Shortcuts({
             </button>
           </div>
           <pre id="shortcut-body-example">
-            Authorization: Bearer &lt;発行したトークン&gt;{'\n'}Content-Type: application/json
+            {t('ui.app.authorization_bearer_lt_your_token_gt')}
+            {'\n'}Content-Type: application/json
             {'\n\n'}
             {example}
           </pre>
         </div>
         <FormError error={copyError} />
-        <label htmlFor="shortcut-project">設定例の保存先（任意）</label>
+        <label htmlFor="shortcut-project">{t('ui.app.example_destination_optional')}</label>
         <select
           id="shortcut-project"
           value={projectId}
           onChange={(event) => setProjectId(event.target.value)}
         >
-          <option value="">指定しない（トークンの設定に従う）</option>
+          <option value="">{t('ui.app.unspecified_use_the_token_s_settings')}</option>
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
           ))}
         </select>
-        <p className="guide-note">
-          選ぶと、上のJSONに実際のプロジェクトIDを表示します。固定の保存先にする場合は、このIDもショートカットに設定してください。
-        </p>
-        <p className="guide-note">
-          保存受付後はIDが返ります。要約とメモリの更新はアプリで確認できます。通信を再試行する場合は、同じIdempotency-Keyを付けてください。
-        </p>
+        <p className="guide-note">{t('ui.app.selecting_a_project_puts_its_actual_id_in_the')}</p>
+        <p className="guide-note">{t('ui.app.the_api_returns_an_id_when_a_save_is')}</p>
       </section>
       <section className="token-section">
         <div className="section-head">
           <div>
-            <h2>連携トークン</h2>
-            <p>トークンの権限はプロジェクト一覧の取得と記事の保存です。</p>
+            <h2>{t('ui.app.integration_tokens')}</h2>
+            <p>{t('ui.app.tokens_allow_listing_projects_and_saving_articles')}</p>
           </div>
           <button className="button primary" onClick={onCreate}>
             <Plus size={17} aria-hidden="true" />
-            トークンを発行
+            {t('ui.app.create_token')}
           </button>
         </div>
         {!tokens.length ? (
           <div className="token-empty">
             <KeyRound size={25} aria-hidden="true" />
-            <p>まだトークンは発行されていません。</p>
+            <p>{t('ui.app.no_tokens_have_been_created')}</p>
           </div>
         ) : (
           <div className="token-list">
@@ -2754,17 +2842,22 @@ function Shortcuts({
                     <code>{token.prefix}••••••••</code>
                     <span>
                       {projects.find((project) => project.id === token.project_id)?.name ??
-                        'すべてのプロジェクト'}{' '}
+                        t('ui.app.all_projects')}{' '}
                       ·{' '}
                       {inactive
                         ? token.revoked_at
-                          ? '失効済み'
-                          : '期限切れ'
+                          ? t('ui.app.revoked')
+                          : t('ui.app.expired')
                         : token.expires_at === null
-                          ? '無期限'
-                          : `${date(token.expires_at)}まで有効`}
+                          ? t('ui.app.no_expiration')
+                          : t('ui.app.valid_until_value', { value0: date(token.expires_at) })}
                     </span>
-                    {token.last_used_at && <small>最終使用：{fullDate(token.last_used_at)}</small>}
+                    {token.last_used_at && (
+                      <small>
+                        {t('ui.app.last_used')}
+                        {fullDate(token.last_used_at)}
+                      </small>
+                    )}
                   </div>
                   <button
                     className="button secondary"
@@ -2772,13 +2865,13 @@ function Shortcuts({
                     onClick={() => {
                       if (
                         window.confirm(
-                          'このトークンを失効しますか？設定済みのショートカットからは保存できなくなります。',
+                          t('ui.app.revoke_this_token_configured_shortcuts_will_no_longer_be'),
                         )
                       )
                         void onRevoke(token.id);
                     }}
                   >
-                    失効する
+                    {t('ui.app.revoke')}
                   </button>
                 </div>
               );
@@ -2790,6 +2883,7 @@ function Shortcuts({
   );
 }
 function TokenForm({ projects }: { projects: Project[] }) {
+  useLanguage();
   const [name, setName] = useState('iPhone');
   const [project, setProject] = useState('');
   const [days, setDays] = useState<number | null>(90);
@@ -2802,10 +2896,10 @@ function TokenForm({ projects }: { projects: Project[] }) {
       <div className="new-token">
         <div className="token-created">
           <Check size={24} aria-hidden="true" />
-          <h3>トークンを発行しました</h3>
+          <h3>{t('ui.app.token_created')}</h3>
         </div>
-        <p>トークン全体が表示されるのは、この画面だけです。ショートカットに登録してください。</p>
-        <label htmlFor="new-token-value">Bearerトークン</label>
+        <p>{t('ui.app.the_complete_token_is_shown_only_here_register_it')}</p>
+        <label htmlFor="new-token-value">{t('ui.app.bearer_token')}</label>
         <textarea id="new-token-value" value={token} readOnly rows={3} />
         <button
           className="button primary"
@@ -2815,12 +2909,12 @@ function TokenForm({ projects }: { projects: Project[] }) {
               setCopied(true);
               setError('');
             } catch {
-              setError('コピーできませんでした。トークンを選択してコピーしてください。');
+              setError(t('ui.app.could_not_copy_select_and_copy_the_token'));
             }
           }}
         >
           {copied ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
-          {copied ? 'コピーしました' : 'トークンをコピー'}
+          {copied ? t('ui.app.copied') : t('ui.app.copy_token')}
         </button>
         <FormError error={error} />
       </div>
@@ -2832,21 +2926,23 @@ function TokenForm({ projects }: { projects: Project[] }) {
         setBusy(true);
         setError('');
         try {
-          const result = await send<{ token: string }>('/api/v1/tokens', {
+          const result = await send<{
+            token: string;
+          }>('/api/v1/tokens', {
             name,
             project_id: project || null,
             expires_days: days,
           });
           setToken(result.token);
         } catch (e) {
-          setError((e as Error).message);
+          setError(applicationError((e as Error).message));
         } finally {
           setBusy(false);
         }
       }}
     >
-      <p className="form-intro">端末や用途ごとに発行すると、必要なトークンだけ失効できます。</p>
-      <label htmlFor="token-name">トークン名</label>
+      <p className="form-intro">{t('ui.app.create_a_token_for_each_device_or_purpose_so')}</p>
+      <label htmlFor="token-name">{t('ui.app.token_name')}</label>
       <input
         id="token-name"
         autoFocus
@@ -2855,30 +2951,31 @@ function TokenForm({ projects }: { projects: Project[] }) {
         required
         maxLength={80}
       />
-      <label htmlFor="token-project">保存先の制限</label>
+      <label htmlFor="token-project">{t('ui.app.destination_restriction')}</label>
       <select id="token-project" value={project} onChange={(e) => setProject(e.target.value)}>
-        <option value="">自分のすべてのプロジェクト</option>
+        <option value="">{t('ui.app.all_my_projects')}</option>
         {projects.map((item) => (
           <option key={item.id} value={item.id}>
             {item.name}
           </option>
         ))}
       </select>
-      <label htmlFor="token-days">有効期間</label>
+      <label htmlFor="token-days">{t('ui.app.validity_period')}</label>
       <select
         id="token-days"
         value={days ?? 'unlimited'}
         onChange={(e) => setDays(e.target.value === 'unlimited' ? null : Number(e.target.value))}
       >
-        <option value={30}>30日</option>
-        <option value={90}>90日</option>
-        <option value={365}>365日</option>
-        <option value="unlimited">無期限</option>
+        <option value={30}>{t('ui.app.30_days')}</option>
+        <option value={90}>{t('ui.app.90_days')}</option>
+        <option value={365}>{t('ui.app.365_days')}</option>
+        <option value="unlimited">{t('ui.app.no_expiration')}</option>
       </select>
       <FormError error={error} />
       <div className="form-actions">
         <button className="button primary" disabled={busy}>
-          {busy ? <Spinner /> : <KeyRound size={17} aria-hidden="true" />}発行する
+          {busy ? <Spinner /> : <KeyRound size={17} aria-hidden="true" />}
+          {t('ui.app.create')}
         </button>
       </div>
     </form>

@@ -1,3 +1,6 @@
+import { legalEn } from './locales/legal-en';
+import { useLanguage } from './i18n';
+import { languages, type Language } from '../shared/locale';
 import { useEffect, type ReactNode } from 'react';
 import { ArrowUp } from 'lucide-react';
 import LegalLinks from './LegalLinks';
@@ -41,7 +44,7 @@ const privacySections: Section[] = [
         </li>
         <li>
           <strong>利用者が登録する情報：</strong>
-          利用者が入力したニックネーム（表示名）・自己紹介、プロジェクト名・概要・公開設定・紹介文、保存したURL・テキスト・メモ・コメント・お気に入り、問い・気づき、課題、プ譜、振り返りなどを保存します。利用開始時に同意した利用規約・プライバシーポリシーの版と同意日時を記録します。
+          利用者が入力したニックネーム（表示名）・自己紹介・表示言語、プロジェクト名・概要・公開設定・紹介文、保存したURL・テキスト・メモ・コメント・お気に入り、問い・気づき、課題、プ譜、振り返りなどを保存します。利用開始時に同意した利用規約・プライバシーポリシーの版と同意日時を記録します。
         </li>
         <li>
           <strong>記事の取得情報と生成結果：</strong>
@@ -201,6 +204,7 @@ const privacySections: Section[] = [
     content: (
       <>
         <p>
+          表示言語の設定はブラウザのローカルストレージに保存します。
           ログイン状態の維持にCookie（有効期限30日）、Googleログイン時の安全確認に一時Cookie（10分）を利用します。
           表示テーマの設定はブラウザのローカルストレージとCookie（1年）に保存します。
           Cookieを無効にすると、ログインなど一部の機能を利用できない場合があります。
@@ -282,7 +286,7 @@ const termsSections: Section[] = [
         この利用規約（以下「本規約」）は、Pufu Lens 運営者（以下「運営者」）が提供する「Pufu
         Lens」（以下「本サービス」）の利用条件を定めます。 利用者は、本規約と
         <a href="/privacy">プライバシーポリシー</a>
-        を確認し、初回ログイン後の画面でニックネーム（表示名）を入力し、両方への同意にチェックして「OK」を押すと利用を開始できます。登録と同意が完了するまでは、再度ログインしても同じ画面を表示します。
+        を確認し、初回ログイン後の画面でニックネーム（表示名）を入力して表示言語を選び、両方への同意にチェックして「OK」を押すと利用を開始できます。登録と同意が完了するまでは、再度ログインしても同じ画面を表示します。
       </p>
     ),
   },
@@ -430,27 +434,87 @@ const termsSections: Section[] = [
   { id: 'contact', title: '第13条 運営者・お問い合わせ', content: <Contact /> },
 ];
 
-export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
-  const title = page === 'privacy' ? 'プライバシーポリシー' : '利用規約';
+function inlineLegal(text: string): ReactNode[] {
+  return text.split(/(\[[^\]]+\]\([^)]+\)|`[^`]+`)/g).map((part, index) => {
+    const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+    if (link)
+      return (
+        <a
+          key={index}
+          href={link[2]}
+          target={link[2].startsWith('https://') ? '_blank' : undefined}
+          rel={link[2].startsWith('https://') ? 'noreferrer' : undefined}
+        >
+          {link[1]}
+        </a>
+      );
+    if (part.startsWith('`') && part.endsWith('`'))
+      return <code key={index}>{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
+
+export default function LegalPage({
+  page,
+  language: explicitLanguage,
+}: {
+  page: 'privacy' | 'terms';
+  language?: Language;
+}) {
+  const current = useLanguage();
+  const language = explicitLanguage ?? current.language;
+  const english = language === 'en';
+  const title =
+    page === 'privacy'
+      ? english
+        ? 'Privacy Policy'
+        : 'プライバシーポリシー'
+      : english
+        ? 'Terms of Service'
+        : '利用規約';
   const updated = legalVersions[page];
-  const sections = page === 'privacy' ? privacySections : termsSections;
+  const sections: Section[] = english
+    ? legalEn[page].map((section) => ({
+        id: section.id,
+        title: section.title,
+        content: (
+          <>
+            {section.blocks.map((block, index) =>
+              block.type === 'list' ? (
+                <ul key={index}>
+                  {block.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>{inlineLegal(item)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p key={index}>{inlineLegal(block.text)}</p>
+              ),
+            )}
+          </>
+        ),
+      }))
+    : page === 'privacy'
+      ? privacySections
+      : termsSections;
   useEffect(() => {
     const previousTitle = document.title;
     document.title = `${title} | Pufu Lens`;
+    document.documentElement.lang = language;
+    document.documentElement.dir = languages[language].direction;
     document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
     return () => {
       document.title = previousTitle;
     };
-  }, [title]);
+  }, [title, language]);
   return (
-    <div className="public-page legal-page">
+    <div className="public-page legal-page" lang={language}>
       <header className="public-header">
         <a href="/" className="brand">
           <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
           <span>Pufu Lens</span>
         </a>
         <a href="/" className="text-link">
-          トップへ戻る
+          {english ? 'Back to home' : 'トップへ戻る'}
         </a>
       </header>
       <main className="manual-main legal-main">
@@ -458,10 +522,18 @@ export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
           <div>
             <h1>{title}</h1>
             <p>
-              制定日：<time dateTime="2026-10-19">2026年10月19日</time>
+              {english ? 'Established: ' : '制定日：'}
+              <time dateTime="2026-10-19">{english ? 'October 19, 2026' : '2026年10月19日'}</time>
               <br />
-              最終更新日：<time dateTime={updated}>{updated.replaceAll('-', '/')}</time>
+              {english ? 'Last updated: ' : '最終更新日：'}
+              <time dateTime={updated}>{updated.replaceAll('-', '/')}</time>
             </p>
+            {english && (
+              <p className="manual-note">
+                This is an English translation for convenience. The{' '}
+                <a href={`/${page}`}>Japanese original</a> governs.
+              </p>
+            )}
           </div>
         </header>
         {sections.map((section) => (
@@ -478,9 +550,9 @@ export default function LegalPage({ page }: { page: 'privacy' | 'terms' }) {
         ))}
         <a className="text-link manual-back-top" href="#legal-start">
           <ArrowUp size={16} aria-hidden="true" />
-          ページの先頭へ
+          {english ? 'Back to top' : 'ページの先頭へ'}
         </a>
-        <LegalLinks />
+        <LegalLinks language={language} />
       </main>
     </div>
   );

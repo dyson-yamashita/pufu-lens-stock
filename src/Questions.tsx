@@ -1,3 +1,4 @@
+import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -14,8 +15,8 @@ import type { Question } from '../shared/domain';
 import { api, send } from './api';
 import SearchField from './SearchField';
 import QuestionLabels from './QuestionLabels';
-
 function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () => void }) {
+  useLanguage();
   return (
     <>
       {question.status === 'ready' && question.text ? (
@@ -24,7 +25,9 @@ function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () =>
             <button
               className="question-open"
               onClick={onOpen}
-              aria-label={`問い・気づきの詳細を開く：${question.text}`}
+              aria-label={t('ui.questions.open_question_or_insight_value', {
+                value0: question.text,
+              })}
             >
               {question.text}
             </button>
@@ -37,16 +40,15 @@ function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () =>
           {question.status !== 'failed' && (
             <LoaderCircle className="spin" size={17} aria-hidden="true" />
           )}
-          {question.error ??
+          {applicationError(question.error) ||
             (question.article_status !== 'ready'
-              ? '記事の要約が完了したら、問い・気づきを1つ生成します。'
-              : 'この記事から、考えを深める問い・気づきを生成しています。')}
+              ? t('ui.questions.one_question_or_insight_will_be_generated_after_the')
+              : t('ui.questions.generating_a_question_or_insight_to_explore_this_article'))}
         </p>
       )}
     </>
   );
 }
-
 export function StockQuestion({
   stockId,
   onQuestion,
@@ -54,6 +56,7 @@ export function StockQuestion({
   stockId: string;
   onQuestion?: (id: string) => void;
 }) {
+  useLanguage();
   const [questions, setQuestions] = useState<Question[]>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,7 +68,9 @@ export function StockQuestion({
       if (inFlight) return;
       inFlight = true;
       try {
-        const result = await api<{ questions: Question[] }>(`/api/v1/stocks/${stockId}/question`, {
+        const result = await api<{
+          questions: Question[];
+        }>(`/api/v1/stocks/${stockId}/question`, {
           signal: controller.signal,
         });
         if (!controller.signal.aborted) {
@@ -73,7 +78,7 @@ export function StockQuestion({
           setError('');
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError((e as Error).message);
+        if (!controller.signal.aborted) setError(applicationError((e as Error).message));
       } finally {
         inFlight = false;
       }
@@ -94,7 +99,7 @@ export function StockQuestion({
             <section className="stock-question" key={question.id}>
               <div className="question-kicker">
                 <CircleHelp size={18} aria-hidden="true" />
-                この記事から生まれた問い・気づき
+                {t('ui.questions.questions_insights_from_this_article')}
                 <QuestionLabels question={question} />
               </div>
               <QuestionBody
@@ -114,7 +119,7 @@ export function StockQuestion({
                       );
                       setRefresh((value) => value + 1);
                     } catch (e) {
-                      setError((e as Error).message);
+                      setError(applicationError((e as Error).message));
                     } finally {
                       setBusy(false);
                     }
@@ -122,8 +127,8 @@ export function StockQuestion({
                 >
                   <RefreshCw size={16} className={busy ? 'spin' : ''} aria-hidden="true" />
                   {question.article_status === 'failed'
-                    ? '記事の再取得を試す'
-                    : '問い・気づきの生成を再試行'}
+                    ? t('ui.questions.retry_article_retrieval')
+                    : t('ui.questions.retry_question_and_insight_generation')}
                 </button>
               )}
             </section>
@@ -134,8 +139,8 @@ export function StockQuestion({
                 <LoaderCircle className="spin" size={17} aria-hidden="true" />
               )}
               {questions === undefined
-                ? '問い・気づきを読み込んでいます…'
-                : 'このストックには問い・気づきがありません。'}
+                ? t('ui.question_page.loading_questions_insights')
+                : t('ui.questions.this_stock_has_no_questions_or_insights')}
             </p>
           )}
       {error && (
@@ -146,7 +151,6 @@ export function StockQuestion({
     </div>
   );
 }
-
 export default function Questions({
   projectId,
   refresh,
@@ -162,6 +166,7 @@ export default function Questions({
   onQuestion: (id: string) => void;
   active?: boolean;
 }) {
+  useLanguage();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
@@ -192,10 +197,10 @@ export default function Questions({
       if (filter === 'favorites') params.set('favorite', 'true');
       if (projectId) params.set('project_id', projectId);
       try {
-        const result = await api<{ questions: Question[]; total: number }>(
-          `/api/v1/questions?${params}`,
-          { signal: controller.signal },
-        );
+        const result = await api<{
+          questions: Question[];
+          total: number;
+        }>(`/api/v1/questions?${params}`, { signal: controller.signal });
         if (!controller.signal.aborted && version === favoriteVersion.current) {
           setQuestions(result.questions);
           setTotal(result.total);
@@ -204,7 +209,7 @@ export default function Questions({
             setPage(Math.max(1, Math.ceil(result.total / 24)));
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError((e as Error).message);
+        if (!controller.signal.aborted) setError(applicationError((e as Error).message));
       } finally {
         inFlight = false;
         if (!controller.signal.aborted) setLoading(false);
@@ -220,10 +225,10 @@ export default function Questions({
     };
   }, [projectId, search, filter, page, refresh, reload, active]);
   return (
-    <section className="questions-page" aria-label="プロジェクトの問い・気づき">
+    <section className="questions-page" aria-label={t('ui.questions.project_questions_insights')}>
       <SearchField
-        label="問い・気づきを検索"
-        placeholder="問い・気づき、記事のタイトル、メモから検索"
+        label={t('ui.questions.search_questions_insights')}
+        placeholder={t('ui.questions.search_questions_insights_article_titles_and_notes')}
         value={query}
         clearable={Boolean(query || search)}
         onChange={setQuery}
@@ -240,12 +245,12 @@ export default function Questions({
         }}
       />
       <div className="filter-row">
-        <div className="filters" aria-label="問い・気づきのフィルター">
+        <div className="filters" aria-label={t('ui.questions.question_and_insight_filters')}>
           {[
-            ['all', 'すべて'],
+            ['all', t('ui.app.all')],
             ['ai', 'AI'],
-            ['user', 'ユーザー'],
-            ['favorites', 'お気に入り'],
+            ['user', t('ui.app.user')],
+            ['favorites', t('ui.app.favorites')],
           ].map(([value, label]) => (
             <button
               key={value}
@@ -260,7 +265,7 @@ export default function Questions({
             </button>
           ))}
         </div>
-        <span className="result-count">{total}件</span>
+        <span className="result-count">{t('count.items', { count: total })}</span>
       </div>
       {error && (
         <p className="form-error" role="alert">
@@ -270,7 +275,7 @@ export default function Questions({
       {loading && !questions.length ? (
         <div className="empty-state">
           <LoaderCircle className="spin" size={20} aria-hidden="true" />
-          <p>問い・気づきを読み込んでいます。</p>
+          <p>{t('ui.questions.loading_questions_insights')}</p>
         </div>
       ) : !questions.length ? (
         <div className="empty-state">
@@ -279,13 +284,13 @@ export default function Questions({
           </span>
           <h2>
             {search || filter !== 'all'
-              ? '該当する問い・気づきはありません'
-              : '問い・気づきから、次の一歩へ'}
+              ? t('ui.questions.no_matching_questions_or_insights')
+              : t('ui.questions.take_the_next_step_with_questions_and_insights')}
           </h2>
           <p>
             {search || filter !== 'all'
-              ? '検索語やフィルターを変えてお試しください。'
-              : '「問い・気づきを追加」から、日常や会話で生まれた問い・気づきを保存できます。自動生成がオンのプロジェクトでは、ストックの要約からAIの問い・気づきも生成されます。'}
+              ? t('ui.app.try_a_different_search_or_filter')
+              : t('ui.questions.use_add_question_or_insight_to_save_thoughts_from')}
           </p>
         </div>
       ) : (
@@ -314,7 +319,7 @@ export default function Questions({
                       try {
                         await onOpen(stock.id);
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(applicationError((e as Error).message));
                       } finally {
                         setOpening(null);
                       }
@@ -332,7 +337,7 @@ export default function Questions({
               ))}
               <div className="question-card-footer">
                 <time dateTime={question.created_at}>
-                  {new Intl.DateTimeFormat('ja-JP', {
+                  {new Intl.DateTimeFormat(intlLocale(), {
                     dateStyle: 'medium',
                     timeZone: 'Asia/Tokyo',
                   }).format(new Date(question.created_at))}
@@ -341,7 +346,11 @@ export default function Questions({
                   <button
                     type="button"
                     className="question-favorite"
-                    aria-label={question.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+                    aria-label={
+                      question.is_favorite
+                        ? t('ui.app.remove_from_favorites')
+                        : t('ui.app.add_to_favorites')
+                    }
                     aria-pressed={Boolean(question.is_favorite)}
                     aria-busy={savingFavorites.includes(question.id)}
                     disabled={savingFavorites.includes(question.id)}
@@ -364,7 +373,7 @@ export default function Questions({
                         );
                         setReload((value) => value + 1);
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(applicationError((e as Error).message));
                       } finally {
                         favoriteVersion.current += 1;
                         setSavingFavorites((ids) => ids.filter((id) => id !== question.id));
@@ -391,7 +400,7 @@ export default function Questions({
             onClick={() => setPage((value) => value - 1)}
           >
             <ChevronLeft size={17} aria-hidden="true" />
-            前へ
+            {t('ui.app.previous')}
           </button>
           <span>
             {page} / {Math.ceil(total / 24)}
@@ -401,7 +410,7 @@ export default function Questions({
             disabled={page * 24 >= total}
             onClick={() => setPage((value) => value + 1)}
           >
-            次へ
+            {t('ui.app.next')}
             <ChevronRight size={17} aria-hidden="true" />
           </button>
         </div>

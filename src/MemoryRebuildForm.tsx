@@ -1,29 +1,33 @@
+import { applicationError, t, useLanguage } from './i18n';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { LoaderCircle, RefreshCw } from 'lucide-react';
 import type { MemoryCoverage, MemoryUpdateMode } from '../shared/domain';
 import { api, createRequestId, send } from './api';
-
-type Target = { coverage: MemoryCoverage; pending: boolean };
-
+type Target = {
+  coverage: MemoryCoverage;
+  pending: boolean;
+};
 export function MemoryCoverageSummary({ coverage }: { coverage: MemoryCoverage }) {
+  useLanguage();
   return (
     <p className="memory-coverage" role="status">
       <span>
-        反映済み{' '}
+        {t('ui.memory_rebuild_form.included')}{' '}
         <strong>
-          {coverage.reflected_count} / {coverage.ready_count}件
+          {coverage.reflected_count} / {t('count.items', { count: coverage.ready_count })}
         </strong>
       </span>
       <span>
-        未反映 <strong>{coverage.pending_count}件</strong>
+        {t('ui.memory_rebuild_form.pending')}
+        <strong>{t('count.items', { count: coverage.pending_count })}</strong>
       </span>
       <span>
-        要約未完了 <strong>{coverage.waiting_count}件</strong>
+        {t('ui.memory_rebuild_form.not_summarized')}
+        <strong>{t('count.items', { count: coverage.waiting_count })}</strong>
       </span>
     </p>
   );
 }
-
 export default function MemoryRebuildForm({
   projectId,
   projectName,
@@ -35,17 +39,20 @@ export default function MemoryRebuildForm({
   onDone: () => void;
   onClose: () => void;
 }) {
+  useLanguage();
   const [target, setTarget] = useState<Target | null>(null);
   const [mode, setMode] = useState<MemoryUpdateMode>('incremental');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const request = useRef<{ mode: MemoryUpdateMode; id: string } | null>(null);
+  const request = useRef<{
+    mode: MemoryUpdateMode;
+    id: string;
+  } | null>(null);
   const modeName = useId();
   const needsFull = Boolean(target?.coverage.full_rebuild_reason);
   const updating = Boolean(target?.pending);
   const pendingCount = target?.coverage.pending_count ?? 0;
-
   useEffect(() => {
     const controller = new AbortController();
     void api<Target>(
@@ -58,14 +65,13 @@ export default function MemoryRebuildForm({
         if (result.coverage.full_rebuild_reason) setMode('full');
       })
       .catch((error: Error) => {
-        if (!controller.signal.aborted) setError(error.message);
+        if (!controller.signal.aborted) setError(applicationError(error.message));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, [projectId]);
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (
@@ -88,28 +94,37 @@ export default function MemoryRebuildForm({
       });
       onDone();
     } catch (error) {
-      setError((error as Error).message);
+      setError(applicationError((error as Error).message));
     } finally {
       setBusy(false);
     }
   }
-
   return (
     <form onSubmit={submit} className="memory-rebuild-form" aria-busy={loading || busy}>
-      <p className="form-help">更新方法を選んでください。要約が完了したストックが対象です。</p>
-      {loading && <p role="status">反映状況を確認しています…</p>}
+      <p className="form-help">
+        {t('ui.memory_rebuild_form.choose_an_update_method_only_summarized_stocks_are_included')}
+      </p>
+      {loading && <p role="status">{t('ui.memory_rebuild_form.checking_coverage')}</p>}
       {target && (
         <div className="memory-update-target">
-          <h3>{projectId ? `${projectName ?? 'プロジェクト'}のメモリ` : 'あなたのメモリ'}</h3>
+          <h3>
+            {projectId
+              ? t('ui.app.memory_for_value', { value0: projectName ?? t('ui.app.projects') })
+              : t('ui.app.your_memory')}
+          </h3>
           <MemoryCoverageSummary coverage={target.coverage} />
           {target.coverage.full_rebuild_reason && (
-            <p className="update-note">{target.coverage.full_rebuild_reason}</p>
+            <p className="update-note">{applicationError(target.coverage.full_rebuild_reason)}</p>
           )}
         </div>
       )}
-      {updating && <p className="update-note">メモリを更新中です。完了後に開き直してください。</p>}
+      {updating && (
+        <p className="update-note">
+          {t('ui.memory_rebuild_form.memory_is_updating_open_this_again_after_it_finishes')}
+        </p>
+      )}
       <fieldset className="memory-update-options" disabled={loading || busy || updating || !target}>
-        <legend>更新方法</legend>
+        <legend>{t('ui.memory_rebuild_form.update_method')}</legend>
         <label className="memory-update-option">
           <input
             type="radio"
@@ -120,8 +135,10 @@ export default function MemoryRebuildForm({
             onChange={() => setMode('incremental')}
           />
           <span>
-            <strong>未反映分を反映</strong>
-            <span>現在のメモリに、まだ取り込んでいない記事の要約だけを追加します。</span>
+            <strong>{t('ui.memory_rebuild_form.include_pending_articles')}</strong>
+            <span>
+              {t('ui.memory_rebuild_form.add_only_article_summaries_that_have_not_yet_been')}
+            </span>
           </span>
         </label>
         <label className="memory-update-option">
@@ -133,16 +150,18 @@ export default function MemoryRebuildForm({
             onChange={() => setMode('full')}
           />
           <span>
-            <strong>全件から再生成</strong>
+            <strong>{t('ui.memory_rebuild_form.rebuild_from_all_articles')}</strong>
             <span>
-              反映済みの記事も含め、すべての要約から作り直します。差分更新よりAIの消費が増えます。
+              {t(
+                'ui.memory_rebuild_form.rebuild_from_every_summary_including_articles_already_incorporated_this',
+              )}
             </span>
           </span>
         </label>
       </fieldset>
       {!loading && target && !needsFull && !pendingCount && (
         <p className="form-help">
-          未反映の要約はありません。内容を見直す場合は「全件から再生成」を選んでください。
+          {t('ui.memory_rebuild_form.there_are_no_pending_summaries_to_revise_the_content')}
         </p>
       )}
       {error && (
@@ -152,7 +171,7 @@ export default function MemoryRebuildForm({
       )}
       <div className="form-actions">
         <button type="button" className="button secondary" disabled={busy} onClick={onClose}>
-          キャンセル
+          {t('ui.app.cancel')}
         </button>
         <button
           type="submit"
@@ -170,7 +189,9 @@ export default function MemoryRebuildForm({
           ) : (
             <RefreshCw size={16} aria-hidden="true" />
           )}
-          {mode === 'full' ? '全件から再生成' : '未反映分を反映'}
+          {mode === 'full'
+            ? t('ui.memory_rebuild_form.rebuild_from_all_articles')
+            : t('ui.memory_rebuild_form.include_pending_articles')}
         </button>
       </div>
     </form>

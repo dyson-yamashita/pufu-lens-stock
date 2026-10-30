@@ -1,9 +1,9 @@
+import { applicationError, t, useLanguage } from './i18n';
 import { useRef, useState, type FormEvent } from 'react';
 import { LoaderCircle, Plus } from 'lucide-react';
 import type { Project } from '../shared/domain';
 import { createPufuSchema } from '../shared/pufu';
 import { createRequestId, send } from './api';
-
 export default function PufuForm({
   projects,
   projectId,
@@ -19,12 +19,16 @@ export default function PufuForm({
   onBusyChange?: (busy: boolean) => void;
   onDone: (id: string) => void;
 }) {
+  useLanguage();
   const [project, setProject] = useState(projectId ?? projects[0]?.id ?? '');
   const [task, setTask] = useState('');
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const request = useRef<{ input: string; id: string } | null>(null);
+  const request = useRef<{
+    input: string;
+    id: string;
+  } | null>(null);
   async function generate(event: FormEvent) {
     event.preventDefault();
     if (busy || disabled) return;
@@ -38,18 +42,20 @@ export default function PufuForm({
       request_id: request.current.id,
     });
     if (!input.success) {
-      setError(input.error.issues[0].message);
+      setError(applicationError(input.error.issues[0].message));
       return;
     }
     if (!project) {
-      setError('プロジェクトを選択してください。');
+      setError(t('ui.pufu_form.select_a_project'));
       return;
     }
     setBusy(true);
     onBusyChange?.(true);
     setError('');
     try {
-      const result = await send<{ id: string }>(
+      const result = await send<{
+        id: string;
+      }>(
         questionId
           ? `/api/v1/questions/${encodeURIComponent(questionId)}/pufus`
           : `/api/v1/projects/${encodeURIComponent(project)}/pufus/generate`,
@@ -57,7 +63,7 @@ export default function PufuForm({
       );
       onDone(result.id);
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);
       onBusyChange?.(false);
@@ -67,8 +73,10 @@ export default function PufuForm({
     <form className={questionId ? 'pufu-task-form' : undefined} onSubmit={generate}>
       {!questionId && (
         <>
-          <p className="form-intro">実現したいことから、解決に向けたプ譜をつくります。</p>
-          <label htmlFor="pufu-project">プロジェクト</label>
+          <p className="form-intro">
+            {t('ui.pufu_form.create_a_pufu_to_work_toward_the_state_you')}
+          </p>
+          <label htmlFor="pufu-project">{t('ui.app.projects')}</label>
           <select
             id="pufu-project"
             value={project}
@@ -76,7 +84,7 @@ export default function PufuForm({
             disabled={busy || !projects.length}
             required
           >
-            {!project && <option value="">プロジェクトを選択してください</option>}
+            {!project && <option value="">{t('ui.app.select_a_project')}</option>}
             {projects.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -86,11 +94,13 @@ export default function PufuForm({
         </>
       )}
       <label htmlFor="pufu-task">
-        {questionId ? '問い・気づきから考える課題' : '課題'}
-        <span className="task-caption">獲得目標</span>
+        {questionId
+          ? t('ui.pufu_form.task_inspired_by_this_question_or_insight')
+          : t('ui.public_projects.task')}
+        <span className="task-caption">{t('ui.public_pufu_score.gaining_goal')}</span>
       </label>
       <p className="field-hint" id="pufu-task-help">
-        どんな状態を実現したいですか？ 入力した内容を、そのままプ譜の獲得目標にします。
+        {t('ui.pufu_form.what_state_do_you_want_to_achieve_your_text')}
       </p>
       <textarea
         id="pufu-task"
@@ -101,13 +111,16 @@ export default function PufuForm({
         maxLength={1000}
         required
         disabled={busy}
-        placeholder="例：記事の取得が途中で失敗しても、要約まで確実に完了できる仕組みをつくる。"
+        placeholder={t(
+          'ui.pufu_form.example_build_a_system_that_reliably_completes_summaries_even',
+        )}
       />
       <label htmlFor="pufu-details">
-        廟算八要素・取り組む予定の施策<span className="optional">任意</span>
+        {t('ui.pufu_form.eight_planning_factors_planned_measures')}
+        <span className="optional">{t('ui.app.optional')}</span>
       </label>
       <p className="field-hint" id="pufu-details-help">
-        人員・予算・時間・品質・ビジネススキーム・環境・競合・外敵の状況や、取り組む予定の施策を自由に書けます。入力した内容をプ譜の生成に使います（4,000文字まで）。
+        {t('ui.pufu_form.describe_people_money_time_quality_business_scheme_environment_rivals')}
       </p>
       <textarea
         id="pufu-details"
@@ -117,13 +130,11 @@ export default function PufuForm({
         rows={6}
         maxLength={4000}
         disabled={busy}
-        placeholder={
-          '例：担当は2名、予算は月3万円、来月末までに検証する。\nまず小規模な試験運用を行い、利用者へのヒアリングを予定している。'
-        }
+        placeholder={t('ui.pufu_form.example_two_people_a_budget_of_200_per_month')}
       />
       <p className="field-hint">
-        {questionId ? '問い・気づき・関連するストック・' : ''}
-        プロジェクトの説明・あなたとプロジェクトのメモリも参考に、勝利条件や施策を生成します。
+        {questionId ? t('ui.pufu_form.questions_insights_related_stocks') : ''}
+        {t('ui.pufu_form.the_project_description_and_your_and_the_project_s')}
       </p>
       {error && (
         <p className="form-error" role="alert">
@@ -137,7 +148,7 @@ export default function PufuForm({
           ) : (
             <Plus size={18} aria-hidden="true" />
           )}
-          {busy ? '作成を受け付けています…' : 'プ譜を作成'}
+          {busy ? t('ui.pufu_form.submitting_creation_request') : t('ui.app.create_pufu')}
         </button>
       </div>
     </form>
