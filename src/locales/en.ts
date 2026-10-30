@@ -945,7 +945,7 @@ export const en: Record<string, string> = {
   'manual.language.profile':
     'Add a project from the side menu. Change your nickname and language in Profile, then choose Save.',
   'manual.language.future':
-    'You can choose a language before signing in. After sign-in, your account setting takes precedence. Changes apply to future summaries, questions, memories and Pufu; saved text and Pufu are not translated or changed.',
+    "You can choose a language before signing in. The app and public project pages use your account setting after sign-in. The manual follows this browser's language choice. Changes apply to future summaries, questions, memories and Pufu; saved text and Pufu are not translated or changed.",
   'error.the_ai_output_format_is_invalid': 'The AI output format is invalid.',
   'error.the_ai_output_format_is_invalid_please_retry':
     'The AI output format is invalid. Please retry.',

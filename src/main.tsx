@@ -5,6 +5,7 @@ import PublicProjectPage from './PublicProjects';
 import UserManual from './UserManual';
 import LegalPage from './LegalPage';
 import PageLanguage from './PageLanguage';
+import { browserLanguage, resolveLanguage } from '../shared/locale';
 import './styles.css';
 
 const publicRoute = /^\/p\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname);
@@ -15,10 +16,17 @@ createRoot(document.getElementById('root')!).render(
     {legalRoute ? (
       <LegalPage
         page={legalRoute[2] as 'privacy' | 'terms'}
-        language={legalRoute[1] === 'en' ? 'en' : 'ja'}
+        language={
+          legalRoute[1] === 'en'
+            ? 'en'
+            : resolveLanguage(
+                new URLSearchParams(window.location.search).get('lang'),
+                browserLanguage(window.navigator?.language ?? 'ja'),
+              )
+        }
       />
     ) : /^\/manual\/?$/.test(window.location.pathname) ? (
-      <PageLanguage>
+      <PageLanguage browserOnly>
         <UserManual />
       </PageLanguage>
     ) : publicRoute ? (

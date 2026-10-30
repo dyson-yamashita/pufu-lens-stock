@@ -70,3 +70,12 @@
 - [ ] Run e2e:check, relevant CI replay, full Vitest, types, lint, format, build, dependency audit. Record real browser coverage and any unavailable environment.
 - [ ] Run standard scoped security audit and independent same-model requesting-code-review against complete diff; address findings and re-review fixes.
 - [ ] Commit and push, create PR against main, attach it, wait for CI, report results/limitations. Do not merge/deploy.
+
+### Task 5: Browser-selected documentation (user follow-up)
+
+**Files:** server/legal-language.ts, server/index.ts, wrangler.jsonc, scripts/e2e/runtime.ts; src/LegalPage.tsx, PageLanguage.tsx, i18n.ts, main.tsx and locale copy; tests/legal-language.test.ts, manual-language-entry.test.ts and affected legal/UI tests.
+
+- [ ] Add failing HTTP tests for canonical English/French/Japanese language selection, preference weights, unknown explicit values, no-store/Vary, anonymous Japanese body, HEAD and forced-original no-loop behavior.
+- [ ] Route canonical GET/HEAD before auth to fixed same-origin locale paths or Japanese asset binding; configure Worker-first canonical legal paths and use the built asset routing in the disposable E2E runtime.
+- [ ] Make production manual entry browser-only, preserve original and static explicit links, keep initial fallback HTML canonical. Add actual entry/HTML regressions.
+- [ ] Run related RED→GREEN, then include in complete integration tests/build/review/scoped audit before delivery.

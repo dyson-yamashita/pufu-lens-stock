@@ -93,7 +93,7 @@ it('未登録なら同意画面のみ表示し、名前と両方の同意が揃�
   expect(document.querySelector('.workspace')).toBeNull();
   expect(requested.some((path) => path.startsWith('/api/v1/stocks'))).toBe(false);
   expect(ok().disabled).toBe(true);
-  for (const path of ['/terms', '/privacy'])
+  for (const path of ['/terms?lang=ja', '/privacy?lang=ja'])
     expect(document.querySelector(`a[href="${path}"]`)?.getAttribute('target')).toBe('_blank');
   await nickname('ふくろう');
   await check('onboarding-terms');

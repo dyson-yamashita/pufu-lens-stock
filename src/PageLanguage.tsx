@@ -4,12 +4,19 @@ import { api } from './api';
 import { applyAccountLanguage, initializeLanguage, useLanguage } from './i18n';
 import { BootMessage } from './BootMessage';
 
-// Direct manual/public routes honor the account without requiring sign-in to read them.
-export default function PageLanguage({ children }: { children?: ReactNode }) {
+// Public routes can honor the account or follow this browser without requiring sign-in.
+export default function PageLanguage({
+  children,
+  browserOnly = false,
+}: {
+  children?: ReactNode;
+  browserOnly?: boolean;
+}) {
   useState(initializeLanguage);
   useLanguage();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(browserOnly);
   useEffect(() => {
+    if (browserOnly) return;
     const controller = new AbortController();
     // A slow identity service must not make otherwise public content unavailable.
     const timeout = window.setTimeout(() => {
@@ -31,8 +38,8 @@ export default function PageLanguage({ children }: { children?: ReactNode }) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, []);
-  return ready ? (
+  }, [browserOnly]);
+  return browserOnly || ready ? (
     <>{children}</>
   ) : (
     <div className="boot">

@@ -42,7 +42,7 @@ export function intlLocale(): string {
   return languages[getLanguage()].intlLocale;
 }
 export function legalHref(page: 'privacy' | 'terms', language = getLanguage()): string {
-  return `${language === 'ja' ? '' : `/${language}`}/${page}`;
+  return language === 'ja' ? `/${page}?lang=ja` : `/${language}/${page}`;
 }
 function updateDocument(language: Language) {
   if (typeof document === 'undefined') return;

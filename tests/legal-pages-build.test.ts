@@ -78,7 +78,7 @@ it.each([
   expect(document.querySelector(`#${section} h2`)).not.toBeNull();
   expect(document.querySelector('#retention, #termination')).not.toBeNull();
   expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
-  for (const href of ['/', '/privacy', '/terms', '#legal-start']) {
+  for (const href of ['/', '/privacy?lang=ja', '/terms?lang=ja', '#legal-start']) {
     expect(document.querySelector(`a[href="${href}"]`)).not.toBeNull();
   }
   const stylesheet = document.querySelector('link[rel="stylesheet"]')?.getAttribute('href');
@@ -111,7 +111,7 @@ it.each([
     expect(document.querySelector('main h1')?.textContent).toBe(title);
     expect(document.querySelector(`#${section} h2`)).not.toBeNull();
     expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
-    expect(document.querySelector(`a[href="/${page}"]`)).not.toBeNull();
+    expect(document.querySelector(`a[href="/${page}?lang=ja"]`)).not.toBeNull();
     for (const path of ['/en/privacy', '/en/terms'])
       expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
     expect(document.querySelector('script[type="module"]')).toBeNull();
@@ -119,3 +119,16 @@ it.each([
     expect(document.querySelector('main')?.textContent).toContain('Japanese original');
   },
 );
+
+it('the Japanese legal originals keep explicit language through section and footer links without JavaScript', () => {
+  const { document } = parseHTML(assets.get('terms/index.html')!);
+  for (const path of [
+    '/privacy?lang=ja#publication',
+    '/privacy?lang=ja#processors',
+    '/privacy?lang=ja#retention',
+    '/en/terms',
+  ]) {
+    expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
+  }
+  expect(document.querySelector('script[type="module"]')).toBeNull();
+});

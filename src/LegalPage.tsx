@@ -1,5 +1,5 @@
 import { legalEn } from './locales/legal-en';
-import { useLanguage } from './i18n';
+import { useLanguage, legalHref, translateUi } from './i18n';
 import { languages, type Language } from '../shared/locale';
 import { useEffect, type ReactNode } from 'react';
 import { ArrowUp } from 'lucide-react';
@@ -285,7 +285,7 @@ const termsSections: Section[] = [
       <p>
         この利用規約（以下「本規約」）は、Pufu Lens 運営者（以下「運営者」）が提供する「Pufu
         Lens」（以下「本サービス」）の利用条件を定めます。 利用者は、本規約と
-        <a href="/privacy">プライバシーポリシー</a>
+        <a href="/privacy?lang=ja">プライバシーポリシー</a>
         を確認し、初回ログイン後の画面でニックネーム（表示名）を入力して表示言語を選び、両方への同意にチェックして「OK」を押すと利用を開始できます。登録と同意が完了するまでは、再度ログインしても同じ画面を表示します。
       </p>
     ),
@@ -328,7 +328,7 @@ const termsSections: Section[] = [
         <p>
           利用者は、保存・表示・AI生成・許可した連携や公開など、本サービスの提供に必要な範囲で、運営者が登録コンテンツを取り扱うことを認めるものとします。
           公開をオンにすると、要約・問い・気づき・プ譜などがログインなしで閲覧可能になります。公開範囲は
-          <a href="/privacy#publication">プライバシーポリシー</a>
+          <a href="/privacy?lang=ja#publication">プライバシーポリシー</a>
           を確認し、個人情報・機密情報や権利侵害がないことを確認してから公開してください。
         </p>
       </>
@@ -342,7 +342,7 @@ const termsSections: Section[] = [
         要約・問い・気づき・メモリ・プ譜などのAI生成結果には、誤り、情報の欠落、偏りが含まれることがあります。
         運営者は、その正確性・完全性や特定の目的への適合性を保証しません。
         利用者は原文や信頼できる情報源と照合し、必要に応じて専門家に相談したうえで、自身の判断で利用してください。
-        外部のAI処理への送信内容は<a href="/privacy#processors">プライバシーポリシー</a>
+        外部のAI処理への送信内容は<a href="/privacy?lang=ja#processors">プライバシーポリシー</a>
         に記載しています。
       </p>
     ),
@@ -409,7 +409,7 @@ const termsSections: Section[] = [
         利用者はいつでも利用を終了できます。保存コンテンツは対応する画面から削除し、外部連携は各設定から解除できます。
         アカウント情報の削除など画面で行えない手続きは、末尾の窓口へご連絡ください。
         ログアウトやGoogle連携の解除だけでは、保存したデータは削除されません。詳細は
-        <a href="/privacy#retention">プライバシーポリシーの削除方法</a>
+        <a href="/privacy?lang=ja#retention">プライバシーポリシーの削除方法</a>
         をご確認ください。
       </p>
     ),
@@ -531,9 +531,25 @@ export default function LegalPage({
             {english && (
               <p className="manual-note">
                 This is an English translation for convenience. The{' '}
-                <a href={`/${page}`}>Japanese original</a> governs.
+                <a href={legalHref(page, 'ja')}>Japanese original</a> governs.
               </p>
             )}
+            <nav className="legal-links" aria-label={translateUi(language, 'language.label')}>
+              <a
+                href={legalHref(page, 'ja')}
+                lang="ja"
+                aria-current={language === 'ja' ? 'page' : undefined}
+              >
+                日本語
+              </a>
+              <a
+                href={legalHref(page, 'en')}
+                lang="en"
+                aria-current={language === 'en' ? 'page' : undefined}
+              >
+                English
+              </a>
+            </nav>
           </div>
         </header>
         {sections.map((section) => (

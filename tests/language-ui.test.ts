@@ -7,7 +7,7 @@ import Profile from '../src/Profile';
 import PageLanguage from '../src/PageLanguage';
 import UserManual from '../src/UserManual';
 import { BootMessage } from '../src/BootMessage';
-import { setLanguage } from '../src/i18n';
+import { setLanguage, useLanguage } from '../src/i18n';
 import { api, ApiError, send } from '../src/api';
 import type { User } from '../shared/domain';
 
@@ -208,12 +208,16 @@ it('individual legacy components remain Japanese before an application locale is
   );
 });
 
-it('resolves the saved account language before rendering a directly entered manual page', async () => {
+it('the account-aware public shell still resolves the saved account language', async () => {
   user = completed('en');
   Object.defineProperty(window.navigator, 'language', { value: 'ja-JP' });
-  await act(async () => root.render(createElement(PageLanguage, {}, createElement(UserManual))));
-  expect(document.querySelector('h1')?.textContent).toBe('User manual');
-  expect(document.querySelector('a[href="/en/privacy"]')).not.toBeNull();
+  function AccountContent() {
+    return createElement('h1', {}, useLanguage().language);
+  }
+  await act(async () =>
+    root.render(createElement(PageLanguage, {}, createElement(AccountContent))),
+  );
+  expect(document.querySelector('h1')?.textContent).toBe('en');
 });
 
 it.each([false, true])(
@@ -245,7 +249,7 @@ it.each([false, true])(
   },
 );
 
-it('keeps the public manual readable when fetching the account language fails', async () => {
+it('the account-aware public shell remains readable when identity lookup fails', async () => {
   vi.mocked(api).mockRejectedValue(new ApiError('Unavailable', 503));
   await act(async () => root.render(createElement(PageLanguage, {}, createElement(UserManual))));
   expect(document.querySelector('h1')?.textContent).toBe('User manual');
