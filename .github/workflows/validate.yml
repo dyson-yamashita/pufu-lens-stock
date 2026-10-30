@@ -46,13 +46,13 @@ jobs:
         run: pnpm run audit
 
   tests:
-    name: Tests (${{ matrix.shard }}/2)
+    name: Tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,7 +71,7 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Run test shard
-        run: pnpm run test --shard=${{ matrix.shard }}/2
+        run: pnpm run test --shard=${{ matrix.shard }}/4
 
   e2e:
     name: Browser E2E (recorded actions, no AI)
