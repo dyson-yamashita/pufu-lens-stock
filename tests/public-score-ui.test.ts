@@ -166,38 +166,35 @@ async function click(label: string) {
   await act(async () => button.click());
 }
 it.each([
-  { width: 900, theme: 'light', textClass: 'text-base' },
-  { width: 899, theme: 'light', textClass: 'text-xs' },
-  { width: 1200, theme: 'dark', textClass: 'text-base' },
-  { width: 640, theme: 'dark', textClass: 'text-xs' },
+  { width: 900, theme: 'light' },
+  { width: 899, theme: 'light' },
+  { width: 1200, theme: 'dark' },
+  { width: 640, theme: 'dark' },
 ])(
-  '公開プ譜は全内容を閲覧でき、狭い表示領域ではミニマップを利用できる（$width / $theme）',
-  async ({ width, theme, textClass }) => {
+  '公開プ譜は編集入力のない画像で全内容を表示し、進捗を隠す（$width / $theme）',
+  async ({ width, theme }) => {
     containerWidth = width;
     const snapshot = { theme, preference: theme };
     Object.defineProperty(window, 'pufuTheme', {
       configurable: true,
       value: { subscribe: () => () => {}, getSnapshot: () => snapshot },
     });
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: () => ({ matches: width < 1000, addEventListener() {}, removeEventListener() {} }),
-    });
     const { default: PublicScore } = await import('../src/PublicPufuScore');
     const original = structuredClone(score);
-    await act(async () => root.render(createElement(PublicScore, { score })));
-    expect(Boolean(document.querySelector('[aria-label="プ譜の表示エリア"]'))).toBe(width < 900);
-    expect(Boolean(document.querySelector('button[aria-label^="全体マップ："]'))).toBe(width < 900);
-    expect(document.querySelector('[role="score"]')).not.toBeNull();
-    const fields = [
-      ...document
-        .querySelector('[role="score"]')!
-        .querySelectorAll<HTMLTextAreaElement>('textarea'),
-    ];
-    expect(fields.length).toBeGreaterThanOrEqual(12);
-    const textFields = fields.filter((field) => !field.getAttribute('role')?.endsWith('-comment'));
-    expect(textFields.every((field) => field.classList.contains(textClass))).toBe(true);
-    expect(fields.filter((field) => !field.hasAttribute('readOnly'))).toHaveLength(0);
+    await act(async () => root.render(createElement(PublicScore, { score, phase: 2 })));
+    const image = document.querySelector('[role="img"][aria-label="第2局面のプ譜"]');
+    expect(image).not.toBeNull();
+    const accessible = document.querySelector('section[aria-label="第2局面のプ譜の内容"]');
+    expect(accessible).not.toBeNull();
+    expect(image!.querySelector('svg')).not.toBeNull();
+    expect(Boolean(document.querySelector('[role="score"],textarea,input,[contenteditable]'))).toBe(
+      false,
+    );
+    expect(
+      [...document.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('編集する'),
+      ),
+    ).toBe(false);
     for (const key of [
       'goal',
       'win',
@@ -207,39 +204,42 @@ it.each([
       'second-purpose',
       ...elementKeys,
     ]) {
-      expect(fields.some((field) => (field.value || field.defaultValue) === `${key}の内容`)).toBe(
-        true,
-      );
-      expect(
-        fields.some((field) => (field.value || field.defaultValue) === `${key}の振り返り`),
-      ).toBe(true);
+      expect(image?.textContent).toContain(`${key}の内容`);
+      expect(image?.textContent).toContain(`${key}の振り返り`);
+      expect(accessible?.textContent).toContain(`${key}の内容`);
+      expect(accessible?.textContent).toContain(`${key}の振り返り`);
     }
-    expect(
-      fields.some((field) => (field.value || field.defaultValue) === 'shared-measureの振り返り'),
-    ).toBe(true);
-    expect(document.body.textContent).toContain('50%');
-    expect(document.body.textContent).toContain('75%');
-    expect(document.querySelector('[role="score"]')?.classList.contains('dark')).toBe(
-      theme === 'dark',
-    );
-    expect(document.body.textContent).toContain('BSD-3-Clause');
+    expect(image?.textContent).toContain('shared-measureの振り返り');
+    expect(image?.textContent).not.toContain('50%');
+    expect(image?.textContent).not.toContain('75%');
+    expect(accessible?.textContent).not.toContain('50%');
+    expect(accessible?.textContent).not.toContain('75%');
     expect(score).toEqual(original);
-    const Sortable = require('sortablejs') as {
-      get: (element: Element) => { option: (name: string) => unknown } | undefined;
-    };
-    const lists = [...document.querySelectorAll('[role="score"] div')]
-      .map((element) => Sortable.get(element))
-      .filter((sortable) => sortable !== undefined);
-    expect(lists.every((sortable) => sortable.option('disabled') === true)).toBe(true);
-    expect(
-      document
-        .querySelector('[role="score"]')!
-        .querySelectorAll(
-          'input,button,[contenteditable="true"],[aria-label="delete-icon"],[aria-label="add-icon"]',
-        ),
-    ).toHaveLength(0);
+    const open = document.querySelector<HTMLButtonElement>(
+      '[aria-label="第2局面のプ譜を拡大表示"]',
+    );
+    expect(open).not.toBeNull();
+    await act(async () => open!.click());
+    expect(document.querySelector('dialog[open] [role="img"] svg')).not.toBeNull();
   },
 );
+it('公開画像の生成に失敗しても編集操作は出さず、状態を伝える', async () => {
+  const snapshot = { theme: 'light', preference: 'light' };
+  Object.defineProperty(window, 'pufuTheme', {
+    configurable: true,
+    value: { subscribe: () => () => {}, getSnapshot: () => snapshot },
+  });
+  const { default: PublicScore } = await import('../src/PublicPufuScore');
+  const invalid = structuredClone(score);
+  invalid.elements.people.text = '\n'.repeat(1000);
+  await act(async () => root.render(createElement(PublicScore, { score: invalid, phase: 1 })));
+  expect(document.querySelector('[role="status"]')?.textContent).toContain(
+    'プ譜の画像を表示できません',
+  );
+  expect(document.querySelector('[role="status"]')?.textContent).not.toContain('編集');
+  expect(document.querySelector('textarea,input,[role="score"]')).toBeNull();
+  expect(document.querySelector('.pufu-image-actions')).toBeNull();
+});
 it.each([
   { width: 900, textClass: 'text-base' },
   { width: 899, textClass: 'text-xs' },

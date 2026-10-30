@@ -125,6 +125,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
   );
   score.gainingGoal.text = 'E2Eの公開プ譜';
+  score.purposes[0].measures[0].progress = 50;
   const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,
     question_id: question.id,
@@ -139,7 +140,16 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await browser.locator('.public-tabs a[href="#pufus"]').click();
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await screen.getByRole('link', /E2Eの公開プ譜/).click();
-  await expect(screen.getByRole('heading', 'E2Eの公開プ譜')).toBeVisible();
+  await expect(browser.locator('section[aria-label="課題"]')).toContainText('E2Eの公開プ譜');
+  await expect(browser.locator('section[aria-label="問い・気づき"]')).toContainText(
+    'E2Eの公開する問い',
+  );
+  await expect(screen.getByRole('img', '第1局面のプ譜')).toBeVisible();
+  await screen.getByRole('button', '第1局面のプ譜を拡大表示').click();
+  await expect(screen.getByRole('dialog', '第1局面のプ譜')).toBeVisible();
+  await screen.getByRole('button', '閉じる').click();
+  await expect(browser.locator('[aria-label="プ譜（閲覧のみ）"] textarea')).toHaveCount(0);
+  await expect(screen.getByRole('img', '第1局面のプ譜')).not.toContainText('50%');
   await screen.getByRole('link', 'プ譜の一覧に戻る').click();
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await browser.setCookies(cookies);

@@ -67,6 +67,11 @@ beforeEach(() => {
           updated_at: '2026-10-18',
           question_id: 'ai',
           question_text: aiQuestion.text,
+          questions: [aiQuestion, userQuestion],
+          stocks: [
+            { id: stock.id, title: stock.title },
+            { id: 'second', title: '二つ目の記事' },
+          ],
           score: {},
         },
       };
@@ -220,6 +225,23 @@ it('プ譜タブから一覧・詳細を閲覧し、戻るとプ譜タブへ戻�
   expect(card?.textContent).toContain('第1局面');
   expect(card?.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
   await navigate('#pufu/pufu?from=pufus');
+  const task = document.querySelector('section[aria-label="課題"]');
+  const questions = document.querySelector('section[aria-label="問い・気づき"]');
+  expect(task?.querySelector('h3')?.textContent).toBe('課題');
+  expect(task?.querySelector('li')?.textContent).toBe('問いから考える課題');
+  expect(questions?.querySelector('h3')?.textContent).toBe('問い・気づき');
+  expect(questions?.querySelector('li a')?.getAttribute('href')).toBe('#question/ai');
+  expect(questions?.querySelector('li a')?.textContent).toBe('AIが生成した問い');
+  expect([...questions!.querySelectorAll('li a')].map((link) => link.textContent)).toEqual([
+    'AIが生成した問い',
+    '自分の問い',
+  ]);
+  const stocks = document.querySelector('section[aria-label="関連するストック"]');
+  expect([...stocks!.querySelectorAll('li a')].map((link) => link.getAttribute('href'))).toEqual([
+    '#stock/stock',
+    '#stock/second',
+  ]);
+  expect(stocks?.textContent).toContain('二つ目の記事');
   const back = document.querySelector('section > a.text-link');
   expect(back?.textContent).toContain('プ譜の一覧に戻る');
   expect(back?.getAttribute('href')).toBe('#pufus');

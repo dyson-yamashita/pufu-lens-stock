@@ -3264,6 +3264,16 @@ article.pufu-list-item {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.public-pufu-context section + section {
+  margin-top: 18px;
+}
+.public-pufu-context h3 {
+  margin: 0;
+}
+.public-pufu-context li {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .pufu-download-options {
   display: flex;
   flex-wrap: wrap;
@@ -3586,9 +3596,6 @@ article.pufu-list-item {
   align-items: center;
   gap: 6px;
 }
-.public-card-footer > svg:last-child {
-  margin-left: auto;
-}
 .public-pagination {
   display: flex;
   align-items: center;
@@ -3789,6 +3796,17 @@ article.pufu-list-item {
   color: var(--muted);
   font-size: 12px;
   border-top: 1px solid var(--border);
+}
+.public-pufu-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: normal;
+  border: 0;
 }
 .public-pufu-preview {
   margin-top: 28px;
