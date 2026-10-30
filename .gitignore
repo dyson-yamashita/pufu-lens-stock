@@ -48,3 +48,6 @@ dumps/
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+# E2E runtime artifacts (recordings are versioned separately)
+.e2e/

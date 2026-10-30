@@ -3,3 +3,6 @@ dist
 .wrangler
 pnpm-lock.yaml
 .agents/skills/
+
+# Browser traces contain generated HTML/JSON and dummy session data
+**/.e2e/
