@@ -40,7 +40,7 @@ test('LANG-001 初回言語選択と再読込・別ブラウザー状態・設�
   await app.clearState();
   await app.open('/');
   await expect(browser.locator('html')).toHaveAttribute('lang', 'ja');
-  await browser.locator('#site-language').selectOption('en');
+  await browser.locator('#site-language').selectOption({ value: 'en' });
   await expect(browser.locator('html')).toHaveAttribute('lang', 'en');
   await browser.locator('.demo-login').click();
   await expect(browser.locator('#onboarding-language')).toHaveValue('en');
@@ -99,7 +99,7 @@ test('LANG-001 初回言語選択と再読込・別ブラウザー状態・設�
     };
     expect(saved.pufu.phases[0].score).toEqual(score);
     await app.open('/#profile');
-    await browser.locator('#profile-language').selectOption('ja');
+    await browser.locator('#profile-language').selectOption({ value: 'ja' });
     await browser.locator('.profile-card form button[type="submit"]').click();
     await expect(browser.locator('html')).toHaveAttribute('lang', 'ja');
     await app.open('/#profile');
