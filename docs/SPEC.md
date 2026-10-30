@@ -216,7 +216,7 @@ D1の`comments`テーブルに`target_type`（`stock / question / pufu`）、`ta
 
 共有するのは従来の公開フィールドだけです。Cookieや認証情報をキャッシュキー・保存レスポンスに含めず、キーにはサーバー設定のorigin・revision・正規化したページ番号だけを使います。ブラウザ向けは引き続き`Cache-Control: no-store`です。個別の公開ページAPIと認証済みAPIはキャッシュしません。Cache APIが利用できない環境や読み書き障害時はDBから取得し、revisionを確認できない場合は旧キャッシュを返さずエラーにします。追加Secret・bindingは不要です。
 
-[本番環境の設定](#cloudflareの本番設定)に沿って本番ビルドを行った後、デプロイ前に `pnpm run db:migrate:production` で `0020_public_projects.sql`・`0033_public_directory_cache.sql` を含む未適用のマイグレーションを適用してください。既存プロジェクトも非公開のまま移行します。
+[本番環境の設定](#cloudflareの本番設定)に沿って本番ビルドを行った後、デプロイ前に `pnpm run db:migrate:production` で `0020_public_projects.sql`・`0035_public_directory_cache.sql` を含む未適用のマイグレーションを適用してください。既存プロジェクトも非公開のまま移行します。
 
 ## X連携
 

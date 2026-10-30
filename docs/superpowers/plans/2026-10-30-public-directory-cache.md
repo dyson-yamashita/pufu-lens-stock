@@ -28,7 +28,7 @@
 
 ### Task 1: revision付き公開一覧キャッシュ
 
-**Files:** `migrations/0033_public_directory_cache.sql`, `server/public-projects.ts`, `tests/public-directory-cache.test.ts`, `tests/helpers.ts`, `docs/SPEC.md`
+**Files:** `migrations/0035_public_directory_cache.sql`, `server/public-projects.ts`, `tests/public-directory-cache.test.ts`, `tests/helpers.ts`, `docs/SPEC.md`
 
 **Interfaces:** `public_directory_revision(id=1, revision TEXT)`をD1に追加。既存の一覧JSONとHTTPステータス・`Cache-Control: no-store`は維持する。テスト用`testApp`は実MiniflareのCacheStorageを遅延取得できるようにする。
 
