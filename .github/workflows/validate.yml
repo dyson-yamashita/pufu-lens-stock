@@ -72,3 +72,41 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run test shard
         run: pnpm run test --shard=${{ matrix.shard }}/2
+
+  e2e:
+    name: Browser E2E (recorded actions, no AI)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+          cache: false
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check scenario ledger
+        run: pnpm run e2e:check
+      - name: Install Chromium
+        env:
+          E2E_TELEMETRY_DISABLED: '1'
+        run: pnpm --filter @pufu-lens/e2e exec e2e-web install chromium --with-deps
+      - name: Replay browser tests without AI
+        run: pnpm run e2e:ci
+      - name: Keep failure reports and traces
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-failure
+          path: packages/e2e/.e2e/runs/
+          include-hidden-files: true
+          retention-days: 7

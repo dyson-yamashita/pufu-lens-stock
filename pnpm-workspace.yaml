@@ -19,6 +19,8 @@ minimumReleaseAgeExclude:
   - '@napi-rs/canvas-win32-x64-msvc@1.0.13'
 
 overrides:
+  # e2e 0.21.3 pins zod 4.6.1; use the patched compatible release.
+  e2e>zod: 4.6.7
   undici: ^7.29.1
   sharp: ^0.35.5
   short-uuid>uuid: ^11.1.1

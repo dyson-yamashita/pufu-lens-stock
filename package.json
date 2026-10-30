@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "^22.18.0 || >=24.11.0"
+    "node": "^22.22.3 || >=24.11.0"
   },
   "scripts": {
     "setup": "node scripts/setup.mjs && pnpm run db:migrate:local",
@@ -13,7 +13,7 @@
     "dev:lan": "vite --host 0.0.0.0",
     "build": "vite build",
     "build:production": "CLOUDFLARE_ENV=production vite build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm --filter @pufu-lens/e2e typecheck",
     "audit": "pnpm audit --audit-level=high",
     "test": "vitest run",
     "test:smoke": "node scripts/smoke-local.mjs",
@@ -25,7 +25,12 @@
     "db:migrate:local": "wrangler d1 migrations apply stock-db --local",
     "db:migrate:production": "wrangler d1 migrations apply stock-db --remote --env production --config dist/pufu_lens_stock/wrangler.json",
     "deploy:workers": "wrangler deploy --config dist/pufu_lens_pdf_parser/wrangler.json && wrangler deploy --config dist/pufu_lens_stock/wrangler.json",
-    "deploy": "pnpm run build:production && pnpm run deploy:workers"
+    "deploy": "pnpm run build:production && pnpm run deploy:workers",
+    "e2e:check": "node scripts/e2e/check.ts",
+    "e2e:ci": "node scripts/e2e/run.ts --mode ci",
+    "e2e:record": "node scripts/e2e/run.ts --mode record",
+    "e2e:bootstrap": "node scripts/e2e/run.ts --mode bootstrap",
+    "e2e:related": "node scripts/e2e/run.ts --mode ci --related"
   },
   "dependencies": {
     "@cloudflare/playwright": "^1.3.6",

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "STOCK-001",
+    "title": "テキストの保存と再表示",
+    "sources": ["src/App.tsx", "server/ingest.ts", "server/workflows.ts"],
+    "aspects": ["画面から本文を保存", "再読込後も本文・保存先が残る"]
+  },
+  {
+    "id": "PUFU-001",
+    "title": "プ譜の編集・局面・戻り先",
+    "sources": [
+      "src/PufuPage.tsx",
+      "src/PufuEditor.tsx",
+      "src/Pufus.tsx",
+      "src/PufuImagePreview.tsx",
+      "server/pufu.ts",
+      "server/pufu-write.ts",
+      "server/pufu-phases.ts"
+    ],
+    "aspects": [
+      "実Editorで編集保存",
+      "再読込後も編集内容が残る",
+      "新局面の編集で過去局面が変わらない",
+      "一覧へ戻る"
+    ]
+  },
+  {
+    "id": "PUBLIC-001",
+    "title": "公開の確認と非公開化",
+    "sources": ["src/PublicProjects.tsx", "server/public-projects.ts", "server/privacy.ts"],
+    "aspects": [
+      "確認前は匿名で取得できない",
+      "確認後に匿名で閲覧できる",
+      "非公開化後は匿名で取得できない"
+    ]
+  }
+]

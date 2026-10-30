@@ -34,3 +34,10 @@
 - 機能を追加・変更・削除するときは [maintaining-user-manual](.agents/skills/maintaining-user-manual/SKILL.md) を使い、ユーザーマニュアルへの影響を判断してください。基本操作・利用条件・公開範囲や説明の正しさに影響する場合だけ更新し、文言・見た目の微調整や内部改善だけの場合は更新しないでください。
 - Superpowers由来のファイルは直接編集せず、更新時は取り込み元のコミットとライセンスを維持してください。取り込み情報は [.agents/superpowers-source.json](.agents/superpowers-source.json) にあります。
 - Cloudflare由来の `security-audit` と補助ファイルは原文を保持し、更新時は取り込み元のコミットとMITライセンスを維持してください。取り込み情報は [.agents/security-audit-source.json](.agents/security-audit-source.json)、ライセンスは [.agents/SECURITY-AUDIT-LICENSE](.agents/SECURITY-AUDIT-LICENSE) にあります。
+
+## ブラウザーE2Eのメンテナンス
+
+- ユーザーの操作や保存結果に影響する変更では `packages/e2e/scenarios.json` の担当ソースと検証観点を確認し、該当シナリオを更新してください。新しい主要フローは台帳と実テストを一緒に追加してください。
+- `pnpm run e2e:check` で台帳の整合性、`pnpm run e2e:related --base origin/main` で関連ケースを確認してください。共通・未分類のアプリ変更は全ケースを実行します。CIは常に全ケースを実行します。
+- 操作記録が古い場合は、該当記録を削除してローカルの `pnpm run e2e:record` でCodexに再操作させ、同じ `expect` を通した記録をレビューしてください。記録JSONを手書きせず、失敗を隠すためにskip・期待値緩和・CIのAI fallbackを追加しないでください。
+- PR作成前はCIモードで再生を確認し、実行したID・画面幅・未確認事項をPRに記載してください。詳細は [E2Eの説明](packages/e2e/README.md) にあります。

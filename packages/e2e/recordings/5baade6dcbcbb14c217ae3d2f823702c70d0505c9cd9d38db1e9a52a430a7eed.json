@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-30T05:36:15.747Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "check",
+        "summary": "check checkbox \"公開する内容に、個人情報や公開を控えたい情報が含まれていないことを確認しました。\" in \"公開前のご確認\"",
+        "target": {
+          "role": "checkbox",
+          "name": "公開する内容に、個人情報や公開を控えたい情報が含まれていないことを確認しました。",
+          "within": "公開前のご確認"
+        },
+        "checked": true
+      },
+      {
+        "name": "check",
+        "summary": "check checkbox \"公開する文章や画像などが、著作権をはじめとする第三者の権利を侵害していないこと…\" in \"公開前のご確認\"",
+        "target": {
+          "role": "checkbox",
+          "name": "公開する文章や画像などが、著作権をはじめとする第三者の権利を侵害していないことを確認しました。",
+          "within": "公開前のご確認"
+        },
+        "checked": true
+      },
+      {
+        "name": "check",
+        "summary": "check checkbox \"公開すると、ログインしていない方も閲覧でき、トップページの公開プロジェクト一覧…\" in \"公開前のご確認\"",
+        "target": {
+          "role": "checkbox",
+          "name": "公開すると、ログインしていない方も閲覧でき、トップページの公開プロジェクト一覧に掲載されることを確認しました。",
+          "within": "公開前のご確認"
+        },
+        "checked": true
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"OK\" in \"公開前のご確認\"",
+        "target": {
+          "role": "button",
+          "name": "OK",
+          "within": "公開前のご確認"
+        }
+      }
+    ],
+    "executor": {
+      "name": "deterministic-bootstrap",
+      "version": "1"
+    },
+    "recordedFor": {
+      "testId": "tests/flows.e2e.ts::PUBLIC-001%20%E5%85%AC%E9%96%8B%E5%89%8D%E3%81%AB%E7%A2%BA%E8%AA%8D%E3%81%97%E5%8C%BF%E5%90%8D%E3%81%A7%E9%96%B2%E8%A6%A7%E3%81%A7%E3%81%8D%E9%9D%9E%E5%85%AC%E9%96%8B%E5%8C%96%E5%BE%8C%E3%81%AF%E5%8F%96%E5%BE%97%E3%81%A7%E3%81%8D%E3%81%AA%E3%81%84",
+      "targetId": "desktop",
+      "instructionDigest": "a050f8b79982c58f945d9408491ceac33fa04893371443cc3b95ee4d60be52ad",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "実画面で操作しました。後続のexpectで検証します。",
+    "startPath": "/#settings/a52e33bd-c8d3-4f26-a908-c68dddc48842",
+    "endPath": "/#settings/a52e33bd-c8d3-4f26-a908-c68dddc48842",
+    "endAnchors": [
+      {
+        "role": "status",
+        "name": "公開設定を保存しました。トップページにも掲載されています。"
+      },
+      {
+        "text": "公開URL"
+      },
+      {
+        "role": "link",
+        "name": "公開ページを確認"
+      },
+      {
+        "role": "button",
+        "name": "コピー"
+      },
+      {
+        "text": "現在：公開中"
+      }
+    ],
+    "goneAnchors": [
+      {
+        "text": "現在：非公開"
+      },
+      {
+        "role": "heading",
+        "name": "公開前のご確認"
+      },
+      {
+        "text": "安心して共有いただくために、公開する内容をご確認のうえ、すべての項目にチェックを入れて「OK」を押してください。"
+      },
+      {
+        "role": "checkbox",
+        "name": "公開する内容に、個人情報や公開を控えたい情報が含まれていないことを確認しました。"
+      },
+      {
+        "text": "公開する内容に、個人情報や公開を控えたい情報が含まれていないことを確認しました。"
+      },
+      {
+        "role": "checkbox",
+        "name": "公開する文章や画像などが、著作権をはじめとする第三者の権利を侵害していないことを確認しました。"
+      },
+      {
+        "text": "公開する文章や画像などが、著作権をはじめとする第三者の権利を侵害していないことを確認しました。"
+      },
+      {
+        "role": "checkbox",
+        "name": "公開すると、ログインしていない方も閲覧でき、トップページの公開プロジェクト一覧に掲載されることを確認しました。"
+      }
+    ],
+    "endWaitMs": 10150,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "cb4e2eb6dacc12f4c1a21c3bc858bd9115701a0e055c2815bb2d99824a92cab4",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "488b8f4a9d597b2b5ad848fbaa9d7f57922e94ddd9807608b50eb75ec26a6dc8",
+      "agentContextDigest": "78bd7d795b03da151d6ceb6a00409982010acc44cd3731bc6ec59d78fd8b3a0b"
+    }
+  }
+}
