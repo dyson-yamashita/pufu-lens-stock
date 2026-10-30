@@ -21,11 +21,13 @@ import {
   Layers,
   LoaderCircle,
   LockKeyhole,
+  Network,
 } from 'lucide-react';
 import type {
   Publication,
   PublicList,
   PublicProject,
+  PublicProjectDetail,
   PublicStock,
   PublicStockDetail,
   PublicQuestion,
@@ -626,6 +628,37 @@ function PublicQuestionList({ root, page, onPageChange }: PublicListProps) {
     </>
   );
 }
+function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
+  const { data, error, reload } = useResource<PublicList<PublicPufuSummary>>(
+    `${root}/pufus?page=${page}`,
+  );
+  return !data ? (
+    <ResourceState error={error} retry={reload} />
+  ) : (
+    <>
+      <div className="public-content-grid">
+        {data.items.map((pufu) => (
+          <a
+            className="public-content-card public-pufu-card"
+            key={pufu.id}
+            href={`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`}
+          >
+            <h3>{pufu.task}</h3>
+            <p className="public-help">
+              第{pufu.current_phase}局面 · {pufu.current_phase % 2 === 0 ? '振り返り' : 'プ譜'}
+            </p>
+            <div className="public-card-footer">
+              <time>{new Date(pufu.updated_at).toLocaleDateString('ja-JP')}</time>
+              <ArrowRight size={18} aria-hidden="true" />
+            </div>
+          </a>
+        ))}
+      </div>
+      {!data.items.length && <p className="public-message">公開できるプ譜はまだありません。</p>}
+      <Pagination page={page} hasMore={data.has_more} onChange={onPageChange} />
+    </>
+  );
+}
 function PublicQuestionDetail({
   root,
   id,
@@ -735,7 +768,7 @@ function PublicQuestionDetail({
     </section>
   );
 }
-function PublicPufuDetail({ root, id }: { root: string; id: string }) {
+function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fromList: boolean }) {
   const { data, error, reload } = useResource<{ pufu: PublicPufu }>(
     `${root}/pufus/${encodeURIComponent(id)}`,
   );
@@ -746,13 +779,19 @@ function PublicPufuDetail({ root, id }: { root: string; id: string }) {
       <a
         className="text-link"
         href={
-          data.pufu.question_id
-            ? `#question/${encodeURIComponent(data.pufu.question_id)}`
-            : '#questions'
+          fromList
+            ? '#pufus'
+            : data.pufu.question_id
+              ? `#question/${encodeURIComponent(data.pufu.question_id)}`
+              : '#questions'
         }
       >
         <ArrowLeft size={16} aria-hidden="true" />
-        {data.pufu.question_id ? '問い・気づきに戻る' : '問い・気づきの一覧に戻る'}
+        {fromList
+          ? 'プ譜の一覧に戻る'
+          : data.pufu.question_id
+            ? '問い・気づきに戻る'
+            : '問い・気づきの一覧に戻る'}
       </a>
       <h2 className="public-detail-title">{data.pufu.task}</h2>
       {(
@@ -782,10 +821,11 @@ function PublicPufuDetail({ root, id }: { root: string; id: string }) {
 }
 export default function PublicProjectPage({ publicId }: { publicId: string }) {
   const root = `/api/public/projects/${encodeURIComponent(publicId)}`;
-  const { data, error, reload } = useResource<{ project: PublicProject }>(root);
+  const { data, error, reload } = useResource<{ project: PublicProjectDetail }>(root);
   const [hash, setHash] = useState(window.location.hash);
   const [stockPage, setStockPage] = useState(1);
   const [questionPage, setQuestionPage] = useState(1);
+  const [pufuPage, setPufuPage] = useState(1);
   useEffect(() => {
     const listener = () => {
       setHash(window.location.hash);
@@ -794,14 +834,14 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
     window.addEventListener('hashchange', listener);
     return () => window.removeEventListener('hashchange', listener);
   }, []);
-  const match = /^#(stock|question|pufu)\/([^/]+)$/.exec(hash);
+  const match = /^#(stock|question|pufu)\/([^/?]+)(?:\?from=(pufus))?$/.exec(hash);
   let content: ReactNode;
   if (match)
     content =
       match[1] === 'stock' ? (
         <PublicStockDetailPage key={match[2]} root={root} id={match[2]} />
       ) : match[1] === 'pufu' ? (
-        <PublicPufuDetail root={root} id={match[2]} />
+        <PublicPufuDetail root={root} id={match[2]} fromList={match[3] === 'pufus'} />
       ) : (
         <PublicQuestionDetail
           key={match[2]}
@@ -812,7 +852,9 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
       );
   else
     content =
-      hash === '#questions' ? (
+      hash === '#pufus' ? (
+        <PublicPufuList root={root} page={pufuPage} onPageChange={setPufuPage} />
+      ) : hash === '#questions' ? (
         <PublicQuestionList root={root} page={questionPage} onPageChange={setQuestionPage} />
       ) : (
         <PublicStockList root={root} page={stockPage} onPageChange={setStockPage} />
@@ -843,7 +885,9 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
               <a
                 href="#stocks"
                 aria-current={
-                  match?.[1] === 'stock' || (!match && hash !== '#questions') ? 'page' : undefined
+                  match?.[1] === 'stock' || (!match && !['#questions', '#pufus'].includes(hash))
+                    ? 'page'
+                    : undefined
                 }
               >
                 <Layers size={18} aria-hidden="true" />
@@ -857,6 +901,13 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
               >
                 <CircleHelp size={18} aria-hidden="true" />
                 問い・気づき<span>{data.project.question_count}</span>
+              </a>
+              <a
+                href="#pufus"
+                aria-current={hash === '#pufus' || match?.[1] === 'pufu' ? 'page' : undefined}
+              >
+                <Network size={18} aria-hidden="true" />
+                プ譜<span>{data.project.pufu_count}</span>
               </a>
             </nav>
             {content}

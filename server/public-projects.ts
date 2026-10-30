@@ -2,7 +2,13 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { AppEnv } from './env';
-import type { Publication, PublicProject, PublicStock, PublicPufu } from '../shared/public-project';
+import type {
+  Publication,
+  PublicProject,
+  PublicProjectDetail,
+  PublicStock,
+  PublicPufu,
+} from '../shared/public-project';
 import type { ArticleSummary } from '../shared/domain';
 import { pufuScoreSchema } from '../shared/pufu';
 import { now } from './db';
@@ -12,6 +18,12 @@ const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
 // 再生成ではtextを保持する。未完成のAI問いはNULLなので公開しない。
 const publicQuestionWhere = "(q.status='ready' OR (q.source='ai' AND q.text IS NOT NULL))";
+// 個別の公開詳細と同じ、完成済みで公開可能な問いに紐づくプ譜だけを数える。
+const publicPufuWhere = `pf.user_id=p.user_id AND pf.status='ready'
+  AND EXISTS(SELECT 1 FROM pufu_questions pq JOIN questions q ON q.id=pq.question_id
+    WHERE pq.pufu_id=pf.id AND ${publicQuestionWhere})
+  AND COALESCE((SELECT ph.score_json FROM pufu_phases ph WHERE ph.pufu_id=pf.id AND ph.number=pf.current_phase),pf.score_json) IS NOT NULL`;
+const publicPufuCount = `(SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id=p.id AND ${publicPufuWhere})`;
 const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
   (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count`;
@@ -108,10 +120,10 @@ export function publicProjectsApp() {
   });
   app.get('/projects/:key', async (c) => {
     const project = await c.env.DB.prepare(
-      `SELECT ${projectColumns} FROM projects p WHERE ${publicWhere}`,
+      `SELECT ${projectColumns},${publicPufuCount} AS pufu_count FROM projects p WHERE ${publicWhere}`,
     )
       .bind(c.req.param('key'))
-      .first<PublicProject>();
+      .first<PublicProjectDetail>();
     if (!project) throw notFound();
     return c.json({ project });
   });
@@ -201,6 +213,23 @@ export function publicProjectsApp() {
       has_more: page * limit < Number(questions.results[0].pufu_count),
     });
   });
+  app.get('/projects/:key/pufus', async (c) => {
+    const { page, limit, offset } = pageOptions(c.req.query('page'));
+    const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
+      c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
+      c.env.DB.prepare(
+        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf
+        JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND ${publicPufuWhere}
+        ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
+      ).bind(c.req.param('key'), limit, offset),
+      c.env.DB.prepare(
+        `SELECT ${publicPufuCount} AS total FROM projects p WHERE ${publicWhere}`,
+      ).bind(c.req.param('key')),
+    ]);
+    if (!project.results.length) throw notFound();
+    const total = Number(count.results[0].total);
+    return c.json({ items: rows.results, total, page, has_more: page * limit < total });
+  });
   app.get('/projects/:key/pufus/:id', async (c) => {
     // 公開の読み取りでは局面の初期化・ジョブ起動・コンテキスト取得を一切行わない。
     const row = await c.env.DB.prepare(
@@ -208,7 +237,7 @@ export function publicProjectsApp() {
       COALESCE(ph.score_json,pf.score_json) AS score_json FROM pufu_scores pf
       JOIN projects p ON p.id=pf.project_id JOIN questions q ON q.id=(SELECT pq.question_id FROM pufu_questions pq JOIN questions visible ON visible.id=pq.question_id WHERE pq.pufu_id=pf.id AND (visible.status='ready' OR (visible.source='ai' AND visible.text IS NOT NULL)) ORDER BY pq.question_id LIMIT 1)
       LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
-      WHERE ${publicWhere} AND pf.id=? AND pf.user_id=p.user_id AND pf.status='ready' AND ${publicQuestionWhere}`,
+      WHERE ${publicWhere} AND pf.id=? AND ${publicPufuWhere} AND ${publicQuestionWhere}`,
     )
       .bind(c.req.param('key'), c.req.param('id'))
       .first<

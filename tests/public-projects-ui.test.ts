@@ -5,6 +5,7 @@ import { parseHTML } from 'linkedom';
 import PublicProjectPage from '../src/PublicProjects';
 import { api } from '../src/api';
 
+vi.mock('../src/PublicPufuScore', () => ({ default: () => null }));
 vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
 const stock = {
   id: 'stock',
@@ -50,12 +51,34 @@ beforeEach(() => {
           public_description: '',
           stock_count: 1,
           question_count: 2,
+          pufu_count: 1,
         },
       };
     if (url.pathname.endsWith('/stocks/stock'))
       return { stock, questions: [aiQuestion, userQuestion], page: 1, total: 2, has_more: false };
     if (url.pathname.endsWith('/stocks'))
       return { items: [stock], total: 1, page: 1, has_more: false };
+    if (url.pathname.endsWith('/pufus/pufu'))
+      return {
+        pufu: {
+          id: 'pufu',
+          task: '問いから考える課題',
+          current_phase: 1,
+          updated_at: '2026-10-18',
+          question_id: 'ai',
+          question_text: aiQuestion.text,
+          score: {},
+        },
+      };
+    if (url.pathname.endsWith('/pufus'))
+      return {
+        items: [
+          { id: 'pufu', task: '問いから考える課題', current_phase: 1, updated_at: '2026-10-18' },
+        ],
+        total: 1,
+        page: 1,
+        has_more: false,
+      };
     if (url.pathname.endsWith('/questions/ai'))
       return {
         question: aiQuestion,
@@ -148,6 +171,7 @@ it('公開した問いの複数のストックを表示し、プ譜カードの�
 it.each([
   ['#stocks', '#stock/stock', 'stocks'],
   ['#questions', '#question/ai', 'questions'],
+  ['#pufus', '#pufu/pufu?from=pufus', 'pufus'],
 ])('一覧 %s の2ページ目から詳細を開いて戻ると同じページを表示する', async (list, detail, path) => {
   const load = vi.mocked(api).getMockImplementation()!;
   vi.mocked(api).mockImplementation(async (url, options) => {
@@ -155,7 +179,19 @@ it.each([
     if (parsed.pathname === `/api/public/projects/project/${path}`) {
       const page = Number(parsed.searchParams.get('page'));
       return {
-        items: path === 'stocks' ? [stock] : [aiQuestion],
+        items:
+          path === 'stocks'
+            ? [stock]
+            : path === 'pufus'
+              ? [
+                  {
+                    id: 'pufu',
+                    task: '問いから考える課題',
+                    current_phase: 1,
+                    updated_at: '2026-10-18',
+                  },
+                ]
+              : [aiQuestion],
         page,
         total: 13,
         has_more: page === 1,
@@ -172,4 +208,38 @@ it.each([
   await navigate(list);
   expect(document.querySelector('.public-pagination')?.textContent).toContain('2ページ');
   expect(vi.mocked(api).mock.calls.at(-1)?.[0]).toBe(`/api/public/projects/project/${path}?page=2`);
+});
+
+it('プ譜タブから一覧・詳細を閲覧し、戻るとプ譜タブへ戻る', async () => {
+  await render('#pufus');
+  expect(document.querySelector('.public-tabs a[aria-current="page"]')?.getAttribute('href')).toBe(
+    '#pufus',
+  );
+  const card = document.querySelector('.public-pufu-card');
+  expect(card?.textContent).toContain('問いから考える課題');
+  expect(card?.textContent).toContain('第1局面');
+  expect(card?.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
+  await navigate('#pufu/pufu?from=pufus');
+  const back = document.querySelector('section > a.text-link');
+  expect(back?.textContent).toContain('プ譜の一覧に戻る');
+  expect(back?.getAttribute('href')).toBe('#pufus');
+  expect(document.querySelector('.public-tabs a[aria-current="page"]')?.getAttribute('href')).toBe(
+    '#pufus',
+  );
+  expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
+  await navigate('#pufus');
+  expect(document.querySelector('.public-pufu-card')?.textContent).toContain('問いから考える課題');
+});
+it('プ譜がない場合は空の状態を表示する', async () => {
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (url, options) =>
+    url.includes('/pufus?')
+      ? { items: [], total: 0, page: 1, has_more: false }
+      : load(url, options),
+  );
+  await render('#pufus');
+  expect(document.querySelector('.public-pufu-card')).toBeNull();
+  expect(document.querySelector('.public-message')?.textContent).toContain(
+    '公開できるプ譜はまだありません',
+  );
 });

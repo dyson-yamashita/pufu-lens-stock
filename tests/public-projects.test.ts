@@ -205,6 +205,7 @@ describe('公開プロジェクトの参照専用API', () => {
       `${root(key)}/stocks/stock`,
       `${root(key)}/questions`,
       `${root(key)}/questions/question`,
+      `${root(key)}/pufus`,
       `${root(key)}/pufus/pufu`,
     ];
     for (const path of paths) {
@@ -240,6 +241,32 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(pufu.pufu.current_phase).toBe(2);
     expect(pufu.pufu.score.gainingGoal.text).toBe('公開する最新局面');
     expect(pufu.pufu.score.elements.people.comment.text).toBe('振り返り：公開する最新局面');
+  });
+  it('プ譜タブの一覧と件数は閲覧可能な完成済みプ譜だけを返し、本文や内部情報を含めない', async () => {
+    await app.env.DB.prepare(
+      "INSERT INTO pufu_scores (id,user_id,project_id,task,input_json,score_json,editor_version,status) VALUES ('orphan','alice','alice-project','SECRET_UNLINKED_TASK','{}',?,'0.9.14','ready')",
+    )
+      .bind(JSON.stringify(score('SECRET_UNLINKED')))
+      .run();
+    const key = await publish();
+    const response = await get(`${root(key)}/pufus`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    const list = await response.json();
+    expect(list).toEqual({
+      items: [
+        { id: 'pufu', task: '公開する課題', current_phase: 2, updated_at: expect.any(String) },
+      ],
+      total: 1,
+      page: 1,
+      has_more: false,
+    });
+    expect(await (await get(root(key))).json()).toMatchObject({ project: { pufu_count: 1 } });
+    await app.env.DB.prepare(
+      "UPDATE questions SET source='user',status='generating' WHERE id='question'",
+    ).run();
+    expect(await (await get(`${root(key)}/pufus`)).json()).toMatchObject({ items: [], total: 0 });
+    expect(await (await get(root(key))).json()).toMatchObject({ project: { pufu_count: 0 } });
   });
   it('ストック詳細は同じ保存先・ストックの完成した問いだけを返し、AI生成やジョブを起動しない', async () => {
     const key = await publish();
@@ -321,6 +348,7 @@ describe('公開プロジェクトの参照専用API', () => {
         `${root(key)}/stocks`,
         `${root(key)}/stocks/stock`,
         `${root(key)}/questions/question`,
+        `${root(key)}/pufus`,
         `${root(key)}/pufus/pufu`,
       ]) {
         expect(
@@ -346,6 +374,7 @@ describe('公開プロジェクトの参照専用API', () => {
       `${root(key)}/stocks/stock`,
       `${root(key)}/questions`,
       `${root(key)}/questions/question`,
+      `${root(key)}/pufus`,
       `${root(key)}/pufus/pufu`,
     ];
     await publication('alice-project', false);
@@ -400,6 +429,7 @@ describe('公開プロジェクトの参照専用API', () => {
       ['stocks', 'items', 14],
       ['questions', 'items', 15],
       ['questions/question', 'pufus', 14],
+      ['pufus', 'items', 14],
       ['stocks/stock', 'questions', 14],
     ] as const) {
       const first = (await (await get(`${root(key)}/${path}`)).json()) as Record<string, unknown>;

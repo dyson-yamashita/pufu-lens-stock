@@ -16,6 +16,7 @@ export type PublicProject = {
   stock_count: number;
   question_count: number;
 };
+export type PublicProjectDetail = PublicProject & { pufu_count: number };
 export type PublicStock = {
   id: string;
   title: string;

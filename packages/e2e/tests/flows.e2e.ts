@@ -117,15 +117,38 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   };
   expect(published.publication.is_public).toBe(true);
   const publicId = published.publication.public_id;
+  const { question } = (await fixture.request('/questions', 'POST', {
+    project_id: fixture.projectId,
+    text: 'E2Eの公開する問い',
+  })) as { question: { id: string } };
+  const score = JSON.parse(
+    await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
+  );
+  score.gainingGoal.text = 'E2Eの公開プ譜';
+  const { pufu } = (await fixture.request('/pufus', 'POST', {
+    project_id: fixture.projectId,
+    question_id: question.id,
+    request_id: requestId(),
+    score,
+  })) as { pufu: { id: string } };
   expect((await fetch(`${fixture.url}/api/public/projects/${publicId}`)).status).toBe(200);
   const cookies = await browser.cookies();
   await app.clearState();
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
+  await browser.locator('.public-tabs a[href="#pufus"]').click();
+  await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
+  await screen.getByRole('link', /E2Eの公開プ譜/).click();
+  await expect(screen.getByRole('heading', 'E2Eの公開プ譜')).toBeVisible();
+  await screen.getByRole('link', 'プ譜の一覧に戻る').click();
+  await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await browser.setCookies(cookies);
   await app.open(`/#settings/${fixture.projectId}`);
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();
   await screen.getByRole('button', '公開設定を保存').click();
   await expect(screen.getByRole('status').filter({ hasText: '非公開にしました。' })).toBeVisible();
-  expect((await fetch(`${fixture.url}/api/public/projects/${publicId}`)).status).toBe(404);
+  for (const suffix of ['', '/pufus', `/pufus/${pufu.id}`])
+    expect((await fetch(`${fixture.url}/api/public/projects/${publicId}${suffix}`)).status).toBe(
+      404,
+    );
 });
