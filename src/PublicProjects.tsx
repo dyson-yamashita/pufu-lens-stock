@@ -1,4 +1,13 @@
-import { lazy, Suspense, useEffect, useId, useState, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -195,124 +204,249 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const saveRef = useRef<HTMLButtonElement>(null);
+  const inFlight = useRef(false);
   const url = saved.public_id ? `${window.location.origin}/p/${saved.public_id}` : '';
+  async function save() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await send<{ publication: Publication }>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/publication`,
+        { is_public: enabled, public_description: description },
+        'PATCH',
+      );
+      setSaved(result.publication);
+      setDescription(result.publication.public_description);
+      setConfirming(false);
+      setMessage(
+        result.publication.is_public
+          ? '公開設定を保存しました。トップページにも掲載されています。'
+          : '非公開にしました。公開URLからも閲覧できません。',
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setBusy(true);
-        setError('');
-        setMessage('');
-        try {
-          const result = await send<{ publication: Publication }>(
-            `/api/v1/projects/${encodeURIComponent(projectId)}/publication`,
-            { is_public: enabled, public_description: description },
-            'PATCH',
-          );
-          setSaved(result.publication);
-          setDescription(result.publication.public_description);
-          setMessage(
-            result.publication.is_public
-              ? '公開設定を保存しました。トップページにも掲載されています。'
-              : '非公開にしました。公開URLからも閲覧できません。',
-          );
-        } catch (e) {
-          setError((e as Error).message);
-        } finally {
-          setBusy(false);
-        }
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (inFlight.current || confirming) return;
+          setError('');
+          setMessage('');
+          if (enabled && !saved.is_public) setConfirming(true);
+          else void save();
+        }}
+      >
+        <label className="project-memory-toggle" htmlFor={`${id}-toggle`}>
+          <span>プロジェクトを公開する</span>
+          <input
+            id={`${id}-toggle`}
+            type="checkbox"
+            role="switch"
+            checked={enabled}
+            disabled={busy}
+            onChange={(e) => {
+              setEnabled(e.target.checked);
+              setMessage('');
+            }}
+            aria-describedby={`${id}-scope`}
+          />
+        </label>
+        <p className="public-help" id={`${id}-scope`}>
+          公開すると、ログインなしで閲覧できるURLが発行され、トップページの公開プロジェクト一覧に掲載されます。
+        </p>
+        <div className="publication-scope">
+          <strong>公開する内容</strong>
+          <ul>
+            <li>プロジェクト名と公開用の紹介文</li>
+            <li>ストックのタイトル・URL・要約・要点・トピック</li>
+            <li>問い・気づきと、紐づくプ譜の最新局面・振り返り</li>
+          </ul>
+          <p>
+            <LockKeyhole size={15} aria-hidden="true" />
+            メモリ、個人メモ、取得した本文、内部用のプロジェクト概要は公開しません。
+          </p>
+        </div>
+        <p className="public-help">
+          公開中に追加・変更した内容も反映されます。プ譜に書かれた内容も公開されるため、公開前に各内容を確認してください。
+        </p>
+        <label htmlFor={`${id}-description`}>
+          公開用の紹介文 <span className="optional">任意</span>
+        </label>
+        <textarea
+          id={`${id}-description`}
+          rows={3}
+          maxLength={1000}
+          value={description}
+          disabled={busy}
+          placeholder="このプロジェクトで集めているテーマや、公開する目的など"
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        {saved.is_public && url && (
+          <div className="publication-url">
+            <label htmlFor={`${id}-url`}>公開URL</label>
+            <input id={`${id}-url`} readOnly value={url} />
+            <div>
+              <a className="button secondary" href={url} target="_blank" rel="noreferrer">
+                <ExternalLink size={16} aria-hidden="true" />
+                公開ページを確認
+              </a>
+              <button
+                className="button subtle"
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    setMessage('公開URLをコピーしました。');
+                  } catch {
+                    setError('URLを選択してコピーしてください。');
+                  }
+                }}
+              >
+                <Copy size={16} aria-hidden="true" />
+                コピー
+              </button>
+            </div>
+          </div>
+        )}
+        {error && !confirming && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
+        {message && (
+          <p role="status" className="publication-success">
+            <Check size={16} aria-hidden="true" />
+            {message}
+          </p>
+        )}
+        <div className="form-actions">
+          <span className="public-help">現在：{saved.is_public ? '公開中' : '非公開'}</span>
+          <button ref={saveRef} className="button primary" disabled={busy}>
+            {busy ? '保存中…' : '公開設定を保存'}
+          </button>
+        </div>
+      </form>
+      {confirming && (
+        <PublicationConfirmation
+          triggerRef={saveRef}
+          busy={busy}
+          error={error}
+          onClose={() => {
+            if (inFlight.current) return;
+            setConfirming(false);
+            setError('');
+          }}
+          onConfirm={() => void save()}
+        />
+      )}
+    </>
+  );
+}
+const publicationChecks = [
+  '公開する内容に、個人情報や公開を控えたい情報が含まれていないことを確認しました。',
+  '公開する文章や画像などが、著作権をはじめとする第三者の権利を侵害していないことを確認しました。',
+  '公開すると、ログインしていない方も閲覧でき、トップページの公開プロジェクト一覧に掲載されることを確認しました。',
+];
+function PublicationConfirmation({
+  triggerRef,
+  busy,
+  error,
+  onClose,
+  onConfirm,
+}: {
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  busy: boolean;
+  error: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const id = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const [checked, setChecked] = useState(publicationChecks.map(() => false));
+  const allChecked = checked.every(Boolean);
+  useEffect(() => {
+    const dialog = dialogRef.current!;
+    dialog.showModal();
+    cancelRef.current?.focus();
+    return () => {
+      dialog.close();
+      triggerRef.current?.focus();
+    };
+  }, [triggerRef]);
+  return (
+    <dialog
+      ref={dialogRef}
+      className="dialog publication-confirmation"
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-intro`}
+      aria-busy={busy}
+      onCancel={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
       }}
     >
-      <label className="project-memory-toggle" htmlFor={`${id}-toggle`}>
-        <span>プロジェクトを公開する</span>
-        <input
-          id={`${id}-toggle`}
-          type="checkbox"
-          role="switch"
-          checked={enabled}
-          disabled={busy}
-          onChange={(e) => {
-            setEnabled(e.target.checked);
-            setMessage('');
-          }}
-          aria-describedby={`${id}-scope`}
-        />
-      </label>
-      <p className="public-help" id={`${id}-scope`}>
-        公開すると、ログインなしで閲覧できるURLが発行され、トップページの公開プロジェクト一覧に掲載されます。
-      </p>
-      <div className="publication-scope">
-        <strong>公開する内容</strong>
-        <ul>
-          <li>プロジェクト名と公開用の紹介文</li>
-          <li>ストックのタイトル・URL・要約・要点・トピック</li>
-          <li>問い・気づきと、紐づくプ譜の最新局面・振り返り</li>
-        </ul>
-        <p>
-          <LockKeyhole size={15} aria-hidden="true" />
-          メモリ、個人メモ、取得した本文、内部用のプロジェクト概要は公開しません。
-        </p>
+      <div className="dialog-head">
+        <h2 id={`${id}-title`}>公開前のご確認</h2>
       </div>
-      <p className="public-help">
-        公開中に追加・変更した内容も反映されます。プ譜に書かれた内容も公開されるため、公開前に各内容を確認してください。
+      <p id={`${id}-intro`} className="public-help">
+        安心して共有いただくために、公開する内容をご確認のうえ、すべての項目にチェックを入れて「OK」を押してください。
       </p>
-      <label htmlFor={`${id}-description`}>
-        公開用の紹介文 <span className="optional">任意</span>
-      </label>
-      <textarea
-        id={`${id}-description`}
-        rows={3}
-        maxLength={1000}
-        value={description}
-        disabled={busy}
-        placeholder="このプロジェクトで集めているテーマや、公開する目的など"
-        onChange={(e) => setDescription(e.target.value)}
-      />
-      {saved.is_public && url && (
-        <div className="publication-url">
-          <label htmlFor={`${id}-url`}>公開URL</label>
-          <input id={`${id}-url`} readOnly value={url} />
-          <div>
-            <a className="button secondary" href={url} target="_blank" rel="noreferrer">
-              <ExternalLink size={16} aria-hidden="true" />
-              公開ページを確認
-            </a>
-            <button
-              className="button subtle"
-              type="button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(url);
-                  setMessage('公開URLをコピーしました。');
-                } catch {
-                  setError('URLを選択してコピーしてください。');
-                }
+      <div className="publication-checks">
+        {publicationChecks.map((text, index) => (
+          <label key={text} className="publication-check">
+            <input
+              type="checkbox"
+              checked={checked[index]}
+              disabled={busy}
+              onChange={(event) => {
+                const value = event.target.checked;
+                setChecked((current) => current.map((item, i) => (i === index ? value : item)));
               }}
-            >
-              <Copy size={16} aria-hidden="true" />
-              コピー
-            </button>
-          </div>
-        </div>
-      )}
+            />
+            <span>{text}</span>
+          </label>
+        ))}
+      </div>
       {error && (
         <p role="alert" className="form-error">
           {error}
         </p>
       )}
-      {message && (
-        <p role="status" className="publication-success">
-          <Check size={16} aria-hidden="true" />
-          {message}
-        </p>
-      )}
       <div className="form-actions">
-        <span className="public-help">現在：{saved.is_public ? '公開中' : '非公開'}</span>
-        <button className="button primary" disabled={busy}>
-          {busy ? '保存中…' : '公開設定を保存'}
+        <button
+          ref={cancelRef}
+          type="button"
+          className="button secondary"
+          disabled={busy}
+          onClick={onClose}
+        >
+          キャンセル
+        </button>
+        <button
+          type="button"
+          className="button primary"
+          disabled={!allChecked || busy}
+          onClick={() => {
+            if (allChecked && !busy) onConfirm();
+          }}
+        >
+          {busy ? '保存中…' : 'OK'}
         </button>
       </div>
-    </form>
+    </dialog>
   );
 }
 function StockTopics({ stock }: { stock: PublicStock }) {
