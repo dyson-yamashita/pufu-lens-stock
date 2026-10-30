@@ -8,7 +8,13 @@ import type { Principal } from '../server/env';
 import score from './fixtures/pufu-sparse.json';
 
 const principal: Principal = {
-  user: { id: 'alice', name: 'Alice', email: 'alice@example.com', bio: '', avatar_url: null },
+  user: {
+    id: 'alice',
+    name: 'Alice',
+    onboarding_completed_at: '2026-10-30T00:00:00Z',
+    bio: '',
+    avatar_url: null,
+  },
   kind: 'mcp',
   tokenProjectId: 'alice-project',
 };

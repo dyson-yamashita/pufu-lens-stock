@@ -80,6 +80,81 @@
 * {
   box-sizing: border-box;
 }
+.onboarding-page {
+  min-height: 100svh;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.onboarding-card {
+  width: min(100%, 520px);
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+.onboarding-card h1 {
+  margin: 0;
+  font-size: clamp(23px, 5vw, 28px);
+}
+.onboarding-card form {
+  margin-top: 28px;
+}
+.onboarding-card form > label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.onboarding-card input:not([type='checkbox']) {
+  width: 100%;
+}
+.onboarding-consents {
+  margin: 24px 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.onboarding-consents legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.onboarding-consent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.onboarding-consent input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--button);
+  padding: 0;
+  align-self: center;
+}
+.onboarding-consent label {
+  display: block;
+  margin: 0;
+  padding: 10px 0;
+  line-height: 1.6;
+}
+.onboarding-consent a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.onboarding-submit {
+  width: 100%;
+  min-height: 48px;
+}
+.onboarding-logout {
+  display: block;
+  margin: 16px auto 0;
+  min-height: 44px;
+  font-size: 13px;
+}
 body {
   margin: 0;
 }

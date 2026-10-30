@@ -50,12 +50,11 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
           </div>
           <div>
             <h2>{user.name}</h2>
-            <p>{user.email}</p>
           </div>
         </div>
         <form onSubmit={submit} noValidate aria-busy={busy}>
           <label htmlFor="profile-name">
-            名前<span className="profile-required">必須</span>
+            ニックネーム（表示名）<span className="profile-required">必須</span>
           </label>
           <input
             id="profile-name"

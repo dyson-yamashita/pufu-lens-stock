@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import { URLSearchParams } from 'node:url';
+import { legalVersions } from '../shared/legal.ts';
 
 const base = process.env.SMOKE_BASE_URL ?? 'http://localhost:5173';
 // 同時実行枠が埋まると最短60秒待機するため、再試行と完了までの時間も含める。
@@ -26,6 +27,14 @@ async function request(path, method = 'GET', body) {
 }
 let projectId;
 try {
+  if (!(await request('/me')).user.onboarding_completed_at)
+    await request('/onboarding', 'POST', {
+      name: 'ローカル検証',
+      terms_accepted: true,
+      privacy_accepted: true,
+      terms_version: legalVersions.terms,
+      privacy_version: legalVersions.privacy,
+    });
   const project = await request('/projects', 'POST', {
     name: 'ローカル動作検証',
     description: '検証終了後に、この検証で作成したデータだけを削除します。',

@@ -162,7 +162,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       const error =
         caught instanceof HTTPException ? new ToolError(caught.message, caught.status) : caught;
       if (!(error instanceof ToolError)) {
-        console.error('MCP tool failed', error);
+        console.error('mcp_tool_failed');
         return { ...result({ error: '処理に失敗しました。', status: 500 }), isError: true };
       }
       return {
@@ -582,10 +582,16 @@ export async function handleMcp(request: Request, env: Env, executionCtx: Execut
   const ctx = executionCtx as McpContext;
   const parsed = z.object({ userId: id, projectId: id.nullable() }).safeParse(ctx.props);
   if (!parsed.success || !ctx.auth) return new Response('認証が必要です。', { status: 401 });
-  const user = await env.DB.prepare('SELECT id,name,bio,email,avatar_url FROM users WHERE id=?')
+  const user = await env.DB.prepare(
+    'SELECT id,name,bio,onboarding_completed_at,avatar_url FROM users WHERE id=?',
+  )
     .bind(parsed.data.userId)
     .first<User>();
   if (!user) return new Response('ユーザーが見つかりません。', { status: 401 });
+  if (!user.onboarding_completed_at)
+    return new Response('Web画面でニックネームの登録と規約への同意を完了してください。', {
+      status: 403,
+    });
   const principal: Principal = { user, kind: 'mcp', tokenProjectId: parsed.data.projectId };
   if (
     principal.tokenProjectId &&

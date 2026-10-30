@@ -34,6 +34,8 @@ export async function testApp(
     projectListVisibilityMigration?: boolean;
     pufuImageLinksMigration?: boolean;
     projectQuestionSettingsMigration?: boolean;
+    onboarding?: boolean;
+    onboardingMigration?: boolean;
   } = {},
 ) {
   const runtime = new Miniflare({
@@ -100,6 +102,14 @@ export async function testApp(
     !migrations.includes('0027_project_question_settings.sql')
   )
     migrations.push('0027_project_question_settings.sql');
+  if (options.onboardingMigration !== false && !migrations.includes('0033_privacy_onboarding.sql'))
+    migrations.push('0033_privacy_onboarding.sql');
+  if (
+    options.onboardingMigration !== false &&
+    migrations.includes('0009_pufu_scores.sql') &&
+    !migrations.includes('0034_pufu_memory_privacy.sql')
+  )
+    migrations.push('0034_pufu_memory_privacy.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(
@@ -148,7 +158,9 @@ export async function testApp(
   } as unknown as ExecutionContext;
   await DB.batch([
     DB.prepare(
-      "INSERT INTO users (id, google_sub, name, email) VALUES ('alice', 'google-alice', 'Alice', 'alice@example.com'), ('bob', 'google-bob', 'Bob', 'bob@example.com')",
+      migrations.includes('0033_privacy_onboarding.sql')
+        ? `INSERT INTO users (id,google_sub,name,onboarding_completed_at) VALUES ('alice','google-alice','Alice',${options.onboarding === false ? 'NULL' : "'2026-10-30T00:00:00Z'"}),('bob','google-bob','Bob',${options.onboarding === false ? 'NULL' : "'2026-10-30T00:00:00Z'"})`
+        : "INSERT INTO users (id, google_sub, name, email) VALUES ('alice', 'google-alice', 'Alice', 'alice@example.com'), ('bob', 'google-bob', 'Bob', 'bob@example.com')",
     ),
     DB.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').bind(
       await hash('alice-session'),

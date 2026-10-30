@@ -95,7 +95,7 @@ it('他人・未認証・別サイト・トークン・MCPの更新と不正な�
     (await favorite('owned', true, { headers: { Authorization: `Bearer ${token}` } })).status,
   ).toBe(403);
   const user = await app.env.DB.prepare(
-    "SELECT id,name,bio,email,avatar_url FROM users WHERE id='alice'",
+    "SELECT id,name,bio,onboarding_completed_at,avatar_url FROM users WHERE id='alice'",
   ).first<User>();
   const mcp = createApp({ kind: 'mcp', user: user!, tokenProjectId: null });
   expect(

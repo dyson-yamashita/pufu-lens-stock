@@ -154,8 +154,29 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
       ]);
       return JSON.parse(row.input_json) as PufuContext;
     });
-    if (context) {
-      const score = await aiStep(env, job, step, 'generate-pufu', () => generatePufu(env, context));
+    if (
+      context &&
+      (await env.DB.prepare(
+        "SELECT id FROM pufu_scores WHERE id=? AND user_id=? AND generation=? AND status IN ('queued','generating') AND NOT EXISTS(SELECT 1 FROM privacy_cleanup_jobs WHERE id=?)",
+      )
+        .bind(job.target_id, job.user_id, job.revision, job.id)
+        .first())
+    ) {
+      const score = await aiStep(env, job, step, 'generate-pufu', async () => {
+        // load-pufu-contextが旧Workflowのキャッシュでも、移行前のメモリは再送しない。
+        const privacy = await env.DB.prepare(
+          'SELECT onboarding_completed_at,memory_privacy_revision FROM users WHERE id=?',
+        )
+          .bind(job.user_id)
+          .first<{ onboarding_completed_at: string | null; memory_privacy_revision: number }>();
+        const userMemory =
+          privacy?.onboarding_completed_at &&
+          context.userMemory &&
+          context.userMemory.revision >= privacy.memory_privacy_revision
+            ? context.userMemory
+            : null;
+        return generatePufu(env, { ...context, userMemory });
+      });
       await step.do('save-pufu', async () => {
         const json = JSON.stringify(score);
         await env.DB.batch([

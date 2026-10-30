@@ -53,6 +53,7 @@ import YouTubePlayer from './YouTubePlayer';
 import YouTubeThumbnail from './YouTubeThumbnail';
 import { api, ApiError, createRequestId, send } from './api';
 import Profile from './Profile';
+import Onboarding from './Onboarding';
 import Questions, { StockQuestion } from './Questions';
 import QuestionForm from './QuestionForm';
 import SearchField from './SearchField';
@@ -283,10 +284,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
                 : 'ログインの準備中です。管理者にお問い合わせください。'}
             </p>
           )}
-          <div className="login-legal">
-            <p>利用開始前に、以下をご確認・ご同意ください。</p>
-            <LegalLinks />
-          </div>
           {config.demo && (
             <button
               className="button secondary demo-login"
@@ -565,7 +562,7 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    if (!user) return;
+    if (!user?.onboarding_completed_at) return;
     const controller = new AbortController();
     setLoading(true);
     let inFlight = false;
@@ -721,6 +718,8 @@ export default function App() {
         }}
       />
     );
+  if (!user.onboarding_completed_at)
+    return <Onboarding onComplete={setUser} onLogout={() => setUser(null)} />;
   const heading =
     route.view === 'settings'
       ? selected
@@ -911,7 +910,7 @@ export default function App() {
             <div className="avatar">{user.name.slice(0, 1)}</div>
             <div className="user-info">
               <strong>{user.name}</strong>
-              <span>{config.demo ? 'ローカルデモ' : user.email}</span>
+              {config.demo && <span>ローカルデモ</span>}
             </div>
             <button
               className="icon-button"

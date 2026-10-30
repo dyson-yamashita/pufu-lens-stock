@@ -268,6 +268,18 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
     if (!isDemo(this.env)) await step.sleep('coalesce-saves', '30 seconds');
     try {
       const project = job.kind === 'project_memory';
+      // 古いWorkflowのステップが再開されても、移行前の本人情報を再利用しない。
+      if (!project) {
+        const current = await this.env.DB.prepare(
+          'SELECT memory_revision FROM users WHERE id=? AND onboarding_completed_at IS NOT NULL',
+        )
+          .bind(job.user_id)
+          .first<{ memory_revision: number }>();
+        if (!current || current.memory_revision !== job.revision) {
+          await done(this.env, job.id);
+          return;
+        }
+      }
       const owner = await step.do('load-current-revision', async () => {
         const row = project
           ? await this.env.DB.prepare(
@@ -301,7 +313,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         if (!rows.hasMore) break;
       }
       const context = {
-        name: owner.name,
+        name: project ? owner.name : '',
         description: owner.description,
         scope: project ? 'project' : 'user',
       };

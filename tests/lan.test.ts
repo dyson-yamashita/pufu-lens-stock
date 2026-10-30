@@ -32,6 +32,20 @@ describe('同じWi-Fiからのローカルデモ', () => {
     const identity = await app.request('/api/v1/me', { host: lanOrigin, headers });
     expect(identity.status).toBe(200);
     expect(await identity.json()).toMatchObject({ demo: true, user: { id: expect.any(String) } });
+    expect((await app.request('/api/v1/projects', { host: lanOrigin, headers })).status).toBe(403);
+    const accepted = await app.request('/api/v1/onboarding', {
+      method: 'POST',
+      host: lanOrigin,
+      headers,
+      body: {
+        name: 'LAN利用者',
+        terms_accepted: true,
+        privacy_accepted: true,
+        terms_version: '2026-10-30',
+        privacy_version: '2026-10-30',
+      },
+    });
+    expect(accepted.status).toBe(200);
     const { projects } = (await (
       await app.request('/api/v1/projects', { host: lanOrigin, headers })
     ).json()) as { projects: { id: string }[] };

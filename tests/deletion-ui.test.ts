@@ -104,7 +104,7 @@ beforeEach(() => {
           user: {
             id: 'user',
             name: '利用者',
-            email: 'user@example.com',
+            onboarding_completed_at: '2026-10-30T00:00:00Z',
             bio: '',
             avatar_url: null,
           },

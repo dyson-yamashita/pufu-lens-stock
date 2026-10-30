@@ -161,6 +161,7 @@ describe('本文取得から要約とメモリまで', () => {
     await runLatestMemory(testCase.kind, testCase.target);
     expect(run).toHaveBeenCalledOnce();
     expect(JSON.parse(run.mock.calls[0][1].messages[1].content).context).toMatchObject({
+      name: testCase.scope === 'user' ? '' : 'Alice project',
       scope: testCase.scope,
       description: testCase.description,
     });
@@ -280,6 +281,20 @@ describe('本文取得から要約とメモリまで', () => {
         "SELECT id FROM processing_jobs WHERE kind = 'project_memory' AND target_id = 'alice-second' AND revision = 2",
       ).first(),
     ).not.toBeNull();
+  });
+  it('未登録の間は以前に予約されたユーザーメモリを生成しない', async () => {
+    await savedArticle();
+    articleFetch();
+    await runArticle();
+    await app.env.DB.prepare(
+      "UPDATE users SET onboarding_completed_at=NULL WHERE id='alice'",
+    ).run();
+    await runLatestMemory('user_memory', 'alice');
+    expect(
+      await app.env.DB.prepare(
+        "SELECT id FROM memories WHERE user_id='alice' AND project_id IS NULL",
+      ).first(),
+    ).toBeNull();
   });
   it('メモリ生成中に自己紹介が変わったら古い生成結果を公開しない', async () => {
     await savedArticle();

@@ -8,6 +8,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { z } from 'zod';
 import {
   profileSchema,
+  onboardingSchema,
   stockInputSchema,
   stockListOptionsSchema,
   stockSearchOptionsSchema,
@@ -38,6 +39,7 @@ import {
   queueQuestionJobStatement,
 } from './db';
 import { dispatchJobs } from './jobs';
+import { consumeMcpLogin } from './mcp-login';
 import { cleanupAccount, requestAccountDeletion } from './account';
 import { reserveOperation, assertOperation, retryAt } from './usage';
 import { memoryCoverage, memoryId } from './memory';
@@ -183,6 +185,18 @@ export function createApp(trustedPrincipal?: Principal) {
     const principal = trustedPrincipal ?? (await authenticate(c));
     c.set('principal', principal);
     if (
+      !principal.user.onboarding_completed_at &&
+      !(
+        principal.kind === 'session' &&
+        ((c.req.path === '/api/v1/me' && ['GET', 'DELETE'].includes(c.req.method)) ||
+          (c.req.method === 'POST' &&
+            ['/api/v1/onboarding', '/api/v1/logout'].includes(c.req.path)))
+      )
+    )
+      throw new HTTPException(403, {
+        message: 'ニックネームの登録と利用規約・プライバシーポリシーへの同意を完了してください。',
+      });
+    if (
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
@@ -266,6 +280,27 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/me', (c) =>
     c.json({ user: c.get('principal').user, demo: isDemoOrigin(c.env, new URL(c.req.url).origin) }),
   );
+  app.post('/api/v1/onboarding', async (c) => {
+    const principal = c.get('principal');
+    if (principal.kind !== 'session') throw new HTTPException(403);
+    const input = await body(c, onboardingSchema);
+    const registered = await c.env.DB.batch([
+      c.env.DB.prepare(
+        'UPDATE users SET name=?,onboarding_completed_at=?,terms_version=?,privacy_version=?,memory_revision=memory_revision+1 WHERE id=? AND onboarding_completed_at IS NULL',
+      ).bind(input.name, now(), input.terms_version, input.privacy_version, principal.user.id),
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO processing_jobs(id,user_id,kind,target_id,revision) SELECT 'um-'||id||'-'||memory_revision,id,'user_memory',id,memory_revision FROM users WHERE id=? AND changes()=1 AND EXISTS(SELECT 1 FROM stocks WHERE user_id=users.id)",
+      ).bind(principal.user.id),
+    ]);
+    const user = await c.env.DB.prepare(
+      'SELECT id,name,bio,avatar_url,onboarding_completed_at FROM users WHERE id=?',
+    )
+      .bind(principal.user.id)
+      .first<User>();
+    if (!user) throw new HTTPException(401);
+    if (registered[1].meta.changes) c.executionCtx.waitUntil(dispatchJobs(c.env));
+    return c.json({ user, redirect_to: await consumeMcpLogin(c) });
+  });
   app.patch('/api/v1/me', async (c) => {
     const data = await body(c, profileSchema);
     const userId = c.get('principal').user.id;
@@ -275,7 +310,7 @@ export function createApp(trustedPrincipal?: Principal) {
         "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'um-' || id || '-' || (memory_revision + 1), id, 'user_memory', id, memory_revision + 1 FROM users WHERE id = ? AND bio <> ?",
       ).bind(userId, data.bio),
       c.env.DB.prepare(
-        'UPDATE users SET name = ?, memory_revision = memory_revision + CASE WHEN bio <> ? THEN 1 ELSE 0 END, bio = ? WHERE id = ? RETURNING id, name, bio, email, avatar_url',
+        'UPDATE users SET name = ?, memory_revision = memory_revision + CASE WHEN bio <> ? THEN 1 ELSE 0 END, bio = ? WHERE id = ? RETURNING id, name, bio, onboarding_completed_at, avatar_url',
       ).bind(data.name, data.bio, data.bio, userId),
     ]);
     const user = updated.results[0];
@@ -1475,7 +1510,7 @@ export function createApp(trustedPrincipal?: Principal) {
     }
     if (error instanceof HTTPException)
       return c.json({ error: error.message || 'リクエストを確認してください。' }, error.status);
-    console.error('api_request_failed', { path: c.req.path });
+    console.error('api_request_failed');
     return c.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, 500);
   });
   return app;

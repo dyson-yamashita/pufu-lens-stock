@@ -62,7 +62,13 @@ beforeEach(() => {
       return { demo: false, googleConfigured: true, aiEnabled: false, aiModel: null };
     if (url.pathname === '/api/v1/me')
       return {
-        user: { id: 'user', name: '利用者', email: 'user@example.com', bio: '', avatar_url: null },
+        user: {
+          id: 'user',
+          name: '利用者',
+          onboarding_completed_at: '2026-10-30T00:00:00Z',
+          bio: '',
+          avatar_url: null,
+        },
       };
     if (url.pathname === '/api/v1/projects')
       return {

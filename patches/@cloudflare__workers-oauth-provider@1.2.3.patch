@@ -1,0 +1,31 @@
+diff --git a/dist/oauth-provider.js b/dist/oauth-provider.js
+index c12a1c7aee8320c923c86f7fd9c69d7046b1c92d..651f258df402339d7ee030abc20456d60fe86edb 100644
+--- a/dist/oauth-provider.js
++++ b/dist/oauth-provider.js
+@@ -3426,7 +3426,7 @@ var OAuthProviderImpl = class {
+ 			if (error instanceof OAuthError && error.code === "invalid_grant") try {
+ 				await this.createOAuthHelpers(env).revokeGrant(options.grantId, options.userId);
+ 			} catch (revokeError) {
+-				console.warn(`Failed to revoke grant ${options.grantId} after tokenExchangeCallback answered invalid_grant:`, revokeError);
++				console.warn("oauth_grant_revocation_failed");
+ 			}
+ 			throw error;
+ 		}
+@@ -4690,7 +4690,7 @@ var OAuthProviderImpl = class {
+ 			const current = await env.OAUTH_KV.get(`client:${client.clientId}`, { type: "json" });
+ 			if (current) await this.putRegisteredClient(env, current, now);
+ 		} catch (error) {
+-			console.warn(`Failed to renew client registration ${client.clientId}:`, error);
++			console.warn("oauth_client_registration_renewal_failed");
+ 		}
+ 	}
+ 	async getClient(env, clientId) {
+@@ -4703,7 +4703,7 @@ var OAuthProviderImpl = class {
+ 			try {
+ 				return await fetchClientIdMetadataDocument(clientId, this.serverCapabilities);
+ 			} catch (error) {
+-				console.warn(`CIMD fetch failed for ${clientId}:`, error instanceof Error ? error.message : error);
++				console.warn("oauth_client_metadata_fetch_failed");
+ 				throw new CimdFetchError(clientId, error);
+ 			}
+ 		}

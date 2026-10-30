@@ -174,7 +174,13 @@ describe('公開プロジェクトの参照専用API', () => {
       const mcp = createApp({
         kind: 'mcp',
         tokenProjectId: null,
-        user: { id: 'alice', name: 'Alice', email: 'alice@example.com', bio: '', avatar_url: null },
+        user: {
+          id: 'alice',
+          name: 'Alice',
+          onboarding_completed_at: '2026-10-30T00:00:00Z',
+          bio: '',
+          avatar_url: null,
+        },
       });
       const viaMcp = await mcp.request(
         'http://localhost:5173/api/v1/projects/alice-project/publication',

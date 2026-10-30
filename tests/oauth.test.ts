@@ -11,6 +11,7 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
   let badNonce = false;
   let badSignature = false;
   let googleSub = 'google-alice';
+  let extraProfile = false;
   beforeEach(async () => {
     app = await testApp();
     app.env.GOOGLE_CLIENT_ID = 'test-client';
@@ -19,6 +20,7 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
     badNonce = false;
     badSignature = false;
     googleSub = 'google-alice';
+    extraProfile = false;
     key = await crypto.subtle.generateKey(
       {
         name: 'RSASSA-PKCS1-v1_5',
@@ -58,9 +60,9 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
               iss: 'https://accounts.google.com',
               aud: 'test-client',
               sub: googleSub,
-              name: 'Alice',
-              email: 'alice@example.com',
-              email_verified: true,
+              ...(extraProfile
+                ? { name: 'Googleの本名', email: 'private@example.com', email_verified: true }
+                : {}),
               nonce: badNonce ? 'wrong-nonce' : nonce,
               iat: Math.floor(Date.now() / 1000),
               exp: Math.floor(Date.now() / 1000) + 300,
@@ -98,6 +100,7 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
     nonce = url.searchParams.get('nonce')!;
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('code_challenge')).toBeTruthy();
+    expect(url.searchParams.get('scope')).toBe('openid');
     return { state, headers: { Cookie: `stock_oauth=${state}` } };
   }
   it('正常な署名とnonceでログインし、subに対応したユーザーのセッションを作る', async () => {
@@ -156,6 +159,7 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
     expect(expired.headers.get('Location')).toBe('/');
   });
   it('編集した名前と自己紹介をGoogle再ログインで上書きしない', async () => {
+    extraProfile = true;
     expect(
       (
         await app.request('/api/v1/me', {
@@ -179,11 +183,11 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
       id: 'alice',
       name: '自分で決めた名前',
       bio: '自分の自己紹介',
-      email: 'alice@example.com',
     });
   });
-  it('初回ログインはGoogleの名前と空の自己紹介でプロフィールを作る', async () => {
+  it('初回ログインで余分な名前・メールが返っても利用せず、未登録の状態を作る', async () => {
     googleSub = 'google-new-user';
+    extraProfile = true;
     const { state, headers } = await login();
     const response = await app.request(`/api/auth/google/callback?state=${state}&code=test-code`, {
       headers,
@@ -196,8 +200,12 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
       headers: { Cookie: session.split(';')[0] },
     });
     const { user } = (await identity.json()) as { user: User };
-    expect(user).toMatchObject({ name: 'Alice', bio: '', email: 'alice@example.com' });
+    expect(user).toMatchObject({ name: '', bio: '', onboarding_completed_at: null });
+    expect(user).not.toHaveProperty('email');
     expect(user.id).not.toBe('alice');
+    const saved = await app.env.DB.prepare('SELECT * FROM users WHERE id=?').bind(user.id).first();
+    expect(JSON.stringify(saved)).not.toContain('private@example.com');
+    expect(JSON.stringify(saved)).not.toContain('Googleの本名');
   });
   it('改ざんされたIDトークンの署名を拒否する', async () => {
     const { state, headers } = await login();
@@ -209,5 +217,49 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
     expect(
       response.headers.getSetCookie().some((cookie) => cookie.startsWith('stock_session=')),
     ).toBe(false);
+  });
+  it('未同意で再ログインしても登録を要求し、OK後はニックネームで利用できる', async () => {
+    await app.env.DB.prepare(
+      "UPDATE users SET name='',onboarding_completed_at=NULL WHERE id='alice'",
+    ).run();
+    const signIn = async () => {
+      const { state, headers } = await login();
+      const response = await app.request(
+        `/api/auth/google/callback?state=${state}&code=test-code`,
+        { headers },
+      );
+      return {
+        Cookie: response.headers
+          .getSetCookie()
+          .find((cookie) => cookie.startsWith('stock_session='))!
+          .split(';')[0],
+      };
+    };
+    await signIn();
+    const session = await signIn();
+    const before = await app.request('/api/v1/me', { headers: session });
+    expect(await before.json()).toMatchObject({
+      user: { name: '', onboarding_completed_at: null },
+    });
+    expect((await app.request('/api/v1/projects', { headers: session })).status).toBe(403);
+    expect(
+      (
+        await app.request('/api/v1/onboarding', {
+          method: 'POST',
+          headers: session,
+          body: {
+            name: 'ふくろう',
+            terms_accepted: true,
+            privacy_accepted: true,
+            terms_version: '2026-10-30',
+            privacy_version: '2026-10-30',
+          },
+        })
+      ).status,
+    ).toBe(200);
+    const after = await app.request('/api/v1/me', { headers: await signIn() });
+    expect(await after.json()).toMatchObject({
+      user: { id: 'alice', name: 'ふくろう', onboarding_completed_at: expect.any(String) },
+    });
   });
 });

@@ -89,7 +89,13 @@ describe('X外部連携と本文補完', () => {
         ).status,
       ).toBe(403);
       const mcp = createApp({
-        user: { id: 'alice', name: 'Alice', email: '', bio: '', avatar_url: null },
+        user: {
+          id: 'alice',
+          name: 'Alice',
+          onboarding_completed_at: '2026-10-30T00:00:00Z',
+          bio: '',
+          avatar_url: null,
+        },
         kind: 'mcp',
         tokenProjectId: null,
       });
