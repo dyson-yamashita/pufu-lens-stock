@@ -322,6 +322,10 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
               <Sparkles size={17} aria-hidden="true" />
               記事からメモリへ
             </span>
+            <span>
+              <Network size={17} aria-hidden="true" />
+              MCPでAIと連携
+            </span>
           </div>
         </div>
         <div className="login-art" aria-hidden="true">
@@ -354,8 +358,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             </div>
             <ArrowUpRight size={20} />
           </div>
-          <span className="art-dot dot-one" />
-          <span className="art-dot dot-two" />
         </div>
       </main>
       <PublicProjectDirectory />

@@ -2358,6 +2358,7 @@ p {
 }
 .login-features {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   color: var(--muted);
   margin-top: 31px;
@@ -2476,22 +2477,6 @@ p {
   right: 15px;
   top: 40px;
   transform: rotate(6deg);
-}
-.art-dot {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  background: #92a4bf;
-  border-radius: 50%;
-}
-.dot-one {
-  left: 9px;
-  top: 113px;
-}
-.dot-two {
-  right: 6px;
-  bottom: 85px;
-  background: #566b87;
 }
 @media (min-width: 1600px) {
   .page-body {
@@ -3728,12 +3713,15 @@ article.pufu-list-item {
 }
 .public-tabs {
   display: flex;
+  overflow-x: auto;
   gap: 8px;
   border-bottom: 1px solid var(--border);
   margin: 30px 0;
 }
 .public-tabs a {
   display: flex;
+  flex-shrink: 0;
+  white-space: nowrap;
   align-items: center;
   gap: 9px;
   padding: 16px;
@@ -3749,6 +3737,16 @@ article.pufu-list-item {
 }
 .public-tabs a span {
   font-size: 12px;
+}
+@media (max-width: 550px) {
+  .public-tabs {
+    gap: 0;
+  }
+  .public-tabs a {
+    gap: 6px;
+    padding: 14px 8px;
+    font-size: 13px;
+  }
 }
 .public-meta {
   display: flex;
