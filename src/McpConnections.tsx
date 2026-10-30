@@ -4,8 +4,9 @@ import { Copy, Layers, LoaderCircle, Trash2 } from 'lucide-react';
 import XIntegration from './XIntegration';
 import { api } from './api';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
+import { translate } from '../shared/locale';
 export default function McpConnections() {
-  useLanguage();
+  const { language } = useLanguage();
   const [connections, setConnections] = useState<McpConnection[]>([]);
   const [url, setUrl] = useState(() => `${window.location.origin}/mcp`);
   const [enabled, setEnabled] = useState<boolean | null>(null);
@@ -115,7 +116,11 @@ export default function McpConnections() {
                   <p>{connection.project_name ?? t('ui.app.all_projects')}</p>
                   <p>
                     {connection.scopes
-                      .map((scope) => mcpScopes[scope as keyof typeof mcpScopes] ?? scope)
+                      .map((scope) =>
+                        Object.hasOwn(mcpScopes, scope)
+                          ? translate(language, mcpScopes[scope as keyof typeof mcpScopes])
+                          : scope,
+                      )
                       .join(t('ui.comments.separator'))}
                   </p>
                   <small>

@@ -263,3 +263,22 @@ it('a completed Japanese account overrides an explicit local English preference'
   expect(document.querySelector('h1')?.textContent).toBe('すべてのストック');
   expect(document.documentElement.lang).toBe('ja');
 });
+
+it.each([
+  ['ja', 'Authorization: Bearer <発行したトークン>'],
+  ['en', 'Authorization: Bearer <your token>'],
+] as const)(
+  'shows readable Bearer placeholder brackets in the %s shortcut instructions',
+  async (language, placeholder) => {
+    user = completed(language);
+    window.location.hash = '#shortcuts';
+    const load = vi.mocked(api).getMockImplementation()!;
+    vi.mocked(api).mockImplementation(async (path, options) =>
+      path === '/api/v1/tokens' ? { tokens: [] } : load(path, options),
+    );
+    await render();
+    const example = document.querySelector('#shortcut-body-example')!;
+    expect(example.textContent?.split('\n')[0]).toBe(placeholder);
+    expect(example.querySelector('your, token')).toBeNull();
+  },
+);

@@ -316,7 +316,7 @@ export const en: Record<string, string> = {
   'ui.app.copy_save_api_url': 'Copy save API URL',
   'ui.app.could_not_copy_select_and_copy_the_displayed_url':
     'Could not copy. Select and copy the displayed URL.',
-  'ui.app.authorization_bearer_lt_your_token_gt': 'Authorization: Bearer &lt;your token&gt;',
+  'ui.app.authorization_bearer_lt_your_token_gt': 'Authorization: Bearer <your token>',
   'ui.app.example_destination_optional': 'Example destination (optional)',
   'ui.app.unspecified_use_the_token_s_settings': "Unspecified (use the token's settings)",
   'ui.app.selecting_a_project_puts_its_actual_id_in_the':
@@ -527,7 +527,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.no_questions_or_insights_available_for_publication_yet':
     'No questions or insights available for publication yet.',
   'ui.public_projects.phase': 'Phase ',
-  'ui.public_projects.separator': ' ·',
+  'ui.public_projects.separator': ' · ',
   'ui.public_projects.reflection': 'Reflection',
   'ui.public_projects.no_pufu_available_for_publication_yet':
     'No Pufu available for publication yet.',

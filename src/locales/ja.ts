@@ -313,7 +313,7 @@ export const ja: Record<string, string> = {
   'ui.app.copy_save_api_url': '保存APIのURLをコピー',
   'ui.app.could_not_copy_select_and_copy_the_displayed_url':
     'コピーできませんでした。表示されたURLを選択してコピーしてください。',
-  'ui.app.authorization_bearer_lt_your_token_gt': 'Authorization: Bearer &lt;発行したトークン&gt;',
+  'ui.app.authorization_bearer_lt_your_token_gt': 'Authorization: Bearer <発行したトークン>',
   'ui.app.example_destination_optional': '設定例の保存先（任意）',
   'ui.app.unspecified_use_the_token_s_settings': '指定しない（トークンの設定に従う）',
   'ui.app.selecting_a_project_puts_its_actual_id_in_the':
@@ -525,7 +525,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.no_questions_or_insights_available_for_publication_yet':
     '公開できる問い・気づきはまだありません。',
   'ui.public_projects.phase': '第',
-  'ui.public_projects.separator': '局面 ·',
+  'ui.public_projects.separator': ' · ',
   'ui.public_projects.reflection': '振り返り',
   'ui.public_projects.no_pufu_available_for_publication_yet': '公開できるプ譜はまだありません。',
   'ui.public_projects.question_or_insight_details': '問い・気づきの詳細',

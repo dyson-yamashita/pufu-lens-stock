@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PublicProjectPage from '../src/PublicProjects';
 import { api } from '../src/api';
+import { setLanguage } from '../src/i18n';
 
 vi.mock('../src/PublicPufuScore', () => ({ default: () => null }));
 vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
@@ -264,4 +265,31 @@ it('プ譜がない場合は空の状態を表示する', async () => {
   expect(document.querySelector('.public-message')?.textContent).toContain(
     '公開できるプ譜はまだありません',
   );
+});
+
+it.each([
+  ['ja', 1, '第1局面 · プ譜'],
+  ['ja', 2, '第2局面 · 振り返り'],
+  ['en', 1, 'Phase 1 · Pufu'],
+  ['en', 2, 'Phase 2 · Reflection'],
+] as const)('renders one complete phase label for %s phase %s', async (language, phase, label) => {
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (url, options) => {
+    if (new URL(url, 'https://example.com').pathname.endsWith('/pufus'))
+      return {
+        items: [
+          { id: 'pufu', task: '保存した課題', current_phase: phase, updated_at: '2026-10-18' },
+        ],
+        total: 1,
+        page: 1,
+        has_more: false,
+      };
+    return load(url, options);
+  });
+  setLanguage(language);
+  await render('#pufus');
+  const card = document.querySelector('.public-pufu-card')!;
+  expect(card.querySelector('h3')?.textContent).toBe('保存した課題');
+  expect(card.querySelector('.public-help')?.textContent).toBe(label);
+  expect(card.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
 });
