@@ -18,7 +18,7 @@ describe('言語の解決', () => {
     expect(resolveLanguage(null, 'en')).toBe('en');
     expect(languageSchema.safeParse('fr').success).toBe(false);
     expect(translate('en', 'memory.interest', { topic: 'Design', count: 2 })).toBe(
-      'Collected 2 articles about “Design”.',
+      'Collected articles about “Design”: 2.',
     );
     expect(translate('en', 'Unknown message')).toBe('Unknown message');
   });

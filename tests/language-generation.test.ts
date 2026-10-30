@@ -73,7 +73,7 @@ describe('生成言語の選択', () => {
       /^What/,
     );
     const memory = await buildMemory(env, [source], context, direct, 'en');
-    expect(memory.interests[0]).toContain('1 article');
+    expect(memory.interests[0]).toBe('Collected articles about “Design”: 1.');
     expect(memory.knowledge[0].text).toBe('根拠を確認する。');
     expect(memoryText(memory, 'en')).toContain('Interests');
     expect(memoryText(empty, 'en')).toMatch(/article summaries/);

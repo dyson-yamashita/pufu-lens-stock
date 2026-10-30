@@ -1,7 +1,7 @@
 import type { generationJa } from './generation-ja';
 
 export const generationEn = {
-  'memory.interest': 'Collected {{count}} articles about “{{topic}}”.',
+  'memory.interest': 'Collected articles about “{{topic}}”: {{count}}.',
   'memory.empty': 'Interests and knowledge will appear here as article summaries are completed.',
   'memory.interests': 'Interests',
   'memory.knowledge': 'Knowledge from articles',
