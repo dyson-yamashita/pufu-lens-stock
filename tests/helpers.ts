@@ -36,6 +36,7 @@ export async function testApp(
     projectQuestionSettingsMigration?: boolean;
     onboarding?: boolean;
     onboardingMigration?: boolean;
+    languageMigration?: boolean;
   } = {},
 ) {
   const runtime = new Miniflare({
@@ -110,6 +111,14 @@ export async function testApp(
     !migrations.includes('0034_pufu_memory_privacy.sql')
   )
     migrations.push('0034_pufu_memory_privacy.sql');
+  // Jobs recreated by historical migrations must be upgraded only after the
+  // migration under test. Those tests opt out and apply it before current APIs.
+  if (
+    options.languageMigration !== false &&
+    (migrations.includes('0009_pufu_scores.sql') || options.languageMigration === true) &&
+    !migrations.includes('0036_language.sql')
+  )
+    migrations.push('0036_language.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(
@@ -259,4 +268,5 @@ export async function upgradeRelationsSchema(DB: D1Database) {
     await applyMigration(DB, '0030_multiple_relations.sql');
   if (!(await columns('pufu_scores')).includes('is_favorite'))
     await applyMigration(DB, '0031_pufu_favorites.sql');
+  if (!(await columns('users')).includes('language')) await applyMigration(DB, '0036_language.sql');
 }

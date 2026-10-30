@@ -1,25 +1,28 @@
 import type { Env, Job, JobStateGuard } from './env';
+import { resolveLanguage, type Language } from '../shared/locale';
 
 export const now = () => new Date().toISOString();
 export function queueQuestionJobStatement(
   env: Env,
   stockId: string | null = null,
   articleId: string | null = null,
+  language?: Language,
 ): D1PreparedStatement {
   return env.DB.prepare(
-    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
-  ).bind(stockId, stockId, articleId, articleId);
+    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation, ? FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
+  ).bind(language ?? '', stockId, stockId, articleId, articleId);
 }
 export function queueQuestionStatements(
   env: Env,
   stockId: string | null = null,
   articleId: string | null = null,
+  language?: Language,
 ): D1PreparedStatement[] {
   return [
     env.DB.prepare(
       "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
     ).bind(stockId, stockId, articleId, articleId),
-    queueQuestionJobStatement(env, stockId, articleId),
+    queueQuestionJobStatement(env, stockId, articleId, language),
   ];
 }
 export function jobFailureStatements(
@@ -72,14 +75,15 @@ function userMemoryStatements(
   userId: string,
   guard = '',
   guardParams: string[] = [],
+  language?: Language,
 ): D1PreparedStatement[] {
   return [
     env.DB.prepare(
       `UPDATE users SET memory_revision = memory_revision + 1 WHERE id = ?${guard}`,
     ).bind(userId, ...guardParams),
     env.DB.prepare(
-      `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision FROM users WHERE id = ?${guard}`,
-    ).bind(userId, ...guardParams),
+      `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision, ? FROM users WHERE id = ?${guard}`,
+    ).bind(language ?? '', userId, ...guardParams),
   ];
 }
 export function dirtyMemoryStatements(
@@ -113,6 +117,7 @@ export function articleMemoryStatements(
   env: Env,
   userId: string,
   articleId: string,
+  language?: Language,
 ): D1PreparedStatement[] {
   // 要約確定と同じトランザクション内で最新の所属を読み、同時保存を取りこぼさない。
   return [
@@ -120,13 +125,14 @@ export function articleMemoryStatements(
       'UPDATE projects SET memory_revision = memory_revision + 1 WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)',
     ).bind(userId, articleId),
     env.DB.prepare(
-      "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision FROM projects WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)",
-    ).bind(userId, articleId),
+      "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision, ? FROM projects WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)",
+    ).bind(language ?? '', userId, articleId),
     ...userMemoryStatements(
       env,
       userId,
       ' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id=s.project_id WHERE s.article_id=? AND p.include_in_user_memory=1)',
       [articleId],
+      language,
     ),
   ];
 }
@@ -141,13 +147,14 @@ export function memorySaveStatement(
     articleCount: number;
     model: string;
     contextHash?: string;
+    language?: Language;
   },
 ): D1PreparedStatement {
   const predicate = input.projectId
     ? 'EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ? AND memory_revision = ?)'
     : 'EXISTS (SELECT 1 FROM users WHERE id = ? AND id = ? AND memory_revision = ?)';
   return env.DB.prepare(
-    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at, context_hash) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at, context_hash = excluded.context_hash, force_full = 0`,
+    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at, context_hash, language) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at, context_hash = excluded.context_hash, language = excluded.language, force_full = 0`,
   ).bind(
     input.projectId ? `project-${input.projectId}` : `user-${input.userId}`,
     input.userId,
@@ -159,6 +166,7 @@ export function memorySaveStatement(
     input.model,
     now(),
     input.contextHash ?? '',
+    resolveLanguage(input.language),
     input.projectId ?? input.userId,
     input.userId,
     input.revision,

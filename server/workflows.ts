@@ -30,6 +30,7 @@ import { dispatchJobs } from './jobs';
 import type { ArticleSummary, MemoryData } from '../shared/domain';
 import { runPufu } from './pufu';
 import { aiStep, deferLimitedJob } from './usage';
+import { resolveLanguage } from '../shared/locale';
 
 const retry = {
   retries: { limit: 2, delay: '5 seconds' as const, backoff: 'exponential' as const },
@@ -90,7 +91,7 @@ async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
     });
     if (!source) return;
     const question = await aiStep(env, job, step, 'generate-question', () =>
-      generateQuestion(env, source),
+      generateQuestion(env, source, resolveLanguage(job.language)),
     );
     await step.do('save-question', async () => {
       await env.DB.batch([
@@ -218,8 +219,12 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         if (!content) throw new Error('保存した本文が見つかりません。');
         return content.text();
       });
-      const summary = await summarize(this.env, title, text, (name, operation) =>
-        aiStep(this.env, job, step, name, operation),
+      const summary = await summarize(
+        this.env,
+        title,
+        text,
+        (name, operation) => aiStep(this.env, job, step, name, operation),
+        resolveLanguage(job.language),
       );
       await step.do('commit-summary', async () => {
         const current = await this.env.DB.prepare(
@@ -241,8 +246,13 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
             article.id,
             job.revision,
           ),
-          ...articleMemoryStatements(this.env, job.user_id, article.id),
-          ...queueQuestionStatements(this.env, null, article.id),
+          ...articleMemoryStatements(
+            this.env,
+            job.user_id,
+            article.id,
+            resolveLanguage(job.language),
+          ),
+          ...queueQuestionStatements(this.env, null, article.id, resolveLanguage(job.language)),
           this.env.DB.prepare(
             "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
           ).bind(now(), job.id),
@@ -318,7 +328,14 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         scope: project ? 'project' : 'user',
       };
       const state = await step.do('load-memory-input-state', () =>
-        memoryUpdateState(this.env, job.user_id, project ? job.target_id : null, context, inputs),
+        memoryUpdateState(
+          this.env,
+          job.user_id,
+          project ? job.target_id : null,
+          context,
+          inputs,
+          resolveLanguage(job.language),
+        ),
       );
       const full = job.memory_mode === 'full' || !state.current || Boolean(state.fullReason);
       if (!full && !state.addedIds.length) {
@@ -335,6 +352,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
             inputs.map((input) => input.source),
             context,
             call,
+            resolveLanguage(job.language),
           )
         : await updateMemory(
             this.env,
@@ -348,6 +366,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
               topicCounts: topicCounts(inputs.map((input) => input.source)).slice(0, 30),
             },
             call,
+            resolveLanguage(job.language),
           );
       await step.do('save-if-revision-current', async () => {
         await this.env.DB.batch([
@@ -355,11 +374,12 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
             userId: job.user_id,
             projectId: project ? job.target_id : null,
             revision: job.revision,
-            text: memoryText(memory),
+            text: memoryText(memory, resolveLanguage(job.language)),
             dataJson: JSON.stringify(memory),
             articleCount: inputs.length,
             model: modelName(this.env),
             contextHash: state.contextHash,
+            language: resolveLanguage(job.language),
           }),
           ...memorySourceStatements(this.env, state.id, job.revision, inputs),
           this.env.DB.prepare(

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { legalVersions } from './legal';
 import { relationIdsSchema, type StockRelations } from './relations';
+import { languageSchema, type Language } from './locale';
 
 export const summarySchema = z.object({
   overview: z.string().min(1).max(1600),
@@ -123,6 +124,7 @@ export type MemoryCoverage = {
   full_rebuild_reason: string | null;
 };
 export const profileSchema = z.strictObject({
+  language: languageSchema.optional(),
   name: z
     .string()
     .trim()
@@ -131,6 +133,7 @@ export const profileSchema = z.strictObject({
   bio: z.string().trim().max(1000, '自己紹介は1,000文字以内で入力してください。'),
 });
 export type User = {
+  language?: Language;
   id: string;
   name: string;
   bio: string;
@@ -138,6 +141,7 @@ export type User = {
   avatar_url: string | null;
 };
 export const onboardingSchema = z.strictObject({
+  language: languageSchema.optional(),
   name: profileSchema.shape.name,
   terms_accepted: z.literal(true),
   privacy_accepted: z.literal(true),

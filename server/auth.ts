@@ -130,7 +130,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
     const match = /^Bearer ([A-Za-z0-9_-]{20,160})$/i.exec(authorization);
     if (!match) throw new HTTPException(401, { message: 'Bearerトークンを確認してください。' });
     const token = await c.env.DB.prepare(
-      'SELECT t.id AS token_id, t.project_id, u.id, u.name, u.bio, u.onboarding_completed_at, u.avatar_url FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > ?)',
+      'SELECT t.id AS token_id, t.project_id, u.id, u.name, u.bio, u.language, u.onboarding_completed_at, u.avatar_url FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > ?)',
     )
       .bind(await hash(match[1]), now())
       .first<{
@@ -139,6 +139,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
         id: string;
         name: string;
         bio: string;
+        language: Principal['user']['language'];
         onboarding_completed_at: string | null;
         avatar_url: string | null;
       }>();
@@ -154,6 +155,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
         id: token.id,
         name: token.name,
         bio: token.bio,
+        language: token.language,
         onboarding_completed_at: token.onboarding_completed_at,
         avatar_url: token.avatar_url,
       },
@@ -164,7 +166,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
   const cookie = getCookie(c, cookieName(c));
   const user = cookie
     ? await c.env.DB.prepare(
-        'SELECT u.id, u.name, u.bio, u.onboarding_completed_at, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?',
+        'SELECT u.id, u.name, u.bio, u.language, u.onboarding_completed_at, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?',
       )
         .bind(await hash(cookie), now())
         .first<Principal['user']>()
