@@ -563,7 +563,7 @@ AI処理はD1の利用枠を原子的に確保してからWorkflowを起動し�
 
 ## ローカル開発
 
-Node.js 22.18以降の22系、または24.11以降（推奨24系）とpnpm 11.28.6を使用します。開発・CI・監査・デプロイで使うpnpmのバージョンは、`package.json` の `packageManager` で一元的に固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
+Node.js 22.22.3以降の22系、または24.11以降（推奨24系）とpnpm 11.28.6を使用します。開発・CI・監査・デプロイで使うpnpmのバージョンは、`package.json` の `packageManager` で一元的に固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
 
 設定値の例は [.dev.vars.example](../.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
@@ -809,6 +809,14 @@ pnpm run check
 `pnpm run audit` で依存関係を検査できます。インストール・ビルドと同じpnpm 11.28.6で `pnpm audit --audit-level=high` を実行し、Bulk Advisory APIを使用します。監査用に別のpnpmを取得する処理はありません。high以上の脆弱性と監査APIのエラーは引き続きCIを失敗させます。開発用Miniflareの脆弱な間接依存を避けるため、`undici` と `sharp` に更新済みバージョンのoverrideを指定しています。
 
 開発サーバーの起動中に `pnpm run test:smoke` を実行すると、MDNの公開記事を取得し、実際のローカルWorkers・Workflows・R2・D1を通して保存と問い・メモリの生成を確認します。この検証で作成したプロジェクトと記事は終了時に削除します。デモ環境専用で、本番には接続しません。
+
+### ブラウザーE2E
+
+`e2e@0.21.3` と `@e2e-dev/web@0.15.3` を開発用workspaceに固定します。`pnpm run e2e:ci` は実際のビルド済みアプリ、ローカルWorker、使い捨てD1・R2・KVで、テキスト保存と再読込、実Editorでのプ譜編集・局面履歴、公開確認と匿名アクセス・非公開化を確認します。desktopとphoneの画面幅で同じシナリオを実行します。
+
+`pnpm run e2e:record` はローカルCodexで操作を選択し、`expect` が確認した記録を保存します。CIはその記録をread-only/strictで再生し、欠損や再生失敗でもAIへ切り替えません。既存Vitestを維持し、権限・入力・競合の検証をE2Eへ移しません。CIは全ケースを品質チェック・Vitestと並列実行し、全件実行・skipなし・AI利用ゼロも確認します。
+
+`packages/e2e/scenarios.json` に検証観点と担当ソースを記録し、`e2e:check` で実テストと照合します。`e2e:related` は変更に関連するケースを選び、共通・未分類のアプリ変更は全件へ広げます。台帳は初期3ケースの対応表で、全APIの網羅率を表しません。外部認証・外部AI・実機Safariは対象外です。セットアップ、CLIアダプターの前提、記録の更新、結果の確認は [E2Eの説明](../packages/e2e/README.md) を参照してください。
 
 ### 開発用スキル
 

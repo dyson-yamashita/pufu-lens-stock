@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-30T05:32:14.833Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"記事をストック\"",
+        "target": {
+          "role": "button",
+          "name": "記事をストック"
+        }
+      }
+    ],
+    "executor": {
+      "name": "deterministic-bootstrap",
+      "version": "1"
+    },
+    "recordedFor": {
+      "testId": "tests/flows.e2e.ts::STOCK-001%20%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%82%92%E4%BF%9D%E5%AD%98%E3%81%97%E3%81%A6%E5%86%8D%E8%AA%AD%E8%BE%BC%E3%81%97%E3%81%A6%E3%82%82%E6%9C%AC%E6%96%87%E3%81%A8%E4%BF%9D%E5%AD%98%E5%85%88%E3%81%8C%E6%AE%8B%E3%82%8B",
+      "targetId": "desktop",
+      "instructionDigest": "b02dd46a857c4fb61243fdcab28f14e24d8be033011ee51c618254c24fb71ee2",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "実画面で操作しました。後続のexpectで検証します。",
+    "startPath": "/#project/68e9f587-ad16-4555-985b-3e3c9886d295",
+    "endPath": "/#project/68e9f587-ad16-4555-985b-3e3c9886d295",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "記事をストック"
+      },
+      {
+        "text": "URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。問い・気づきも自動で生成します。"
+      },
+      {
+        "role": "tab",
+        "name": "URL",
+        "states": ["selected"]
+      },
+      {
+        "role": "tab",
+        "name": "テキスト"
+      },
+      {
+        "text": "保存先プロジェクト"
+      },
+      {
+        "role": "option",
+        "name": "Cloudflareでつくる"
+      },
+      {
+        "role": "option",
+        "name": "日々のインプット"
+      },
+      {
+        "role": "option",
+        "name": "E2E検証プロジェクト",
+        "states": ["selected"]
+      }
+    ],
+    "endWaitMs": 10163,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "cb4e2eb6dacc12f4c1a21c3bc858bd9115701a0e055c2815bb2d99824a92cab4",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "488b8f4a9d597b2b5ad848fbaa9d7f57922e94ddd9807608b50eb75ec26a6dc8",
+      "agentContextDigest": "78bd7d795b03da151d6ceb6a00409982010acc44cd3731bc6ec59d78fd8b3a0b"
+    }
+  }
+}

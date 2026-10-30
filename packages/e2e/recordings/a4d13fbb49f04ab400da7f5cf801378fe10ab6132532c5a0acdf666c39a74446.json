@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-30T05:38:05.384Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"編集する\" in \"プ譜の一覧に戻る\"",
+        "target": {
+          "role": "button",
+          "name": "編集する",
+          "within": "プ譜の一覧に戻る"
+        }
+      }
+    ],
+    "executor": {
+      "name": "deterministic-bootstrap",
+      "version": "1"
+    },
+    "recordedFor": {
+      "testId": "tests/flows.e2e.ts::PUFU-001%20%E3%83%97%E8%AD%9C%E3%82%92%E7%B7%A8%E9%9B%86%E4%BF%9D%E5%AD%98%E3%81%97%E6%96%B0%E5%B1%80%E9%9D%A2%E3%81%A8%E9%81%8E%E5%8E%BB%E5%B1%80%E9%9D%A2%E3%82%92%E4%BF%9D%E6%8C%81%E3%81%97%E3%81%A6%E4%B8%80%E8%A6%A7%E3%81%B8%E6%88%BB%E3%82%8B",
+      "targetId": "desktop",
+      "instructionDigest": "034daac097138895cb41778e864a899351f0205cb92c4a2a0bda515bb7ee1f11",
+      "paramsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "callIndex": 0,
+      "agent": "default"
+    },
+    "summary": "実画面で操作しました。後続のexpectで検証します。",
+    "startPath": "/#pufu/pufu-local-demo-e6d9dcb7-3f7f-4d22-b526-98a0cf655963-0138c75a-8a46-4552-ac8f-f611e32fd32e",
+    "endPath": "/#pufu/pufu-local-demo-e6d9dcb7-3f7f-4d22-b526-98a0cf655963-0138c75a-8a46-4552-ac8f-f611e32fd32e",
+    "endAnchors": [
+      {
+        "role": "status",
+        "name": "保存済み"
+      },
+      {
+        "role": "heading",
+        "name": "第1局面のプ譜を編集"
+      },
+      {
+        "role": "button",
+        "name": "閉じる"
+      },
+      {
+        "role": "button",
+        "name": "保存"
+      },
+      {
+        "text": "ひと"
+      },
+      {
+        "role": "image",
+        "name": "comment-icon-people"
+      },
+      {
+        "role": "textbox",
+        "name": "people-textbox",
+        "text": "自分",
+        "placeholder": "ひとを入力",
+        "value": "自分"
+      },
+      {
+        "text": "お金"
+      }
+    ],
+    "endWaitMs": 10188,
+    "keyedBy": {
+      "cacheSchema": "trace-1",
+      "policyVersion": "conservative/6",
+      "project": "cb4e2eb6dacc12f4c1a21c3bc858bd9115701a0e055c2815bb2d99824a92cab4",
+      "platform": "web",
+      "engineName": "web",
+      "engineSpiVersion": 1,
+      "appIdentity": "488b8f4a9d597b2b5ad848fbaa9d7f57922e94ddd9807608b50eb75ec26a6dc8",
+      "agentContextDigest": "78bd7d795b03da151d6ceb6a00409982010acc44cd3731bc6ec59d78fd8b3a0b"
+    }
+  }
+}
