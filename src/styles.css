@@ -291,12 +291,7 @@ p {
   object-fit: contain;
 }
 .boot {
-  --boot-blue: #4b8de9c2;
-  --boot-sky: #68bdf4a3;
-  --boot-indigo: #7392e89e;
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
+  background: linear-gradient(145deg, #f5f9ff, #eaf3ff 50%, #dcecff);
   display: flex;
   min-height: 100vh;
   align-items: center;
@@ -305,36 +300,7 @@ p {
   gap: 24px;
 }
 :root[data-theme='dark'] .boot {
-  --boot-blue: #2856a8b3;
-  --boot-sky: #2377a399;
-  --boot-indigo: #494da699;
-}
-.boot::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: -24%;
-  pointer-events: none;
-  opacity: 0.68;
-  background:
-    radial-gradient(ellipse at 28% 32%, var(--boot-blue), transparent 60%),
-    radial-gradient(ellipse at 70% 68%, var(--boot-sky), transparent 62%),
-    radial-gradient(ellipse at 74% 26%, var(--boot-indigo), transparent 58%);
-  animation: boot-breathe 8s ease-in-out infinite;
-}
-.boot[data-loading='false']::before {
-  animation: none;
-}
-@keyframes boot-breathe {
-  0%,
-  100% {
-    transform: scale(0.94);
-    opacity: 0.55;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
+  background: linear-gradient(145deg, #101b2e, #152a45 50%, #1b3553);
 }
 .boot .brand {
   gap: 14px;
@@ -348,6 +314,51 @@ p {
 .boot p {
   font-size: 14px;
   color: var(--text);
+}
+.boot-status {
+  position: relative;
+  display: grid;
+  white-space: pre;
+}
+.boot-message-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.boot-message-space,
+.boot-message-typing {
+  grid-area: 1 / 1;
+}
+.boot-message-space {
+  visibility: hidden;
+  padding-right: 5px;
+}
+.boot-message-typing {
+  text-align: center;
+}
+.boot-composing {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.boot-converted {
+  background: var(--selected);
+  border-radius: 3px;
+}
+.boot-caret {
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.1em;
+  background: currentColor;
+  animation: boot-caret 1s step-end infinite;
+}
+@keyframes boot-caret {
+  50% {
+    opacity: 0;
+  }
 }
 .app-shell {
   display: flex;
