@@ -291,9 +291,9 @@ p {
   object-fit: contain;
 }
 .boot {
-  --boot-cool: #b3cdf380;
-  --boot-lilac: #d5c9ed80;
-  --boot-warm: #f4d5c780;
+  --boot-blue: #4b8de9c2;
+  --boot-sky: #68bdf4a3;
+  --boot-indigo: #7392e89e;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -305,9 +305,9 @@ p {
   gap: 24px;
 }
 :root[data-theme='dark'] .boot {
-  --boot-cool: #335d8a80;
-  --boot-lilac: #61457866;
-  --boot-warm: #7a4f4466;
+  --boot-blue: #2856a8b3;
+  --boot-sky: #2377a399;
+  --boot-indigo: #494da699;
 }
 .boot::before {
   content: '';
@@ -315,24 +315,25 @@ p {
   z-index: -1;
   inset: -24%;
   pointer-events: none;
+  opacity: 0.68;
   background:
-    radial-gradient(ellipse at 18% 24%, var(--boot-cool), transparent 56%),
-    radial-gradient(ellipse at 78% 76%, var(--boot-warm), transparent 54%),
-    radial-gradient(ellipse at 65% 32%, var(--boot-lilac), transparent 58%);
-  animation: boot-drift 14s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 28% 32%, var(--boot-blue), transparent 60%),
+    radial-gradient(ellipse at 70% 68%, var(--boot-sky), transparent 62%),
+    radial-gradient(ellipse at 74% 26%, var(--boot-indigo), transparent 58%);
+  animation: boot-breathe 8s ease-in-out infinite;
 }
 .boot[data-loading='false']::before {
   animation: none;
 }
-@keyframes boot-drift {
-  0% {
-    transform: translate3d(-6%, -5%, 0) scale(1);
+@keyframes boot-breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.55;
   }
   50% {
-    transform: translate3d(4%, 3%, 0) scale(1.06);
-  }
-  100% {
-    transform: translate3d(6%, -2%, 0) scale(1.02);
+    transform: scale(1.1);
+    opacity: 1;
   }
 }
 .boot .brand {
@@ -346,7 +347,7 @@ p {
 }
 .boot p {
   font-size: 14px;
-  color: var(--muted);
+  color: var(--text);
 }
 .app-shell {
   display: flex;
