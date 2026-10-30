@@ -14,6 +14,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    maxWorkers: '100%',
     testTimeout: 20000,
     server: { deps: { inline: ['@cloudflare/workers-oauth-provider'] } },
   },
