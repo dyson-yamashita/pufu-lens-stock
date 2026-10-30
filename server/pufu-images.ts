@@ -1,3 +1,4 @@
+import { resolveLanguage, translate } from '../shared/locale';
 import { HTTPException } from 'hono/http-exception';
 import { PufuImageError } from '@pufu-lens/pufu-image';
 import type { Env, Principal } from './env';
@@ -12,6 +13,7 @@ export async function generateQuestionPufuImage(
   questionId: string | null | undefined,
   pufuId?: string,
 ) {
+  const language = resolveLanguage(principal.user.language);
   const snapshot = await readQuestionPufuSnapshot(env, principal, questionId, pufuId);
   const metadata = {
     question_id: snapshot.pufu.question_id,
@@ -21,12 +23,12 @@ export async function generateQuestionPufuImage(
     phase: snapshot.phase,
     revision: snapshot.revision,
   };
-  const title = snapshot.pufu.projectScore?.gainingGoal.text || 'プ譜';
+  const title = snapshot.pufu.projectScore?.gainingGoal.text || translate(language, 'プ譜');
   if (!snapshot.pufu.projectScore)
     return { metadata: { ...metadata, status: 'not_created' }, png: null, title };
   let image: Awaited<ReturnType<typeof renderSavedPufu>>;
   try {
-    image = await renderSavedPufu(env, snapshot.pufu.projectScore);
+    image = await renderSavedPufu(env, snapshot.pufu.projectScore, language);
   } catch (error) {
     if (!(error instanceof PufuImageError)) throw error;
     const status = ['IMAGE_TOO_LARGE', 'INPUT_TOO_LARGE'].includes(error.code)

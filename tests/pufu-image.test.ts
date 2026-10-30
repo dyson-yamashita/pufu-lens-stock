@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { createPufuSvg, initPufuWasm, renderPufuPng, PufuImageError } from '@pufu-lens/pufu-image';
 import wasm from './resvg-wasm';
+import { pufuImageLabels } from '../shared/pufu-image-labels';
 import sparse from './fixtures/pufu-sparse.json';
 import many from './fixtures/pufu-many-measures.json';
 import long from './fixtures/pufu-long-text.json';
@@ -49,6 +50,41 @@ describe('Pufu JSON -> SVG -> PNG (real WASM)', () => {
       expect(result.svg).not.toContain('Pufu Lens');
     }
     expect(JSON.stringify(score)).toBe(original);
+  });
+  it('localizes headers safely and wraps English words without losing graphemes or comments', () => {
+    const score = structuredClone(sparse);
+    const sentence =
+      'Careful research preserves meaningful English words and café e\u0301 accents.';
+    const url = 'https://example.com/' + 'a'.repeat(90);
+    score.gainingGoal.text = sentence;
+    score.gainingGoal.comment.text = url;
+    const original = JSON.stringify(score);
+    const labels = pufuImageLabels('en');
+    const svg = createPufuSvg(score, { labels, language: 'en' });
+    const { document } = parseHTML(`<html><body>${svg}</body></html>`);
+    expect(document.querySelector('desc')?.textContent).toContain('saved comments');
+    expect(svg).toContain('Win condition');
+    expect(svg).not.toContain('廟算八要素');
+    const objective = document.querySelector(`[data-uuid="${score.gainingGoal.uuid}"]`)!;
+    const lines = [...objective.querySelectorAll('[data-role="objective"] > text')]
+      .slice(1)
+      .map((t) => t.textContent!);
+    expect(lines.join('')).toBe(sentence);
+    for (let i = 0; i < lines.length - 1; i++)
+      expect(/\s$/.test(lines[i]) || /^\s/.test(lines[i + 1])).toBe(true);
+    const comment = document.querySelector(`[data-comment-of="${score.gainingGoal.uuid}"]`)!;
+    expect([...comment.querySelectorAll('text')].map((t) => t.textContent).join('')).toBe(url);
+    expect(JSON.stringify(score)).toBe(original);
+    const unsafe = createPufuSvg(score, { labels: { ...labels, measures: '<script>&"' } });
+    expect(unsafe).toContain('&lt;script&gt;&amp;&quot;');
+    expect(
+      parseHTML(`<html><body>${unsafe}</body></html>`).document.querySelector('script'),
+    ).toBeNull();
+    expect(
+      Buffer.from(renderPufuPng(score, { font, labels, language: 'en' }).png)
+        .subarray(0, 8)
+        .toString('hex'),
+    ).toBe('89504e470d0a1a0a');
   });
   it('両テーマで内容と配置を保持し、ダークでは施策の色分けと文字のコントラストを保つ', () => {
     const score = structuredClone(sparse);

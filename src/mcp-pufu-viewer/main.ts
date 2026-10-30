@@ -1,3 +1,5 @@
+import { languages, resolveLanguage, translate } from '../../shared/locale';
+import { pufuViewerMessages } from '../../shared/pufu-viewer';
 import {
   App,
   applyDocumentTheme,
@@ -9,7 +11,7 @@ import { PufuViewerController, needsNewUrl, type ViewerState } from './controlle
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const viewport = element<HTMLDivElement>('viewport');
 const app = new App(
-  { name: 'Pufu Lens プ譜ビューアー', version: '1.0.0' },
+  { name: 'Pufu Lens Pufu Viewer', version: '1.0.0' },
   {},
   { strict: true, autoResize: true },
 );
@@ -18,6 +20,7 @@ let zoom = 1,
 let bridgeReady = false;
 const controller = new PufuViewerController({
   origin: document.documentElement.dataset.imageOrigin!,
+  language: resolveLanguage(document.documentElement.lang),
   call: async (args) => {
     await connection;
     if (!app.getHostCapabilities()?.serverTools) throw new Error('tool_bridge_unavailable');
@@ -25,16 +28,36 @@ const controller = new PufuViewerController({
   },
   changed: render,
 });
+const t = (message: string, values?: Record<string, string | number>) =>
+  translate(controller.language, message, values);
 function render(state: ViewerState) {
+  document.documentElement.lang = controller.language;
+  document.documentElement.dir = languages[controller.language].direction;
+  document.title = t('プ譜ビューアー');
+  for (const [key, slot] of Object.entries(pufuViewerMessages)) {
+    if (key === 'TITLE' || key === 'STATUS' || key === 'FULLSCREEN') continue;
+    if ('attribute' in slot) element(slot.id).setAttribute(slot.attribute, t(slot.message));
+    else element(slot.id).textContent = t(slot.message);
+  }
+  element('fullscreen').textContent = t(
+    app.getHostContext()?.displayMode === 'fullscreen' ? '会話に戻る' : '全画面',
+  );
   element('status').textContent = state.message;
   element('updated').hidden = !state.updated || state.status !== 'ready';
-  element('title').textContent = state.image?.title || 'プ譜';
+  element('title').textContent = state.image?.title || t('プ譜');
   element('metadata').textContent = state.image
-    ? `局面 ${state.image.phase} · 更新 ${state.image.updated_at ? new Date(state.image.updated_at).toLocaleString() : '日時不明'}`
+    ? t('mcp.viewerMetadata', {
+        phase: state.image.phase,
+        updated: state.image.updated_at
+          ? new Date(state.image.updated_at).toLocaleString(
+              languages[controller.language].intlLocale,
+            )
+          : t('日時不明'),
+      })
     : '';
   const target = state.image ?? controller.target;
   element('target').textContent = target
-    ? `${target.question_id ? `問い・気づき: ${target.question_id} / ` : ''}プ譜: ${target.pufu_id ?? '未選択'}`
+    ? `${target.question_id ? t('mcp.viewerQuestion', { id: target.question_id }) : ''}${t('mcp.viewerPufu', { id: target.pufu_id ?? t('未選択') })}`
     : '';
   element<HTMLButtonElement>('download').disabled = !state.image || state.status === 'forbidden';
   element<HTMLButtonElement>('retry').disabled = !bridgeReady || state.status === 'loading';
@@ -56,7 +79,7 @@ function render(state: ViewerState) {
   if (state.image && imageElement?.dataset.source !== state.image.image_url) {
     const url = state.image.image_url;
     imageElement = new Image();
-    imageElement.alt = state.image.title || 'プ譜';
+    imageElement.alt = state.image.title || t('プ譜');
     imageElement.referrerPolicy = 'no-referrer';
     imageElement.draggable = false;
     imageElement.dataset.source = url;
@@ -118,7 +141,7 @@ element('download').onclick = async () => {
     const link = element<HTMLAnchorElement>('external');
     link.href = image.download_url;
     link.hidden = false;
-    element('status').textContent = '「PNGを開く」から画像を開いて保存してください。';
+    element('status').textContent = t('「PNGを開く」から画像を開いて保存してください。');
   }
 };
 element('external').onclick = (event) => {
@@ -149,7 +172,7 @@ function hostContext(context: McpUiHostContext) {
   document.documentElement.dataset.fullscreen = String(context.displayMode === 'fullscreen');
   const fullscreen = element<HTMLButtonElement>('fullscreen');
   fullscreen.hidden = !context.availableDisplayModes?.includes('fullscreen');
-  fullscreen.textContent = context.displayMode === 'fullscreen' ? '会話に戻る' : '全画面';
+  fullscreen.textContent = t(context.displayMode === 'fullscreen' ? '会話に戻る' : '全画面');
   sizeImage();
 }
 element('fullscreen').onclick = async () => {
@@ -160,7 +183,7 @@ element('fullscreen').onclick = async () => {
     });
     hostContext({ ...app.getHostContext(), displayMode: mode });
   } catch {
-    element('status').textContent = '全画面表示を使用できません。拡大操作で確認してください。';
+    element('status').textContent = t('全画面表示を使用できません。拡大操作で確認してください。');
   }
 };
 app.ontoolinput = ({ arguments: args }) => controller.setInput(args);

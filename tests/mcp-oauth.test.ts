@@ -105,7 +105,7 @@ describe('MCP OAuth連携', () => {
       },
       body: form,
     });
-    return { client, verifier, approve, params, form, cookies };
+    return { client, verifier, approve, params, form, cookies, html };
   }
   async function exchange(auth: Awaited<ReturnType<typeof authorize>>, verifier = auth.verifier) {
     const callback = new URL(auth.approve.headers.get('Location')!);
@@ -122,6 +122,25 @@ describe('MCP OAuth連携', () => {
       }),
     });
   }
+  it('English consent preserves escaped client identity, scope IDs and approval flow', async () => {
+    await app.env.DB.prepare(
+      "UPDATE users SET language='en',name='<Alice>' WHERE id='alice'",
+    ).run();
+    const auth = await authorize();
+    const { document } = parseHTML(auth.html);
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.querySelector('h1')?.textContent).toBe('Allow connection to <ChatGPT>');
+    expect(document.querySelector('Alice')).toBeNull();
+    expect(document.querySelector('button[value="approve"]')?.textContent).toBe('Allow connection');
+    expect(
+      [...document.querySelectorAll('input[name="scope"]')].map((input) =>
+        input.getAttribute('value'),
+      ),
+    ).toContain('pufus:write');
+    expect(document.querySelector('input[name="handle"]')?.getAttribute('value')).toBeTruthy();
+    expect(auth.approve.status).toBe(302);
+    expect((await exchange(auth)).status).toBe(200);
+  });
   it('認可情報を公開し未認証MCPを401で拒否する', async () => {
     const metadata = await request('/.well-known/oauth-protected-resource/mcp');
     expect(metadata.status).toBe(200);

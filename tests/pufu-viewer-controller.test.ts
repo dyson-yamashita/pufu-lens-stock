@@ -38,6 +38,32 @@ function setup(call = vi.fn(async () => result())) {
   };
 }
 describe('プ譜ビューアーの期限・競合・再試行', () => {
+  it('uses initial and refreshed metadata language for loading, ready, cancellation and errors', async () => {
+    const controller = new PufuViewerController({
+      origin,
+      language: 'en',
+      call: async () => ({
+        isError: true,
+        structuredContent: { status: 409, error: 'Pufu creation has not completed.' },
+      }),
+      changed: () => {},
+      now: () => start,
+    });
+    expect(controller.state.message).toBe('Loading…');
+    controller.receive(result(image({ language: 'en' })));
+    expect(controller.state.message).toBe('Loading image…');
+    controller.loaded(image().image_url);
+    expect(controller.state.message).toBe('Pufu is displayed. Zoom in to inspect it.');
+    controller.cancel();
+    expect(controller.state.message).toBe('Retrieval cancelled. You can refresh.');
+    await controller.refresh();
+    expect(controller.state.status).toBe('generating');
+    expect(controller.state.message).not.toMatch(/[\u3040-\u30ff\u3400-\u9fff]/u);
+    controller.receive(result(image({ language: 'ja', revision: 2 })));
+    controller.loaded(image().image_url);
+    expect(controller.language).toBe('ja');
+    expect(controller.state.message).toBe('プ譜を表示しています。拡大して確認できます。');
+  });
   it.each([null, 'linked-question'])(
     '問いの紐付けが%sへ変わっても同じプ譜を再取得する',
     async (question_id) => {

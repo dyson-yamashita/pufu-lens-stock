@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { translate, type Language } from '../shared/locale';
+import { pufuGuidelineEn } from '../shared/locales/mcp-guideline-en';
 
 export const pufuGuidelineSchema = z.strictObject({
   section: z
@@ -227,15 +229,18 @@ function summarize(entry: Guideline): Summary {
   };
 }
 
-export function getPufuGuideline({ section, detail }: Options) {
+export function getPufuGuideline({ section, detail }: Options, language: Language = 'ja') {
+  const localizedSections: typeof sections = language === 'en' ? pufuGuidelineEn : sections;
   const selected =
     section === 'all'
-      ? Object.fromEntries(Object.values(sections).flatMap((value) => Object.entries(value)))
-      : sections[section];
+      ? Object.fromEntries(
+          Object.values(localizedSections).flatMap((value) => Object.entries(value)),
+        )
+      : localizedSections[section];
   const pages = section === 'all' ? Object.values(sourcePages).flat() : sourcePages[section];
   return {
     version: '1.0.0',
-    language: 'ja',
+    language,
     section,
     detail,
     guidelines:
@@ -245,7 +250,9 @@ export function getPufuGuideline({ section, detail }: Options) {
             Object.entries(selected).map(([key, value]) => [key, summarize(value)]),
           ),
     sources: [...new Set(pages)].map((page) => `https://scrapbox.io/ProjectScore/${page}`),
-    attribution:
+    attribution: translate(
+      language,
       'プロジェクト工学フォーラムの解説とユーザー提供の仕様案をもとにPufu Lens向けに再構成したガイドラインです。原著の公式仕様をそのまま転載したものではありません。',
+    ),
   };
 }

@@ -8,6 +8,7 @@ import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
 import type { AppEnv, Env } from './env';
+import { resolveLanguage, translate } from '../shared/locale';
 import { authenticate } from './auth';
 import { rememberMcpLogin } from './mcp-login';
 import { hash } from './security';
@@ -41,10 +42,14 @@ function authorizationApp() {
       return c.redirect('/api/auth/google');
     }
     if (principal.kind !== 'session') throw new HTTPException(403);
+    c.set('principal', principal);
     if (!principal.user.onboarding_completed_at) {
       await rememberMcpLogin(c);
       return c.redirect('/');
     }
+    const language = resolveLanguage(principal.user.language);
+    const t = (message: string, values?: Record<string, string | number>) =>
+      translate(language, message, values);
     const details = await oauth.describeConsent(authRequest);
     const consent = await oauth.beginConsent(authRequest);
     await c.env.OAUTH_KV!.put(`mcp-consent-user:${await hash(consent.handle)}`, principal.user.id, {
@@ -58,7 +63,7 @@ function authorizationApp() {
     const scopes = Object.entries(mcpScopes)
       .map(
         ([scope, label]) =>
-          `<label class="permission"><input type="checkbox" name="scope" value="${scope}"${details.scope.includes(scope) ? ' checked' : ''}> ${label}</label>`,
+          `<label class="permission"><input type="checkbox" name="scope" value="${scope}"${details.scope.includes(scope) ? ' checked' : ''}> ${escape(t(label))}</label>`,
       )
       .join('');
     const projectOptions = projects.results
@@ -69,18 +74,19 @@ function authorizationApp() {
     const themeAttribute =
       preference === 'light' || preference === 'dark' ? ` data-theme="${preference}"` : '';
     return c.html(
-      `<!doctype html><html lang="ja"${themeAttribute}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MCP連携の許可 | Pufu Lens</title><style>
+      `<!doctype html><html lang="${language}"${themeAttribute}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(t('MCP連携の許可'))} | Pufu Lens</title><style>
 :root{color-scheme:light;--text:#252c32;--page:#f8f9fa;--card:#fff;--border:#b7c0cc}
 :root[data-theme="dark"]{color-scheme:dark;--text:#e5eaf3;--page:#101827;--card:#172033;--border:#667b98}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--text:#e5eaf3;--page:#101827;--card:#172033;--border:#667b98}}
 body{font-family:system-ui,sans-serif;line-height:1.8;color:var(--text);background:var(--page);margin:0;padding:24px}main{max-width:560px;margin:32px auto;background:var(--card);padding:28px;border:1px solid var(--border);border-radius:16px}h1{font-size:24px}.permission{display:block;margin:12px 0}input,select,button{font:inherit}select{display:block;width:100%;padding:10px;margin:8px 0 20px}button{padding:10px 20px;cursor:pointer;margin:8px 8px 0 0}p{overflow-wrap:anywhere}small{display:block}
 input,select,button{color:var(--text);background:var(--card);border:1px solid var(--border)}input[type="checkbox"]{accent-color:var(--text)}fieldset{border:1px solid var(--border)}
-</style></head><body><main><p>Pufu Lens · MCP連携</p><h1>${escape(details.clientName)}との連携を許可</h1><p>${escape(principal.user.name)}として接続します。</p><p>${details.clientDomain ? `クライアントのドメイン: ${escape(details.clientDomain)}` : 'クライアント名は接続元が登録した名称です。'}<br>認可結果の送信先: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? '<p>このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。</p>' : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset><legend>許可する操作</legend>${scopes}</fieldset><p><label for="project">アクセスを許可するプロジェクト</label><select id="project" name="project_id"><option value="">すべてのプロジェクト</option>${projectOptions}</select><small>選択した範囲のデータが接続先で利用されます。</small></p><button name="decision" value="approve">連携を許可</button><button name="decision" value="deny">許可しない</button></form></main></body></html>`,
+</style></head><body><main><p>Pufu Lens · ${escape(t('MCP連携'))}</p><h1>${escape(t('mcp.consentTitle', { client: details.clientName }))}</h1><p>${escape(t('mcp.consentIdentity', { name: principal.user.name }))}</p><p>${details.clientDomain ? escape(t('mcp.clientDomain', { domain: details.clientDomain })) : escape(t('クライアント名は接続元が登録した名称です。'))}<br>${escape(t('mcp.redirectHost'))}: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? `<p>${escape(t('このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。'))}</p>` : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset><legend>${escape(t('許可する操作'))}</legend>${scopes}</fieldset><p><label for="project">${escape(t('アクセスを許可するプロジェクト'))}</label><select id="project" name="project_id"><option value="">${escape(t('すべてのプロジェクト'))}</option>${projectOptions}</select><small>${escape(t('選択した範囲のデータが接続先で利用されます。'))}</small></p><button name="decision" value="approve">${escape(t('連携を許可'))}</button><button name="decision" value="deny">${escape(t('許可しない'))}</button></form></main></body></html>`,
     );
   });
   app.post('/oauth/authorize', async (c) => {
     const principal = await authenticate(c);
     if (principal.kind !== 'session') throw new HTTPException(403);
+    c.set('principal', principal);
     if (!principal.user.onboarding_completed_at) throw new HTTPException(403);
     const form = await c.req.parseBody({ all: true });
     const handle = typeof form.handle === 'string' ? form.handle : '';
@@ -154,7 +160,9 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
         (grant) =>
           ({
             id: grant.id,
-            client_name: grant.metadata?.client_name ?? 'MCPクライアント',
+            client_name:
+              grant.metadata?.client_name ??
+              translate(resolveLanguage(c.get('principal').user.language), 'MCPクライアント'),
             project_id: grant.metadata?.project_id ?? null,
             project_name: grant.metadata?.project_name ?? null,
             scopes: grant.scope,
@@ -171,13 +179,18 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
     return c.json({ ok: true });
   });
   app.onError((error, c) => {
+    const language = resolveLanguage(c.get('principal')?.user.language);
+    const t = (message: string) => translate(language, message);
     if (error instanceof AuthorizationError && error.redirectTo)
       return c.redirect(error.redirectTo);
     if (error instanceof AuthorizationError || error instanceof CimdFetchError)
-      return c.json({ error: '認可要求が無効か期限切れです。接続先からやり直してください。' }, 400);
-    if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
+      return c.json(
+        { error: t('認可要求が無効か期限切れです。接続先からやり直してください。') },
+        400,
+      );
+    if (error instanceof HTTPException) return c.json({ error: t(error.message) }, error.status);
     console.error('mcp_authorization_failed');
-    return c.json({ error: '連携の認可処理に失敗しました。' }, 500);
+    return c.json({ error: t('連携の認可処理に失敗しました。') }, 500);
   });
   return app;
 }

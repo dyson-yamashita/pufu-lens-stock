@@ -1,7 +1,47 @@
 import { pufuScoreSchema, type PufuScore } from './model.js';
 import metrics from './font-metrics.json';
 import { PufuImageError, imageLimits } from './errors.js';
-export type SvgOptions = { showProgress?: boolean; theme?: 'light' | 'dark' };
+export type PufuImageLabels = {
+  title: string;
+  description: string;
+  descriptionWithoutProgress: string;
+  eightElements: string;
+  measures: string;
+  purposes: string;
+  winCondition: string;
+  gainingGoal: string;
+  progress: string;
+  elements: Record<keyof PufuScore['elements'], string>;
+};
+export const defaultPufuImageLabels: PufuImageLabels = {
+  title: 'プ譜',
+  description:
+    'ProjectScoreModelから生成。廟算八要素、施策、中間目的、勝利条件、獲得目標、保存されたコメントを表示。施策の進捗表示はあり。',
+  descriptionWithoutProgress:
+    'ProjectScoreModelから生成。廟算八要素、施策、中間目的、勝利条件、獲得目標、保存されたコメントを表示。施策の進捗表示はなし。',
+  eightElements: '廟算八要素',
+  measures: '施策',
+  purposes: '中間目的',
+  winCondition: '勝利条件',
+  gainingGoal: '獲得目標',
+  progress: '進捗',
+  elements: {
+    people: 'ひと',
+    money: 'お金',
+    time: '時間',
+    quality: 'クオリティ',
+    businessScheme: '商流 / 座組',
+    environment: '環境',
+    rival: 'ライバル',
+    foreignEnemy: '外敵',
+  },
+};
+export type SvgOptions = {
+  showProgress?: boolean;
+  theme?: 'light' | 'dark';
+  labels?: PufuImageLabels;
+  language?: string;
+};
 type BaseNode = PufuScore['gainingGoal'];
 type MeasureNode = PufuScore['purposes'][number]['measures'][number];
 const segmenter = new Intl.Segmenter('ja', { granularity: 'grapheme' });
@@ -58,7 +98,30 @@ function textWidth(text: string, size: number, _bold = false): number {
   }
   return (units / 1000) * size;
 }
-function wrap(text: string, width: number, size: number, bold = false) {
+function wrap(text: string, width: number, size: number, bold = false, language = 'ja') {
+  if (language !== 'ja') {
+    const words = new Intl.Segmenter(language, { granularity: 'word' });
+    const lines: string[] = [];
+    for (const paragraph of text.split(/\r\n|\r|\n/)) {
+      let line = '';
+      for (const { segment } of words.segment(paragraph)) {
+        const pieces =
+          textWidth(segment, size, bold) <= width
+            ? [segment]
+            : [...segmenter.segment(segment)].map((item) => item.segment);
+        for (const piece of pieces) {
+          if (textWidth(piece, size, bold) > width)
+            throw new PufuImageError('TEXT_TOO_WIDE', '分割できない文字列が表示幅を超えています。');
+          if (line && textWidth(line + piece, size, bold) > width) {
+            lines.push(line);
+            line = piece;
+          } else line += piece;
+        }
+      }
+      lines.push(line);
+    }
+    return lines;
+  }
   const lines = [];
   for (const paragraph of text.split(/\r\n|\r|\n/)) {
     let line = '';
@@ -95,8 +158,9 @@ function textBlock(
   color = '#24354e',
   bold = false,
   centered = false,
+  language = 'ja',
 ) {
-  const lines = wrap(text, width, size, bold);
+  const lines = wrap(text, width, size, bold, language);
   const lineHeight = Math.round(size * 1.65);
   const content = lines
     .map(
@@ -117,10 +181,27 @@ function rect(
 ) {
   return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`;
 }
-function comment(node: BaseNode, x: number, y: number, width: number, upside = false) {
+function comment(
+  node: BaseNode,
+  x: number,
+  y: number,
+  width: number,
+  upside = false,
+  language = 'ja',
+) {
   if (!node.comment.text) return { content: '', height: 0 };
   const stroke = { blue: '#41b4f7', green: '#43db6d', red: '#f2a4b7' }[node.comment.color];
-  const text = textBlock(node.comment.text, x + 15, y + 29, width - 30, 19, '#4b5563');
+  const text = textBlock(
+    node.comment.text,
+    x + 15,
+    y + 29,
+    width - 30,
+    19,
+    '#4b5563',
+    false,
+    false,
+    language,
+  );
   const height = text.height + 23;
   const mid = x + width / 2;
   const top = upside ? '' : `H ${mid - 13} L ${mid} ${y - 13} L ${mid + 13} ${y}`;
@@ -133,22 +214,42 @@ function comment(node: BaseNode, x: number, y: number, width: number, upside = f
     height,
   };
 }
-function measure(node: MeasureNode, x: number, y: number, width: number, showProgress: boolean) {
+function measure(
+  node: MeasureNode,
+  x: number,
+  y: number,
+  width: number,
+  showProgress: boolean,
+  labels: PufuImageLabels,
+  language: string,
+) {
   const color = palette[node.color];
-  const text = textBlock(node.text, x + 17, y + 33, width - 34, 22, '#4b5563');
+  const text = textBlock(
+    node.text,
+    x + 17,
+    y + 33,
+    width - 34,
+    22,
+    '#4b5563',
+    false,
+    false,
+    language,
+  );
   const hasProgress = showProgress && node.progress !== undefined;
   const height = text.height + 23 + (hasProgress ? 35 : 0);
   let content = rect(x, y, width, height, color.fill, color.border, 5) + text.content;
   if (hasProgress && node.progress !== undefined) {
     const progressY = y + height - 22;
     content += '<g data-role="measure-progress">';
-    content += `<text x="${x + 22}" y="${progressY + 4}" font-size="15" fill="#73839a">進捗</text>`;
-    content += rect(x + 66, progressY - 6, width - 150, 8, '#e1e8f1', 'none', 4);
+    content += `<text x="${x + 22}" y="${progressY + 4}" font-size="15" fill="#73839a">${xml(labels.progress)}</text>`;
+    const barX = Math.max(66, 32 + textWidth(labels.progress, 15));
+    const barWidth = width - barX - 84;
+    content += rect(x + barX, progressY - 6, barWidth, 8, '#e1e8f1', 'none', 4);
     if (node.progress > 0)
       content += rect(
-        x + 66,
+        x + barX,
         progressY - 6,
-        ((width - 150) * node.progress) / 100,
+        (barWidth * node.progress) / 100,
         8,
         '#5384b7',
         'none',
@@ -157,7 +258,7 @@ function measure(node: MeasureNode, x: number, y: number, width: number, showPro
     content += `<text x="${x + width - 20}" y="${progressY + 4}" text-anchor="end" font-size="16" fill="#56718f">${node.progress}%</text>`;
     content += '</g>';
   }
-  const note = comment(node, x, y + height + 25, width);
+  const note = comment(node, x, y + height + 25, width, false, language);
   return {
     content: `<g data-role="measure" data-uuid="${xml(node.uuid)}">${content}${note.content}</g>`,
     height: height + (note.height ? note.height + 25 : 0),
@@ -171,15 +272,28 @@ function objective(
   y: number,
   width: number,
   above = false,
+  language = 'ja',
 ) {
-  const pre = above ? comment(node, x, y, width, true) : { content: '', height: 0 };
+  const pre = above ? comment(node, x, y, width, true, language) : { content: '', height: 0 };
   const boxY = y + (pre.height ? pre.height + 26 : 0);
-  const text = textBlock(node.text, x + 17, boxY + 66, width - 34, 23, '#4b5563');
+  const text = textBlock(
+    node.text,
+    x + 17,
+    boxY + 66,
+    width - 34,
+    23,
+    '#4b5563',
+    false,
+    false,
+    language,
+  );
   const height = Math.max(170, text.height + 65);
   let content = pre.content + rect(x, boxY, width, height, '#ffffff', '#9ca3af', 5);
-  content += `<text x="${x + 17}" y="${boxY + 28}" font-size="17" fill="#6b7280">${label}</text>`;
+  content += `<text x="${x + 17}" y="${boxY + 28}" font-size="17" fill="#6b7280">${xml(label)}</text>`;
   content += text.content;
-  const note = above ? { content: '', height: 0 } : comment(node, x, boxY + height + 25, width);
+  const note = above
+    ? { content: '', height: 0 }
+    : comment(node, x, boxY + height + 25, width, false, language);
   return {
     content: `<g data-role="objective" data-uuid="${xml(node.uuid)}">${content}${note.content}</g>`,
     height: boxY - y + height + (note.height ? note.height + 25 : 0),
@@ -258,7 +372,35 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     throw new PufuImageError('INVALID_OPTIONS', '進捗表示には真偽値を指定してください。');
   if (options.theme !== undefined && options.theme !== 'light' && options.theme !== 'dark')
     throw new PufuImageError('INVALID_OPTIONS', 'テーマはlightまたはdarkを指定してください。');
-  const { showProgress = true, theme = 'light' } = options;
+  const {
+    showProgress = true,
+    theme = 'light',
+    labels = defaultPufuImageLabels,
+    language = 'ja',
+  } = options;
+  if (typeof language !== 'string' || !language)
+    throw new PufuImageError('INVALID_OPTIONS', '言語には有効な言語コードを指定してください。');
+  try {
+    new Intl.Segmenter(language);
+  } catch (cause) {
+    throw new PufuImageError('INVALID_OPTIONS', '言語には有効な言語コードを指定してください。', {
+      cause,
+    });
+  }
+  if (
+    !labels ||
+    typeof labels !== 'object' ||
+    Object.keys(defaultPufuImageLabels).some((key) =>
+      key === 'elements'
+        ? !labels.elements ||
+          Object.keys(defaultPufuImageLabels.elements).some(
+            (element) =>
+              typeof labels.elements[element as keyof typeof labels.elements] !== 'string',
+          )
+        : typeof labels[key as Exclude<keyof PufuImageLabels, 'elements'>] !== 'string',
+    )
+  )
+    throw new PufuImageError('INVALID_OPTIONS', '画像のラベルをすべて指定してください。');
   const score = validateScore(input);
   const width = 1760;
   const rowStart = 88;
@@ -270,26 +412,29 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     purposeWidth = 280;
   const xObjective = 1290,
     objectiveWidth = 384;
-  const labels = {
-    people: 'ひと',
-    money: 'お金',
-    time: '時間',
-    quality: 'クオリティ',
-    businessScheme: '商流 / 座組',
-    environment: '環境',
-    rival: 'ライバル',
-    foreignEnemy: '外敵',
-  };
   let content = '';
   let elementY = rowStart;
-  for (const [key, label] of Object.entries(labels) as [keyof typeof score.elements, string][]) {
+  for (const [key, label] of Object.keys(defaultPufuImageLabels.elements).map((key) => [
+    key,
+    labels.elements[key as keyof typeof labels.elements],
+  ]) as [keyof typeof score.elements, string][]) {
     const node = score.elements[key];
     const text = node.text
-      ? textBlock(node.text, xElements + 8, elementY + 53, elementsWidth - 16, 21, '#4b5563')
+      ? textBlock(
+          node.text,
+          xElements + 8,
+          elementY + 53,
+          elementsWidth - 16,
+          21,
+          '#4b5563',
+          false,
+          false,
+          language,
+        )
       : { content: '', height: 0 };
-    content += `<g data-role="element" data-uuid="${xml(node.uuid)}"><text x="${xElements + 8}" y="${elementY + 20}" font-size="17" fill="#6b7280">${label}</text>${text.content}</g>`;
+    content += `<g data-role="element" data-uuid="${xml(node.uuid)}"><text x="${xElements + 8}" y="${elementY + 20}" font-size="17" fill="#6b7280">${xml(label)}</text>${text.content}</g>`;
     const end = elementY + 25 + text.height;
-    const note = comment(node, xElements + 2, end + 24, elementsWidth - 4);
+    const note = comment(node, xElements + 2, end + 24, elementsWidth - 4, false, language);
     content += note.content;
     elementY = end + (note.height ? note.height + 46 : 22);
   }
@@ -299,7 +444,7 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     let measureY = purposeY;
     const measures = [];
     for (const node of purpose.measures) {
-      const item = measure(node, xMeasure, measureY, measureWidth, showProgress);
+      const item = measure(node, xMeasure, measureY, measureWidth, showProgress, labels, language);
       measures.push(item);
       measureY += item.height + 26;
     }
@@ -312,11 +457,19 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
       '#24354e',
       false,
       true,
+      language,
     );
     const ellipseHeight = purposeHeight(purposeText, purposeWidth, 23);
     const groupHeight = Math.max(ellipseHeight, measureY - purposeY - 26, 250);
     const centerY = purposeY + groupHeight / 2;
-    const note = comment(purpose, xPurpose, centerY + ellipseHeight / 2 + 24, purposeWidth);
+    const note = comment(
+      purpose,
+      xPurpose,
+      centerY + ellipseHeight / 2 + 24,
+      purposeWidth,
+      false,
+      language,
+    );
     groups.push({
       purpose,
       purposeY,
@@ -329,14 +482,23 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     });
     purposeY += groupHeight + note.height + 54;
   }
-  const win = objective(score.winCondition, '勝利条件', xObjective, rowStart + 8, objectiveWidth);
+  const win = objective(
+    score.winCondition,
+    labels.winCondition,
+    xObjective,
+    rowStart + 8,
+    objectiveWidth,
+    false,
+    language,
+  );
   const goalSize = objective(
     score.gainingGoal,
-    '獲得目標',
+    labels.gainingGoal,
     xObjective,
     0,
     objectiveWidth,
     true,
+    language,
   ).height;
   const minBodyBottom = Math.max(
     elementY + 12,
@@ -345,11 +507,12 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
   );
   const goal = objective(
     score.gainingGoal,
-    '獲得目標',
+    labels.gainingGoal,
     xObjective,
     minBodyBottom - goalSize - 14,
     objectiveWidth,
     true,
+    language,
   );
   const height = minBodyBottom + 49;
   if (!Number.isSafeInteger(height) || height < 1 || width * height > imageLimits.maxPixels)
@@ -378,22 +541,23 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
       '#24354e',
       false,
       true,
+      language,
     );
     content += purposeText.content + group.note.content + '</g>';
   }
   const heads = [
-    [xElements + 8, '廟算八要素', 'start'],
-    [xMeasure + measureWidth / 2, '施策', 'middle'],
-    [xPurpose + purposeWidth / 2, '中間目的', 'middle'],
-    [xObjective, '勝利条件', 'start'],
+    [xElements + 8, labels.eightElements, 'start'],
+    [xMeasure + measureWidth / 2, labels.measures, 'middle'],
+    [xPurpose + purposeWidth / 2, labels.purposes, 'middle'],
+    [xObjective, labels.winCondition, 'start'],
   ]
     .map(
       ([x, label, anchor]) =>
-        `<text x="${x}" y="57" text-anchor="${anchor}" font-size="18" font-weight="700" fill="#6b7280">${label}</text>`,
+        `<text x="${x}" y="57" text-anchor="${anchor}" font-size="18" font-weight="700" fill="#6b7280">${xml(label)}</text>`,
     )
     .join('');
-  const description = `ProjectScoreModelから生成。廟算八要素、施策、中間目的、勝利条件、獲得目標、保存されたコメントを表示。施策の進捗表示は${showProgress ? 'あり' : 'なし'}。`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>プ譜：${xml(score.gainingGoal.text)}</title><desc>${description}</desc><g font-family="Noto Sans CJK JP, sans-serif">${rect(0, 0, width, height, '#ffffff', 'none', 0)}${rect(30, 24, 1696, height - 48, '#ffffff', '#bdc8d8', 0)}${heads}<line x1="402" y1="24" x2="402" y2="${height - 24}" stroke="#cbd5e1"/>${lines}${content}${win.content}${goal.content}</g></svg>`;
+  const description = showProgress ? labels.description : labels.descriptionWithoutProgress;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>${xml(labels.title)}：${xml(score.gainingGoal.text)}</title><desc>${xml(description)}</desc><g font-family="Noto Sans CJK JP, sans-serif">${rect(0, 0, width, height, '#ffffff', 'none', 0)}${rect(30, 24, 1696, height - 48, '#ffffff', '#bdc8d8', 0)}${heads}<line x1="402" y1="24" x2="402" y2="${height - 24}" stroke="#cbd5e1"/>${lines}${content}${win.content}${goal.content}</g></svg>`;
   if (theme === 'light') return svg;
   // 色属性だけを置き換え、本文に書かれた色コードやエスケープ済みの文章は変えない。
   return svg.replace(

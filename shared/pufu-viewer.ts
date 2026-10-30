@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { languageSchema } from './locale';
 
 export const pufuViewerUri = 'ui://pufu/viewer-v1.html';
 const identifier = z.string().min(1).max(100);
 
 export const pufuViewerSchema = z.object({
+  language: languageSchema.optional(),
   status: z.enum(['ready', 'not_created']),
   question_id: identifier.nullable(),
   project_id: identifier,
@@ -33,3 +35,25 @@ export const pufuViewerReadySchema = pufuViewerSchema.extend({
   height: z.number().int().positive(),
 });
 export type PufuViewerImage = z.infer<typeof pufuViewerReadySchema>;
+
+// Explicit UI slots; never scan or translate user-provided content.
+export const pufuViewerMessages = {
+  TITLE: { id: 'title', message: 'プ譜' },
+  STATUS: { id: 'status', message: '読み込み中です…' },
+  UPDATED: { id: 'updated', message: 'プ譜が更新されたため最新の内容を表示しています' },
+  FIT: { id: 'fit', message: '横幅に合わせる' },
+  FULLSCREEN: { id: 'fullscreen', message: '全画面' },
+  DOWNLOAD: { id: 'download', message: 'PNGを開く・保存' },
+  RETRY: { id: 'retry', message: '再取得' },
+  EXTERNAL: { id: 'external', message: 'PNGを開く' },
+  SUMMARY: { id: 'summary', message: '対象のプ譜' },
+  VIEWER: { id: 'viewer', message: 'プ譜ビューアー', attribute: 'aria-label' },
+  TOOLBAR: { id: 'toolbar', message: '画像の操作', attribute: 'aria-label' },
+  ZOOM_OUT: { id: 'zoom-out', message: '縮小', attribute: 'aria-label' },
+  ZOOM_IN: { id: 'zoom-in', message: '拡大', attribute: 'aria-label' },
+  VIEWPORT: {
+    id: 'viewport',
+    message: 'プ譜画像。拡大後はスクロールやドラッグで移動できます。',
+    attribute: 'aria-label',
+  },
+} as const;

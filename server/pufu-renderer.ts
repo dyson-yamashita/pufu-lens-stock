@@ -1,8 +1,10 @@
 import wasm from '@resvg/resvg-wasm/index_bg.wasm?module';
 import { initPufuWasm, renderPufuPng, PufuImageError } from '@pufu-lens/pufu-image';
+import { pufuImageLabels } from '../shared/pufu-image-labels';
+import { type Language } from '../shared/locale';
 import type { Env } from './env';
 let font: Promise<Uint8Array> | undefined;
-export async function renderSavedPufu(env: Env, score: unknown) {
+export async function renderSavedPufu(env: Env, score: unknown, language: Language = 'ja') {
   if (!env.ASSETS)
     throw new PufuImageError('FONT_UNAVAILABLE', '画像生成用の静的アセットが設定されていません。');
   const assets = env.ASSETS;
@@ -29,5 +31,10 @@ export async function renderSavedPufu(env: Env, score: unknown) {
     }),
     font,
   ]);
-  return renderPufuPng(score, { font: bytes, showProgress: false });
+  return renderPufuPng(score, {
+    font: bytes,
+    showProgress: false,
+    language,
+    labels: pufuImageLabels(language),
+  });
 }

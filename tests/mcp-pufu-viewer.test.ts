@@ -140,6 +140,21 @@ describe('MCP Appsのプ譜表示', () => {
       expires_at: expect.any(String),
     });
   });
+  it('threads the account language into PNG presentation and viewer metadata with the same signed lifetime', async () => {
+    await app.env.DB.prepare("UPDATE users SET language='en' WHERE id='alice'").run();
+    const render = vi.spyOn(renderer, 'renderSavedPufu');
+    const before = (await app.env.DB.prepare('SELECT * FROM pufu_scores').all()).results;
+    const output = await call('show_pufu');
+    const data = pufuViewerSchema.parse(output.structuredContent);
+    expect(data).toMatchObject({ language: 'en', title: score.gainingGoal.text, status: 'ready' });
+    expect(render).toHaveBeenCalledExactlyOnceWith(app.env, score, 'en');
+    const image = await render.mock.results[0].value;
+    expect(image.svg).toContain('Eight planning elements');
+    expect(image.svg).not.toContain('廟算八要素');
+    expect(Math.abs(Date.parse(data.expires_at!) - Date.now() - 3_600_000)).toBeLessThan(5000);
+    expect((await open(data.image_url!)).status).toBe(200);
+    expect((await app.env.DB.prepare('SELECT * FROM pufu_scores').all()).results).toEqual(before);
+  });
   it('未作成を成功画像と区別する', async () => {
     const output = await call('show_pufu', { question_id: 'empty-q' });
     expect(output.isError).not.toBe(true);

@@ -526,7 +526,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
       expect(
         image.content?.some((item) => item.type === 'image' && item.mimeType === 'image/png'),
       ).toBe(true);
-      expect(render).toHaveBeenCalledExactlyOnceWith(app.env, original);
+      expect(render).toHaveBeenCalledExactlyOnceWith(app.env, original, 'ja');
       for (const tool of ['get_pufu', 'get_pufu_image']) {
         expect(
           (await call(token, tool, { ...selected, question_id: unrelated.id })).result,

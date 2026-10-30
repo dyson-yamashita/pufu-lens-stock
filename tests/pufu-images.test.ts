@@ -61,14 +61,14 @@ describe('プ譜画像をリクエスト時に生成する', () => {
         projectScore: saved,
       });
       expect((await app.request(`${path}/image`)).status).toBe(200);
-      expect(render).toHaveBeenLastCalledWith(app.env, saved);
+      expect(render).toHaveBeenLastCalledWith(app.env, saved, 'ja');
     }
     expect(await (await app.request('/api/v1/questions/image-question/pufu')).json()).toMatchObject(
       { projectScore: newer },
     );
     expect((await app.request(legacyImagePath)).status).toBe(200);
     expect(render).toHaveBeenCalledTimes(3);
-    expect(render).toHaveBeenLastCalledWith(app.env, newer);
+    expect(render).toHaveBeenLastCalledWith(app.env, newer, 'ja');
     expect(await snapshot()).toEqual(before);
   });
   it('別の問い・別ユーザーのプ譜や存在しないIDは404にして描画しない', async () => {
@@ -150,7 +150,7 @@ describe('プ譜画像をリクエスト時に生成する', () => {
     ).toBe(201);
     expect(render).not.toHaveBeenCalled();
     expect((await app.request(imagePath)).status).toBe(200);
-    expect(render).toHaveBeenCalledExactlyOnceWith(app.env, updated);
+    expect(render).toHaveBeenCalledExactlyOnceWith(app.env, updated, 'ja');
   });
   it('権限不足・存在しない問いでは描画しない', async () => {
     const render = vi.spyOn(renderer, 'renderSavedPufu');
