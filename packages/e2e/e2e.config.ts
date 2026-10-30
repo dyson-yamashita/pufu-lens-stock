@@ -32,12 +32,12 @@ export default {
   targets: [
     {
       name: 'desktop',
-      engine: web({ viewport: { width: 1280, height: 900 } }),
+      engine: web({ locale: 'ja-JP', viewport: { width: 1280, height: 900 } }),
       app: { url, identity: 'pufu-lens-e2e' },
     },
     {
       name: 'phone',
-      engine: web({ viewport: { width: 390, height: 844 } }),
+      engine: web({ locale: 'ja-JP', viewport: { width: 390, height: 844 } }),
       app: { url, identity: 'pufu-lens-e2e' },
     },
   ],
