@@ -56,13 +56,15 @@ export async function createPdfWorker() {
   };
 }
 
-export async function createPdfService() {
+export async function createPdfService({ manualClock = false } = {}) {
   const { outputFiles } = await build({
     stdin: {
       contents: `import {parsePdf} from './server/pdf-client.ts';
+        ${manualClock ? "import {advanceClock} from './tests/pdf-test-clock.ts';" : ''}
         let cancellations = 0;
         export default { async fetch(request, env) {
           const path = new URL(request.url).pathname;
+          ${manualClock ? "if (path === '/__test/clock') return Response.json(advanceClock(Number(new URL(request.url).searchParams.get('advance') ?? 0)));" : ''}
           if (path === '/cancellations') return Response.json({cancellations});
           const source = path === '/stalled'
             ? new Response(new ReadableStream({start(controller) {controller.enqueue(new Uint8Array([37]));}, cancel() {cancellations++;}}))
@@ -76,6 +78,7 @@ export async function createPdfService() {
     format: 'esm',
     platform: 'browser',
     write: false,
+    inject: manualClock ? [new URL('./pdf-test-clock.ts', import.meta.url).pathname] : [],
   });
   const runtime = new Miniflare({
     workers: [
