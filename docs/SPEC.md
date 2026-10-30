@@ -820,7 +820,7 @@ pnpm run check
 
 `pnpm run e2e:record` はローカルCodexで操作を選択し、`expect` が確認した記録を保存します。CIはその記録をread-only/strictで再生し、欠損や再生失敗でもAIへ切り替えません。既存Vitestを維持し、権限・入力・競合の検証をE2Eへ移しません。CIは全ケースを品質チェック・Vitestと並列実行し、全件実行・skipなし・AI利用ゼロも確認します。
 
-`packages/e2e/scenarios.json` に検証観点と担当ソースを記録し、`e2e:check` で実テストと照合します。`e2e:related` は変更に関連するケースを選び、共通・未分類のアプリ変更は全件へ広げます。台帳は初期3ケースの対応表で、全APIの網羅率を表しません。外部認証・外部AI・実機Safariは対象外です。セットアップ、CLIアダプターの前提、記録の更新、結果の確認は [E2Eの説明](../packages/e2e/README.md) を参照してください。
+`packages/e2e/scenarios.json` に検証観点と担当ソースを記録し、`e2e:check` で実テストと照合します。`e2e:related` は変更に関連するケースを選び、共通・未分類のアプリ変更は全件へ広げます。台帳は初期3ケースの対応表で、全APIの網羅率を表しません。外部認証・外部AI・実機Safariは対象外です。実行後はGit管理外の `packages/e2e/.e2e/runs/<実行ID>/index.html` に静的HTMLレポートを生成します。保存済みJSONからは `pnpm run e2e:report` で再生成でき、テストやAIは起動しません。セットアップ、CLIアダプターの前提、記録の更新、結果の確認は [E2Eの説明](../packages/e2e/README.md) を参照してください。
 
 ### 開発用スキル
 
