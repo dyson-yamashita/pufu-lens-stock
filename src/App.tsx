@@ -704,10 +704,9 @@ export default function App() {
   };
   if (!config || user === undefined)
     return (
-      <div className="boot">
+      <div className="boot" data-loading={!error}>
         <Brand />
-        <p>{error || '知識の棚を開いています…'}</p>
-        {!error && <Spinner />}
+        <p role="status">{error || '知識の棚を開いています…'}</p>
       </div>
     );
   if (!user)
