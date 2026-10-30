@@ -2,13 +2,16 @@ import type { Env } from './env';
 import { isDemo } from './env';
 
 export async function cleanupLegacyUserMemory(env: Env): Promise<void> {
-  const jobs = await env.DB.prepare('SELECT id FROM privacy_cleanup_jobs LIMIT 10').all<{
+  const jobs = await env.DB.prepare('SELECT id,kind FROM privacy_cleanup_jobs LIMIT 10').all<{
     id: string;
+    kind: string;
   }>();
   for (const job of jobs.results) {
     try {
       try {
-        const instance = await env.MEMORY_WORKFLOW.get(job.id);
+        const instance = await (
+          job.kind === 'pufu' ? env.ARTICLE_WORKFLOW : env.MEMORY_WORKFLOW
+        ).get(job.id);
         if (isDemo(env)) {
           // Miniflareはinstance.delete未実装。本番では完了済みのステップも消去する。
           const state = await instance.status();

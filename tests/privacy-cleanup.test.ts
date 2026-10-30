@@ -33,22 +33,53 @@ it('移行中に終了した旧ユーザーメモリのAI結果をDBへ書き戻
     ),
   ).toBeNull();
 });
-
-it('Workflow状態の削除が失敗したら要求を残し、次の保守で削除を完了する', async () => {
-  await app.env.DB.prepare("INSERT INTO privacy_cleanup_jobs(id) VALUES ('old-user-memory')").run();
-  let deleted = false;
-  const remove = vi.fn(async () => {
-    deleted = true;
+it('移行中に終了した旧プ譜のAI結果もDBへ書き戻さない', async () => {
+  await app.env.DB.batch([
+    app.env.DB.prepare(
+      "INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,editor_version,status) VALUES ('old-pufu','alice','alice-project','課題','{}','0.9.19','generating')",
+    ),
+    app.env.DB.prepare(
+      "INSERT INTO processing_jobs(id,user_id,kind,target_id,revision,status) VALUES ('old-pufu-job','alice','pufu','old-pufu',1,'running')",
+    ),
+  ]);
+  const job = (await app.env.DB.prepare(
+    "SELECT * FROM processing_jobs WHERE id='old-pufu-job'",
+  ).first<Job>())!;
+  app.env.AI = { run: async () => ({}) };
+  await aiStep(app.env, job, mockStep(), 'generate-pufu', async () => {
+    await app.env.DB.prepare(
+      "UPDATE pufu_scores SET generation=2,status='failed' WHERE id='old-pufu'",
+    ).run();
+    return { text: 'private@example.com' };
   });
-  remove.mockRejectedValueOnce(new Error('temporary failure'));
-  vi.mocked(app.env.MEMORY_WORKFLOW.get).mockResolvedValue({
-    delete: remove,
-  } as unknown as WorkflowInstance);
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-  await scheduledMaintenance(app.env);
-  expect(deleted).toBe(false);
-  expect(await app.env.DB.prepare('SELECT id FROM privacy_cleanup_jobs').first()).not.toBeNull();
-  await scheduledMaintenance(app.env);
-  expect(deleted).toBe(true);
-  expect(await app.env.DB.prepare('SELECT id FROM privacy_cleanup_jobs').first()).toBeNull();
+  expect(
+    await app.env.DB.prepare(
+      "SELECT result_json FROM ai_calls WHERE id='old-pufu-job:generate-pufu'",
+    ).first('result_json'),
+  ).toBeNull();
 });
+
+it.each(['user_memory', 'pufu'])(
+  '%sのWorkflow状態の削除が失敗したら要求を残し、次の保守で削除を完了する',
+  async (kind) => {
+    await app.env.DB.prepare("INSERT INTO privacy_cleanup_jobs(id,kind) VALUES ('old-job',?)")
+      .bind(kind)
+      .run();
+    let deleted = false;
+    const remove = vi.fn(async () => {
+      deleted = true;
+    });
+    remove.mockRejectedValueOnce(new Error('temporary failure'));
+    app.env[kind === 'pufu' ? 'ARTICLE_WORKFLOW' : 'MEMORY_WORKFLOW'] = {
+      get: vi.fn(async () => ({ delete: remove })),
+      create: app.env.MEMORY_WORKFLOW.create,
+    } as unknown as typeof app.env.MEMORY_WORKFLOW;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await scheduledMaintenance(app.env);
+    expect(deleted).toBe(false);
+    expect(await app.env.DB.prepare('SELECT id FROM privacy_cleanup_jobs').first()).not.toBeNull();
+    await scheduledMaintenance(app.env);
+    expect(deleted).toBe(true);
+    expect(await app.env.DB.prepare('SELECT id FROM privacy_cleanup_jobs').first()).toBeNull();
+  },
+);

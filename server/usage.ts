@@ -195,14 +195,24 @@ export async function aiStep<T extends object>(
           .run();
         throw error;
       }
-      await env.DB.prepare(
+      const guard =
         job.kind === 'user_memory'
-          ? "UPDATE ai_calls SET status='done',result_json=CASE WHEN EXISTS(SELECT 1 FROM users WHERE id=? AND memory_revision=? AND onboarding_completed_at IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM privacy_cleanup_jobs WHERE id=?) THEN ? ELSE NULL END,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?"
+          ? 'SELECT 1 FROM users WHERE id=? AND memory_revision=? AND onboarding_completed_at IS NOT NULL'
+          : job.kind === 'pufu'
+            ? 'SELECT 1 FROM pufu_scores WHERE id=? AND generation=? AND user_id=?'
+            : null;
+      const guardValues =
+        job.kind === 'user_memory'
+          ? [job.user_id, job.revision]
+          : [job.target_id, job.revision, job.user_id];
+      await env.DB.prepare(
+        guard
+          ? `UPDATE ai_calls SET status='done',result_json=CASE WHEN EXISTS(${guard}) AND NOT EXISTS(SELECT 1 FROM privacy_cleanup_jobs WHERE id=?) THEN ? ELSE NULL END,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`
           : "UPDATE ai_calls SET status='done',result_json=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
       )
         .bind(
-          ...(job.kind === 'user_memory'
-            ? [job.user_id, job.revision, job.id, JSON.stringify(result), id]
+          ...(guard
+            ? [...guardValues, job.id, JSON.stringify(result), id]
             : [JSON.stringify(result), id]),
         )
         .run();

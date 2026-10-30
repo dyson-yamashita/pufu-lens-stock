@@ -250,7 +250,7 @@ describe('初回のニックネームと規約への同意', () => {
   it('移行で旧メール列・名前・画像を消去し、コンテンツとセッションを保持する', async () => {
     await app.dispose();
     const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
-      .filter((name) => name.endsWith('.sql') && name !== '0033_privacy_onboarding.sql')
+      .filter((name) => name.endsWith('.sql') && name < '0033')
       .sort();
     app = await testApp({ migrations, onboardingMigration: false });
     const projects = (await app.env.DB.prepare('SELECT * FROM projects ORDER BY id').all()).results;
@@ -261,6 +261,18 @@ describe('初回のニックネームと規約への同意', () => {
     ).run();
     await app.env.DB.batch([
       app.env.DB.prepare(
+        "INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,score_json,editor_version,status) VALUES ('old-pufu','alice','alice-project','保存済み課題','{\"userMemory\":{\"text\":\"private@example.com\"},\"details\":\"利用者の補足\"}','{\"original\":true}','0.9.19','ready')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,editor_version,status) VALUES ('old-inflight','alice','alice-project','生成中課題','{\"userMemory\":{\"revision\":0}}','0.9.19','generating')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO processing_jobs(id,user_id,kind,target_id,revision,status) VALUES ('old-pufu-flight','alice','pufu','old-inflight',1,'running')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO ai_calls(id,job_id,user_id,status,result_json) VALUES ('old-pufu-flight:generate-pufu','old-pufu-flight','alice','done','private@example.com')",
+      ),
+      app.env.DB.prepare(
         "INSERT INTO processing_jobs(id,user_id,kind,target_id,revision,status) VALUES ('old-user-memory','alice','user_memory','alice',0,'done'),('keep-article','alice','article','article',0,'done')",
       ),
       app.env.DB.prepare(
@@ -268,6 +280,7 @@ describe('初回のニックネームと規約への同意', () => {
       ),
     ]);
     await applyMigration(app.env.DB, '0033_privacy_onboarding.sql');
+    await applyMigration(app.env.DB, '0034_pufu_memory_privacy.sql');
     const users = (await app.env.DB.prepare('SELECT * FROM users').all()).results;
     expect(users).toHaveLength(2);
     for (const user of users) {
@@ -286,8 +299,18 @@ describe('初回のニックネームと規約への同意', () => {
     expect((await app.env.DB.prepare('SELECT id,result_json FROM ai_calls').all()).results).toEqual(
       [{ id: 'keep-article:generate', result_json: 'article summary' }],
     );
-    expect((await app.env.DB.prepare('SELECT id FROM privacy_cleanup_jobs').all()).results).toEqual(
-      [{ id: 'old-user-memory' }],
-    );
+    expect(
+      (await app.env.DB.prepare('SELECT id FROM privacy_cleanup_jobs ORDER BY id').all()).results,
+    ).toEqual([{ id: 'old-pufu-flight' }, { id: 'old-user-memory' }]);
+    expect(
+      await app.env.DB.prepare(
+        "SELECT status,generation FROM pufu_scores WHERE id='old-inflight'",
+      ).first(),
+    ).toEqual({ status: 'failed', generation: 2 });
+    const pufu = await app.env.DB.prepare(
+      "SELECT input_json,score_json FROM pufu_scores WHERE id='old-pufu'",
+    ).first<{ input_json: string; score_json: string }>();
+    expect(JSON.parse(pufu!.input_json)).toEqual({ userMemory: null, details: '利用者の補足' });
+    expect(JSON.parse(pufu!.score_json)).toEqual({ original: true });
   });
 });

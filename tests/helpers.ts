@@ -104,6 +104,12 @@ export async function testApp(
     migrations.push('0027_project_question_settings.sql');
   if (options.onboardingMigration !== false && !migrations.includes('0033_privacy_onboarding.sql'))
     migrations.push('0033_privacy_onboarding.sql');
+  if (
+    options.onboardingMigration !== false &&
+    migrations.includes('0009_pufu_scores.sql') &&
+    !migrations.includes('0034_pufu_memory_privacy.sql')
+  )
+    migrations.push('0034_pufu_memory_privacy.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(

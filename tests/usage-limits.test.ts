@@ -202,16 +202,19 @@ describe('永続利用量制限', () => {
     app.env.AI_CONCURRENT_CALLS = '1';
     app.env.AI_CALL_DAILY_LIMIT = '1';
     const makeJob = async (id: string, user_id = 'alice') => {
-      await app.env.DB.prepare(
-        "INSERT INTO processing_jobs (id,user_id,kind,target_id,revision) VALUES (?,?,'pufu','test',1)",
-      )
-        .bind(id, user_id)
-        .run();
+      await app.env.DB.batch([
+        app.env.DB.prepare(
+          "INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,editor_version) VALUES (?,?,?,'検証課題','{}','0.9.19')",
+        ).bind(id, user_id, `${user_id}-project`),
+        app.env.DB.prepare(
+          "INSERT INTO processing_jobs (id,user_id,kind,target_id,revision) VALUES (?,?,'pufu',?,1)",
+        ).bind(id, user_id, id),
+      ]);
       return {
         id,
         user_id,
         kind: 'pufu',
-        target_id: 'test',
+        target_id: id,
         revision: 1,
         status: 'pending',
       } as Job;
