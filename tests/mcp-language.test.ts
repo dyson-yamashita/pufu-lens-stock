@@ -3,6 +3,7 @@ import type {
   CallToolResult,
   InitializeResult,
   ListToolsResult,
+  ListResourcesResult,
   ReadResourceResult,
 } from '@modelcontextprotocol/server';
 import { parseHTML } from 'linkedom';
@@ -62,6 +63,18 @@ describe('MCP account language', () => {
       call(ja, 'get_pufu_guideline'),
     ]);
     expect(enTools.tools.map((t) => t.name)).toEqual(jaTools.tools.map((t) => t.name));
+    const [enResources, jaResources] = await Promise.all([
+      rpc<ListResourcesResult>(en, 'resources/list'),
+      rpc<ListResourcesResult>(ja, 'resources/list'),
+    ]);
+    expect(enResources.resources.map(({ uri, name }) => ({ uri, name }))).toEqual(
+      jaResources.resources.map(({ uri, name }) => ({ uri, name })),
+    );
+    expect(enResources.resources[0]).toMatchObject({
+      name: 'プ譜ビューアー',
+      title: 'Pufu viewer',
+      uri: pufuViewerUri,
+    });
     expect(enTools.tools.find((t) => t.name === 'get_pufu')?.title).toBe('Get pufu');
     expect(jaTools.tools.find((t) => t.name === 'get_pufu')?.title).toBe('プ譜取得');
     expect(JSON.stringify(enTools.tools)).not.toMatch(/[\u3040-\u30ff\u3400-\u9fff]/u);

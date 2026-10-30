@@ -20,9 +20,9 @@ export function registerPufuViewer(server: McpServer, env: Env, language: Langua
   };
   registerAppResource(
     server,
-    translate(language, 'プ譜ビューアー'),
+    'プ譜ビューアー',
     pufuViewerUri,
-    { _meta: metadata },
+    { title: translate(language, 'プ譜ビューアー'), _meta: metadata },
     async () => ({
       contents: [
         {
