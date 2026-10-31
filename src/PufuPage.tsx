@@ -6,6 +6,7 @@ import { api, send } from './api';
 import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
 import PufuRelations from './PufuRelations';
 import PufuFavoriteButton from './PufuFavoriteButton';
+import DeleteAction from './DeleteAction';
 const PufuEditor = lazy(async () => {
   try {
     const editor = await import('./PufuEditor');
@@ -20,12 +21,14 @@ export default function PufuPage({
   onQuestion,
   backLabel = t('ui.app.back_to_pufu_list'),
   onBack,
+  onDeleted,
   onGuard,
 }: {
   id: string;
   onQuestion: (id: string) => void;
   backLabel?: string;
   onBack: () => void;
+  onDeleted: () => void;
   onGuard: (guard: (() => boolean) | null) => void;
 }) {
   useLanguage();
@@ -33,6 +36,8 @@ export default function PufuPage({
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [editorBlocked, setEditorBlocked] = useState(false);
   const [relationsBusy, setRelationsBusy] = useState(false);
   const [editorVersion, setEditorVersion] = useState(0);
@@ -47,8 +52,8 @@ export default function PufuPage({
         ]
       : []);
   const favoriteVersion = useRef(0);
-  const updateRevision = useCallback((revision: number) => {
-    setPufu((current) => current && { ...current, revision });
+  const updateRevision = useCallback((revision: number, task?: string) => {
+    setPufu((current) => current && { ...current, revision, task: task ?? current.task });
   }, []);
   useEffect(() => {
     const controller = new AbortController();
@@ -107,7 +112,8 @@ export default function PufuPage({
             key={pufu.id}
             pufu={pufu}
             onError={setError}
-            onBusyChange={() => {
+            onBusyChange={(value) => {
+              setFavoriteBusy(value);
               favoriteVersion.current += 1;
             }}
             onSaved={(saved) => {
@@ -229,6 +235,29 @@ export default function PufuPage({
             </p>
           </div>
         )
+      )}
+      {pufu && (
+        <DeleteAction
+          label={t('ui.pufu_page.delete_pufu')}
+          title={t('ui.pufu_page.delete_this_pufu')}
+          disabled={deleting || busy || favoriteBusy || editorBlocked || relationsBusy}
+          onDelete={async () => {
+            setDeleting(true);
+            try {
+              await api(`/api/v1/pufus/${encodeURIComponent(id)}`, { method: 'DELETE' });
+              onDeleted();
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        >
+          <p className="delete-target">{pufu.task}</p>
+          <p>
+            {t('ui.question_page.project')}
+            {pufu.context.project.name}
+          </p>
+          <p>{t('ui.pufu_page.delete_description')}</p>
+        </DeleteAction>
       )}
     </section>
   );

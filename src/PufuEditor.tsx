@@ -27,7 +27,7 @@ export default function PufuEditor({
   pufu: Pufu;
   onGuard: (guard: (() => boolean) | null) => void;
   onEditingStateChange?: (blocked: boolean) => void;
-  onSaved?: (revision: number) => void;
+  onSaved?: (revision: number, task?: string) => void;
 }) {
   const { language } = useLanguage();
   const { theme } = useTheme();
@@ -143,7 +143,7 @@ export default function PufuEditor({
       ]);
       baseline.current = canonical(json);
       setRevision(result.revision);
-      onSaved?.(result.revision);
+      onSaved?.(result.revision, isLatest ? input.data.gainingGoal.text : undefined);
       setDirty(false);
       if (append) setEditor(structuredClone(next));
       setNotice(

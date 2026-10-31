@@ -73,6 +73,7 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     screen.getByRole('status').filter({ hasText: 'プ譜を保存しました。' }),
   ).toBeVisible();
   await screen.getByRole('button', '閉じる').click();
+  await expect(browser.locator('.pufu-context-task')).toContainText('E2Eプ譜の次局面の目標');
   await app.open(`/#pufu/${pufu.id}`);
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
   await screen.getByRole('button', '前の局面へ').click();
@@ -92,6 +93,25 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await screen.getByRole('button', /E2Eプ譜の次局面の目標/).click();
   await screen.getByRole('button', 'プ譜の一覧に戻る').click();
   await expect(screen.getByRole('heading', 'すべてのプ譜')).toBeVisible();
+  await screen.getByRole('button', /E2Eプ譜の次局面の目標/).click();
+  await expect(screen.getByRole('button', 'プ譜を削除')).toBeHidden();
+  await browser.locator('.delete-action summary').click();
+  await screen.getByRole('button', 'プ譜を削除').click();
+  await expect(screen.getByRole('dialog', 'このプ譜を削除しますか？')).toContainText(
+    'E2Eプ譜の次局面の目標',
+  );
+  await screen.getByRole('button', 'キャンセル').click();
+  expect((await fixture.request(`/pufus/${pufu.id}`)).pufu).toBeDefined();
+  await screen.getByRole('button', 'プ譜を削除').click();
+  await browser.locator('.delete-confirmation').getByRole('button', 'プ譜を削除').click();
+  await expect(screen.getByRole('heading', 'すべてのプ譜')).toBeVisible();
+  await expect(
+    screen.getByRole('status').filter({ hasText: 'プ譜を削除しました。' }),
+  ).toBeVisible();
+  await expect(screen.getByRole('button', /E2Eプ譜の次局面の目標/)).toHaveCount(0);
+  await app.open('/#pufus');
+  await expect(screen.getByRole('button', /E2Eプ譜の次局面の目標/)).toHaveCount(0);
+  expect(await fixture.request('/pufus')).toMatchObject({ total: 0, pufus: [] });
 });
 
 test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取得できない', async ({
