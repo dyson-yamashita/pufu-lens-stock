@@ -1,7 +1,7 @@
 import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
-import type { PufuListItem } from '../shared/pufu';
+import { pufuDisplayTitle, type PufuListItem } from '../shared/pufu';
 import { api } from './api';
 import PufuFavoriteButton from './PufuFavoriteButton';
 const statusLabels = () => ({
@@ -132,7 +132,7 @@ export default function Pufus({
               <article key={pufu.id} className="pufu-list-item">
                 <button type="button" className="pufu-list-open" onClick={() => onPufu(pufu.id)}>
                   <span>
-                    <strong>{pufu.task}</strong>
+                    <strong>{pufuDisplayTitle(pufu)}</strong>
                     {questions.length > 0 && (
                       <small>
                         {t('ui.pufus.question_or_insight')}

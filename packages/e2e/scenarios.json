@@ -10,6 +10,10 @@
     "title": "プ譜の編集・局面・戻り先",
     "sources": [
       "src/PufuPage.tsx",
+      "src/PufuTitle.tsx",
+      "src/PufuForm.tsx",
+      "server/pufu-title.ts",
+      "server/pufu-create.ts",
       "src/PufuEditor.tsx",
       "src/Pufus.tsx",
       "src/PufuImagePreview.tsx",
@@ -22,6 +26,7 @@
       "再読込後も編集内容が残る",
       "新局面の編集で過去局面が変わらない",
       "一覧へ戻る",
+      "一覧はタイトル表示のみ、詳細のペンで編集・保存・再読込・解除と第一局面の獲得目標への復帰",
       "その他の操作の開閉、削除確認のキャンセル、全局面の削除と再読込後の不在"
     ]
   },

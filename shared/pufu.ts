@@ -6,7 +6,19 @@ export const pufuEditorVersion = '0.9.19';
 export { elementKeys, pufuScoreSchema } from '@pufu-lens/pufu-image/model';
 import { pufuScoreSchema } from '@pufu-lens/pufu-image/model';
 export type PufuScore = z.infer<typeof pufuScoreSchema>;
+export const pufuTitleSchema = z
+  .string()
+  .trim()
+  .max(200, 'タイトルは200文字以内で入力してください。');
+export function pufuDisplayTitle(pufu: {
+  title?: string | null;
+  first_phase_task?: string;
+  task: string;
+}) {
+  return pufu.title || pufu.first_phase_task || pufu.task;
+}
 export const createPufuSchema = z.strictObject({
+  title: pufuTitleSchema.optional(),
   task: z
     .string()
     .trim()
@@ -32,6 +44,7 @@ export const savePufuSchema = z.strictObject({
   ...pufuRelationFields,
 });
 export const createSavedPufuSchema = z.strictObject({
+  title: pufuTitleSchema.optional(),
   project_id: z.string().min(1).max(100),
   ...pufuRelationFields,
   score: pufuScoreSchema,
@@ -59,6 +72,7 @@ export type MemorySnapshot = {
   updated_at: string;
 };
 export type PufuContext = {
+  title?: string;
   details?: string;
   question: { id: string; text: string; source: 'ai' | 'user' } | null;
   task: string;
@@ -69,6 +83,8 @@ export type PufuContext = {
   projectMemory: MemorySnapshot | null;
 };
 export type PufuSummary = PufuRelations & {
+  title?: string | null;
+  first_phase_task?: string;
   id: string;
   is_favorite: 0 | 1;
   question_id: string | null;

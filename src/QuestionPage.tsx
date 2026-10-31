@@ -1,3 +1,4 @@
+import { pufuDisplayTitle } from '../shared/pufu';
 import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Folder, LoaderCircle, Star } from 'lucide-react';
@@ -291,7 +292,7 @@ export default function QuestionPage({
                         onClick={() => onPufu(pufu.id)}
                       >
                         <span>
-                          <strong>{pufu.task}</strong>
+                          <strong>{pufuDisplayTitle(pufu)}</strong>
                           <small>
                             {pufu.status === 'ready'
                               ? t('ui.question_page.editable')

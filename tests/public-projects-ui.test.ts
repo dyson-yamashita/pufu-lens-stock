@@ -32,9 +32,11 @@ const userQuestion = {
   source: 'user',
   pufu_count: 0,
 };
+let pufuTitle: string | null;
 let root: Root;
 let document: Document;
 beforeEach(() => {
+  pufuTitle = null;
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
   document = dom.document as unknown as Document;
   vi.stubGlobal('window', dom.window);
@@ -63,6 +65,7 @@ beforeEach(() => {
       return {
         pufu: {
           id: 'pufu',
+          title: pufuTitle,
           task: '問いから考える課題',
           current_phase: 1,
           updated_at: '2026-10-18',
@@ -79,7 +82,13 @@ beforeEach(() => {
     if (url.pathname.endsWith('/pufus'))
       return {
         items: [
-          { id: 'pufu', task: '問いから考える課題', current_phase: 1, updated_at: '2026-10-18' },
+          {
+            id: 'pufu',
+            title: pufuTitle,
+            task: '問いから考える課題',
+            current_phase: 1,
+            updated_at: '2026-10-18',
+          },
         ],
         total: 1,
         page: 1,
@@ -90,7 +99,13 @@ beforeEach(() => {
         question: aiQuestion,
         stock,
         pufus: [
-          { id: 'pufu', task: '問いから考える課題', current_phase: 1, updated_at: '2026-10-18' },
+          {
+            id: 'pufu',
+            title: pufuTitle,
+            task: '問いから考える課題',
+            current_phase: 1,
+            updated_at: '2026-10-18',
+          },
         ],
         has_more: false,
       };
@@ -164,7 +179,13 @@ it('公開した問いの複数のストックを表示し、プ譜カードの�
         stock,
         stocks: [stock, { ...stock, id: 'second', title: '二つ目の記事' }],
         pufus: [
-          { id: 'pufu', task: '問いから考える課題', current_phase: 1, updated_at: '2026-10-18' },
+          {
+            id: 'pufu',
+            title: pufuTitle,
+            task: '問いから考える課題',
+            current_phase: 1,
+            updated_at: '2026-10-18',
+          },
         ],
         has_more: false,
       };
@@ -192,6 +213,7 @@ it.each([
               ? [
                   {
                     id: 'pufu',
+                    title: pufuTitle,
                     task: '問いから考える課題',
                     current_phase: 1,
                     updated_at: '2026-10-18',
@@ -292,4 +314,15 @@ it.each([
   expect(card.querySelector('h3')?.textContent).toBe('保存した課題');
   expect(card.querySelector('.public-help')?.textContent).toBe(label);
   expect(card.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
+});
+
+it('公開プ譜は一覧と詳細に設定したタイトルを表示し、課題本文も保持する', async () => {
+  pufuTitle = '短い公開タイトル';
+  await render('#pufus');
+  expect(document.querySelector('.public-pufu-card')?.textContent).toContain(pufuTitle);
+  await navigate('#pufu/pufu');
+  expect(document.querySelector('h2.public-detail-title')?.textContent).toBe(pufuTitle);
+  expect(document.querySelector('.public-pufu-context')?.textContent).toContain(
+    '問いから考える課題',
+  );
 });

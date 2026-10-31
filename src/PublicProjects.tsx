@@ -1,3 +1,4 @@
+import { pufuDisplayTitle } from '../shared/pufu';
 import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import {
   lazy,
@@ -686,7 +687,7 @@ function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             key={pufu.id}
             href={`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`}
           >
-            <h3>{pufu.task}</h3>
+            <h3>{pufuDisplayTitle(pufu)}</h3>
             <p className="public-help">
               {t('phase.number', { number: pufu.current_phase })}
               {t('ui.public_projects.separator')}
@@ -794,7 +795,7 @@ function PublicQuestionDetail({
               href={`#pufu/${encodeURIComponent(pufu.id)}`}
             >
               <span>
-                <strong>{pufu.task}</strong>
+                <strong>{pufuDisplayTitle(pufu)}</strong>
                 <small>
                   {t('phase.number', { number: pufu.current_phase })}
                   {t('ui.public_projects.read_only')}
@@ -851,7 +852,7 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
             ? t('ui.public_projects.back_to_question_or_insight')
             : t('ui.public_projects.back_to_questions_insights')}
       </a>
-      <h2 className="public-detail-title">{t('ui.app.pufu')}</h2>
+      <h2 className="public-detail-title">{data.pufu.title || t('ui.app.pufu')}</h2>
       <div className="pufu-context public-pufu-context">
         <section aria-label={t('ui.public_projects.task')}>
           <h3 className="question-origin pufu-context-label">{t('ui.public_projects.task')}</h3>

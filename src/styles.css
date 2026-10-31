@@ -4190,3 +4190,33 @@ article.pufu-list-item {
   padding-top: 4px;
   border-top: 1px solid var(--border);
 }
+
+.pufu-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.pufu-title-row h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.pufu-title-row h2 {
+  font-size: 18px;
+}
+.pufu-title-row > .icon-button {
+  flex-shrink: 0;
+}
+.pufu-title-form {
+  min-width: 0;
+}
+.pufu-title-form input {
+  width: 100%;
+}
+.pufu-context > .pufu-title-row,
+.pufu-context > .pufu-title-form {
+  margin-bottom: 16px;
+}

@@ -35,6 +35,7 @@ let independent: boolean;
 let projects: Project[];
 let pufuFavorite: 0 | 1;
 let readyPufu: boolean;
+let pufuTitle: string | null;
 const summary = {
   id: 'pufu',
   question_id: 'question',
@@ -103,7 +104,12 @@ beforeEach(() => {
   ];
   pufuFavorite = 0;
   readyPufu = false;
+  pufuTitle = null;
   vi.mocked(send).mockImplementation(async (path, data) => {
+    if (path === '/api/v1/pufus/pufu/title') {
+      pufuTitle = (data as { title: string }).title || null;
+      return { id: 'pufu', title: pufuTitle };
+    }
     if (path === '/api/v1/pufus/pufu/favorite') {
       pufuFavorite = (data as { is_favorite: boolean }).is_favorite ? 1 : 0;
       return { id: 'pufu', is_favorite: pufuFavorite };
@@ -111,6 +117,7 @@ beforeEach(() => {
     throw new Error('想定外の送信先: ' + path);
   });
   Object.defineProperties(window.HTMLElement.prototype, {
+    select: { configurable: true, value() {} },
     showModal: { configurable: true, value() {} },
     close: { configurable: true, value() {} },
   });
@@ -212,7 +219,7 @@ beforeEach(() => {
         return {
           pufus:
             total && (url.searchParams.get('favorite') !== 'true' || pufuFavorite)
-              ? [{ ...summary, is_favorite: pufuFavorite }]
+              ? [{ ...summary, title: pufuTitle, is_favorite: pufuFavorite }]
               : [],
           total: url.searchParams.get('favorite') === 'true' && !pufuFavorite ? 0 : total,
         };
@@ -220,6 +227,7 @@ beforeEach(() => {
         return {
           pufu: {
             ...summary,
+            title: pufuTitle,
             status: readyPufu ? 'ready' : summary.status,
             is_favorite: pufuFavorite,
             question_id: independent ? null : summary.question_id,
@@ -704,6 +712,7 @@ it.each(['#pufus', '#pufus/project'])(
     const dialog = document.querySelector('dialog')!;
     expect(dialog.querySelector('#pufu-project')).not.toBeNull();
     for (const [selector, value] of [
+      ['#pufu-title', '継続の計画'],
       ['#pufu-task', '継続できる仕組みを作る'],
       ['#pufu-details', '人員2名。毎朝10分の振り返りを予定。'],
     ]) {
@@ -721,6 +730,7 @@ it.each(['#pufus', '#pufus/project'])(
     expect(send).toHaveBeenCalledWith(
       '/api/v1/projects/project/pufus/generate',
       expect.objectContaining({
+        title: '継続の計画',
         task: '継続できる仕組みを作る',
         details: '人員2名。毎朝10分の振り返りを予定。',
         request_id: expect.any(String),
@@ -766,4 +776,89 @@ it('送信中は追加ダイアログの閉じる操作とEscapeを無効にす�
   await hashChange();
   expect(document.querySelector('dialog')).toBeNull();
   expect(window.location.hash).toBe('#pufu/pufu');
+});
+
+it.each(['#pufu/pufu'])(
+  'ペンで任意タイトルを保存・解除し、キャンセルでは保存しない: %s',
+  async (hash) => {
+    await render(hash);
+    const editTitle = async () =>
+      act(async () =>
+        document.querySelector<HTMLButtonElement>('[aria-label="タイトルを編集"]')!.click(),
+      );
+    const enterTitle = async (value: string) =>
+      act(async () => {
+        const input = document.querySelector<HTMLInputElement>('.pufu-title-form input')!;
+        input.value = value;
+        input.dispatchEvent(new window.Event('input', { bubbles: true }));
+      });
+    const submit = async () =>
+      act(async () =>
+        document
+          .querySelector('.pufu-title-form')!
+          .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+      );
+    await editTitle();
+    expect(window.location.hash).toBe(hash);
+    await enterTitle('短い見出し');
+    await submit();
+    expect(send).toHaveBeenLastCalledWith(
+      '/api/v1/pufus/pufu/title',
+      { title: '短い見出し' },
+      'PATCH',
+    );
+    expect(document.querySelector('.pufu-title-row')!.textContent).toContain('短い見出し');
+    await editTitle();
+    await enterTitle('取り消す変更');
+    const calls = vi.mocked(send).mock.calls.length;
+    await act(async () =>
+      document
+        .querySelector('.pufu-title-form')!
+        .dispatchEvent(
+          Object.assign(new window.Event('keydown', { bubbles: true }), { key: 'Escape' }),
+        ),
+    );
+    expect(vi.mocked(send).mock.calls.length).toBe(calls);
+    expect(document.querySelector('.pufu-title-row')!.textContent).toContain('短い見出し');
+    await editTitle();
+    await enterTitle('');
+    await submit();
+    expect(document.querySelector('.pufu-title-row')!.textContent).toContain(summary.task);
+  },
+);
+
+it('一覧はタイトルを表示するだけで、編集は詳細画面のペンから行う', async () => {
+  pufuTitle = '短い見出し';
+  await render('#pufus');
+  const card = document.querySelector('.pufu-list-item')!;
+  expect(card.querySelector('strong')?.textContent).toBe('短い見出し');
+  expect(card.querySelector('[aria-label="タイトルを編集"]')).toBeNull();
+  await act(async () => card.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+  await hashChange();
+  expect(window.location.hash).toBe('#pufu/pufu');
+  expect(document.querySelector('.pufu-title-row h2')?.textContent).toBe('短い見出し');
+  expect(document.querySelector('[aria-label="タイトルを編集"]')).not.toBeNull();
+});
+
+it('タイトル保存中はプ譜を削除できず、保存完了後に削除操作を再開できる', async () => {
+  await render('#pufu/pufu');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('[aria-label="タイトルを編集"]')!.click(),
+  );
+  let complete!: (value: unknown) => void;
+  vi.mocked(send).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+  );
+  await act(async () =>
+    document
+      .querySelector('.pufu-title-form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+  );
+  const deletion = document.querySelector<HTMLButtonElement>('.delete-action button')!;
+  expect(deletion.disabled).toBe(true);
+  await act(async () => complete({ id: 'pufu', title: null }));
+  expect(deletion.disabled).toBe(false);
 });
