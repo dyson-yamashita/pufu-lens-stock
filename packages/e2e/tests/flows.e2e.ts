@@ -94,14 +94,14 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await expect(screen.getByRole('button', 'タイトルを編集')).toHaveCount(0);
   await screen.getByRole('button', /E2Eプ譜の編集済み目標/).click();
   await screen.getByRole('button', 'タイトルを編集').click();
-  await screen.getByLabel('タイトル').fill('E2E短いタイトル');
+  await screen.getByLabel('タイトル任意').fill('E2E短いタイトル');
   await screen.getByRole('button', '保存', { exact: true }).click();
   await expect(screen.getByRole('heading', 'E2E短いタイトル')).toBeVisible();
   await app.open('/#pufus');
   await screen.getByRole('button', /E2E短いタイトル/).click();
   await expect(screen.getByRole('heading', 'E2E短いタイトル')).toBeVisible();
   await screen.getByRole('button', 'タイトルを編集').click();
-  await screen.getByLabel('タイトル').fill('');
+  await screen.getByLabel('タイトル任意').fill('');
   await screen.getByRole('button', '保存', { exact: true }).click();
   await expect(browser.locator('.pufu-title-row h2')).toHaveText('E2Eプ譜の編集済み目標');
   await app.open('/#pufus');
