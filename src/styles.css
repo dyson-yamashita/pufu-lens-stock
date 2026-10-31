@@ -4166,10 +4166,20 @@ article.pufu-list-item {
 }
 .mcp-connection-editor .mcp-permission {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 8px;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 .mcp-connections .token-row > .mcp-connection-actions {
   flex: 0 1 auto;
+}
+.mcp-connection-editor .mcp-permission input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
 }
