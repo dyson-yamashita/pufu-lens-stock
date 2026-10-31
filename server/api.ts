@@ -1,3 +1,10 @@
+import {
+  allowedProjectIds,
+  projectScopeJson,
+  canAccessProject,
+  resolveProjectId,
+  projectListFilter,
+} from './project-access';
 import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import { encryptToken } from './x';
 import { publicProjectsApp, publicationApp } from './public-projects';
@@ -335,11 +342,12 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ ok: true, cleanup_pending: !complete }, complete ? 200 : 202);
   });
   app.get('/api/v1/projects', async (c) => {
-    const { user, tokenProjectId } = c.get('principal');
+    const principal = c.get('principal');
+    const { user } = principal;
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.auto_generate_questions, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count, (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id = p.id AND pf.user_id = p.user_id) AS pufu_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id = ?) GROUP BY p.id ORDER BY p.created_at, p.id",
+      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.auto_generate_questions, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count, (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id = p.id AND pf.user_id = p.user_id) AS pufu_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?))) GROUP BY p.id ORDER BY p.created_at, p.id",
     )
-      .bind(user.id, tokenProjectId, tokenProjectId)
+      .bind(user.id, projectScopeJson(principal), projectScopeJson(principal))
       .all();
     return c.json({
       projects: result.results.map((project) => ({
@@ -419,7 +427,8 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ ok: true });
   });
   app.get('/api/v1/stocks', async (c) => {
-    const { user, tokenProjectId } = c.get('principal');
+    const principal = c.get('principal');
+    const { user } = principal;
     const options = stockListOptionsSchema.extend(stockSearchOptionsSchema.shape).safeParse({
       limit: c.req.query('limit') === undefined ? undefined : Number(c.req.query('limit')),
       sort_by: c.req.query('sort_by'),
@@ -434,8 +443,7 @@ export function createApp(trustedPrincipal?: Principal) {
         message: '取得件数・並び順・表示形式・検索方式を確認してください。',
       });
     const requested = c.req.query('project_id') || null;
-    if (tokenProjectId && requested && requested !== tokenProjectId) throw new HTTPException(403);
-    const projectId = tokenProjectId ?? requested;
+    const projectId = resolveProjectId(principal, requested);
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const status = c.req.query('status') ?? 'all';
     const source = c.req.query('source') ?? 'all';
@@ -451,6 +459,7 @@ export function createApp(trustedPrincipal?: Principal) {
         await listStocks(c.env, {
           ...options.data,
           userId: user.id,
+          projectIds: allowedProjectIds(principal),
           projectId,
           q: (c.req.query('q') ?? '').slice(0, 200),
           status,
@@ -466,11 +475,14 @@ export function createApp(trustedPrincipal?: Principal) {
     }
   });
   app.post('/api/v1/stocks', async (c) => {
-    const { user, tokenProjectId } = c.get('principal');
+    const principal = c.get('principal');
+    const { user } = principal;
     const data = await body(c, stockInputSchema);
-    if (tokenProjectId && data.project_id !== undefined && tokenProjectId !== data.project_id)
+    if (data.project_id && !canAccessProject(principal, data.project_id))
       throw new HTTPException(403, { message: 'このトークンの保存先プロジェクトとは異なります。' });
-    const projectId = data.project_id ?? tokenProjectId;
+    const projectId = resolveProjectId(principal, data.project_id ?? null);
+    if (!projectId && allowedProjectIds(principal) !== null)
+      throw new HTTPException(400, { message: '保存先プロジェクトを指定してください。' });
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const source = data.type === 'url' ? validateUrl(data.url) : null;
     const youtube = source !== null && isYouTubeUrl(source.href);
@@ -630,7 +642,8 @@ export function createApp(trustedPrincipal?: Principal) {
         content_key: string | null;
         input_text: string | null;
       }>();
-    if (!stock) throw new HTTPException(404, { message: '記事が見つかりません。' });
+    if (!stock || !canAccessProject(c.get('principal'), stock.project_id))
+      throw new HTTPException(404, { message: '記事が見つかりません。' });
     return stock;
   }
   async function ownedQuestion(c: import('hono').Context<AppEnv>) {
@@ -639,18 +652,19 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<QuestionDetail>();
-    if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
+    if (!question || !canAccessProject(c.get('principal'), question.project_id))
+      throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return withRelations(question);
   }
   async function ownedPufu(c: import('hono').Context<AppEnv>) {
     const pufu = await c.env.DB.prepare(
-      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ? AND (? IS NULL OR project_id=?)`,
+      `SELECT ${pufuColumns} FROM pufu_scores WHERE id = ? AND user_id = ? AND (? IS NULL OR project_id IN (SELECT value FROM json_each(?)))`,
     )
       .bind(
         c.req.param('id'),
         c.get('principal').user.id,
-        c.get('principal').tokenProjectId,
-        c.get('principal').tokenProjectId,
+        projectScopeJson(c.get('principal')),
+        projectScopeJson(c.get('principal')),
       )
       .first<PufuSummary>();
     if (!pufu) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
@@ -823,20 +837,22 @@ export function createApp(trustedPrincipal?: Principal) {
     });
   });
   app.get('/api/v1/pufus', async (c) => {
-    const { user, tokenProjectId } = c.get('principal');
+    const principal = c.get('principal');
+    const { user } = principal;
     const favorite = c.req.query('favorite') ?? 'false';
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const requested = c.req.query('project_id') || null;
-    if (tokenProjectId && requested && requested !== tokenProjectId) throw new HTTPException(404);
-    const projectId = tokenProjectId ?? requested;
+    const projectId = resolveProjectId(principal, requested);
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
     const joins =
       'pufu_scores pf JOIN projects p ON p.id=pf.project_id LEFT JOIN questions q ON q.id=pf.question_id';
+    const projects = projectListFilter(projectId, allowedProjectIds(principal));
     const where =
-      'pf.user_id=? AND p.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR p.id=?)' +
+      'pf.user_id=? AND p.user_id=? AND ' +
+      projects.sql +
       (favorite === 'true' ? ' AND pf.is_favorite=1' : '');
-    const params = [user.id, user.id, projectId, projectId];
+    const params = [user.id, user.id, ...projects.params];
     const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(
         `SELECT ${pufuColumns
@@ -891,7 +907,7 @@ export function createApp(trustedPrincipal?: Principal) {
     const timestamp = now();
     const userId = c.get('principal').user.id;
     const condition =
-      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ? AND EXISTS (SELECT 1 FROM pufu_phases WHERE pufu_id = pufu_scores.id AND number = ?) AND project_id=? AND (? IS NULL OR project_id=?) AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=pufu_scores.project_id))";
+      "id = ? AND user_id = ? AND status = 'ready' AND revision = ? AND current_phase = ? AND EXISTS (SELECT 1 FROM pufu_phases WHERE pufu_id = pufu_scores.id AND number = ?) AND project_id=? AND (? IS NULL OR project_id IN (SELECT value FROM json_each(?))) AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=pufu_scores.project_id))";
     const values = [
       pufu.id,
       userId,
@@ -899,8 +915,8 @@ export function createApp(trustedPrincipal?: Principal) {
       pufu.current_phase,
       phase,
       pufu.project_id,
-      c.get('principal').tokenProjectId,
-      c.get('principal').tokenProjectId,
+      projectScopeJson(c.get('principal')),
+      projectScopeJson(c.get('principal')),
       questionId,
       questionId,
     ];
@@ -1004,8 +1020,9 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ ok: true }, 202);
   });
   app.get('/api/v1/questions', async (c) => {
-    const { user } = c.get('principal');
-    const projectId = c.req.query('project_id') || null;
+    const principal = c.get('principal');
+    const { user } = principal;
+    const projectId = resolveProjectId(principal, c.req.query('project_id') || null);
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
     const status = c.req.query('status') ?? 'all';
@@ -1015,13 +1032,15 @@ export function createApp(trustedPrincipal?: Principal) {
     const favorite = c.req.query('favorite') ?? 'false';
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
+    const projects = projectListFilter(projectId, allowedProjectIds(principal));
     const where =
-      "p.user_id = ? AND ((? IS NULL AND p.show_in_all_lists = 1) OR q.project_id = ?) AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(s.title, a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
+      'p.user_id = ? AND ' +
+      projects.sql +
+      " AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(s.title, a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
       (favorite === 'true' ? ' AND q.is_favorite = 1' : '');
     const params = [
       user.id,
-      projectId,
-      projectId,
+      ...projects.params,
       `%${query}%`,
       `%${query}%`,
       `%${query}%`,
@@ -1072,8 +1091,7 @@ export function createApp(trustedPrincipal?: Principal) {
       projectId: string,
       created: boolean,
     ) => {
-      if (principal.tokenProjectId && row.project_id !== principal.tokenProjectId)
-        throw new HTTPException(404);
+      if (!canAccessProject(principal, row.project_id)) throw new HTTPException(404);
       if (row.request_json !== requestJson(projectId))
         throw new HTTPException(409, {
           message: '同じリクエストIDで異なる問い・気づきが送信されました。',
@@ -1104,6 +1122,7 @@ export function createApp(trustedPrincipal?: Principal) {
     if (stock && data.project_id && stock.project_id !== data.project_id)
       throw new HTTPException(400, { message: 'ストックとプロジェクトが一致しません。' });
     const projectId = data.project_id ?? stock!.project_id;
+    if (!canAccessProject(principal, projectId)) throw new HTTPException(404);
     await ownedProject(c.env, user.id, projectId);
     await validateRelations(c.env, projectId, [], stockIds);
     const result = await c.env.DB.prepare(
@@ -1131,7 +1150,8 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
-    if (!row) throw new HTTPException(404, { message: '記事が見つかりません。' });
+    if (!row || !canAccessProject(c.get('principal'), String(row.project_id)))
+      throw new HTTPException(404, { message: '記事が見つかりません。' });
     const { summary_json, ...stock } = row;
     return c.json({
       stock: {

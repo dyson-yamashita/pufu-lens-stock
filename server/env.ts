@@ -51,6 +51,7 @@ export type Principal = {
   user: User;
   kind: 'session' | 'token' | 'mcp';
   tokenProjectId: string | null;
+  tokenProjectIds?: string[] | null;
 };
 export type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export type Job = {

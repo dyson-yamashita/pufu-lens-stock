@@ -13,7 +13,9 @@ export function searchBindings(env: Env) {
           (vector) =>
             vector.namespace === options?.namespace &&
             (!options?.filter?.project_id ||
-              vector.metadata?.project_id === options.filter.project_id),
+              (typeof options.filter.project_id === 'object' && '$in' in options.filter.project_id
+                ? options.filter.project_id.$in?.includes(vector.metadata?.project_id as string)
+                : vector.metadata?.project_id === options.filter.project_id)),
         )
         .map((vector) => ({ id: vector.id, score: 0.9 }));
       return { matches: matches.slice(0, options?.topK), count: matches.length };

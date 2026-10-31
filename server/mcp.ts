@@ -1,3 +1,4 @@
+import { allowedProjectIds, canAccessProject } from './project-access';
 import { getMcpConnectionSettings } from './mcp-connection-settings';
 import {
   McpServer,
@@ -184,9 +185,10 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     });
   }
   const project = (requested?: string): string | undefined => {
-    if (principal.tokenProjectId && requested && requested !== principal.tokenProjectId)
+    if (requested && !canAccessProject(principal, requested))
       throw new ToolError('このプロジェクトへのアクセスは許可されていません。', 403);
-    return principal.tokenProjectId ?? requested;
+    const ids = allowedProjectIds(principal);
+    return requested ?? (ids?.length === 1 ? ids[0] : undefined);
   };
   async function invoke(path: string, method = 'GET', body?: unknown, requestId?: string) {
     const response = await api.request(
@@ -311,7 +313,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
   const ownedDetail = async (kind: 'stocks' | 'questions', itemId: string) => {
     const data = await invoke(`${kind}/${encodeURIComponent(itemId)}`);
     const item = data[kind === 'stocks' ? 'stock' : 'question'] as { project_id: string };
-    if (principal.tokenProjectId && item.project_id !== principal.tokenProjectId)
+    if (!canAccessProject(principal, item.project_id))
       throw new ToolError('指定されたデータが見つかりません。', 404);
     return data;
   };
@@ -663,7 +665,9 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
 
 export async function handleMcp(request: Request, env: Env, executionCtx: ExecutionContext) {
   const ctx = executionCtx as McpContext;
-  const parsed = z.object({ userId: id, projectId: id.nullable() }).safeParse(ctx.props);
+  const parsed = z
+    .object({ userId: id, projectId: id.nullable(), projectIds: z.array(id).nullable().optional() })
+    .safeParse(ctx.props);
   if (!parsed.success || !ctx.auth) return new Response('認証が必要です。', { status: 401 });
   const user = await env.DB.prepare(
     'SELECT id,name,bio,onboarding_completed_at,avatar_url,language FROM users WHERE id=?',
@@ -689,15 +693,30 @@ export async function handleMcp(request: Request, env: Env, executionCtx: Execut
   const principal: Principal = {
     user,
     kind: 'mcp',
-    tokenProjectId: settings ? settings.project_id : parsed.data.projectId,
+    tokenProjectId: null,
+    tokenProjectIds: settings
+      ? settings.project_ids === null
+        ? settings.project_id
+          ? [settings.project_id]
+          : null
+        : (JSON.parse(settings.project_ids) as string[])
+      : parsed.data.projectIds === undefined
+        ? parsed.data.projectId
+          ? [parsed.data.projectId]
+          : null
+        : parsed.data.projectIds,
   };
-  if (
-    principal.tokenProjectId &&
-    !(await env.DB.prepare('SELECT id FROM projects WHERE id=? AND user_id=?')
-      .bind(principal.tokenProjectId, user.id)
-      .first())
-  )
-    return new Response(t('許可されたプロジェクトが見つかりません。'), { status: 403 });
+  const permitted = allowedProjectIds(principal);
+  if (permitted !== null) {
+    const existing = await env.DB.prepare(
+      'SELECT id FROM projects WHERE user_id=? AND id IN (SELECT value FROM json_each(?))',
+    )
+      .bind(user.id, JSON.stringify(permitted))
+      .all<{ id: string }>();
+    if (!existing.results.length)
+      return new Response(t('許可されたプロジェクトが見つかりません。'), { status: 403 });
+    principal.tokenProjectIds = existing.results.map((project) => project.id);
+  }
   const handler = createMcpHandler(() => createServer(env, ctx, principal), {
     corsOptions: false,
     allowedHostnames: [new URL(env.APP_URL).hostname],

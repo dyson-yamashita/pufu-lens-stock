@@ -119,7 +119,7 @@ it('編集のキャンセルと保存失敗後の再試行を扱い、保存結�
     await act(async () => root.render(createElement(McpConnections)));
     await click('編集');
     const permissions = [
-      ...dom.document.querySelectorAll('.mcp-permission input'),
+      ...dom.document.querySelectorAll('.mcp-permission input[type=checkbox]'),
     ] as HTMLInputElement[];
     expect(permissions[1].disabled).toBe(false);
     expect(permissions[2].disabled).toBe(true);
@@ -140,7 +140,11 @@ it('編集のキャンセルと保存失敗後の再試行を扱い、保存結�
     expect(dom.document.querySelector('.mcp-connections strong')?.textContent).toBe('保存した名前');
     expect(api).toHaveBeenCalledWith('/api/v1/mcp/connections/edit-connection', {
       method: 'PATCH',
-      body: JSON.stringify({ client_name: 'ChatGPT', project_id: null, scopes: ['projects:read'] }),
+      body: JSON.stringify({
+        client_name: 'ChatGPT',
+        project_ids: null,
+        scopes: ['projects:read'],
+      }),
     });
   } finally {
     await act(async () => root.unmount());

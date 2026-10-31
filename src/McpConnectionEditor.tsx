@@ -15,7 +15,13 @@ export default function McpConnectionEditor({
 }) {
   const { language } = useLanguage();
   const [name, setName] = useState(connection.client_name);
-  const [projectId, setProjectId] = useState(connection.project_id ?? '');
+  const [projectIds, setProjectIds] = useState<string[] | null>(
+    connection.project_ids === undefined
+      ? connection.project_id
+        ? [connection.project_id]
+        : null
+      : connection.project_ids,
+  );
   const [scopes, setScopes] = useState(connection.scopes);
   const [projects, setProjects] = useState<{ id: string; name: string }[] | null>(null);
   const [error, setError] = useState('');
@@ -45,7 +51,7 @@ export default function McpConnectionEditor({
               method: 'PATCH',
               body: JSON.stringify({
                 client_name: name.trim(),
-                project_id: projectId || null,
+                project_ids: projectIds,
                 scopes,
               }),
             },
@@ -69,24 +75,59 @@ export default function McpConnectionEditor({
             maxLength={100}
           />
         </label>
-        <label>
-          {t('ui.mcp_connections.project')}
-          <select
-            value={projectId}
-            onChange={(event) => setProjectId(event.target.value)}
-            disabled={projects === null}
-          >
-            <option value="">{t('ui.app.all_projects')}</option>
-            {projectId && !projects?.some((project) => project.id === projectId) && (
-              <option value={projectId}>{connection.project_name ?? projectId}</option>
-            )}
-            {projects?.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset disabled={projects === null}>
+          <legend>{t('ui.mcp_connections.project')}</legend>
+          <label className="mcp-permission">
+            <input
+              type="radio"
+              name="project-access"
+              checked={projectIds === null}
+              onChange={() => setProjectIds(null)}
+            />
+            {t('ui.app.all_projects')}
+          </label>
+          <label className="mcp-permission">
+            <input
+              type="radio"
+              name="project-access"
+              checked={projectIds !== null}
+              onChange={() => setProjectIds([])}
+            />
+            {t('ui.mcp_connections.selected_projects')}
+          </label>
+          {projectIds !== null && (
+            <div className="mcp-project-options">
+              {[
+                ...(projects ?? []),
+                ...projectIds
+                  .filter((id) => !projects?.some((project) => project.id === id))
+                  .map((id) => ({
+                    id,
+                    name:
+                      connection.projects?.find((project) => project.id === id)?.name ??
+                      connection.project_name ??
+                      id,
+                  })),
+              ].map((project) => (
+                <label className="mcp-permission" key={project.id}>
+                  <input
+                    type="checkbox"
+                    checked={projectIds.includes(project.id)}
+                    onChange={(event) =>
+                      setProjectIds((current) =>
+                        event.target.checked
+                          ? [...(current ?? []), project.id]
+                          : (current ?? []).filter((id) => id !== project.id),
+                      )
+                    }
+                  />
+                  {project.name}
+                </label>
+              ))}
+            </div>
+          )}
+          <p>{t('ui.mcp_connections.projects_help')}</p>
+        </fieldset>
         <fieldset>
           <legend>{t('ui.mcp_connections.permissions')}</legend>
           {Object.entries(mcpScopes).map(([scope, label]) => (
@@ -117,11 +158,11 @@ export default function McpConnectionEditor({
           <button
             type="submit"
             className="button primary"
-            disabled={!name.trim() || projects === null}
+            disabled={!name.trim() || projects === null || projectIds?.length === 0}
           >
             {t(saving ? 'ui.mcp_connections.saving' : 'ui.mcp_connections.save')}
           </button>
-          <button type="button" className="button" onClick={onCancel}>
+          <button type="button" className="button secondary" onClick={onCancel}>
             {t('ui.mcp_connections.cancel')}
           </button>
         </div>

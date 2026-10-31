@@ -1,3 +1,4 @@
+import { projectScopeJson } from './project-access';
 import { HTTPException } from 'hono/http-exception';
 import type { z } from 'zod';
 import type {
@@ -16,12 +17,12 @@ function targetQuery(principal: Principal, target: CommentTarget) {
     pufu: 'pufu_scores t JOIN projects p ON p.id = t.project_id',
   };
   return {
-    sql: `SELECT 1 FROM ${sources[target.target_type]} WHERE t.id = ? AND p.user_id = ? AND (? IS NULL OR p.id = ?)${target.target_type === 'pufu' ? ' AND t.user_id = p.user_id AND EXISTS (SELECT 1 FROM pufu_phases ph WHERE ph.pufu_id = t.id AND ph.number = ?)' : ''}`,
+    sql: `SELECT 1 FROM ${sources[target.target_type]} WHERE t.id = ? AND p.user_id = ? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?)))${target.target_type === 'pufu' ? ' AND t.user_id = p.user_id AND EXISTS (SELECT 1 FROM pufu_phases ph WHERE ph.pufu_id = t.id AND ph.number = ?)' : ''}`,
     values: [
       target.target_id,
       principal.user.id,
-      principal.tokenProjectId,
-      principal.tokenProjectId,
+      projectScopeJson(principal),
+      projectScopeJson(principal),
       ...(target.target_type === 'pufu' ? [target.phase!] : []),
     ],
   };

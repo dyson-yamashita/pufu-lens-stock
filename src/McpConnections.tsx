@@ -115,7 +115,16 @@ export default function McpConnections() {
                 <Layers size={19} aria-hidden="true" />
                 <div className="mcp-connection-details">
                   <strong>{connection.client_name}</strong>
-                  <p>{connection.project_name ?? t('ui.app.all_projects')}</p>
+                  <p>
+                    {connection.project_ids
+                      ? (
+                          connection.projects ??
+                          connection.project_ids.map((id) => ({ id, name: id }))
+                        )
+                          .map((project) => project.name)
+                          .join(t('ui.comments.separator'))
+                      : (connection.project_name ?? t('ui.app.all_projects'))}
+                  </p>
                   <p>
                     {connection.scopes
                       .map((scope) =>
@@ -149,7 +158,7 @@ export default function McpConnections() {
                 ) : (
                   <div className="mcp-connection-actions">
                     <button
-                      className="button"
+                      className="button secondary"
                       disabled={busy !== null || editing !== null}
                       onClick={() => {
                         setEditing(connection.id);

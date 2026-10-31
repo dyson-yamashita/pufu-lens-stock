@@ -8,7 +8,11 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   screen,
   browser,
 }) => {
-  const { url, cookie } = fixture;
+  const { url } = fixture;
+  const second = await fixture.request('/projects', 'POST', {
+    name: 'E2E追加プロジェクト',
+    description: '',
+  });
   const registered = await fetch(`${url}/oauth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -31,31 +35,23 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
     resource: `${url}/mcp`,
     scope: 'projects:read stocks:read offline_access',
   });
-  const page = await fetch(`${url}/oauth/authorize?${params}`, { headers: { Cookie: cookie } });
-  const html = await page.text();
-  const handle = /name="handle" value="([^"]+)"/.exec(html)![1];
-  const consentCookie = page.headers
-    .getSetCookie()
-    .map((value) => value.split(';')[0])
-    .join('; ');
-  const form = new URLSearchParams({ handle, decision: 'approve', project_id: '' });
-  for (const scope of ['projects:read', 'stocks:read', 'offline_access'])
-    form.append('scope', scope);
-  const approved = await fetch(`${url}/oauth/authorize`, {
-    method: 'POST',
-    redirect: 'manual',
-    headers: { Cookie: `${cookie}; ${consentCookie}`, Origin: url },
-    body: form,
-  });
-  expect(approved.status).toBe(302);
+  await app.open(`/oauth/authorize?${params}`);
+  await screen.getByLabel('選択したプロジェクト', { exact: true }).check();
+  await screen.getByLabel(fixture.projectName, { exact: true }).check();
+  await screen.getByLabel('E2E追加プロジェクト', { exact: true }).check();
+  await screen.getByRole('button', '連携を許可', { exact: true }).click();
+  await expect(browser.locator('.app-shell')).toBeVisible();
   await app.open('/#mcp');
   const row = browser.locator('.mcp-connections .token-row');
   await expect(row).toContainText('E2E ChatGPT');
   await screen.getByRole('button', '編集', { exact: true }).click();
   await screen.getByLabel('連携先の表示名').fill('仕事用ChatGPT');
-  await screen
-    .getByLabel('アクセスを許可するプロジェクト')
-    .selectOption({ value: fixture.projectId });
+  await expect(screen.getByLabel(fixture.projectName, { exact: true })).toBeChecked();
+  await expect(screen.getByLabel('E2E追加プロジェクト', { exact: true })).toBeChecked();
+  await screen.getByLabel('すべてのプロジェクト', { exact: true }).check();
+  await screen.getByLabel('選択したプロジェクト', { exact: true }).check();
+  await screen.getByLabel(fixture.projectName, { exact: true }).check();
+  await screen.getByLabel('E2E追加プロジェクト', { exact: true }).check();
   await screen
     .getByLabel('ストックを検索・閲覧（本文・コメントを含む）', { exact: true })
     .uncheck();
@@ -66,7 +62,8 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await expect(row).toContainText('仕事用ChatGPT');
   await screen.getByRole('button', '編集', { exact: true }).click();
   await expect(screen.getByLabel('連携先の表示名')).toHaveValue('仕事用ChatGPT');
-  await expect(screen.getByLabel('アクセスを許可するプロジェクト')).toHaveValue(fixture.projectId);
+  await expect(screen.getByLabel(fixture.projectName, { exact: true })).toBeChecked();
+  await expect(screen.getByLabel('E2E追加プロジェクト', { exact: true })).toBeChecked();
   await expect(
     screen.getByLabel('ストックを検索・閲覧（本文・コメントを含む）', { exact: true }),
   ).not.toBeChecked();
@@ -74,12 +71,13 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await screen.getByRole('button', 'キャンセル', { exact: true }).click();
   await expect(row).toContainText('仕事用ChatGPT');
   const { connections } = (await fixture.request('/mcp/connections')) as {
-    connections: { id: string; client_name: string; project_id: string; scopes: string[] }[];
+    connections: { id: string; client_name: string; project_ids: string[]; scopes: string[] }[];
   };
   expect(connections[0]).toMatchObject({
     client_name: '仕事用ChatGPT',
-    project_id: fixture.projectId,
+    project_ids: [fixture.projectId, second.id],
     scopes: ['projects:read', 'offline_access'],
   });
   await fixture.request(`/mcp/connections/${connections[0].id}`, 'DELETE');
+  await fixture.request(`/projects/${second.id}`, 'DELETE');
 });

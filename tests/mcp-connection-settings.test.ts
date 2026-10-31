@@ -1,6 +1,10 @@
+import score from './fixtures/pufu-sparse.json';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import worker from '../server/index';
-import { testApp } from './helpers';
+import { testApp, applyMigration } from './helpers';
+import { readdir } from 'node:fs/promises';
+import { searchBindings, searchStock } from './search-helpers';
+import { syncSearchIndex } from '../server/search-index';
 import { mcpTokens } from './mcp-helpers';
 
 let app: Awaited<ReturnType<typeof testApp>>;
@@ -19,7 +23,13 @@ const request = (path: string, init: RequestInit = {}) =>
   worker.fetch(new Request(`${app.env.APP_URL}${path}`, init), app.env, app.ctx);
 const list = async () =>
   (await (await request('/api/v1/mcp/connections', { headers: session })).json()) as {
-    connections: { id: string; client_name: string; project_id: string | null; scopes: string[] }[];
+    connections: {
+      id: string;
+      client_name: string;
+      project_id: string | null;
+      project_ids: string[] | null;
+      scopes: string[];
+    }[];
   };
 const update = (id: string, body: unknown, headers = session) =>
   request(`/api/v1/mcp/connections/${id}`, {
@@ -199,4 +209,183 @@ it('認証済みリクエストと解除が競合しても元の権限に戻さ�
     resume();
     spy.mockRestore();
   }
+});
+
+it('複数許可を初回認可・既存トークン・一覧と詳細・書き込みに適用する', async () => {
+  await app.env.DB.prepare(
+    "INSERT INTO projects(id,user_id,name) VALUES ('alice-third','alice','Third')",
+  ).run();
+  await app.env.DB.prepare("UPDATE projects SET show_in_all_lists=0 WHERE id='alice-second'").run();
+  const scopes = [
+    'projects:read',
+    'stocks:read',
+    'stocks:write',
+    'questions:read',
+    'questions:write',
+    'pufus:write',
+    'offline_access',
+  ];
+  const tokens = await mcpTokens(app, ['alice-project', 'alice-second'], scopes);
+  const id = (await list()).connections[0].id;
+  expect((await list()).connections[0].project_ids).toEqual(['alice-project', 'alice-second']);
+  const pufus: string[] = [];
+  for (const [index, project] of ['alice-project', 'alice-second', 'alice-third'].entries()) {
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO articles(id,user_id,canonical_url,source_url,title,domain,status) VALUES (?,'alice',?,?,?,'example.com','ready')",
+      ).bind(
+        `a${index}`,
+        `https://example.com/${index}`,
+        `https://example.com/${index}`,
+        `Item ${index}`,
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO stocks(id,user_id,project_id,article_id) VALUES (?,'alice',?,?)",
+      ).bind(`s${index}`, project, `a${index}`),
+      app.env.DB.prepare(
+        "INSERT INTO questions(id,project_id,source,text,status) VALUES (?,?,'user',?,'ready')",
+      ).bind(`q${index}`, project, `Question ${index}`),
+    ]);
+    const created = await app.request('/api/v1/pufus', {
+      method: 'POST',
+      body: { project_id: project, request_id: crypto.randomUUID(), score },
+    });
+    expect(created.status).toBe(201);
+    pufus.push(((await created.json()) as { pufu: { id: string } }).pufu.id);
+  }
+  const projects = (await call(tokens.access_token, 'list_projects')).structuredContent
+    .projects as { id: string }[];
+  expect(projects.map((project) => project.id).sort()).toEqual(['alice-project', 'alice-second']);
+  for (const [tool, key] of [
+    ['list_stocks', 'stocks'],
+    ['list_questions', 'questions'],
+    ['list_pufus', 'pufus'],
+  ]) {
+    const result = (await call(tokens.access_token, tool)).structuredContent;
+    expect(result.total).toBe(2);
+    expect((result[key] as { project_id: string }[]).map((row) => row.project_id).sort()).toEqual([
+      'alice-project',
+      'alice-second',
+    ]);
+    expect((await call(tokens.access_token, tool, { project_id: 'alice-third' })).isError).toBe(
+      true,
+    );
+  }
+  for (const index of [0, 1, 2]) {
+    const calls = [
+      ['get_stock', { stock_id: `s${index}`, include_content: true }],
+      ['get_question', { question_id: `q${index}` }],
+      ['get_pufu', { pufu_id: pufus[index] }],
+      [
+        'add_comment',
+        {
+          target_type: 'stock',
+          target_id: `s${index}`,
+          body: 'Comment',
+          request_id: crypto.randomUUID(),
+        },
+      ],
+      ['list_comments', { target_type: 'stock', target_id: `s${index}` }],
+      ['update_pufu', { pufu_id: pufus[index], revision: 1, projectScore: score }],
+      ['add_pufu_phase', { pufu_id: pufus[index], revision: 2, request_id: crypto.randomUUID() }],
+      [
+        'create_pufu',
+        {
+          project_id: ['alice-project', 'alice-second', 'alice-third'][index],
+          projectScore: score,
+          request_id: crypto.randomUUID(),
+        },
+      ],
+    ] as const;
+    for (const [tool, args] of calls) {
+      const result = await call(tokens.access_token, tool, args);
+      if (index === 2) {
+        expect(result.isError, tool).toBe(true);
+        expect(result.structuredContent.status, tool).toBe(404);
+      } else expect(result.isError, `${tool}: ${JSON.stringify(result)}`).not.toBe(true);
+    }
+  }
+  expect(
+    (await call(tokens.access_token, 'show_pufu', { pufu_id: pufus[2] })).structuredContent.status,
+  ).toBe(404);
+  const saved = { client_name: 'Multi', scopes, project_ids: ['alice-second', 'alice-third'] };
+  expect((await update(id, saved)).status).toBe(200);
+  expect((await call(tokens.access_token, 'get_stock', { stock_id: 's0' })).isError).toBe(true);
+  expect((await call(tokens.access_token, 'get_stock', { stock_id: 's2' })).isError).not.toBe(true);
+  for (const project_ids of [[], ['bob-project'], ['alice-second', 'missing']])
+    expect((await update(id, { ...saved, project_ids })).status).toBe(
+      project_ids.length ? 404 : 400,
+    );
+  await app.env.DB.prepare("DELETE FROM projects WHERE id='alice-second'").run();
+  expect(
+    (await call(tokens.access_token, 'list_projects')).structuredContent.projects.map(
+      (p: { id: string }) => p.id,
+    ),
+  ).toEqual(['alice-third']);
+  expect((await update(id, { ...saved, project_ids: null })).status).toBe(200);
+  expect(
+    (await call(tokens.access_token, 'list_projects')).structuredContent.projects,
+  ).toHaveLength(2);
+});
+
+it('意味検索・hybridの候補と総数にも複数プロジェクト制限を適用する', async () => {
+  await app.env.DB.prepare(
+    "INSERT INTO projects(id,user_id,name) VALUES ('alice-third','alice','Third')",
+  ).run();
+  const bindings = searchBindings(app.env);
+  for (let index = 0; index < 100; index++)
+    bindings.vectors.set(`outside-${index}`, {
+      id: `outside-${index}`,
+      namespace: 'alice',
+      metadata: { project_id: 'alice-third' },
+      values: bindings.values,
+    });
+  await searchStock(app, 'one', { project: 'alice-project' });
+  await searchStock(app, 'two', { project: 'alice-second' });
+  await searchStock(app, 'outside', { project: 'alice-third' });
+  await syncSearchIndex(app.env);
+  const tokens = await mcpTokens(app, ['alice-project', 'alice-second'], ['stocks:read']);
+  for (const mode of ['semantic', 'hybrid']) {
+    const result = await call(tokens.access_token, 'list_stocks', {
+      q: 'コードレビュー',
+      mode,
+      limit: 1,
+    });
+    expect(result.isError, JSON.stringify(result)).not.toBe(true);
+    expect(result.structuredContent.total).toBe(2);
+    expect(result.structuredContent.stocks).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toContain('s-outside');
+    expect(result.structuredContent.search.mode).toBe(mode);
+    expect(result.structuredContent.search.candidates_truncated).toBe(false);
+  }
+});
+it('旧単一プロジェクト設定を移行し、全件と解除済みの状態を維持する', async () => {
+  await app.dispose();
+  const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
+    .filter((name) => name.endsWith('.sql') && name !== '0038_mcp_multiple_projects.sql')
+    .sort();
+  app = await testApp({ migrations });
+  await app.env.DB.batch([
+    app.env.DB.prepare(
+      "INSERT INTO mcp_connection_settings(user_id,grant_id,client_name,project_id,scopes) VALUES ('alice','single','App','alice-project','[]')",
+    ),
+    app.env.DB.prepare(
+      "INSERT INTO mcp_connection_settings(user_id,grant_id,client_name,project_id,scopes) VALUES ('alice','all','App',NULL,'[]')",
+    ),
+    app.env.DB.prepare(
+      "INSERT INTO mcp_connection_settings(user_id,grant_id,client_name,project_id,scopes,revoked) VALUES ('alice','revoked','App','alice-project','[]',1)",
+    ),
+  ]);
+  await applyMigration(app.env.DB, '0038_mcp_multiple_projects.sql');
+  expect(
+    (
+      await app.env.DB.prepare(
+        'SELECT grant_id,project_ids,revoked FROM mcp_connection_settings ORDER BY grant_id',
+      ).all()
+    ).results,
+  ).toEqual([
+    { grant_id: 'all', project_ids: null, revoked: 0 },
+    { grant_id: 'revoked', project_ids: '["alice-project"]', revoked: 1 },
+    { grant_id: 'single', project_ids: '["alice-project"]', revoked: 0 },
+  ]);
 });

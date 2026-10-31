@@ -1,3 +1,4 @@
+import { projectScopeJson } from './project-access';
 import { HTTPException } from 'hono/http-exception';
 import type { z } from 'zod';
 import { createSavedPufuSchema, pufuEditorVersion, type PufuContext } from '../shared/pufu';
@@ -11,9 +12,14 @@ export async function createSavedPufu(
   data: z.infer<typeof createSavedPufuSchema>,
 ) {
   const project = await env.DB.prepare(
-    'SELECT id,name,description FROM projects WHERE id=? AND user_id=? AND (? IS NULL OR id=?)',
+    'SELECT id,name,description FROM projects WHERE id=? AND user_id=? AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))',
   )
-    .bind(data.project_id, principal.user.id, principal.tokenProjectId, principal.tokenProjectId)
+    .bind(
+      data.project_id,
+      principal.user.id,
+      projectScopeJson(principal),
+      projectScopeJson(principal),
+    )
     .first<{ id: string; name: string; description: string }>();
   if (!project) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
   const id = `pufu-${principal.user.id}-${data.request_id}`;
@@ -80,7 +86,7 @@ export async function createSavedPufu(
       `INSERT OR IGNORE INTO pufu_scores
       (id,user_id,project_id,question_id,task,input_json,score_json,editor_version,status,request_json,created_at,updated_at)
       SELECT ?,user_id,id,?,?,?,?,?,'ready',?,?,? FROM projects
-      WHERE id=? AND user_id=? AND (? IS NULL OR id=?)
+      WHERE id=? AND user_id=? AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))
       AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=projects.id AND status='ready'))`,
     ).bind(
       id,
@@ -94,8 +100,8 @@ export async function createSavedPufu(
       timestamp,
       project.id,
       principal.user.id,
-      principal.tokenProjectId,
-      principal.tokenProjectId,
+      projectScopeJson(principal),
+      projectScopeJson(principal),
       questionId,
       questionId,
     ),
