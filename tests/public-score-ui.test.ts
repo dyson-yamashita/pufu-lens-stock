@@ -540,7 +540,7 @@ it('PNGは選択中の保存済み局面を出力し、失敗時は形式選択�
   );
   expect(document.querySelector('dialog button[disabled]')).toBeNull();
   await click('画像（PNG）');
-  expect(createPufuPng).toHaveBeenLastCalledWith(score, 'light');
+  expect(createPufuPng).toHaveBeenLastCalledWith(score, 'light', 'ja');
   expect(createUrl).toHaveBeenCalledWith(png);
   expect(links).toEqual([`${pufu.id}-phase-1.png`]);
   expect(document.querySelector('dialog')).toBeNull();

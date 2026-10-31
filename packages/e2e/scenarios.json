@@ -41,5 +41,29 @@
       "公開プ譜の画像表示・拡大、課題と問いのラベル、進捗非表示",
       "非公開化後は匿名で取得できない"
     ]
+  },
+  {
+    "id": "LANG-001",
+    "title": "言語の初回選択とアカウント設定の保持",
+    "sources": [
+      "src/i18n.ts",
+      "src/LanguageSelect.tsx",
+      "src/Onboarding.tsx",
+      "src/Profile.tsx",
+      "src/App.tsx",
+      "src/main.tsx",
+      "shared/locale.ts",
+      "server/auth.ts",
+      "server/api.ts",
+      "src/PufuEditor.tsx",
+      "src/PufuImagePreview.tsx"
+    ],
+    "aspects": [
+      "初回登録前の英語選択と登録後の英語表示",
+      "ブラウザーの保存設定を消してもアカウントの英語を優先",
+      "プロフィールで日本語へ変更し再読込後も保持",
+      "表示名を翻訳・書き換えない",
+      "英語SVGと実Editorの英語見出し、保存済みスコアの不変性"
+    ]
   }
 ]

@@ -3,6 +3,7 @@ import { scheduledMaintenance } from './jobs';
 import type { Env } from './env';
 import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp-oauth';
 import { handleMcp } from './mcp';
+import { legalLanguageResponse } from './legal-language';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { AppEnv } from './env';
@@ -26,6 +27,9 @@ entry.use(
   '/oauth/*',
   bodyLimit({ maxSize: 16384, onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413) }),
 );
+entry.on(['GET', 'HEAD'], ['/privacy', '/privacy/', '/terms', '/terms/'], async (c) => {
+  return (await legalLanguageResponse(c.req.raw, c.env)) ?? c.notFound();
+});
 entry.all('*', (c) => {
   if (!c.env.OAUTH_KV) {
     if (c.req.method === 'GET' && c.req.path === '/api/v1/mcp/connections')

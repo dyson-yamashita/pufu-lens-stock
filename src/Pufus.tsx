@@ -1,15 +1,15 @@
+import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
 import type { PufuListItem } from '../shared/pufu';
 import { api } from './api';
 import PufuFavoriteButton from './PufuFavoriteButton';
-
-const statusLabels = {
-  queued: '生成待ち',
-  generating: '生成中',
-  ready: '作成済み',
-  failed: '生成失敗',
-};
+const statusLabels = () => ({
+  queued: t('ui.pufus.queued'),
+  generating: t('ui.pufus.generating'),
+  ready: t('ui.pufus.created'),
+  failed: t('ui.pufus.generation_failed'),
+});
 export default function Pufus({
   projectId,
   refresh,
@@ -21,6 +21,7 @@ export default function Pufus({
   active: boolean;
   onPufu: (id: string) => void;
 }) {
+  useLanguage();
   const [pufus, setPufus] = useState<PufuListItem[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -43,10 +44,10 @@ export default function Pufus({
       if (favoritesOnly) params.set('favorite', 'true');
       if (projectId) params.set('project_id', projectId);
       try {
-        const result = await api<{ pufus: PufuListItem[]; total: number }>(
-          `/api/v1/pufus?${params}`,
-          { signal: controller.signal },
-        );
+        const result = await api<{
+          pufus: PufuListItem[];
+          total: number;
+        }>(`/api/v1/pufus?${params}`, { signal: controller.signal });
         if (!controller.signal.aborted && version === favoriteVersion.current) {
           setPufus(result.pufus);
           setTotal(result.total);
@@ -55,7 +56,7 @@ export default function Pufus({
             setPage(Math.max(1, Math.ceil(result.total / 24)));
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError((e as Error).message);
+        if (!controller.signal.aborted) setError(applicationError((e as Error).message));
       } finally {
         inFlight = false;
         if (!controller.signal.aborted) setLoading(false);
@@ -71,12 +72,12 @@ export default function Pufus({
     };
   }, [projectId, page, refresh, retry, active, favoritesOnly]);
   return (
-    <section className="questions-page" aria-label="保存したプ譜">
+    <section className="questions-page" aria-label={t('ui.pufus.saved_pufu')}>
       <div className="filter-row">
-        <div className="filters" aria-label="プ譜のフィルター">
+        <div className="filters" aria-label={t('ui.pufus.pufu_filters')}>
           {[
-            [false, 'すべて'],
-            [true, 'お気に入り'],
+            [false, t('ui.app.all')],
+            [true, t('ui.app.favorites')],
           ].map(([value, label]) => (
             <button
               key={String(value)}
@@ -91,20 +92,20 @@ export default function Pufus({
             </button>
           ))}
         </div>
-        <span className="result-count">{total}件</span>
+        <span className="result-count">{t('count.items', { count: total })}</span>
       </div>
       {error && (
         <div className="form-error" role="alert">
           {error}
           <button className="button text-button" onClick={() => setRetry((value) => value + 1)}>
-            再読み込み
+            {t('ui.app.reload')}
           </button>
         </div>
       )}
       {loading && !pufus.length ? (
         <div className="empty-state">
           <LoaderCircle className="spin" size={20} aria-hidden="true" />
-          <p>プ譜を読み込んでいます。</p>
+          <p>{t('ui.pufus.loading_pufu')}</p>
         </div>
       ) : !pufus.length ? (
         !error && (
@@ -112,11 +113,11 @@ export default function Pufus({
             <span className="empty-icon">
               <Network className="pufu-icon" size={28} aria-hidden="true" />
             </span>
-            <h2>{favoritesOnly ? 'お気に入りのプ譜はありません' : 'プ譜はまだありません'}</h2>
+            <h2>{favoritesOnly ? t('ui.pufus.no_favorite_pufu') : t('ui.pufus.no_pufu_yet')}</h2>
             <p>
               {favoritesOnly
-                ? 'プ譜の星ボタンからお気に入りに追加できます。'
-                : '「プ譜を追加」から獲得目標を入力して作成できます。問い・気づきからも作成できます。'}
+                ? t('ui.pufus.use_the_star_button_on_a_pufu_to_add')
+                : t('ui.pufus.choose_add_pufu_and_enter_a_gaining_goal_to')}
             </p>
           </div>
         )
@@ -134,24 +135,29 @@ export default function Pufus({
                     <strong>{pufu.task}</strong>
                     {questions.length > 0 && (
                       <small>
-                        問い・気づき：{questions[0].text}
-                        {questions.length > 1 && ` (他${questions.length - 1}件)`}
+                        {t('ui.pufus.question_or_insight')}
+                        {questions[0].text}
+                        {questions.length > 1 &&
+                          t('ui.pufus.value_more', { value0: questions.length - 1 })}
                       </small>
                     )}
                     {stocks.length > 0 && (
                       <small>
-                        ストック：{stocks[0].title}
-                        {stocks.length > 1 && ` (他${stocks.length - 1}件)`}
+                        {t('ui.pufus.stock')}
+                        {stocks[0].title}
+                        {stocks.length > 1 &&
+                          t('ui.pufus.value_more', { value0: stocks.length - 1 })}
                       </small>
                     )}
                     <small>
-                      {pufu.project_name} · {statusLabels[pufu.status]} · 第{pufu.current_phase}局面
+                      {pufu.project_name} · {statusLabels()[pufu.status]} ·{' '}
+                      {t('phase.number', { number: pufu.current_phase })}
                     </small>
                   </span>
                 </button>
                 <div className="pufu-list-footer">
                   <time dateTime={pufu.created_at}>
-                    {new Intl.DateTimeFormat('ja-JP', {
+                    {new Intl.DateTimeFormat(intlLocale(), {
                       dateStyle: 'medium',
                       timeZone: 'Asia/Tokyo',
                     }).format(new Date(pufu.created_at))}
@@ -185,7 +191,7 @@ export default function Pufus({
             onClick={() => setPage((value) => value - 1)}
           >
             <ChevronLeft size={17} aria-hidden="true" />
-            前へ
+            {t('ui.app.previous')}
           </button>
           <span>
             {page} / {Math.ceil(total / 24)}
@@ -195,7 +201,7 @@ export default function Pufus({
             disabled={page * 24 >= total}
             onClick={() => setPage((value) => value + 1)}
           >
-            次へ
+            {t('ui.app.next')}
             <ChevronRight size={17} aria-hidden="true" />
           </button>
         </div>

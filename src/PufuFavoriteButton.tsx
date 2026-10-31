@@ -1,10 +1,9 @@
+import { applicationError, t, useLanguage } from './i18n';
 import { useState } from 'react';
 import { LoaderCircle, Star } from 'lucide-react';
 import type { PufuSummary } from '../shared/pufu';
 import { send } from './api';
-
 type Favorite = Pick<PufuSummary, 'id' | 'is_favorite'>;
-
 export default function PufuFavoriteButton({
   pufu,
   onSaved,
@@ -16,12 +15,15 @@ export default function PufuFavoriteButton({
   onError: (message: string) => void;
   onBusyChange: () => void;
 }) {
+  useLanguage();
   const [busy, setBusy] = useState(false);
   return (
     <button
       type="button"
       className="pufu-favorite"
-      aria-label={pufu.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+      aria-label={
+        pufu.is_favorite ? t('ui.app.remove_from_favorites') : t('ui.app.add_to_favorites')
+      }
       aria-pressed={Boolean(pufu.is_favorite)}
       aria-busy={busy}
       disabled={busy}
@@ -37,7 +39,7 @@ export default function PufuFavoriteButton({
           );
           onSaved(saved);
         } catch (error) {
-          onError((error as Error).message);
+          onError(applicationError((error as Error).message));
         } finally {
           onBusyChange();
           setBusy(false);

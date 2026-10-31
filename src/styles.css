@@ -4074,3 +4074,49 @@ article.pufu-list-item {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.language-select {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.language-select > label {
+  font-weight: 600;
+}
+.language-select select {
+  width: 100%;
+  min-height: 44px;
+}
+.language-select .profile-hint {
+  margin: 0;
+}
+.login-header-links .language-select {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 12px;
+}
+.login-header-links .language-select select {
+  width: auto;
+  min-width: 105px;
+}
+@media (max-width: 760px) {
+  .login-page > header {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .login-header-links {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .login-header-links .language-select > label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .login-caption {
+    display: none;
+  }
+}

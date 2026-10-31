@@ -11,6 +11,7 @@ export async function mcpTokens(
   app: Awaited<ReturnType<typeof testApp>>,
   projectId: string | null = null,
   scopes = allMcpScopes,
+  user = 'alice',
 ) {
   const request = (path: string, init: RequestInit = {}) =>
     worker.fetch(new Request(`${app.env.APP_URL}${path}`, init), app.env, app.ctx);
@@ -39,7 +40,7 @@ export async function mcpTokens(
     scope: scopes.join(' '),
   });
   const page = await request(`/oauth/authorize?${params}`, {
-    headers: { Cookie: 'stock_session=alice-session' },
+    headers: { Cookie: `stock_session=${user}-session` },
   });
   const html = await page.text();
   const handle = /name="handle" value="([^"]+)"/.exec(html)![1];
@@ -49,7 +50,7 @@ export async function mcpTokens(
     method: 'POST',
     headers: {
       Origin: app.env.APP_URL,
-      Cookie: `stock_session=alice-session; ${page.headers
+      Cookie: `stock_session=${user}-session; ${page.headers
         .getSetCookie()
         .map((value) => value.split(';')[0])
         .join('; ')}`,

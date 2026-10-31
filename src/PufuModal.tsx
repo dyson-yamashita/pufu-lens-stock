@@ -1,6 +1,6 @@
+import { t, useLanguage } from './i18n';
 import { useLayoutEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-
 export default function PufuModal({
   title,
   children,
@@ -14,6 +14,7 @@ export default function PufuModal({
   busy?: boolean;
   wide?: boolean;
 }) {
+  useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useLayoutEffect(() => {
@@ -39,7 +40,12 @@ export default function PufuModal({
     >
       <div className="dialog-head">
         <h2 id={id}>{title}</h2>
-        <button className="icon-button" aria-label="閉じる" disabled={busy} onClick={onClose}>
+        <button
+          className="icon-button"
+          aria-label={t('ui.app.close')}
+          disabled={busy}
+          onClick={onClose}
+        >
           <X size={20} aria-hidden="true" />
         </button>
       </div>

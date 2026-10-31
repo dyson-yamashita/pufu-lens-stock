@@ -3,6 +3,7 @@ import { isYouTubeUrl } from '../shared/youtube';
 import type { Source } from './ai';
 import type { Env } from './env';
 import { hash } from './security';
+import { defaultLanguage, resolveLanguage, type Language } from '../shared/locale';
 
 export type MemoryContext = { name: string; description: string; scope: string };
 export type MemoryInput = { source: Source; hash: string };
@@ -84,11 +85,12 @@ export async function memoryUpdateState(
   projectId: string | null,
   context: MemoryContext,
   inputs: MemoryInput[],
+  language: Language = defaultLanguage,
 ) {
   const id = memoryId(userId, projectId);
   const [memory, tracked] = await Promise.all([
     env.DB.prepare(
-      'SELECT data_json,article_count,context_hash,force_full FROM memories WHERE id=? AND user_id=?',
+      'SELECT data_json,article_count,context_hash,force_full,language FROM memories WHERE id=? AND user_id=?',
     )
       .bind(id, userId)
       .first<{
@@ -96,6 +98,7 @@ export async function memoryUpdateState(
         article_count: number;
         context_hash: string;
         force_full: number;
+        language: string;
       }>(),
     env.DB.prepare('SELECT article_id,source_hash FROM memory_sources WHERE memory_id=?')
       .bind(id)
@@ -113,7 +116,9 @@ export async function memoryUpdateState(
   const current = new Map(inputs.map((input) => [input.source.articleId, input.hash]));
   let fullReason: string | null = null;
   if (memory) {
-    if (!memory.context_hash || previous.size !== memory.article_count)
+    if (resolveLanguage(memory.language) !== language)
+      fullReason = '生成言語が変更されたため、全件更新が必要です。';
+    else if (!memory.context_hash || previous.size !== memory.article_count)
       fullReason = '以前のメモリの反映履歴がないため、全件更新が必要です。';
     else if (memory.force_full) fullReason = '全件更新の要求を受け付けています。';
     else if (memory.context_hash !== contextHash)
@@ -139,11 +144,12 @@ export async function memoryCoverage(
   userId: string,
   projectId: string | null,
   context: MemoryContext,
+  language: Language = defaultLanguage,
 ): Promise<MemoryCoverage> {
   // HTTPの読み取りは一括取得し、記事数に比例するDB往復を避ける。
   // Workflowからはpageを指定し、永続化するページのサイズを制限する。
   const { inputs, waitingCount } = await loadMemoryInputPage(env, userId, projectId);
-  const state = await memoryUpdateState(env, userId, projectId, context, inputs);
+  const state = await memoryUpdateState(env, userId, projectId, context, inputs, language);
   return {
     ready_count: inputs.length,
     reflected_count: state.reflectedCount,

@@ -149,7 +149,10 @@ describe('本人のプロフィール', () => {
 
   it('移行時に既存ユーザー・セッション・プロジェクトを保持し、自己紹介を空で初期化する', async () => {
     await app.dispose();
-    app = await testApp({ migrations: ['0001_initial.sql', '0002_unlimited_tokens.sql'] });
+    app = await testApp({
+      migrations: ['0001_initial.sql', '0002_unlimited_tokens.sql'],
+      languageMigration: true,
+    });
     const before = await app.env.DB.prepare('SELECT * FROM users ORDER BY id').all();
     const sessions = await app.env.DB.prepare('SELECT * FROM sessions ORDER BY user_id').all();
     const projects = await app.env.DB.prepare('SELECT * FROM projects ORDER BY id').all();

@@ -1,9 +1,9 @@
+import { applicationError, t, useLanguage } from './i18n';
 import { useRef, useState, type FormEvent } from 'react';
 import { CircleHelp, LoaderCircle } from 'lucide-react';
 import { userQuestionSchema, type Project, type Question } from '../shared/domain';
 import { createRequestId, send } from './api';
 import RelationPicker, { type RelationOption } from './RelationPicker';
-
 export default function QuestionForm({
   projects,
   projectId,
@@ -13,6 +13,7 @@ export default function QuestionForm({
   projectId: string | null;
   onDone: (projectId: string) => void;
 }) {
+  useLanguage();
   const [project, setProject] = useState(projectId ?? projects[0]?.id ?? '');
   const [stocks, setStocks] = useState<RelationOption[]>([]);
   const [text, setText] = useState('');
@@ -29,7 +30,7 @@ export default function QuestionForm({
       request_id: key.current,
     });
     if (!result.success) {
-      setError(result.error.issues[0].message);
+      setError(applicationError(result.error.issues[0].message));
       document
         .getElementById(
           result.error.issues[0].path[0] === 'project_id' ? 'question-project' : 'question-text',
@@ -39,10 +40,12 @@ export default function QuestionForm({
     }
     setBusy(true);
     try {
-      const saved = await send<{ question: Question }>('/api/v1/questions', result.data);
+      const saved = await send<{
+        question: Question;
+      }>('/api/v1/questions', result.data);
       onDone(saved.question.project_id);
     } catch (e) {
-      setError((e as Error).message);
+      setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);
     }
@@ -50,9 +53,9 @@ export default function QuestionForm({
   return (
     <form onSubmit={submit}>
       <p className="form-intro">
-        プロジェクトに自分の問い・気づきを保存します。関連するストックは任意で選べます。
+        {t('ui.question_form.save_your_own_question_or_insight_in_a_project')}
       </p>
-      <label htmlFor="question-project">プロジェクト</label>
+      <label htmlFor="question-project">{t('ui.app.projects')}</label>
       <select
         id="question-project"
         value={project}
@@ -65,7 +68,9 @@ export default function QuestionForm({
       >
         {!project && (
           <option value="">
-            {projects.length ? 'プロジェクトを選択してください' : 'プロジェクトがありません'}
+            {projects.length
+              ? t('ui.app.select_a_project')
+              : t('ui.question_form.no_projects_available')}
           </option>
         )}
         {projects.map((item) => (
@@ -85,7 +90,7 @@ export default function QuestionForm({
           key.current = createRequestId();
         }}
       />
-      <label htmlFor="question-text">問い・気づき</label>
+      <label htmlFor="question-text">{t('ui.app.questions_insights')}</label>
       <textarea
         id="question-text"
         value={text}
@@ -93,7 +98,7 @@ export default function QuestionForm({
         required
         rows={4}
         maxLength={500}
-        placeholder="考えたいこと、確かめたいこと、気づいたこと"
+        placeholder={t('ui.question_form.something_to_explore_verify_or_reflect_on')}
         aria-describedby="question-text-hint"
         onInput={(event) => {
           setText(event.currentTarget.value);
@@ -102,7 +107,7 @@ export default function QuestionForm({
         }}
       />
       <p id="question-text-hint" className="profile-hint profile-bio-hint">
-        <span>500文字まで。</span>
+        <span>{t('ui.question_form.up_to_500_characters')}</span>
         <span>{text.length} / 500</span>
       </p>
       {error && (
@@ -117,7 +122,7 @@ export default function QuestionForm({
           ) : (
             <CircleHelp size={17} aria-hidden="true" />
           )}
-          {busy ? '保存中…' : '問い・気づきを追加'}
+          {busy ? t('ui.app.saving') : t('ui.app.add_question_or_insight')}
         </button>
       </div>
     </form>

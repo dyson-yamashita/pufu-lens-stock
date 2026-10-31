@@ -1,11 +1,14 @@
+import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { LoaderCircle, MessageSquare, RefreshCw } from 'lucide-react';
 import type { CommentList, CommentTarget, EntityComment } from '../shared/comments';
 import { api, createRequestId, send } from './api';
-
 type CommentDraft = {
   body: string;
-  request: { body: string; id: string } | null;
+  request: {
+    body: string;
+    id: string;
+  } | null;
   busy: boolean;
   error: string;
   posted: EntityComment[];
@@ -28,6 +31,7 @@ export default function Comments({
   targetId: string;
   phase?: number;
 }) {
+  useLanguage();
   const [drafts, setDrafts] = useState<Record<string, CommentDraft>>({});
   const key = `${targetType}:${targetId}:${phase ?? ''}`;
   return (
@@ -64,6 +68,7 @@ function CommentThread({
   draft: CommentDraft;
   updateDraft: (update: (current: CommentDraft) => CommentDraft) => void;
 }) {
+  useLanguage();
   const [comments, setComments] = useState<EntityComment[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -98,7 +103,7 @@ function CommentThread({
         setHasMore(data.has_more);
       }
     } catch (error) {
-      if (!signal.aborted) setLoadError((error as Error).message);
+      if (!signal.aborted) setLoadError(applicationError((error as Error).message));
     } finally {
       if (!signal.aborted) setLoading(false);
     }
@@ -118,7 +123,9 @@ function CommentThread({
       draft.request?.body === text ? draft.request : { body: text, id: createRequestId() };
     updateDraft((current) => ({ ...current, request, busy: true, error: '', notice: '' }));
     try {
-      const data = await send<{ comment: EntityComment }>('/api/v1/comments', {
+      const data = await send<{
+        comment: EntityComment;
+      }>('/api/v1/comments', {
         ...target,
         body: text,
         request_id: request.id,
@@ -126,7 +133,7 @@ function CommentThread({
       updateDraft((current) => ({
         ...emptyDraft,
         posted: mergeComments(current.posted, [data.comment]),
-        notice: 'コメントを追加しました。',
+        notice: t('ui.comments.comment_added'),
       }));
     } catch (error) {
       updateDraft((current) => ({ ...current, error: (error as Error).message }));
@@ -139,7 +146,9 @@ function CommentThread({
       <div className="comments-heading">
         <h2 id={headingId}>
           <MessageSquare size={18} aria-hidden="true" />
-          {phase === undefined ? 'コメント' : `第${phase}局面のコメント`}
+          {phase === undefined
+            ? t('ui.app.comments')
+            : t('ui.comments.comments_for_phase_value', { value0: phase })}
         </h2>
         <button
           type="button"
@@ -148,12 +157,13 @@ function CommentThread({
           onClick={() => void load(1, controller.current!.signal)}
         >
           <RefreshCw size={15} aria-hidden="true" />
-          更新
+          {t('ui.comments.refresh')}
         </button>
       </div>
       {loadError && (
         <p className="form-error" role="alert">
-          {loadError}「更新」で再試行できます。
+          {loadError}
+          {t('ui.comments.use_refresh_to_try_again')}
         </p>
       )}
       {visibleComments.length > 0 && (
@@ -162,10 +172,14 @@ function CommentThread({
             <li key={item.id}>
               <div className="comment-meta">
                 <span>
-                  {item.author_name}・{item.author_kind === 'agent' ? 'AI連携' : '本人'}
+                  {item.author_name}
+                  {t('ui.comments.separator')}
+                  {item.author_kind === 'agent'
+                    ? t('ui.comments.ai_integration')
+                    : t('ui.comments.you')}
                 </span>
                 <time dateTime={item.created_at}>
-                  {new Intl.DateTimeFormat('ja-JP', {
+                  {new Intl.DateTimeFormat(intlLocale(), {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                     timeZone: 'Asia/Tokyo',
@@ -180,7 +194,7 @@ function CommentThread({
       {loading && (
         <p className="content-loading" role="status">
           <LoaderCircle size={17} className="spin" aria-hidden="true" />
-          コメントを読み込んでいます…
+          {t('ui.comments.loading_comments')}
         </p>
       )}
       {hasMore && (
@@ -190,14 +204,14 @@ function CommentThread({
           disabled={loading || busy}
           onClick={() => void load(page + 1, controller.current!.signal)}
         >
-          続きを読み込む
+          {t('ui.comments.load_more')}
         </button>
       )}
       <form onSubmit={submit}>
         <textarea
-          aria-label="コメントを追加"
+          aria-label={t('ui.comments.add_comment')}
           aria-describedby={hintId}
-          placeholder="コメントを追加…"
+          placeholder={t('ui.comments.add_a_comment')}
           value={body}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -221,11 +235,11 @@ function CommentThread({
         )}
         <div className="form-actions">
           <span className="field-hint" id={hintId}>
-            2,000文字まで
+            {t('ui.comments.up_to_2_000_characters')}
           </span>
           <button className="button primary" disabled={busy || loading || !body.trim()}>
             {busy && <LoaderCircle size={16} className="spin" aria-hidden="true" />}
-            {busy ? '追加中…' : 'コメントを追加'}
+            {busy ? t('ui.comments.adding') : t('ui.comments.add_comment')}
           </button>
         </div>
       </form>

@@ -29,7 +29,32 @@ it.each([
   expect(document.body.textContent).not.toContain('認証付きアプリ');
   expect(document.querySelector('nav[aria-label="目次"]')).toBeNull();
   expect(document.querySelectorAll('main .manual-section').length).toBeGreaterThan(0);
-  for (const path of ['/', '/privacy', '/terms']) {
+  for (const path of ['/', '/privacy?lang=ja', '/terms?lang=ja']) {
     expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
   }
 });
+
+it.each([
+  ['/privacy', '', 'en-US', 'Privacy Policy'],
+  ['/terms/', '', 'fr-FR', 'Terms of Service'],
+  ['/terms', '?lang=ja', 'en-US', '利用規約'],
+  ['/privacy', '?lang=en', 'ja-JP', 'Privacy Policy'],
+  ['/en/terms', '?lang=ja', 'ja-JP', 'Terms of Service'],
+])(
+  'the SPA entry resolves legal language for %s%s and primary %s',
+  async (pathname, search, primary, title) => {
+    vi.stubGlobal('window', {
+      location: { pathname, search, hash: '' },
+      navigator: { language: primary },
+    });
+    vi.stubGlobal(
+      'document',
+      parseHTML('<html><body><div id="root"></div></body></html>').document,
+    );
+    await import('../src/main');
+    const { document } = parseHTML(renderToStaticMarkup(render.mock.calls[0][0]));
+    expect(document.querySelector('h1')?.textContent).toBe(title);
+    if (title === '利用規約')
+      expect(document.querySelector('a[href="/terms?lang=ja"]')).not.toBeNull();
+  },
+);

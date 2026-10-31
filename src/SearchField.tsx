@@ -1,6 +1,6 @@
+import { t, useLanguage } from './i18n';
 import { useRef } from 'react';
 import { Search, X } from 'lucide-react';
-
 export default function SearchField({
   label,
   placeholder,
@@ -18,6 +18,7 @@ export default function SearchField({
   onSearch: () => void;
   onClear: () => void;
 }) {
+  useLanguage();
   const input = useRef<HTMLInputElement>(null);
   return (
     <form
@@ -30,7 +31,7 @@ export default function SearchField({
       }}
     >
       <div className="search-field">
-        <button type="submit" className="icon-button" aria-label="検索する">
+        <button type="submit" className="icon-button" aria-label={t('ui.search_field.search')}>
           <Search size={18} aria-hidden="true" />
         </button>
         <input
@@ -46,7 +47,7 @@ export default function SearchField({
           <button
             type="button"
             className="icon-button"
-            aria-label="検索をクリア"
+            aria-label={t('ui.search_field.clear_search')}
             onClick={() => {
               onClear();
               input.current?.focus();

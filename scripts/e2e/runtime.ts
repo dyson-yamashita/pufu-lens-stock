@@ -141,7 +141,7 @@ export async function withRuntime<T>(
           binding: 'ASSETS',
           directory: join(repo, 'dist/client'),
           not_found_handling: 'single-page-application',
-          run_worker_first: ['/api/*', '/mcp', '/oauth/*', '/.well-known/*'],
+          run_worker_first: built.assets.run_worker_first,
         },
         d1_databases: [
           {

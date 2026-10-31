@@ -24,6 +24,7 @@ import {
   pufuScoreSchema,
 } from '../shared/pufu';
 import { createApp } from './api';
+import { resolveLanguage, translate, languages } from '../shared/locale';
 import type { Env, Principal } from './env';
 import type { User } from '../shared/domain';
 import type { McpContext } from './mcp-oauth';
@@ -76,15 +77,44 @@ class ToolError extends Error {
 }
 
 function createServer(env: Env, ctx: McpContext, principal: Principal) {
+  const language = resolveLanguage(principal.user.language);
+  const t = (message: string, values?: Record<string, string | number>) =>
+    translate(language, message, values);
+  const errorMessage = (message: string, status: number) => {
+    const localized = t(message);
+    if (language === 'ja' || localized !== message) return localized;
+    return t(
+      `mcp.error.${[400, 401, 403, 404, 409, 413, 422, 429, 503].includes(status) ? status : 500}`,
+    );
+  };
+  // Only application schema metadata is localized; returned user documents never pass here.
+  const schemaMetadata = (schema: unknown): unknown => {
+    if (Array.isArray(schema)) return schema.map(schemaMetadata);
+    if (!schema || typeof schema !== 'object') return schema;
+    return Object.fromEntries(
+      Object.entries(schema).map(([key, value]) => [
+        key,
+        (key === 'description' || key === 'title') && typeof value === 'string'
+          ? t(value)
+          : schemaMetadata(value),
+      ]),
+    );
+  };
   const server = new McpServer(
     { name: 'pufu-lens-stock', version: '1.0.0' },
     {
       instructions:
-        '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+        t(
+          '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+        ) +
+        '\n' +
+        t('mcp.outputLanguage', { language: languages[language].name }) +
+        '\n' +
+        languages[language].generationInstruction,
     },
   );
   const api = createApp(principal);
-  registerPufuViewer(server, env);
+  registerPufuViewer(server, env, language);
   const exposedTools: (Tool & { securitySchemes: { type: string; scopes: string[] }[] })[] = [];
   function register<Input extends z.ZodObject>(
     name: string,
@@ -101,16 +131,53 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     },
     callback: ToolCallback<Input>,
   ) {
-    if (config._meta.ui) registerAppTool(server, name, config, callback);
-    else server.registerTool(name, config, callback);
+    // Clone only this request's schema and adapt its Standard Schema validation messages.
+    // The shared Zod schemas and other principals keep their original validation behavior.
+    const inputSchema = config.inputSchema.clone();
+    const standard = inputSchema['~standard'];
+    Object.defineProperty(inputSchema, '~standard', {
+      value: {
+        ...standard,
+        validate: async (value: unknown) => {
+          const parsed = await standard.validate(value);
+          return parsed.issues
+            ? {
+                issues: parsed.issues.map((issue) => ({
+                  ...issue,
+                  // Zod's standard diagnostics already describe the English
+                  // constraint; retain them instead of hiding the repair hint.
+                  message:
+                    language === 'en' && !/[\u3040-\u30ff\u3400-\u9fff]/u.test(issue.message)
+                      ? issue.message
+                      : errorMessage(issue.message, 400),
+                })),
+              }
+            : parsed;
+        },
+      },
+    });
+    const localizedConfig = {
+      ...config,
+      inputSchema,
+      title: t(config.title),
+      description: t(config.description),
+    };
+    if (config._meta.ui) registerAppTool(server, name, localizedConfig, callback);
+    else server.registerTool(name, localizedConfig, callback);
     // SDKのツール呼び出し検証を利用しつつ、ChatGPTが要求するトップレベルの認証宣言も公開する。
-    const { outputSchema, ...listedConfig } = config;
+    const { outputSchema, ...listedConfig } = localizedConfig;
     exposedTools.push({
       ...listedConfig,
       name,
-      inputSchema: z.toJSONSchema(config.inputSchema, { io: 'input' }) as Tool['inputSchema'],
+      inputSchema: schemaMetadata(
+        z.toJSONSchema(config.inputSchema, { io: 'input' }),
+      ) as Tool['inputSchema'],
       ...(outputSchema
-        ? { outputSchema: z.toJSONSchema(outputSchema, { io: 'output' }) as Tool['outputSchema'] }
+        ? {
+            outputSchema: schemaMetadata(
+              z.toJSONSchema(outputSchema, { io: 'output' }),
+            ) as Tool['outputSchema'],
+          }
         : {}),
       securitySchemes: config._meta.securitySchemes,
     });
@@ -148,7 +215,10 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
   ): Promise<CallToolResult> {
     if (!ctx.auth.scope.includes(scope))
       return {
-        ...result({ error: 'この操作の権限が必要です。再接続して許可してください。', status: 403 }),
+        ...result({
+          error: t('この操作の権限が必要です。再接続して許可してください。'),
+          status: 403,
+        }),
         isError: true,
         _meta: {
           'mcp/www_authenticate': [
@@ -163,11 +233,11 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
         caught instanceof HTTPException ? new ToolError(caught.message, caught.status) : caught;
       if (!(error instanceof ToolError)) {
         console.error('mcp_tool_failed');
-        return { ...result({ error: '処理に失敗しました。', status: 500 }), isError: true };
+        return { ...result({ error: t('処理に失敗しました。'), status: 500 }), isError: true };
       }
       return {
         ...result({
-          error: error.message,
+          error: errorMessage(error.message, error.status),
           status: error.status,
           ...(error.retryAt ? { retry_at: error.retryAt } : {}),
         }),
@@ -186,14 +256,14 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       annotations: read,
       _meta: { securitySchemes: [{ type: 'oauth2', scopes: [] }] },
     },
-    (args) => result(getPufuGuideline(args)),
+    (args) => result(getPufuGuideline(args, language)),
   );
   for (const write of [false, true]) {
     register(
       write ? 'add_comment' : 'list_comments',
       {
         title: write ? 'コメント追加' : 'コメント一覧',
-        description: `本人用の時系列コメントを${write ? '追加' : '古い順に50件ずつ取得'}します。target_typeはstock・question・pufu、target_idは対象IDです。プ譜は実在する局面番号phaseを必ず指定し、ストック・問い・気づきには指定しません。ストックはstocks:${write ? 'write' : 'read'}、問い・気づき・プ譜はquestions:${write ? 'write' : 'read'}権限が必要です。コメントは公開ページやメモリに含みません。${write ? 'request_idは操作ごとに新しいUUIDを使い、再送は同じ値を使います。本文は2,000文字以内です。' : 'has_moreがtrueならpageを増やして続きを取得できます。'}`,
+        description: t(write ? 'mcp.comments.add' : 'mcp.comments.list'),
         inputSchema: write ? addCommentSchema : listCommentsSchema,
         annotations: write ? { ...add, openWorldHint: false } : read,
         _meta: {
@@ -217,12 +287,17 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
   }
   const loadPufuImage = async (questionId: string | null | undefined, pufuId?: string) => {
     const image = await generateQuestionPufuImage(env, principal, questionId, pufuId);
+    const links = await issuePufuImageLink(env, principal, image);
     return {
       image,
       data: {
         ...image.metadata,
         title: image.title,
-        ...(await issuePufuImageLink(env, principal, image)),
+        ...links,
+        ...(links.image_url_error
+          ? { image_url_error: errorMessage(links.image_url_error, 503) }
+          : {}),
+        language,
       },
     };
   };
@@ -480,7 +555,11 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       if (metadata?.image_url && metadata.download_url)
         output.content.push({
           type: 'text',
-          text: `ビューアーを利用できる環境では、表示・再表示の依頼には、取得したquestion_idとpufu_idを指定してshow_pufuを呼び出してください。過去の画像URLをMarkdown画像として使い回さないでください。既存ビューアーの再取得ではこの結果を利用し、新しい表示カードを作らないでください。ビューアー非対応環境では、以下の外部リンク、またはBase64から保存したPNGファイルを案内してください。\n[画像を開く](${metadata.image_url})\n[PNGをダウンロード](${metadata.download_url})\nリンクの有効期限: ${metadata.expires_at}`,
+          text: t('mcp.imageLinks', {
+            image_url: metadata.image_url,
+            download_url: metadata.download_url,
+            expires_at: metadata.expires_at ?? '',
+          }),
         });
       return output;
     },
@@ -524,8 +603,11 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
             type: 'text',
             text:
               data.status === 'ready'
-                ? `プ譜の画像を取得しました。対応環境ではビューアーで確認できます。\n[画像を開く](${data.image_url})\n[PNGをダウンロード](${data.download_url})`
-                : 'この問い・気づきのプ譜はまだ作成されていません。',
+                ? t('mcp.imageReady', {
+                    image_url: data.image_url ?? '',
+                    download_url: data.download_url ?? '',
+                  })
+                : t('この問い・気づきのプ譜はまだ作成されていません。'),
           },
         ];
       }
@@ -583,13 +665,14 @@ export async function handleMcp(request: Request, env: Env, executionCtx: Execut
   const parsed = z.object({ userId: id, projectId: id.nullable() }).safeParse(ctx.props);
   if (!parsed.success || !ctx.auth) return new Response('認証が必要です。', { status: 401 });
   const user = await env.DB.prepare(
-    'SELECT id,name,bio,onboarding_completed_at,avatar_url FROM users WHERE id=?',
+    'SELECT id,name,bio,onboarding_completed_at,avatar_url,language FROM users WHERE id=?',
   )
     .bind(parsed.data.userId)
     .first<User>();
   if (!user) return new Response('ユーザーが見つかりません。', { status: 401 });
+  const t = (message: string) => translate(resolveLanguage(user.language), message);
   if (!user.onboarding_completed_at)
-    return new Response('Web画面でニックネームの登録と規約への同意を完了してください。', {
+    return new Response(t('Web画面でニックネームの登録と規約への同意を完了してください。'), {
       status: 403,
     });
   const principal: Principal = { user, kind: 'mcp', tokenProjectId: parsed.data.projectId };
@@ -599,7 +682,7 @@ export async function handleMcp(request: Request, env: Env, executionCtx: Execut
       .bind(principal.tokenProjectId, user.id)
       .first())
   )
-    return new Response('許可されたプロジェクトが見つかりません。', { status: 403 });
+    return new Response(t('許可されたプロジェクトが見つかりません。'), { status: 403 });
   const handler = createMcpHandler(() => createServer(env, ctx, principal), {
     corsOptions: false,
     allowedHostnames: [new URL(env.APP_URL).hostname],

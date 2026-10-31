@@ -1,255 +1,205 @@
+import { t, useLanguage, legalHref } from './i18n';
 import { useEffect } from 'react';
 import { ArrowUp, BookOpen } from 'lucide-react';
 import LegalLinks from './LegalLinks';
-
-const sections = [
+const sections = () => [
   {
     id: 'stocks',
-    title: '記事をストックする',
+    title: t('ui.user_manual.save_articles_as_stocks'),
     content: (
       <>
         <ol>
-          <li>「記事をストック」を開き、「URL」か「テキスト」を選びます。</li>
-          <li>保存先のプロジェクトを選び、投稿URLか本文を入力して「ストックする」を押します。</li>
-          <li>追加したカードを開くと、要約・要点・問いを確認できます。</li>
+          <li>{t('ui.user_manual.open_save_article_and_choose_url_or_text')}</li>
+          <li>{t('ui.user_manual.choose_the_destination_project_enter_a_post_url_or')}</li>
+          <li>{t('ui.user_manual.open_the_added_card_to_view_its_summary_key')}</li>
         </ol>
-        <p>保存時にメモやテキストのタイトルを付ける場合は、「詳細」を開いて入力します。</p>
-        <p>
-          公開されたPDFのURLも保存できます。文字情報のあるPDFから本文を読み取り、要約や問いを生成します。画像だけのスキャンPDFやパスワード付きPDFは自動取得できません。取得に失敗した場合は、詳細画面で本文を補完して再試行できます。
-        </p>
-        <p>
-          あとで読み返したい記事には星を付けられます。「メモ・保存先」では、メモや保存先を変更できます。
-        </p>
-        <p>
-          短い本文は推測で膨らませず、原文を表示します。「ひとことメモを残す」から気になった理由を保存すると、AIの問いとメモリに反映されます。メモ本文は記事の要約に混ぜず、直接公開しません。プロジェクトの公開時は、メモをもとに作った問いも公開されます。
-        </p>
-        <p>
-          プロジェクトの作成時または「設定」の「詳細設定」で「すべてのストック・問い・気づき・プ譜の一覧に表示する」をオフにすると、全体の一覧と件数から外せます。初期値はオンです。オフでもプロジェクトを指定すれば表示でき、メモリや公開設定は変わりません。
-        </p>
-        <p>
-          タイトルを変えるときは、詳細画面のタイトル右の鉛筆を押します。編集後に「保存」で確定し、「キャンセル」で取り消せます。公開中のプロジェクトでは、変更したタイトルが公開ページにも反映されます。
-        </p>
-        <p>
-          ストックを削除するには、詳細画面の下部にある「その他の操作」を開き、「このストックを削除」を選びます。確認画面で対象と削除範囲を確認してください。ストックとそのコメントは削除されますが、関連する問い・プ譜は残ります。他のプロジェクトに保存した同じ記事も残ります。
-        </p>
-        <p>
-          プロジェクト全体を削除するには、「設定」の最下部で「プロジェクトの削除」を開きます。プロジェクト内のデータが削除され、公開ページも閲覧できなくなります。
-        </p>
+        <p>{t('ui.user_manual.to_add_a_note_or_a_title_for_text')}</p>
+        <p>{t('ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with')}</p>
+        <p>{t('ui.user_manual.star_articles_you_want_to_revisit_use_note_destination')}</p>
+        <p>{t('ui.user_manual.short_text_is_shown_as_originally_written_without_expanding')}</p>
+        <p>{t('ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings')}</p>
+        <p>{t('ui.user_manual.to_change_a_title_press_the_pencil_beside_it')}</p>
+        <p>{t('ui.user_manual.to_delete_a_stock_open_other_actions_at_the')}</p>
+        <p>{t('ui.user_manual.to_delete_a_whole_project_open_project_deletion_at')}</p>
         <p className="manual-note">
-          Xの投稿は「外部連携」でX
-          API連携の設定が必要です。YouTubeの一覧には静止画のサムネイルを表示します。画像かタイトルを押して詳細画面を開き、「動画」で再生できます。初期タイトルは「YouTube」で、タイトル右の鉛筆から変更できます。URLとメモだけを保存し、動画情報の取得や要約・問いの生成は行いません。チャンネルURLや再生できない動画は「YouTubeで開く」からご覧ください。
+          {t('ui.user_manual.x_posts_require_x_api_configuration_in_integrations_youtube')}
         </p>
       </>
     ),
   },
   {
     id: 'questions',
-    title: '問いを見つける・書く',
+    title: t('ui.user_manual.find_and_write_questions'),
     content: (
       <>
+        <p>{t('ui.user_manual.use_questions_insights_or_all_questions_insights_to_view')}</p>
+        <p>{t('ui.user_manual.use_add_question_or_insight_to_save_your_own')}</p>
+        <p>{t('ui.user_manual.in_details_switch_between_content_pufu_comments_and_note')}</p>
+        <p>{t('ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and')}</p>
         <p>
-          「問い・気づき」タブや「すべての問い・気づき」から、ストックをもとにAIが作った問いを見られます。気になる問いを開いて、次に考えたいことを探してみましょう。
+          {t(
+            'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate',
+          )}
         </p>
-        <p>
-          「問い・気づきを追加」から、自分の問いも保存できます。同じプロジェクトのストックを複数選ぶか、関連する記事を選ばずに保存できます。検索やページを切り替えても、選択したストックは保持されます。
-        </p>
-        <p>
-          詳細画面では「本文」「プ譜」「コメント」「メモ・保存先」のタブを切り替えられます。「メモ・保存先」でメモやストックの関連を編集し、「変更を保存」で確定します。選択済みのストックのチェックを外すと関連を解除できます。メモは2,000文字までで、公開ページやAIのメモリには含まれません。
-        </p>
-        <p>
-          自分で追加した問い・気づきは、ストックの関連を解除して保存すると、同じ画面で保存先プロジェクトを変更できます。AIが作った問いの保存先は元の記事から変更します。複数の関連がある場合など、別のプロジェクトにまたがる移動はできません。
-        </p>
-        <p>
-          問いの自動生成を止める場合は、プロジェクトの作成時または「設定」の「詳細設定」で「ストックから問い・気づきを自動生成する」をオフにして保存します。初期値はオンです。生成済みの問いや手動での追加、要約・メモリの更新設定は変わりません。開始済みの生成は完了する場合があります。
-        </p>
-        <p>
-          問い・気づきを削除するには、詳細画面の下部にある「その他の操作」を開き、「問い・気づきを削除」を選びます。問いとそのコメントは削除されますが、関連するプ譜・局面・ストックは残ります。
-        </p>
+        <p>{t('ui.user_manual.to_delete_a_question_or_insight_open_other_actions')}</p>
       </>
     ),
   },
   {
     id: 'pufu',
-    title: 'プ譜で解決の案をつくる',
+    title: t('ui.user_manual.develop_solutions_with_pufu'),
     content: (
       <>
-        <p>
-          サイドメニューの「すべてのプ譜」や「プ譜」タブから、保存したプ譜を一覧で確認し、開いて編集できます。全体画面ではプロジェクトで絞り込めます。プロジェクトの画面では、そのプロジェクトのプ譜を表示します。生成待ち・生成中・生成失敗のプ譜も確認できます。
-        </p>
-        <p>
-          一覧や詳細画面の星ボタンを押すと、お気に入りに登録・解除できます。一覧の「お気に入り」を選ぶと、登録したプ譜だけを表示します。「すべて」で一覧に戻れます。
-        </p>
+        <p>{t('ui.user_manual.use_all_pufu_in_the_side_menu_or_the')}</p>
+        <p>{t('ui.user_manual.use_the_star_button_in_a_list_or_details')}</p>
         <ol>
-          <li>
-            「プ譜」一覧の「プ譜を追加」を押し、保存先のプロジェクトを選びます。問いから作る場合は、問いの詳細の「プ譜」タブで「問い・気づきから考える」を選びます。
-          </li>
-          <li>
-            実現したい状態を獲得目標として書きます。「廟算八要素・取り組む予定の施策」には、人員・予算・時間などの状況や予定している施策を任意で入力できます。「プ譜を作成」を押すと、これらを参考に案を生成します。
-          </li>
-          <li>
-            プ譜の画像を押すと、拡大表示できます。ピンチや＋・−で拡大縮小し、ドラッグで移動します。
-          </li>
-          <li>
-            画像右下の「編集する」を押し、開いた画面で目標や施策を編集して「保存」で残します。第1局面から、各項目の吹き出しアイコンでコメントも修正できます。
-          </li>
-          <li>「局面を追加」で次の段階へ進め、振り返りや進捗を記録できます。</li>
-          <li>
-            「ダウンロード」を押し、「JSON」または「画像（PNG）」を選ぶと、表示中の局面の保存済み内容をダウンロードできます。
-          </li>
-          <li>
-            編集画面の横幅が狭い場合は、全体マップをタップ・ドラッグして表示位置を移動できます。
-          </li>
+          <li>{t('ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select')}</li>
+          <li>{t('ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally')}</li>
+          <li>{t('ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or')}</li>
+          <li>{t('ui.user_manual.press_edit_at_the_image_s_lower_right_change')}</li>
+          <li>{t('ui.user_manual.use_add_phase_to_move_to_the_next_stage')}</li>
+          <li>{t('ui.user_manual.choose_download_then_json_or_image_png_to_download')}</li>
+          <li>{t('ui.user_manual.when_the_editor_is_narrow_tap_or_drag_its')}</li>
         </ol>
-        <p>
-          プ譜の画面で「問い・気づきとストックの関連を編集」を開くと、同じプロジェクトの問いとストックを複数選び、「関連を保存」で確定できます。チェックを外すと関連を解除できます。プ譜を編集中の場合は、編集を保存して閉じてから関連を保存してください。問いから新しく作成する場合は、その問い1つを関連付けます。
-        </p>
+        <p>{t('ui.user_manual.open_edit_related_questions_insights_and_stocks_on_a')}</p>
       </>
     ),
   },
   {
     id: 'comments',
-    title: 'コメントで考えの変化を残す',
+    title: t('ui.user_manual.record_your_thinking_with_comments'),
     content: (
       <>
-        <p>
-          ストックや問いの詳細の「コメント」タブで、判断の理由や気づきを追記できます。プ譜では、表示中の局面の下にあるコメント欄を使います。局面を切り替えると、その局面の履歴を表示します。
-        </p>
-        <p>
-          本文を入力して「コメントを追加」を押すと、作成元と日時を付けて古い順に表示します。1件2,000文字までです。「更新」で最新の履歴、「続きを読み込む」で残りの履歴を確認できます。
-        </p>
-        <p>
-          同じユーザーで接続したChatGPTなどのAI連携からも、許可した操作とプロジェクトの範囲で同じ履歴を参照・追記できます。本人の投稿かAI連携の投稿かは、各コメントに表示します。
-        </p>
+        <p>{t('ui.user_manual.use_the_comments_tab_in_stock_or_question_details')}</p>
+        <p>{t('ui.user_manual.enter_text_and_choose_add_comment_comments_show_their')}</p>
+        <p>{t('ui.user_manual.ai_integrations_such_as_chatgpt_connected_as_the_same')}</p>
         <p className="manual-note">
-          この欄は自分用の記録です。公開ページやAIのメモリには含まれません。プ譜エディター内の各要素に付けるコメントとは別に保存され、次の局面には引き継ぎません。対象のストック・問い・プ譜やプロジェクトを削除すると、関連するコメントも削除されます。
+          {t('ui.user_manual.this_is_a_private_record_excluded_from_public_pages')}
         </p>
       </>
     ),
   },
   {
     id: 'memory',
-    title: 'メモリで関心と知識を振り返る',
+    title: t('ui.user_manual.review_interests_and_knowledge_in_memory'),
     content: (
       <>
         <p>
-          記事の要約が増えると、関心の傾向や記事から得た知識がメモリにまとまります。プロジェクトの「メモリ」はそのプロジェクト、「あなたのメモリ」は対象のプロジェクトを横断した内容です。
+          {t(
+            'ui.user_manual.as_article_summaries_accumulate_memory_collects_your_interest_patterns',
+          )}
         </p>
-        <p>知識に付いた「ストックした記事」から、もとになった記事を確認できます。</p>
-        <p>
-          YouTubeは、自分でメモを書いた場合だけ、そのメモをメモリに反映します。動画の内容・字幕・動画情報は使いません。メモの追加・編集・削除に合わせて更新し、URLの保存だけや動画の表示・再生では更新しません。
-        </p>
+        <p>{t('ui.user_manual.use_source_articles_beside_a_knowledge_item_to_view')}</p>
+        <p>{t('ui.user_manual.youtube_contributes_to_memory_only_when_you_write_a')}</p>
         <p className="manual-note">
-          ユーザーメモリに含めたくないプロジェクトは、作成時または「設定」の「詳細設定」で「ストック追加時にユーザーのメモリを更新する」をオフにします。初期値はオンです。オフでもプロジェクトのメモリは更新されますが、後日のユーザーメモリ更新でも、そのプロジェクトの記事は対象から外れます。
+          {t('ui.user_manual.to_exclude_a_project_from_your_user_memory_turn')}
         </p>
       </>
     ),
   },
   {
     id: 'sharing',
-    title: 'プロジェクトを公開する',
+    title: t('ui.public_projects.publish_a_project'),
     content: (
       <>
         <ol>
-          <li>公開したいプロジェクトの「設定」を開きます。</li>
-          <li>「公開設定」で公開をオンにし、公開用の紹介文を入力して保存します。</li>
+          <li>{t('ui.user_manual.open_settings_for_the_project_you_want_to_share')}</li>
           <li>
-            「公開前のご確認」で、個人情報や公開を控えたい情報、著作権などの権利、トップページへの掲載について確認します。すべての項目にチェックを入れて「OK」を押すと公開されます。
+            {t(
+              'ui.user_manual.in_publication_settings_enable_publishing_enter_a_public_introduction',
+            )}
           </li>
-          <li>表示された参照用URLを共有します。トップページの公開プロジェクトにも掲載されます。</li>
+          <li>
+            {t(
+              'ui.user_manual.under_before_publishing_review_personal_or_private_information_copyright',
+            )}
+          </li>
+          <li>{t('ui.user_manual.share_the_displayed_public_url_the_project_is_also')}</li>
         </ol>
-        <p>
-          公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の画像を押すと、拡大して閲覧できます。ストックのタイトル・URL・要約・要点・トピック、問い、紐づくプ譜の最新局面・振り返りが公開されます。
-        </p>
+        <p>{t('ui.user_manual.public_pages_can_be_viewed_without_signing_in_and')}</p>
         <p className="manual-note">
-          メモリ・個人メモ・詳細画面のコメント欄・取得した本文・内部用のプロジェクト概要は公開しません。プ譜の本文やエディター内の要素コメントは公開されるため、公開前に確認してください。公開をオフにして保存すると、参照用URLからも閲覧できなくなります。
+          {t('ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text')}
         </p>
       </>
     ),
   },
   {
     id: 'integrations',
-    title: 'ほかのアプリから使う',
+    title: t('ui.user_manual.use_other_apps'),
     content: (
       <ul>
         <li>
-          <strong>iPhoneの共有メニュー：</strong>
-          「ショートカット連携」でトークンを発行し、案内に表示される送信先URLと保存先を使って設定します。「共有シートから受け取る」→「入力からURLを取得」→「URLの内容を取得」の順に設定すると、開いている記事を共有メニューからストックできます。
+          <strong>{t('ui.user_manual.iphone_share_menu')}</strong>
+          {t('ui.user_manual.create_a_token_under_shortcut_integration_then_configure_the')}
         </li>
         <li>
-          <strong>プロジェクトIDの確認：</strong>
-          連携でプロジェクトIDが必要な場合は、対象プロジェクトの「設定」を開き、IDの横のコピーアイコンを押します。
+          <strong>{t('ui.user_manual.find_a_project_id')}</strong>
+          {t('ui.user_manual.if_an_integration_needs_a_project_id_open_that')}
         </li>
         <li>
-          <strong>ChatGPTなどとの連携：</strong>
-          「外部連携」の「MCP連携」にあるURLを接続先へ登録します。ログイン後に、許可する操作と対象プロジェクトを選びます。問いとプ譜の閲覧を許可すると、保存済みのプ譜を会話で確認し、改善案の検討にも使えます。
-          問いの追加を許可すると、会話から問いとメモを一緒に保存できます。メモは2,000文字までで、公開ページやAIのメモリには含まれません。
+          <strong>{t('ui.user_manual.connect_chatgpt_and_other_apps')}</strong>
+          {t('ui.user_manual.register_the_url_under_integrations_mcp_integration_in_the')}
         </li>
         <li>
-          <strong>ChatGPTなどでプ譜をつくる・編集する：</strong>
-          MCP連携で「プ譜を作成・編集」の操作を許可すると、会話で考えたプ譜をプロジェクトに保存し、保存済みの内容を編集できます。既存の連携は再接続して追加の操作を許可してください。問い・気づきへの紐付けは任意で、後から同じプロジェクトの問いに紐付けたり、解除したりできます。問いに紐付けず作成したプ譜も「プ譜」一覧から開いて編集できます。公開ページには、問いに紐づくプ譜が表示されます。
-          「次の局面として残して」と依頼すると、前の局面を変更せずに次の局面を追加できます。局面を進めたきっかけは、任意で新しい局面のコメントに残せます。
-          接続したAIに記述ガイドラインの取得を依頼すると、獲得目標や勝利条件などの意味と書き方を確認できます。ガイドラインの取得だけでは、保存済みのプ譜は変更されません。
+          <strong>{t('ui.user_manual.create_and_edit_pufu_in_chatgpt_and_other_apps')}</strong>
+          {t('ui.user_manual.allow_create_edit_pufu_in_your_mcp_connection_to')}
         </li>
         <li>
-          <strong>MCPで関連するストックを探す：</strong>
-          通常はキーワードで検索します。意味の近い内容も探す場合は、接続先にハイブリッド検索を指定して依頼できます。管理者の検索設定と索引の準備が必要です。準備中や利用上限・接続障害時はキーワード検索に戻るため、実際に使われた検索方式も確認してください。記事本文は検索対象に含みません。
+          <strong>{t('ui.user_manual.find_related_stocks_with_mcp')}</strong>
+          {t('ui.user_manual.search_uses_keywords_by_default_to_also_find_similar')}
         </li>
         <li>
-          <strong>ChatGPTなどでプ譜を確認する：</strong>
-          プ譜の一覧、または問いの詳細から、取得したいプ譜を指定してJSONや画像で確認できます。複数のプ譜がある場合も選べます。「プ譜を表示して」と依頼すると、対応環境では会話内のビューアーで拡大・移動・PNGの保存ができます。表示に失敗した場合は「再取得」を選びます。ビューアーが使えない環境では、画像や外部リンクの取得を依頼してください。画像はリクエスト時に、指定したプ譜の最新局面から生成します。リンクを知る人が1時間閲覧でき、期限切れやプ譜の更新・削除後は再取得してください。リンクを使えない場合は、PNGファイルへの保存を依頼できます。閲覧を許可した本人のプロジェクトが対象です。
+          <strong>{t('ui.user_manual.view_pufu_in_chatgpt_and_other_apps')}</strong>
+          {t('ui.user_manual.choose_a_pufu_from_the_list_or_question_details')}
         </li>
         <li>
-          <strong>接続をやめる：</strong>
-          「外部連携」の「接続中のサービス」から、対象の連携を解除できます。Xの認証情報は、同じ画面の「Xの認証情報の削除」を開いて削除します。削除してもストック済みの記事は残ります。
+          <strong>{t('ui.user_manual.disconnect')}</strong>
+          {t('ui.user_manual.disconnect_a_service_under_integrations_connected_services_open_x')}
         </li>
       </ul>
     ),
   },
   {
     id: 'withdrawal',
-    title: '退会する',
+    title: t('ui.profile.delete_your_account'),
     content: (
       <>
         <ol>
-          <li>サイドメニューの「プロフィール」を開きます。</li>
-          <li>「退会するには？」を押して退会欄を開きます。</li>
-          <li>「退会する」を押し、削除されるデータを確認します。</li>
-          <li>「すべて削除して退会する」で確定します。</li>
+          <li>{t('ui.user_manual.open_profile_from_the_side_menu')}</li>
+          <li>{t('ui.user_manual.open_how_do_i_delete_my_account_to_show')}</li>
+          <li>{t('ui.user_manual.press_delete_account_and_review_the_data_to_be')}</li>
+          <li>{t('ui.user_manual.confirm_with_delete_all_data_and_account')}</li>
         </ol>
         <p className="manual-note">
-          登録したデータと保存本文が削除され、復元できません。公開中のプロジェクトも閲覧できなくなり、すべての端末でログアウトし、連携も無効になります。削除が継続中の場合は画面に案内が表示されます。Googleアカウント自体は削除されません。
+          {t('ui.user_manual.registered_data_and_saved_article_bodies_are_deleted_and')}
         </p>
       </>
     ),
   },
   {
     id: 'help',
-    title: '困ったときは',
+    title: t('ui.user_manual.troubleshooting'),
     content: (
       <dl className="manual-help">
-        <dt>記事の取得に失敗した</dt>
-        <dd>
-          ストックの詳細を開き、「要約」の「取得を再試行」を使います。本文を貼り付けて再試行することもできます。PDFは10MB・100ページまでが対象です。ページの閲覧制限や、画面に表示された外部連携の設定も確認してください。YouTubeの動画は埋め込みプレーヤーで表示するため、記事取得の再試行はできません。再生できない場合は「YouTubeで開く」からご覧ください。
-        </dd>
-        <dt>要約やプ譜がまだ表示されない</dt>
-        <dd>
-          保存後の処理には時間がかかることがあります。処理中の表示を確認し、少し待ってください。失敗が表示された場合は、画面の案内から再試行できます。
-        </dd>
+        <dt>{t('ui.user_manual.article_retrieval_failed')}</dt>
+        <dd>{t('ui.user_manual.open_the_stock_details_and_use_retry_retrieval_under')}</dd>
+        <dt>{t('ui.user_manual.a_summary_or_pufu_has_not_appeared_yet')}</dt>
+        <dd>{t('ui.user_manual.processing_after_a_save_can_take_time_check_the')}</dd>
       </dl>
     ),
   },
 ];
-
 export default function UserManual() {
+  const { language } = useLanguage();
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'ユーザーマニュアル | Pufu Lens';
+    document.title = t('ui.user_manual.user_manual_pufu_lens');
     // Reactの描画後にも、直リンクで指定された節を表示する。
-    document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView?.();
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [language]);
   return (
     <div className="public-page manual-page">
       <header className="public-header">
@@ -258,42 +208,45 @@ export default function UserManual() {
           <span>Pufu Lens</span>
         </a>
         <a href="/" className="text-link">
-          トップへ戻る
+          {t('ui.user_manual.back_to_home')}
         </a>
       </header>
       <main className="manual-main">
         <header className="page-header" id="manual-start" tabIndex={-1}>
           <div>
-            <h1>ユーザーマニュアル</h1>
-            <p>記事を集め、問いを育て、次のアイデアにつなげるための基本ガイドです。</p>
+            <h1>{t('ui.app.user_manual')}</h1>
+            <p>
+              {t('ui.user_manual.a_basic_guide_to_collecting_articles_developing_questions_and')}
+            </p>
           </div>
         </header>
         <section className="manual-start" aria-labelledby="manual-start-heading">
           <h2 id="manual-start-heading">
             <BookOpen size={20} aria-hidden="true" />
-            まずは、ここから
+            {t('ui.user_manual.start_here')}
           </h2>
           <ol>
             <li>
-              Googleでログインし、ニックネーム（表示名）を入力します。
-              <a href="/terms">利用規約</a>と<a href="/privacy">プライバシーポリシー</a>
-              を確認し、両方への同意にチェックして「OK」を押します。完了するまでは、再度ログインしても登録画面が表示されます。
+              {t('manual.language.start')}{' '}
+              <a href={legalHref('terms')}>{t('ui.legal_links.terms_of_service')}</a>
+              {t('ui.user_manual.and')}
+              <a href={legalHref('privacy')}>{t('ui.legal_links.privacy_policy')}</a>
+              {t('ui.user_manual.review_both_documents_check_both_consent_boxes_and_press')}
             </li>
-            <li>
-              サイドメニューからプロジェクトを追加します。ニックネームは「プロフィール」で変更できます。
-            </li>
-            <li>気になった記事のURLや、自分のテキストをストックします。</li>
-            <li>問いを選び、プ譜で解決の案を考えてみましょう。</li>
+            <li>{t('manual.language.profile')}</li>
+            <li>{t('ui.user_manual.save_interesting_article_urls_or_your_own_text_as')}</li>
+            <li>{t('ui.user_manual.choose_a_question_and_explore_solutions_with_pufu')}</li>
           </ol>
+          <p className="manual-note">{t('manual.language.future')}</p>
         </section>
-        <nav className="manual-toc" aria-label="マニュアルの目次">
-          {sections.map((section) => (
+        <nav className="manual-toc" aria-label={t('ui.user_manual.manual_contents')}>
+          {sections().map((section) => (
             <a key={section.id} href={`#${section.id}`}>
               {section.title}
             </a>
           ))}
         </nav>
-        {sections.map((section) => (
+        {sections().map((section) => (
           <section
             className="manual-section"
             key={section.id}
@@ -307,7 +260,7 @@ export default function UserManual() {
         ))}
         <a className="text-link manual-back-top" href="#manual-start">
           <ArrowUp size={16} aria-hidden="true" />
-          ページの先頭へ
+          {t('ui.user_manual.back_to_top')}
         </a>
         <LegalLinks />
       </main>

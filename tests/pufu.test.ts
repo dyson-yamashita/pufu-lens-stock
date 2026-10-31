@@ -883,10 +883,22 @@ describe('問いからプ譜を生成・編集・保存する', () => {
         '0008_question_favorites.sql',
       ],
     });
-    await app.request('/api/v1/stocks', {
-      method: 'POST',
-      body: { project_id: 'alice-project', url: 'https://example.com/before' },
-    });
+    // Use the historical shape before testing a table-rebuilding migration.
+    // Current APIs require the language snapshot added after this migration.
+    await app.env.DB.batch([
+      app.env.DB.prepare(
+        "INSERT INTO articles(id,user_id,canonical_url,source_url,title,domain) VALUES('old-article','alice','https://example.com/before','https://example.com/before','Before','example.com')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO stocks(id,user_id,project_id,article_id) VALUES('old-stock','alice','alice-project','old-article')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO questions(id,stock_id,source) VALUES('old-question','old-stock','ai')",
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO processing_jobs(id,user_id,kind,target_id,revision) VALUES('old-job','alice','article','old-article',1)",
+      ),
+    ]);
     const questions = await app.env.DB.prepare('SELECT * FROM questions').all();
     const jobs = await app.env.DB.prepare('SELECT * FROM processing_jobs ORDER BY id').all();
     await applyMigration(app.env.DB, '0009_pufu_scores.sql');

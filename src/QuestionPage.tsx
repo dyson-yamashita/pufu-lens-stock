@@ -1,3 +1,4 @@
+import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Folder, LoaderCircle, Star } from 'lucide-react';
 import type { Project, Question, QuestionDetail } from '../shared/domain';
@@ -8,19 +9,18 @@ import Comments from './Comments';
 import DeleteAction from './DeleteAction';
 import QuestionSettings from './QuestionSettings';
 import PufuForm from './PufuForm';
-
-const detailTabs = [
-  ['body', '本文'],
-  ['pufus', 'プ譜'],
-  ['comments', 'コメント'],
-  ['settings', 'メモ・保存先'],
-] as const;
-
+const detailTabs = () =>
+  [
+    ['body', t('ui.app.content')],
+    ['pufus', t('ui.app.pufu')],
+    ['comments', t('ui.app.comments')],
+    ['settings', t('ui.app.note_destination')],
+  ] as const;
 export default function QuestionPage({
   id,
   resolve,
   projects,
-  backLabel = '問い・気づきの一覧に戻る',
+  backLabel = t('ui.public_projects.back_to_questions_insights'),
   onBack,
   onResolve,
   onPufu,
@@ -39,8 +39,9 @@ export default function QuestionPage({
   onDeleted: () => void;
   onUpdated: () => void;
 }) {
+  useLanguage();
   const [question, setQuestion] = useState<QuestionDetail>();
-  const [tab, setTab] = useState<(typeof detailTabs)[number][0]>('body');
+  const [tab, setTab] = useState<ReturnType<typeof detailTabs>[number][0]>('body');
   const tabsId = useId();
   const [pufus, setPufus] = useState<PufuSummary[]>([]);
   const [error, setError] = useState('');
@@ -57,16 +58,16 @@ export default function QuestionPage({
       inFlight = true;
       const version = detailsVersion.current;
       try {
-        const result = await api<{ question: QuestionDetail; pufus: PufuSummary[] }>(
-          `/api/v1/questions/${encodeURIComponent(id)}`,
-          { signal: controller.signal },
-        );
+        const result = await api<{
+          question: QuestionDetail;
+          pufus: PufuSummary[];
+        }>(`/api/v1/questions/${encodeURIComponent(id)}`, { signal: controller.signal });
         if (!controller.signal.aborted && version === detailsVersion.current && version % 2 === 0) {
           setQuestion(result.question);
           setPufus(result.pufus);
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError((e as Error).message);
+        if (!controller.signal.aborted) setError(applicationError((e as Error).message));
       } finally {
         inFlight = false;
       }
@@ -83,19 +84,27 @@ export default function QuestionPage({
   return (
     <section
       className="question-detail-page"
-      aria-label={resolve ? '課題からプ譜を作成' : '問い・気づきの詳細'}
+      aria-label={
+        resolve
+          ? t('ui.question_page.create_pufu_from_a_task')
+          : t('ui.public_projects.question_or_insight_details')
+      }
     >
       <button className="back-link" onClick={onBack}>
         <ArrowLeft size={16} aria-hidden="true" />
-        {resolve ? '問い・気づきの詳細に戻る' : backLabel}
+        {resolve ? t('ui.app.back_to_question_or_insight') : backLabel}
       </button>
       <header className="page-header">
         <div>
-          <h1>{resolve ? '課題からプ譜を作成' : '問い・気づきの詳細'}</h1>
+          <h1>
+            {resolve
+              ? t('ui.question_page.create_pufu_from_a_task')
+              : t('ui.public_projects.question_or_insight_details')}
+          </h1>
           <p>
             {resolve
-              ? '実現したいことを課題として書き、解決に向けたプ譜をつくります。'
-              : '問い・気づきを見つめ直し、次の一歩へ。'}
+              ? t('ui.question_page.describe_what_you_want_to_achieve_as_a_task')
+              : t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}
           </p>
         </div>
       </header>
@@ -108,7 +117,7 @@ export default function QuestionPage({
         !error && (
           <p className="content-loading">
             <LoaderCircle className="spin" size={20} aria-hidden="true" />
-            問い・気づきを読み込んでいます…
+            {t('ui.question_page.loading_questions_insights')}
           </p>
         )
       ) : (
@@ -117,28 +126,28 @@ export default function QuestionPage({
             <div
               className="detail-tabs question-detail-tabs"
               role="tablist"
-              aria-label="問い・気づきの詳細"
+              aria-label={t('ui.public_projects.question_or_insight_details')}
               onKeyDown={(event) => {
-                const index = detailTabs.findIndex(([key]) => key === tab);
+                const index = detailTabs().findIndex(([key]) => key === tab);
                 const next =
                   event.key === 'ArrowRight'
-                    ? (index + 1) % detailTabs.length
+                    ? (index + 1) % detailTabs().length
                     : event.key === 'ArrowLeft'
-                      ? (index + detailTabs.length - 1) % detailTabs.length
+                      ? (index + detailTabs().length - 1) % detailTabs().length
                       : event.key === 'Home'
                         ? 0
                         : event.key === 'End'
-                          ? detailTabs.length - 1
+                          ? detailTabs().length - 1
                           : -1;
                 if (next < 0) return;
                 event.preventDefault();
-                setTab(detailTabs[next][0]);
+                setTab(detailTabs()[next][0]);
                 const buttons =
                   event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]');
                 buttons[next]?.focus();
               }}
             >
-              {detailTabs.map(([key, label]) => (
+              {detailTabs().map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -173,8 +182,8 @@ export default function QuestionPage({
               <h2>
                 {question.text ||
                   (question.status === 'failed'
-                    ? '問い・気づきを生成できませんでした。'
-                    : '問い・気づきを生成しています…')}
+                    ? t('ui.question_page.could_not_generate_questions_or_insights')
+                    : t('ui.question_page.generating_questions_insights'))}
               </h2>
               {(
                 question.stocks ??
@@ -188,7 +197,7 @@ export default function QuestionPage({
                       try {
                         await onStock(stock.id);
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(applicationError((e as Error).message));
                       }
                     }}
                   >
@@ -200,7 +209,7 @@ export default function QuestionPage({
               ))}
               <div className="question-card-footer">
                 <time dateTime={question.created_at}>
-                  {new Intl.DateTimeFormat('ja-JP', {
+                  {new Intl.DateTimeFormat(intlLocale(), {
                     dateStyle: 'medium',
                     timeZone: 'Asia/Tokyo',
                   }).format(new Date(question.created_at))}
@@ -210,7 +219,11 @@ export default function QuestionPage({
                     type="button"
                     className="question-favorite"
                     disabled={favoriteBusy || deleting || saving}
-                    aria-label={question.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+                    aria-label={
+                      question.is_favorite
+                        ? t('ui.app.remove_from_favorites')
+                        : t('ui.app.add_to_favorites')
+                    }
                     aria-pressed={Boolean(question.is_favorite)}
                     onClick={async () => {
                       detailsVersion.current += 1;
@@ -226,7 +239,7 @@ export default function QuestionPage({
                           (current) => current && { ...current, is_favorite: result.is_favorite },
                         );
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(applicationError((e as Error).message));
                       } finally {
                         detailsVersion.current += 1;
                         setFavoriteBusy(false);
@@ -262,10 +275,12 @@ export default function QuestionPage({
               >
                 <div className="section-head pufu-list-heading">
                   <div>
-                    <h2>この問い・気づきのプ譜</h2>
-                    <p>課題ごとに案をつくり、編集して育てられます。</p>
+                    <h2>{t('ui.public_projects.pufu_for_this_question_or_insight')}</h2>
+                    <p>
+                      {t('ui.question_page.create_ideas_for_each_task_and_develop_them_through')}
+                    </p>
                   </div>
-                  <span className="result-count">{pufus.length}件</span>
+                  <span className="result-count">{t('count.items', { count: pufus.length })}</span>
                 </div>
                 {pufus.length ? (
                   <div className="pufu-list">
@@ -279,10 +294,10 @@ export default function QuestionPage({
                           <strong>{pufu.task}</strong>
                           <small>
                             {pufu.status === 'ready'
-                              ? '編集できます'
+                              ? t('ui.question_page.editable')
                               : pufu.status === 'failed'
-                                ? '生成に失敗しました'
-                                : 'プ譜を生成しています…'}
+                                ? t('ui.question_page.generation_failed')
+                                : t('ui.question_page.generating_pufu')}
                           </small>
                         </span>
                       </button>
@@ -290,8 +305,8 @@ export default function QuestionPage({
                   </div>
                 ) : (
                   <div className="pufu-empty">
-                    <p>この問い・気づきのプ譜はまだありません。</p>
-                    <p>取り組みたい課題から、実行に向けた案をつくれます。</p>
+                    <p>{t('ui.public_projects.no_pufu_for_this_question_or_insight_yet')}</p>
+                    <p>{t('ui.question_page.create_actionable_ideas_from_a_task_you_want_to')}</p>
                   </div>
                 )}
                 <div className="question-resolve-action">
@@ -300,7 +315,7 @@ export default function QuestionPage({
                     onClick={onResolve}
                     disabled={deleting || question.status !== 'ready' || !question.text}
                   >
-                    問い・気づきから考える
+                    {t('ui.question_page.explore_this_question_or_insight')}
                     <ArrowRight size={18} aria-hidden="true" />
                   </button>
                 </div>
@@ -329,11 +344,9 @@ export default function QuestionPage({
                     detailsVersion.current += 1;
                     setSaving(true);
                     try {
-                      const result = await send<{ question: QuestionDetail }>(
-                        `/api/v1/questions/${encodeURIComponent(id)}`,
-                        input,
-                        'PATCH',
-                      );
+                      const result = await send<{
+                        question: QuestionDetail;
+                      }>(`/api/v1/questions/${encodeURIComponent(id)}`, input, 'PATCH');
                       setQuestion(result.question);
                       onUpdated();
                     } finally {
@@ -344,8 +357,8 @@ export default function QuestionPage({
                 />
               </div>
               <DeleteAction
-                label="問い・気づきを削除"
-                title="問い・気づきを削除しますか？"
+                label={t('ui.question_page.delete_question_or_insight')}
+                title={t('ui.question_page.delete_this_question_or_insight')}
                 disabled={deleting || favoriteBusy || saving}
                 onDelete={async () => {
                   setDeleting(true);
@@ -360,12 +373,15 @@ export default function QuestionPage({
                 <p className="delete-target">
                   {question.text ||
                     (question.status === 'queued'
-                      ? '生成待ちの問い・気づき'
-                      : '生成中・生成に失敗した問い・気づき')}
+                      ? t('ui.question_page.question_or_insight_awaiting_generation')
+                      : t('ui.question_page.question_or_insight_generating_or_failed'))}
                 </p>
-                <p>プロジェクト：{question.project_name}</p>
                 <p>
-                  この問い・気づきとコメントを削除します。関連するプ譜・局面・ストックは残ります。この操作は取り消せません。
+                  {t('ui.question_page.project')}
+                  {question.project_name}
+                </p>
+                <p>
+                  {t('ui.question_page.delete_this_question_or_insight_and_its_comments_related')}
                 </p>
               </DeleteAction>
             </>

@@ -1,8 +1,7 @@
+import { t, useLanguage } from './i18n';
 import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
-
 const reloadKey = 'pufu-editor-load-retry';
-
 export function clearPufuEditorLoadRetry() {
   try {
     window.sessionStorage.removeItem(reloadKey);
@@ -10,8 +9,8 @@ export function clearPufuEditorLoadRetry() {
     // ストレージを使えない環境でもエディターの表示を妨げない。
   }
 }
-
 export default function PufuEditorLoadError() {
+  useLanguage();
   useEffect(() => {
     if (navigator.onLine === false) return;
     try {
@@ -24,14 +23,13 @@ export default function PufuEditorLoadError() {
       // 自動復帰できない場合は、画面内の再読み込みボタンを使えるようにする。
     }
   }, []);
-
   return (
     <div className="empty-state" role="alert">
-      <h2>エディターを読み込めませんでした</h2>
-      <p>作成したプ譜は保存されています。画面を再読み込みして、もう一度お試しください。</p>
+      <h2>{t('ui.pufu_editor_load_error.could_not_load_the_editor')}</h2>
+      <p>{t('ui.pufu_editor_load_error.your_pufu_is_saved_reload_the_page_and_try')}</p>
       <button className="button secondary" onClick={() => window.location.reload()}>
         <RefreshCw size={17} aria-hidden="true" />
-        画面を再読み込み
+        {t('ui.pufu_editor_load_error.reload_page')}
       </button>
     </div>
   );

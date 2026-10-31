@@ -1,9 +1,13 @@
+import { t, useLanguage } from './i18n';
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import DeleteAction from './DeleteAction';
-
-type Status = { configured: boolean; available: boolean };
+type Status = {
+  configured: boolean;
+  available: boolean;
+};
 export default function XIntegration() {
+  useLanguage();
   const [status, setStatus] = useState<Status | null>(null);
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
@@ -14,27 +18,25 @@ export default function XIntegration() {
     api<Status>('/api/v1/integrations/x', { signal: controller.signal })
       .then(setStatus)
       .catch(() => {
-        if (!controller.signal.aborted) setError('Xの連携状態を取得できませんでした。');
+        if (!controller.signal.aborted)
+          setError(t('ui.xintegration.could_not_load_x_integration_status'));
       });
     return () => controller.abort();
   }, []);
   return (
-    <section className="connect-guide" aria-label="X API連携">
-      <p>
-        X公式APIのBearer
-        Tokenを登録すると、投稿URLから本文を取得できます。APIの契約・閲覧権限・利用料金はX側の設定に従います。
-      </p>
-      <p>
-        認証情報はサーバーで暗号化し、X公式APIへの認証にだけ使用します。登録後の値は表示せず、MCPや他のユーザーには提供しません。
-      </p>
+    <section className="connect-guide" aria-label={t('ui.mcp_connections.x_api_integration')}>
+      <p>{t('ui.xintegration.register_an_official_x_api_bearer_token_to_retrieve')}</p>
+      <p>{t('ui.xintegration.credentials_are_encrypted_on_the_server_and_used_only')}</p>
       <p role="status">
         {status
           ? status.configured
-            ? '登録済み（投稿取得時に認証を確認します）'
-            : '未登録'
-          : '読み込み中…'}
+            ? t('ui.xintegration.registered_credentials_are_checked_when_retrieving_a_post')
+            : t('ui.xintegration.not_registered')
+          : t('ui.xintegration.loading')}
       </p>
-      {status && !status.available && <p>管理者による暗号化キーの設定が必要です。</p>}
+      {status && !status.available && (
+        <p>{t('ui.xintegration.the_administrator_must_configure_an_encryption_key')}</p>
+      )}
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -45,9 +47,9 @@ export default function XIntegration() {
             await api('/api/v1/integrations/x', { method: 'PUT', body: JSON.stringify({ token }) });
             setToken('');
             setStatus({ configured: true, available: true });
-            setNotice('Xの認証情報を保存しました。');
+            setNotice(t('ui.xintegration.x_credentials_saved'));
           } catch {
-            setError('保存できませんでした。トークンの形式と外部連携の設定を確認してください。');
+            setError(t('ui.xintegration.could_not_save_check_the_token_format_and_integration'));
           } finally {
             setBusy(false);
           }
@@ -65,33 +67,38 @@ export default function XIntegration() {
           required
           disabled={busy || !status?.available}
           onChange={(event) => setToken(event.target.value)}
-          placeholder={status?.configured ? '変更する場合だけ入力' : 'Bearer Tokenを入力'}
+          placeholder={
+            status?.configured
+              ? t('ui.xintegration.enter_only_to_change')
+              : t('ui.xintegration.enter_bearer_token')
+          }
         />
         <div className="form-actions">
           <button className="button primary" disabled={busy || !status?.available || !token.trim()}>
-            {busy ? '処理中…' : status?.configured ? '更新する' : '登録する'}
+            {busy
+              ? t('ui.xintegration.processing')
+              : status?.configured
+                ? t('ui.xintegration.update')
+                : t('ui.xintegration.register')}
           </button>
         </div>
       </form>
       {status?.configured && (
         <DeleteAction
-          summary="Xの認証情報の削除"
-          label="Xの認証情報を削除"
-          title="Xの認証情報を削除しますか？"
+          summary={t('ui.xintegration.x_credential_deletion')}
+          label={t('ui.xintegration.delete_x_credentials')}
+          title={t('ui.xintegration.delete_x_credentials_2')}
           disabled={busy}
           onDelete={async () => {
             await api('/api/v1/integrations/x', { method: 'DELETE' });
             setStatus({ ...status, configured: false });
             setToken('');
             setError('');
-            setNotice('Xの認証情報を削除しました。');
+            setNotice(t('ui.xintegration.x_credentials_deleted'));
           }}
         >
-          <p>
-            登録したX
-            APIの認証情報を削除します。新たにXの投稿を取得するには、認証情報の再登録が必要です。
-          </p>
-          <p>ストック済みの記事は残ります。</p>
+          <p>{t('ui.xintegration.delete_the_registered_x_api_credentials_to_retrieve_new')}</p>
+          <p>{t('ui.xintegration.previously_saved_articles_remain')}</p>
         </DeleteAction>
       )}
       {error && (

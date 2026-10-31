@@ -1,4 +1,5 @@
 import type { User } from '../shared/domain';
+import type { Language } from '../shared/locale';
 import ipaddr from 'ipaddr.js';
 import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider';
 
@@ -53,6 +54,7 @@ export type Principal = {
 };
 export type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export type Job = {
+  language?: Language;
   id: string;
   user_id: string;
   kind: 'article' | 'project_memory' | 'user_memory' | 'cleanup' | 'question' | 'pufu';

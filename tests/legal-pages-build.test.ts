@@ -78,7 +78,7 @@ it.each([
   expect(document.querySelector(`#${section} h2`)).not.toBeNull();
   expect(document.querySelector('#retention, #termination')).not.toBeNull();
   expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
-  for (const href of ['/', '/privacy', '/terms', '#legal-start']) {
+  for (const href of ['/', '/privacy?lang=ja', '/terms?lang=ja', '#legal-start']) {
     expect(document.querySelector(`a[href="${href}"]`)).not.toBeNull();
   }
   const stylesheet = document.querySelector('link[rel="stylesheet"]')?.getAttribute('href');
@@ -95,4 +95,40 @@ it('トップの初期HTMLにサービス説明と法的文書へのリンクを
     expect(document.querySelector(`#root a[href="${href}"]`)).not.toBeNull();
   }
   expect(document.querySelector('script[type="module"]')).not.toBeNull();
+});
+
+it.each([
+  ['privacy', 'Privacy Policy', 'google-user-data'],
+  ['terms', 'Terms of Service', 'application'],
+])(
+  'builds complete English %s without JavaScript and links to the governing original',
+  (page, title, section) => {
+    const html = assets.get(`en/${page}/index.html`);
+    expect(html).toBeDefined();
+    const { document } = parseHTML(html!);
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toBe(`${title} | Pufu Lens`);
+    expect(document.querySelector('main h1')?.textContent).toBe(title);
+    expect(document.querySelector(`#${section} h2`)).not.toBeNull();
+    expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
+    expect(document.querySelector(`a[href="/${page}?lang=ja"]`)).not.toBeNull();
+    for (const path of ['/en/privacy', '/en/terms'])
+      expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
+    expect(document.querySelector('script[type="module"]')).toBeNull();
+    expect(document.querySelector('script[src="/theme.js"]')).not.toBeNull();
+    expect(document.querySelector('main')?.textContent).toContain('Japanese original');
+  },
+);
+
+it('the Japanese legal originals keep explicit language through section and footer links without JavaScript', () => {
+  const { document } = parseHTML(assets.get('terms/index.html')!);
+  for (const path of [
+    '/privacy?lang=ja#publication',
+    '/privacy?lang=ja#processors',
+    '/privacy?lang=ja#retention',
+    '/en/terms',
+  ]) {
+    expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
+  }
+  expect(document.querySelector('script[type="module"]')).toBeNull();
 });

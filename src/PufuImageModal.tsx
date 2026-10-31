@@ -1,9 +1,14 @@
+import { t, useLanguage } from './i18n';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { Maximize2, Minus, Plus } from 'lucide-react';
 import PufuModal from './PufuModal';
-
-type Point = { x: number; y: number };
-type View = Point & { scale: number };
+type Point = {
+  x: number;
+  y: number;
+};
+type View = Point & {
+  scale: number;
+};
 const initialView: View = { scale: 1, x: 0, y: 0 };
 const midpoint = (points: Point[]) => ({
   x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
@@ -11,16 +16,18 @@ const midpoint = (points: Point[]) => ({
 });
 const distance = (points: Point[]) =>
   Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
-
 export default function PufuImageModal({
   image,
   phase,
   onClose,
 }: {
-  image: { __html: string };
+  image: {
+    __html: string;
+  };
   phase: number;
   onClose: () => void;
 }) {
+  useLanguage();
   const viewport = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Point>());
   const current = useRef(initialView);
@@ -77,20 +84,25 @@ export default function PufuImageModal({
   }
   const release = (event: PointerEvent<HTMLDivElement>) => pointers.current.delete(event.pointerId);
   return (
-    <PufuModal title={`第${phase}局面のプ譜`} onClose={onClose}>
+    <PufuModal
+      title={t('ui.pufu_image_modal.pufu_phase_value', { value0: phase })}
+      onClose={onClose}
+    >
       <div className="pufu-image-controls">
         <button
           className="icon-button"
-          aria-label="縮小"
+          aria-label={t('ui.pufu_image_modal.zoom_out')}
           disabled={view.scale <= 1}
           onClick={() => zoom(view.scale - 0.5)}
         >
           <Minus size={20} aria-hidden="true" />
         </button>
-        <output aria-label="拡大率">{Math.round(view.scale * 100)}%</output>
+        <output aria-label={t('ui.pufu_image_modal.zoom_level')}>
+          {Math.round(view.scale * 100)}%
+        </output>
         <button
           className="icon-button"
-          aria-label="拡大"
+          aria-label={t('ui.pufu_image_modal.zoom_in')}
           disabled={view.scale >= 6}
           onClick={() => zoom(view.scale + 0.5)}
         >
@@ -98,18 +110,18 @@ export default function PufuImageModal({
         </button>
         <button
           className="button secondary"
-          aria-label="全体を表示"
+          aria-label={t('ui.pufu_image_modal.fit_to_view')}
           onClick={() => update(initialView)}
         >
           <Maximize2 size={16} aria-hidden="true" />
-          全体を表示
+          {t('ui.pufu_image_modal.fit_to_view')}
         </button>
       </div>
       <div
         ref={viewport}
         className="pufu-image-viewport"
         role="region"
-        aria-label="プ譜の拡大表示"
+        aria-label={t('ui.pufu_image_modal.enlarged_pufu')}
         tabIndex={0}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
@@ -146,11 +158,15 @@ export default function PufuImageModal({
           className="pufu-image-canvas"
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
         >
-          <div role="img" aria-label={`第${phase}局面のプ譜`} dangerouslySetInnerHTML={image} />
+          <div
+            role="img"
+            aria-label={t('ui.pufu_image_modal.pufu_phase_value', { value0: phase })}
+            dangerouslySetInnerHTML={image}
+          />
         </div>
       </div>
       <p className="field-hint pufu-image-help">
-        ピンチや＋・−で拡大縮小し、ドラッグや矢印キーで移動できます。
+        {t('ui.pufu_image_modal.pinch_or_use_and_to_zoom_drag_or_use')}
       </p>
     </PufuModal>
   );

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { languageSchema, resolveLanguage, translate, type Language } from '../../shared/locale';
 import { pufuViewerReadySchema, type PufuViewerImage } from '../../shared/pufu-viewer';
 
 type ToolResult = { isError?: boolean; structuredContent?: unknown };
@@ -25,6 +26,10 @@ export class PufuViewerController {
     loadImage: false,
     updated: false,
   };
+  language: Language;
+  private t(message: string) {
+    return translate(this.language, message);
+  }
   target?: Selection;
   private confirmed = false;
   private epoch = 0;
@@ -33,11 +38,15 @@ export class PufuViewerController {
   constructor(
     private readonly options: {
       origin: string;
+      language?: Language;
       call: (args: Selection) => Promise<ToolResult>;
       changed: (state: ViewerState) => void;
       now?: () => number;
     },
-  ) {}
+  ) {
+    this.language = resolveLanguage(options.language);
+    this.state.message = this.t(this.state.message);
+  }
   private now() {
     return this.options.now?.() ?? Date.now();
   }
@@ -49,7 +58,7 @@ export class PufuViewerController {
     if (!this.confirmed && parsed.success) this.target = parsed.data;
   }
   fail(message: string, status: ViewerState['status'] = 'error') {
-    this.state = { ...this.state, status, message, loadImage: false };
+    this.state = { ...this.state, status, message: this.t(message), loadImage: false };
     this.emit();
   }
   private validUrl(image: PufuViewerImage) {
@@ -71,6 +80,10 @@ export class PufuViewerController {
     );
   }
   private accept(result: ToolResult, refreshing: boolean) {
+    const metadata = z
+      .object({ language: languageSchema.optional() })
+      .safeParse(result.structuredContent);
+    if (metadata.success && metadata.data.language) this.language = metadata.data.language;
     if (result.isError) {
       const error = z
         .object({ status: z.number().optional(), error: z.string().optional() })
@@ -81,7 +94,8 @@ export class PufuViewerController {
       else if (
         code === 409 &&
         error.success &&
-        error.data.error?.includes('作成が完了していません')
+        (error.data.error?.includes('作成が完了していません') ||
+          error.data.error?.includes('creation has not completed'))
       )
         this.fail('プ譜を生成中です。しばらくしてから再取得してください。', 'generating');
       else this.fail('プ譜を取得できませんでした。再取得するか、会話で表示を依頼してください。');
@@ -122,7 +136,9 @@ export class PufuViewerController {
       !expired && this.state.status === 'ready' && previous?.image_url === image.image_url;
     this.state = {
       status: alreadyDisplayed ? 'ready' : 'loading',
-      message: alreadyDisplayed ? this.state.message : '画像を読み込み中です…',
+      message: this.t(
+        alreadyDisplayed ? 'プ譜を表示しています。拡大して確認できます。' : '画像を読み込み中です…',
+      ),
       image,
       loadImage: !expired,
       updated:
@@ -168,7 +184,7 @@ export class PufuViewerController {
     this.state = {
       ...this.state,
       status: 'loading',
-      message: 'プ譜を再取得しています…',
+      message: this.t('プ譜を再取得しています…'),
       loadImage: false,
     };
     this.emit();
@@ -197,7 +213,7 @@ export class PufuViewerController {
       this.state = {
         ...this.state,
         status: 'ready',
-        message: 'プ譜を表示しています。拡大して確認できます。',
+        message: this.t('プ譜を表示しています。拡大して確認できます。'),
       };
       this.emit();
     }
