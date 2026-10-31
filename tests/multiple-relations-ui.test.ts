@@ -251,6 +251,7 @@ it('プ譜の関連保存で複数の問いとストックを送り、新revisio
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -279,6 +280,7 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -286,7 +288,10 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
       }),
     ),
   );
+  const deleteButton = document.querySelector<HTMLButtonElement>('.delete-action button')!;
+  expect(deleteButton.disabled).toBe(false);
   await click('編集を開始');
+  expect(deleteButton.disabled).toBe(true);
   const save = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
     (item) => item.textContent === '関連を保存',
   )!;
@@ -295,6 +300,10 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
   await submit();
   expect(send).not.toHaveBeenCalled();
   await click('編集を保存して閉じる');
+  expect(deleteButton.disabled).toBe(false);
+  expect(document.querySelector('.pufu-context-task p')?.textContent).toBe(
+    '保存直後の第一局面の目標',
+  );
   await submit();
   expect(send).toHaveBeenCalledWith(
     '/api/v1/pufus/pufu/relations',
@@ -307,6 +316,7 @@ it('関連保存後の取得に失敗した場合は編集を止め、書き込�
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -331,6 +341,7 @@ it('タイトル未設定時の見出しは第一局面の保存直後に獲得�
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),

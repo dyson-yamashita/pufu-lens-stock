@@ -839,3 +839,26 @@ it('一覧はタイトルを表示するだけで、編集は詳細画面のペ�
   expect(document.querySelector('.pufu-title-row h2')?.textContent).toBe('短い見出し');
   expect(document.querySelector('[aria-label="タイトルを編集"]')).not.toBeNull();
 });
+
+it('タイトル保存中はプ譜を削除できず、保存完了後に削除操作を再開できる', async () => {
+  await render('#pufu/pufu');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('[aria-label="タイトルを編集"]')!.click(),
+  );
+  let complete!: (value: unknown) => void;
+  vi.mocked(send).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+  );
+  await act(async () =>
+    document
+      .querySelector('.pufu-title-form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+  );
+  const deletion = document.querySelector<HTMLButtonElement>('.delete-action button')!;
+  expect(deletion.disabled).toBe(true);
+  await act(async () => complete({ id: 'pufu', title: null }));
+  expect(deletion.disabled).toBe(false);
+});

@@ -1272,6 +1272,13 @@ export default function App() {
                     window.location.hash = `#pufus${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
                 }}
                 onGuard={setNavigationGuard}
+                onDeleted={() => {
+                  setNotice(t('ui.pufu_page.pufu_deleted'));
+                  reload();
+                  if (pufuSource.questionId) navigateDetail('question', pufuSource.questionId);
+                  else
+                    window.location.hash = `#pufus${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
+                }}
               />
             ) : (
               <QuestionPage

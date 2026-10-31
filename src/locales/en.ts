@@ -654,6 +654,13 @@ export const en: Record<string, string> = {
   'ui.pufu_image_preview.the_publisher_needs_to_review_its_content':
     'The publisher needs to review its content.',
   'ui.pufu_image_preview.edit': 'Edit',
+  'ui.pufu_page.delete_pufu': 'Delete Pufu',
+  'ui.pufu_page.delete_this_pufu': 'Delete this Pufu?',
+  'ui.pufu_page.delete_description':
+    'Delete all phases, reflections, and comments for this Pufu. Related questions, insights, and stocks will remain. This action cannot be undone.',
+  'ui.pufu_page.pufu_deleted': 'Pufu deleted.',
+  'ui.user_manual.to_delete_a_pufu_open_other_actions':
+    'To delete a Pufu, open “Other actions” at the bottom of its details and press “Delete Pufu”. Check the task and destination before confirming. All phases, reflections, and comments are also deleted, while related questions, insights, and stocks remain.',
   'ui.pufu_page.edit_pufu': 'Edit Pufu',
   'ui.pufu_page.from_a_question_or_insight_to_an_actionable_plan':
     'From a question or insight to an actionable plan.',

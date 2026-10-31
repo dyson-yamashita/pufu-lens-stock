@@ -105,6 +105,7 @@ async function render() {
           null,
           'アプリのメニュー',
           createElement(PufuPage, {
+            onDeleted: vi.fn(),
             id: 'pufu',
             onQuestion: vi.fn(),
             onBack: vi.fn(),

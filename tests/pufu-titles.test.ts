@@ -139,14 +139,14 @@ it('タイトルの型・長さを検証し、他人・未認証・CSRF・保存
 it('移行後も既存の本文・局面を保ち、タイトル未設定で利用できる', async () => {
   await app.dispose();
   const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
-    .filter((name) => name.endsWith('.sql') && name < '0039')
+    .filter((name) => name.endsWith('.sql') && name < '0040')
     .sort();
   app = await testApp({ migrations });
   await app.env.DB.prepare(
     "INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,editor_version) VALUES ('old','alice','alice-project','旧目標','{}','0.9.19')",
   ).run();
   const before = await app.env.DB.prepare("SELECT * FROM pufu_scores WHERE id='old'").first();
-  await applyMigration(app.env.DB, '0039_pufu_titles.sql');
+  await applyMigration(app.env.DB, '0040_pufu_titles.sql');
   expect(await app.env.DB.prepare("SELECT * FROM pufu_scores WHERE id='old'").first()).toEqual({
     ...before,
     title: null,

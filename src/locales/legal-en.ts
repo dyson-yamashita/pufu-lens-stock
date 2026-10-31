@@ -122,7 +122,7 @@ export const legalEn = {
       blocks: [
         {
           type: 'paragraph',
-          text: 'Registration information and saved content are retained for as long as needed to provide the Service. Stocks, questions, insights and projects can be deleted from their respective screens. To delete a Pufu score, delete its linked questions/insights, stocks or project. Deleting a stock or project also deletes related questions, insights and Pufu scores. Articles referenced in other projects remain while those saved references exist. Unreferenced article bodies are deleted and related memories updated asynchronously. Usage history needed to prevent abuse or information required by law may be retained as necessary after content deletion.',
+          text: 'Registration information and saved content are retained for as long as needed to provide the Service. Stocks, questions, insights, Pufu scores and projects can be deleted from their respective screens. To delete only a Pufu score, open “Other actions” in its details. Deleting a stock or project also deletes related questions, insights and Pufu scores. Articles referenced in other projects remain while those saved references exist. Unreferenced article bodies are deleted and related memories updated asynchronously. Usage history needed to prevent abuse or information required by law may be retained as necessary after content deletion.',
         },
         {
           type: 'list',

@@ -11,7 +11,7 @@ export default function PufuTitle({
   onSaved,
 }: {
   pufu: Pick<PufuSummary, 'id' | 'title' | 'task' | 'first_phase_task'>;
-  onBusyChange: () => void;
+  onBusyChange: (busy: boolean) => void;
   onSaved: (saved: SavedTitle) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -40,19 +40,19 @@ export default function PufuTitle({
           if (busy) return;
           setBusy(true);
           setError('');
-          onBusyChange();
+          onBusyChange(true);
           try {
             const saved = await send<SavedTitle>(
               `/api/v1/pufus/${encodeURIComponent(pufu.id)}/title`,
               { title: title.trim() },
               'PATCH',
             );
-            onBusyChange();
             onSaved(saved);
             finish();
           } catch (e) {
             setError(applicationError((e as Error).message));
           } finally {
+            onBusyChange(false);
             setBusy(false);
           }
         }}

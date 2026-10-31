@@ -63,6 +63,7 @@ const sections = () => [
           <li>{t('ui.user_manual.when_the_editor_is_narrow_tap_or_drag_its')}</li>
         </ol>
         <p>{t('ui.user_manual.open_edit_related_questions_insights_and_stocks_on_a')}</p>
+        <p>{t('ui.user_manual.to_delete_a_pufu_open_other_actions')}</p>
       </>
     ),
   },

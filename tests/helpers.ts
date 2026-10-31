@@ -269,6 +269,6 @@ export async function upgradeRelationsSchema(DB: D1Database) {
   if (!(await columns('pufu_scores')).includes('is_favorite'))
     await applyMigration(DB, '0031_pufu_favorites.sql');
   if (!(await columns('pufu_scores')).includes('title'))
-    await applyMigration(DB, '0039_pufu_titles.sql');
+    await applyMigration(DB, '0040_pufu_titles.sql');
   if (!(await columns('users')).includes('language')) await applyMigration(DB, '0036_language.sql');
 }

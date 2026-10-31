@@ -649,6 +649,13 @@ export const ja: Record<string, string> = {
   'ui.pufu_image_preview.the_publisher_needs_to_review_its_content':
     '公開元で内容の確認が必要です。',
   'ui.pufu_image_preview.edit': '編集する',
+  'ui.pufu_page.delete_pufu': 'プ譜を削除',
+  'ui.pufu_page.delete_this_pufu': 'このプ譜を削除しますか？',
+  'ui.pufu_page.delete_description':
+    'このプ譜のすべての局面・振り返り・コメントを削除します。関連する問い・気づきやストックは残ります。この操作は取り消せません。',
+  'ui.pufu_page.pufu_deleted': 'プ譜を削除しました。',
+  'ui.user_manual.to_delete_a_pufu_open_other_actions':
+    'プ譜を削除するには、詳細の下部にある「その他の操作」を開き、「プ譜を削除」を押します。課題と保存先を確認してから削除してください。すべての局面・振り返り・コメントも削除されますが、関連する問い・気づきやストックは残ります。',
   'ui.pufu_page.edit_pufu': 'プ譜の編集',
   'ui.pufu_page.from_a_question_or_insight_to_an_actionable_plan':
     '問い・気づきから、実行に向けた一枚へ。',
