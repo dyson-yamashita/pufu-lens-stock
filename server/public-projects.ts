@@ -200,7 +200,7 @@ export function publicProjectsApp() {
         `SELECT ${stockColumns} FROM ${stockJoins} JOIN question_stocks qs ON qs.stock_id=s.id JOIN questions q ON q.id=qs.question_id AND q.project_id=p.id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN pufu_questions pq ON pq.pufu_id=pf.id JOIN questions q ON q.id=pq.question_id JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
+        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN pufu_questions pq ON pq.pufu_id=pf.id JOIN questions q ON q.id=pq.question_id JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
     ]);
     if (!questions.results.length) throw notFound();
@@ -218,7 +218,7 @@ export function publicProjectsApp() {
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf
+        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf
         JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND ${publicPufuWhere}
         ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), limit, offset),
@@ -233,7 +233,7 @@ export function publicProjectsApp() {
   app.get('/projects/:key/pufus/:id', async (c) => {
     // 公開の読み取りでは局面の初期化・ジョブ起動・コンテキスト取得を一切行わない。
     const row = await c.env.DB.prepare(
-      `SELECT pf.id,pf.task,pf.current_phase,pf.updated_at,q.id AS question_id,q.text AS question_text,${pufuRelationsColumns('pf')},
+      `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,q.id AS question_id,q.text AS question_text,${pufuRelationsColumns('pf')},
       COALESCE(ph.score_json,pf.score_json) AS score_json FROM pufu_scores pf
       JOIN projects p ON p.id=pf.project_id JOIN questions q ON q.id=(SELECT pq.question_id FROM pufu_questions pq JOIN questions visible ON visible.id=pq.question_id WHERE pq.pufu_id=pf.id AND (visible.status='ready' OR (visible.source='ai' AND visible.text IS NOT NULL)) ORDER BY pq.question_id LIMIT 1)
       LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
@@ -253,6 +253,7 @@ export function publicProjectsApp() {
       pufu: {
         ...withRelations({ questions_json: row.questions_json, stocks_json: row.stocks_json }),
         id: row.id,
+        title: row.title,
         task: row.task,
         current_phase: row.current_phase,
         updated_at: row.updated_at,

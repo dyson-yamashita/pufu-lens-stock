@@ -1,7 +1,8 @@
+import PufuTitle from './PufuTitle';
 import { applicationError, t, useLanguage } from './i18n';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, LoaderCircle, RefreshCw } from 'lucide-react';
-import type { Pufu } from '../shared/pufu';
+import type { Pufu, PufuPhase } from '../shared/pufu';
 import { api, send } from './api';
 import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
 import PufuRelations from './PufuRelations';
@@ -47,9 +48,23 @@ export default function PufuPage({
         ]
       : []);
   const favoriteVersion = useRef(0);
-  const updateRevision = useCallback((revision: number) => {
-    setPufu((current) => current && { ...current, revision });
-  }, []);
+  const updateRevision = useCallback(
+    (revision: number, saved?: PufuPhase, currentPhase?: number) => {
+      setPufu((current) => {
+        if (!current) return current;
+        if (!saved || currentPhase === undefined) return { ...current, revision };
+        return {
+          ...current,
+          revision,
+          current_phase: currentPhase,
+          first_phase_task:
+            saved.number === 1 ? saved.score.gainingGoal.text : current.first_phase_task,
+          task: saved.number === currentPhase ? saved.score.gainingGoal.text : current.task,
+        };
+      });
+    },
+    [],
+  );
   useEffect(() => {
     const controller = new AbortController();
     let complete = false,
@@ -68,7 +83,7 @@ export default function PufuPage({
           complete = result.pufu.status === 'ready' || result.pufu.status === 'failed';
           setPufu((current) =>
             current?.id === result.pufu.id && version !== favoriteVersion.current
-              ? { ...result.pufu, is_favorite: current.is_favorite }
+              ? { ...result.pufu, is_favorite: current.is_favorite, title: current.title }
               : result.pufu,
           );
           setError('');
@@ -125,6 +140,18 @@ export default function PufuPage({
       )}
       {pufu && (
         <div className="pufu-context">
+          <PufuTitle
+            key={pufu.id}
+            pufu={pufu}
+            onBusyChange={() => {
+              favoriteVersion.current += 1;
+            }}
+            onSaved={(saved) => {
+              setPufu((current) =>
+                current?.id === saved.id ? { ...current, title: saved.title } : current,
+              );
+            }}
+          />
           {questions.length > 0 && (
             <div>
               <span className="question-origin pufu-context-label">
@@ -167,7 +194,9 @@ export default function PufuPage({
           onBusy={setRelationsBusy}
           onSaved={(saved) => {
             setPufu((current) =>
-              current?.id === saved.id ? { ...saved, is_favorite: current.is_favorite } : saved,
+              current?.id === saved.id
+                ? { ...saved, is_favorite: current.is_favorite, title: current.title }
+                : saved,
             );
             setEditorVersion((value) => value + 1);
           }}

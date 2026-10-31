@@ -21,6 +21,7 @@ export default function PufuForm({
 }) {
   useLanguage();
   const [project, setProject] = useState(projectId ?? projects[0]?.id ?? '');
+  const [title, setTitle] = useState('');
   const [task, setTask] = useState('');
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
@@ -34,9 +35,10 @@ export default function PufuForm({
     if (busy || disabled) return;
     const text = task.trim();
     const extra = details.trim();
-    const key = JSON.stringify([project, questionId, text, extra]);
+    const key = JSON.stringify([project, questionId, title.trim(), text, extra]);
     if (request.current?.input !== key) request.current = { input: key, id: createRequestId() };
     const input = createPufuSchema.safeParse({
+      title: title.trim(),
       task: text,
       details: extra,
       request_id: request.current.id,
@@ -93,6 +95,21 @@ export default function PufuForm({
           </select>
         </>
       )}
+      <label htmlFor="pufu-title">
+        {t('ui.app.title_2')}
+        <span className="optional">{t('ui.app.optional')}</span>
+      </label>
+      <input
+        id="pufu-title"
+        value={title}
+        onInput={(event) => setTitle(event.currentTarget.value)}
+        maxLength={200}
+        disabled={busy}
+        aria-describedby="pufu-title-help"
+      />
+      <p className="field-hint" id="pufu-title-help">
+        {t('pufu.title_hint')}
+      </p>
       <label htmlFor="pufu-task">
         {questionId
           ? t('ui.pufu_form.task_inspired_by_this_question_or_insight')

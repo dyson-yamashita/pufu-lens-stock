@@ -58,6 +58,7 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await expect(
     screen.getByRole('status').filter({ hasText: 'プ譜を保存しました。' }),
   ).toBeVisible();
+  await expect(browser.locator('.pufu-title-row h2')).toHaveText('E2Eプ譜の編集済み目標');
   await screen.getByRole('button', '閉じる').click();
   await app.open(`/#pufu/${pufu.id}`);
   await screen.getByRole('button', '局面を追加').click();
@@ -89,7 +90,20 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     'E2Eプ譜の次局面の目標',
   ]);
   await app.open('/#pufus');
-  await screen.getByRole('button', /E2Eプ譜の次局面の目標/).click();
+  await expect(screen.getByRole('button', 'E2Eプ譜の編集済み目標', { exact: true })).toBeVisible();
+  await screen.getByRole('button', 'タイトルを編集').click();
+  await screen.getByLabel('タイトル').fill('E2E短いタイトル');
+  await screen.getByRole('button', '保存', { exact: true }).click();
+  await expect(screen.getByRole('button', 'E2E短いタイトル', { exact: true })).toBeVisible();
+  await app.open('/#pufus');
+  await screen.getByRole('button', 'E2E短いタイトル', { exact: true }).click();
+  await expect(screen.getByRole('heading', 'E2E短いタイトル')).toBeVisible();
+  await screen.getByRole('button', 'タイトルを編集').click();
+  await screen.getByLabel('タイトル').fill('');
+  await screen.getByRole('button', '保存', { exact: true }).click();
+  await expect(browser.locator('.pufu-title-row h2')).toHaveText('E2Eプ譜の編集済み目標');
+  await app.open('/#pufus');
+  await screen.getByRole('button', 'E2Eプ譜の編集済み目標', { exact: true }).click();
   await screen.getByRole('button', 'プ譜の一覧に戻る').click();
   await expect(screen.getByRole('heading', 'すべてのプ譜')).toBeVisible();
 });

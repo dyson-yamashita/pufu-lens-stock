@@ -1,3 +1,4 @@
+import PufuTitle from './PufuTitle';
 import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LoaderCircle, Network } from 'lucide-react';
@@ -130,9 +131,23 @@ export default function Pufus({
             const stocks = pufu.stocks ?? [];
             return (
               <article key={pufu.id} className="pufu-list-item">
+                <PufuTitle
+                  pufu={pufu}
+                  onOpen={() => onPufu(pufu.id)}
+                  onBusyChange={() => {
+                    favoriteVersion.current += 1;
+                  }}
+                  onSaved={(saved) => {
+                    setPufus((items) =>
+                      items.map((item) =>
+                        item.id === saved.id ? { ...item, title: saved.title } : item,
+                      ),
+                    );
+                    setRetry((value) => value + 1);
+                  }}
+                />
                 <button type="button" className="pufu-list-open" onClick={() => onPufu(pufu.id)}>
                   <span>
-                    <strong>{pufu.task}</strong>
                     {questions.length > 0 && (
                       <small>
                         {t('ui.pufus.question_or_insight')}

@@ -1,4 +1,9 @@
 export const ja: Record<string, string> = {
+  'pufu.title_too_long': 'タイトルは200文字以内で入力してください。',
+  'pufu.title_hint':
+    '短いタイトルを任意で設定できます。空欄の場合は第一局面の獲得目標を表示します。',
+  'manual.pufu_titles':
+    '作成時にタイトルを任意で設定できます。一覧・詳細のタイトル右側のペンマークで編集し、空欄に戻すと第一局面の獲得目標を表示します。',
   'language.label': '言語',
   'language.hint':
     'これから生成する要約・問い・メモリ・プ譜に適用されます。保存済みの内容は変わりません。',

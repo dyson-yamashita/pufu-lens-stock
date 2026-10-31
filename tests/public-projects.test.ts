@@ -255,7 +255,13 @@ describe('公開プロジェクトの参照専用API', () => {
     const list = await response.json();
     expect(list).toEqual({
       items: [
-        { id: 'pufu', task: '公開する課題', current_phase: 2, updated_at: expect.any(String) },
+        {
+          id: 'pufu',
+          title: null,
+          task: '公開する課題',
+          current_phase: 2,
+          updated_at: expect.any(String),
+        },
       ],
       total: 1,
       page: 1,

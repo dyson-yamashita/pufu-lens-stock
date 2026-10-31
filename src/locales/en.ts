@@ -1,4 +1,9 @@
 export const en: Record<string, string> = {
+  'pufu.title_too_long': 'Keep the title within 200 characters.',
+  'pufu.title_hint':
+    'Optionally enter a short title. Leave blank to show the gaining goal from phase 1.',
+  'manual.pufu_titles':
+    'You can set an optional title when creating a Pufu. Use the pencil to the right of the title in the list or details to edit it. Clear it to show the gaining goal from phase 1.',
   'language.label': 'Language',
   'language.hint':
     'Applies to future summaries, questions, memories and Pufu. Saved content stays as it is.',

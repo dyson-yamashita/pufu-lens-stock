@@ -31,11 +31,12 @@ export async function createSavedPufu(
     ...(data.question_ids === undefined && data.stock_ids === undefined
       ? { question_id: questionId }
       : { question_ids: questionIds, stock_ids: stockIds }),
+    ...(data.title ? { title: data.title } : {}),
     score: data.score,
   });
   const load = () =>
     env.DB.prepare(
-      'SELECT id,project_id,question_id,task,status,revision,current_phase,request_json FROM pufu_scores WHERE id=? AND user_id=?',
+      'SELECT id,title,project_id,question_id,task,status,revision,current_phase,request_json FROM pufu_scores WHERE id=? AND user_id=?',
     )
       .bind(id, principal.user.id)
       .first<{
@@ -84,13 +85,14 @@ export async function createSavedPufu(
   const results = await env.DB.batch([
     env.DB.prepare(
       `INSERT OR IGNORE INTO pufu_scores
-      (id,user_id,project_id,question_id,task,input_json,score_json,editor_version,status,request_json,created_at,updated_at)
-      SELECT ?,user_id,id,?,?,?,?,?,'ready',?,?,? FROM projects
+      (id,user_id,project_id,question_id,title,task,input_json,score_json,editor_version,status,request_json,created_at,updated_at)
+      SELECT ?,user_id,id,?,?,?,?,?,?,'ready',?,?,? FROM projects
       WHERE id=? AND user_id=? AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))
       AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=projects.id AND status='ready'))`,
     ).bind(
       id,
       questionId,
+      data.title || null,
       task,
       JSON.stringify(context),
       json,

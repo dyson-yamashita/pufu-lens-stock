@@ -35,6 +35,7 @@ export type PublicQuestion = StockRelations & {
   pufu_count: number;
 };
 export type PublicPufuSummary = {
+  title?: string | null;
   id: string;
   task: string;
   current_phase: number;
