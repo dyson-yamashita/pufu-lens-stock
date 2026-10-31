@@ -7,12 +7,10 @@ import { applicationError, t } from './i18n';
 type SavedTitle = Pick<PufuSummary, 'id' | 'title'>;
 export default function PufuTitle({
   pufu,
-  onOpen,
   onBusyChange,
   onSaved,
 }: {
   pufu: Pick<PufuSummary, 'id' | 'title' | 'task' | 'first_phase_task'>;
-  onOpen?: () => void;
   onBusyChange: () => void;
   onSaved: (saved: SavedTitle) => void;
 }) {
@@ -105,13 +103,7 @@ export default function PufuTitle({
     );
   return (
     <div className="pufu-title-row">
-      {onOpen ? (
-        <button type="button" className="pufu-title-open" onClick={onOpen}>
-          <strong>{pufuDisplayTitle(pufu)}</strong>
-        </button>
-      ) : (
-        <h2>{pufuDisplayTitle(pufu)}</h2>
-      )}
+      <h2>{pufuDisplayTitle(pufu)}</h2>
       <button
         ref={button}
         type="button"

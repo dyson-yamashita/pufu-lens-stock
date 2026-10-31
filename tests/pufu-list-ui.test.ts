@@ -778,7 +778,7 @@ it('送信中は追加ダイアログの閉じる操作とEscapeを無効にす�
   expect(window.location.hash).toBe('#pufu/pufu');
 });
 
-it.each(['#pufus', '#pufu/pufu'])(
+it.each(['#pufu/pufu'])(
   'ペンで任意タイトルを保存・解除し、キャンセルでは保存しない: %s',
   async (hash) => {
     await render(hash);
@@ -826,3 +826,16 @@ it.each(['#pufus', '#pufu/pufu'])(
     expect(document.querySelector('.pufu-title-row')!.textContent).toContain(summary.task);
   },
 );
+
+it('一覧はタイトルを表示するだけで、編集は詳細画面のペンから行う', async () => {
+  pufuTitle = '短い見出し';
+  await render('#pufus');
+  const card = document.querySelector('.pufu-list-item')!;
+  expect(card.querySelector('strong')?.textContent).toBe('短い見出し');
+  expect(card.querySelector('[aria-label="タイトルを編集"]')).toBeNull();
+  await act(async () => card.querySelector<HTMLButtonElement>('.pufu-list-open')!.click());
+  await hashChange();
+  expect(window.location.hash).toBe('#pufu/pufu');
+  expect(document.querySelector('.pufu-title-row h2')?.textContent).toBe('短い見出し');
+  expect(document.querySelector('[aria-label="タイトルを編集"]')).not.toBeNull();
+});

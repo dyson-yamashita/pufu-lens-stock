@@ -4197,8 +4197,7 @@ article.pufu-list-item {
   gap: 8px;
   min-width: 0;
 }
-.pufu-title-row h2,
-.pufu-title-open {
+.pufu-title-row h2 {
   flex: 1;
   min-width: 0;
   margin: 0;
@@ -4208,18 +4207,8 @@ article.pufu-list-item {
 .pufu-title-row h2 {
   font-size: 18px;
 }
-.pufu-title-open {
-  padding: 0;
-  background: transparent;
-}
 .pufu-title-row > .icon-button {
   flex-shrink: 0;
-}
-.pufu-list-item > .pufu-title-row {
-  padding: 18px 12px 0 20px;
-}
-.pufu-list-item > .pufu-title-form {
-  padding: 18px 20px 0;
 }
 .pufu-title-form {
   min-width: 0;
