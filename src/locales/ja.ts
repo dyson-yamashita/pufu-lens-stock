@@ -386,6 +386,18 @@ export const ja: Record<string, string> = {
     '現在、MCP連携は未設定です。管理者による接続設定が完了すると、このURLから連携できます。',
   'ui.mcp_connections.ask_the_connected_app_to_find_stocks_in_a':
     '接続先から「プロジェクトのストックを探して」「この問い・気づきを保存して」と依頼できます。ストックを追加すると、要約とAIの問い・気づきが順次生成されます。',
+  'ui.mcp_connections.edit': '編集',
+  'ui.mcp_connections.name': '連携先の表示名',
+  'ui.mcp_connections.project': 'アクセスを許可するプロジェクト',
+  'ui.mcp_connections.permissions': '許可する操作',
+  'ui.mcp_connections.save': '保存',
+  'ui.mcp_connections.saving': '保存中…',
+  'ui.mcp_connections.cancel': 'キャンセル',
+  'ui.mcp_connections.saved': '連携の設定を保存しました。',
+  'ui.mcp_connections.edit_help':
+    '変更は発行済みのトークンにも適用されます。選べない権限を追加する場合は、接続先から連携をやり直してください。トークン更新を無効にすると、現在のトークンの期限後は再連携が必要になる場合があります。',
+  'ui.user_manual.edit_mcp_connection':
+    '「外部連携」の「接続中のサービス」で「編集」を押すと、連携先の表示名・アクセスを許可するプロジェクト・許可する操作を変更して保存できます。最初に認可していない権限を追加する場合は、接続先から連携をやり直してください。',
   'ui.mcp_connections.connected_services': '接続中のサービス',
   'ui.mcp_connections.loading': ' 読み込み中…',
   'ui.mcp_connections.could_not_load_connected_services':

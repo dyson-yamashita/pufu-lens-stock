@@ -1,6 +1,10 @@
 import { mcpJa } from './mcp-ja';
 
 export const mcpEn = {
+  '連携の設定を確認してください。': 'Check the connection settings.',
+  '権限を追加するには、接続先から連携をやり直してください。':
+    'Reconnect from the destination app to add permissions.',
+
   '任意の問い・気づきID。pufu_idを指定する場合は省略できます。両方指定した場合は紐付けを検証します。':
     'Optional question or insight ID. May be omitted when pufu_id is supplied. When both are supplied their association is verified.',
   'list_pufus/get_question/create_pufuが返すプ譜のID。問いなしのプ譜も取得できます。省略時はquestion_idが必須で、最新の完成済みプ譜を選びます。':

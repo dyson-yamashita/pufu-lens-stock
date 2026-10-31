@@ -69,3 +69,80 @@ it('shows granted connection permissions in English while retaining connection n
     await act(async () => root.unmount());
   }
 });
+
+it('編集のキャンセルと保存失敗後の再試行を扱い、保存結果を一覧に反映する', async () => {
+  const dom = parseHTML('<html><head></head><body><div id="root"></div></body></html>');
+  vi.stubGlobal('window', dom.window);
+  vi.stubGlobal('document', dom.document);
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://lens.example.com' },
+  });
+  setLanguage('ja');
+  const connection = {
+    id: 'edit-connection',
+    client_name: 'ChatGPT',
+    project_id: null,
+    project_name: null,
+    scopes: ['projects:read'],
+    authorized_scopes: ['projects:read', 'stocks:read'],
+    created_at: '2026-10-30T00:00:00Z',
+    expires_at: null,
+  };
+  let fail = true;
+  vi.mocked(api).mockImplementation(async (path, options) => {
+    if (options?.method === 'PATCH') {
+      if (fail) throw new Error('保存できませんでした。');
+      return { connection: { ...connection, client_name: '保存した名前' } };
+    }
+    if (path === '/api/v1/mcp/connections')
+      return { enabled: true, url: 'https://lens.example.com/mcp', connections: [connection] };
+    if (path === '/api/v1/projects') return { projects: [{ id: 'p1', name: 'プロジェクト' }] };
+    return { configured: false, available: true };
+  });
+  const root = createRoot(dom.document.getElementById('root')!);
+  const click = async (text: string) => {
+    const button = [...dom.document.querySelectorAll('button')].find(
+      (node) => node.textContent === text,
+    )!;
+    expect(button).toBeTruthy();
+    await act(async () => button.click());
+  };
+  const submit = async () =>
+    act(async () => {
+      dom.document
+        .querySelector('form.mcp-connection-editor')!
+        .dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    });
+  try {
+    await act(async () => root.render(createElement(McpConnections)));
+    await click('編集');
+    const permissions = [
+      ...dom.document.querySelectorAll('.mcp-permission input'),
+    ] as HTMLInputElement[];
+    expect(permissions[1].disabled).toBe(false);
+    expect(permissions[2].disabled).toBe(true);
+    await click('キャンセル');
+    expect(dom.document.querySelector('.mcp-connection-editor')).toBeNull();
+    expect(vi.mocked(api).mock.calls.some(([, options]) => options?.method === 'PATCH')).toBe(
+      false,
+    );
+    await click('編集');
+    await submit();
+    expect(dom.document.querySelector('.mcp-connection-editor [role="alert"]')?.textContent).toBe(
+      '保存できませんでした。',
+    );
+    expect(dom.document.querySelector('.mcp-connections strong')?.textContent).toBe('ChatGPT');
+    fail = false;
+    await submit();
+    expect(dom.document.querySelector('.mcp-connection-editor')).toBeNull();
+    expect(dom.document.querySelector('.mcp-connections strong')?.textContent).toBe('保存した名前');
+    expect(api).toHaveBeenCalledWith('/api/v1/mcp/connections/edit-connection', {
+      method: 'PATCH',
+      body: JSON.stringify({ client_name: 'ChatGPT', project_id: null, scopes: ['projects:read'] }),
+    });
+  } finally {
+    await act(async () => root.unmount());
+  }
+});

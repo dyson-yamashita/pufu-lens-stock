@@ -1,8 +1,11 @@
 import OAuthProvider, {
   AuthorizationError,
+  OAuthError,
   CimdFetchError,
 } from '@cloudflare/workers-oauth-provider';
 import type { OAuthResourceContext, GrantSummary } from '@cloudflare/workers-oauth-provider';
+import { z } from 'zod';
+import { getMcpConnectionSettings } from './mcp-connection-settings';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
@@ -152,29 +155,100 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
     } while (cursor);
     return result;
   };
+  const connection = async (
+    c: import('hono').Context<AppEnv>,
+    grant: GrantSummary,
+  ): Promise<McpConnection> => {
+    const settings = await getMcpConnectionSettings(c.env, c.get('principal').user.id, grant.id);
+    const projectId = settings ? settings.project_id : (grant.metadata?.project_id ?? null);
+    const project = projectId
+      ? await c.env.DB.prepare('SELECT name FROM projects WHERE id=? AND user_id=?')
+          .bind(projectId, c.get('principal').user.id)
+          .first<{ name: string }>()
+      : null;
+    return {
+      id: grant.id,
+      client_name:
+        settings?.client_name ??
+        grant.metadata?.client_name ??
+        translate(resolveLanguage(c.get('principal').user.language), 'MCPクライアント'),
+      project_id: projectId,
+      project_name: project?.name ?? projectId,
+      scopes: settings
+        ? grant.scope.filter((scope) => (JSON.parse(settings.scopes) as string[]).includes(scope))
+        : grant.scope,
+      authorized_scopes: grant.scope,
+      created_at: new Date(grant.createdAt * 1000).toISOString(),
+      expires_at: grant.expiresAt ? new Date(grant.expiresAt * 1000).toISOString() : null,
+    };
+  };
   app.get('/api/v1/mcp/connections', async (c) =>
     c.json({
       enabled: !!c.env.OAUTH_PROVIDER,
       url: `${c.env.APP_URL}/mcp`,
-      connections: (c.env.OAUTH_PROVIDER ? await grants(c) : []).map(
-        (grant) =>
-          ({
-            id: grant.id,
-            client_name:
-              grant.metadata?.client_name ??
-              translate(resolveLanguage(c.get('principal').user.language), 'MCPクライアント'),
-            project_id: grant.metadata?.project_id ?? null,
-            project_name: grant.metadata?.project_name ?? null,
-            scopes: grant.scope,
-            created_at: new Date(grant.createdAt * 1000).toISOString(),
-            expires_at: grant.expiresAt ? new Date(grant.expiresAt * 1000).toISOString() : null,
-          }) satisfies McpConnection,
+      connections: await Promise.all(
+        (c.env.OAUTH_PROVIDER ? await grants(c) : []).map((grant) => connection(c, grant)),
       ),
     }),
   );
+  app.patch('/api/v1/mcp/connections/:id', async (c) => {
+    const grant = (await grants(c)).find((grant) => grant.id === c.req.param('id'));
+    if (!grant) throw new HTTPException(404);
+    const parsed = z
+      .object({
+        client_name: z.string().trim().min(1).max(100),
+        project_id: z.string().min(1).max(200).nullable(),
+        scopes: z
+          .array(
+            z.enum(
+              Object.keys(mcpScopes) as [keyof typeof mcpScopes, ...(keyof typeof mcpScopes)[]],
+            ),
+          )
+          .max(Object.keys(mcpScopes).length),
+      })
+      .strict()
+      .safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success)
+      throw new HTTPException(400, { message: '連携の設定を確認してください。' });
+    const data = parsed.data;
+    if (data.scopes.some((scope) => !grant.scope.includes(scope)))
+      throw new HTTPException(400, {
+        message: '権限を追加するには、接続先から連携をやり直してください。',
+      });
+    const userId = c.get('principal').user.id;
+    if (
+      data.project_id &&
+      !(await c.env.DB.prepare('SELECT id FROM projects WHERE id=? AND user_id=?')
+        .bind(data.project_id, userId)
+        .first())
+    )
+      throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
+    const saved = await c.env.DB.prepare(
+      `INSERT INTO mcp_connection_settings (user_id,grant_id,client_name,project_id,scopes) VALUES (?,?,?,?,?)
+      ON CONFLICT(user_id,grant_id) DO UPDATE SET client_name=excluded.client_name,project_id=excluded.project_id,scopes=excluded.scopes WHERE mcp_connection_settings.revoked=0`,
+    )
+      .bind(
+        userId,
+        grant.id,
+        data.client_name,
+        data.project_id,
+        JSON.stringify([...new Set(data.scopes)]),
+      )
+      .run();
+    if (!saved.meta.changes) throw new HTTPException(404);
+    return c.json({ connection: await connection(c, grant) });
+  });
   app.delete('/api/v1/mcp/connections/:id', async (c) => {
     const id = c.req.param('id');
     if (!(await grants(c)).some((grant) => grant.id === id)) throw new HTTPException(404);
+    // Retain a tombstone: a request authenticated before KV revocation must
+    // never fall back to the original, possibly broader grant permissions.
+    await c.env.DB.prepare(
+      `INSERT INTO mcp_connection_settings (user_id,grant_id,client_name,project_id,scopes,revoked)
+      VALUES (?,?,'',NULL,'[]',1) ON CONFLICT(user_id,grant_id) DO UPDATE SET revoked=1,scopes='[]'`,
+    )
+      .bind(c.get('principal').user.id, id)
+      .run();
     await c.env.OAUTH_PROVIDER!.revokeGrant(id, c.get('principal').user.id);
     return c.json({ ok: true });
   });
@@ -266,9 +340,22 @@ export function createMcpOAuthProvider(
         requiredScopes: Object.keys(mcpScopes),
         accessTokenTTL: 3600,
         refreshTokenTTL: 30 * 86400,
-        tokenExchangeCallback: async ({ scope, userId }) => {
+        tokenExchangeCallback: async ({ scope, userId, grantId, grantType }) => {
           exchangeUserId = userId;
-          return { refreshTokenTTL: scope.includes('offline_access') ? 30 * 86400 : 0 };
+          const settings = await getMcpConnectionSettings(bindings, userId, grantId);
+          if (settings?.revoked)
+            throw new OAuthError('invalid_grant', { description: 'Connection revoked.' });
+          const allowed = settings ? (JSON.parse(settings.scopes) as string[]) : scope;
+          if (grantType === 'refresh_token' && !allowed.includes('offline_access'))
+            throw new OAuthError('invalid_scope', {
+              description: 'Offline access has been disabled.',
+            });
+          return {
+            refreshTokenTTL:
+              scope.includes('offline_access') && allowed.includes('offline_access')
+                ? 30 * 86400
+                : 0,
+          };
         },
         resourceMetadata: { resource: `${env.APP_URL}/mcp`, authorization_servers: [env.APP_URL] },
         defaultHandler: {

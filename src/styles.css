@@ -4131,3 +4131,45 @@ article.pufu-list-item {
     display: none;
   }
 }
+
+.mcp-connections .token-row {
+  flex-wrap: wrap;
+}
+.mcp-connections .token-row > .mcp-connection-details {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+.mcp-connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mcp-connection-editor {
+  width: 100%;
+  min-width: 0;
+}
+.mcp-connection-editor fieldset {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.mcp-connection-editor label {
+  display: block;
+  margin-bottom: 12px;
+}
+.mcp-connection-editor input:not([type='checkbox']),
+.mcp-connection-editor select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.mcp-connection-editor .mcp-permission {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mcp-connections .token-row > .mcp-connection-actions {
+  flex: 0 1 auto;
+}

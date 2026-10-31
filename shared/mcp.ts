@@ -13,6 +13,7 @@ export type McpConnection = {
   project_id: string | null;
   project_name: string | null;
   scopes: string[];
+  authorized_scopes?: string[];
   created_at: string;
   expires_at: string | null;
 };

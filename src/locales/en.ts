@@ -388,6 +388,18 @@ export const en: Record<string, string> = {
     'MCP integration is not configured yet. This URL will work after the administrator completes connection setup.',
   'ui.mcp_connections.ask_the_connected_app_to_find_stocks_in_a':
     'Ask the connected app to find stocks in a project or save a question or insight. Adding a stock generates its summary and AI questions and insights in sequence.',
+  'ui.mcp_connections.edit': 'Edit',
+  'ui.mcp_connections.name': 'Connection display name',
+  'ui.mcp_connections.project': 'Allowed project',
+  'ui.mcp_connections.permissions': 'Allowed operations',
+  'ui.mcp_connections.save': 'Save',
+  'ui.mcp_connections.saving': 'Saving…',
+  'ui.mcp_connections.cancel': 'Cancel',
+  'ui.mcp_connections.saved': 'Connection settings saved.',
+  'ui.mcp_connections.edit_help':
+    'Changes also apply to existing tokens. Reconnect from the destination app to add unavailable permissions. Disabling token refresh may require reconnecting after the current token expires.',
+  'ui.user_manual.edit_mcp_connection':
+    'Under Integrations → Connected services, select Edit to change and save a connection’s display name, allowed project, and operations. To add permissions that were not originally authorized, reconnect from the destination app.',
   'ui.mcp_connections.connected_services': 'Connected services',
   'ui.mcp_connections.loading': ' Loading…',
   'ui.mcp_connections.could_not_load_connected_services': 'Could not load connected services.',

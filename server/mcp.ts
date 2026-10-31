@@ -1,3 +1,4 @@
+import { getMcpConnectionSettings } from './mcp-connection-settings';
 import {
   McpServer,
   type CallToolResult,
@@ -675,7 +676,21 @@ export async function handleMcp(request: Request, env: Env, executionCtx: Execut
     return new Response(t('Web画面でニックネームの登録と規約への同意を完了してください。'), {
       status: 403,
     });
-  const principal: Principal = { user, kind: 'mcp', tokenProjectId: parsed.data.projectId };
+  // Resolve the grant through the provider; never trust a client-supplied grant ID.
+  const token = await env.OAUTH_PROVIDER?.unwrapToken(ctx.auth.token);
+  if (!token || token.userId !== user.id)
+    return new Response(t('認証が必要です。'), { status: 401 });
+  const settings = await getMcpConnectionSettings(env, user.id, token.grantId);
+  if (settings?.revoked) return new Response(t('認証が必要です。'), { status: 401 });
+  if (settings) {
+    const allowed = JSON.parse(settings.scopes) as string[];
+    ctx.auth.scope = ctx.auth.scope.filter((scope) => allowed.includes(scope));
+  }
+  const principal: Principal = {
+    user,
+    kind: 'mcp',
+    tokenProjectId: settings ? settings.project_id : parsed.data.projectId,
+  };
   if (
     principal.tokenProjectId &&
     !(await env.DB.prepare('SELECT id FROM projects WHERE id=? AND user_id=?')
