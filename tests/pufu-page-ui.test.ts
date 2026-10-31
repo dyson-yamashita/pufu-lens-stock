@@ -177,20 +177,27 @@ it('問いなしのプ譜でも課題を表示し、プ譜一覧への戻り先�
   expect(document.querySelector('.pufu-context-questions')).toBeNull();
 });
 
-it('問い・気づきはラベル1つの下に全件を箇条書きで表示する', async () => {
+it('関連するストックの下に問い・気づきを閉じたトグルで表示する', async () => {
   const questions = [
     { id: 'question', text: '保存した問い' },
     { id: 'question-2', text: '別の気づき' },
     { id: 'question-3', text: '3つ目の問い' },
   ];
-  vi.mocked(api).mockResolvedValue({ pufu: { ...pufu, questions } });
+  const stocks = [{ id: 'stock', title: '関連する記事' }];
+  vi.mocked(api).mockResolvedValue({ pufu: { ...pufu, questions, stocks } });
   await render();
   const context = document.querySelector('.pufu-context')!;
   expect(
     [...context.querySelectorAll('.pufu-context-label')].filter(
       (label) => label.textContent === '問い・気づき',
     ),
-  ).toHaveLength(1);
+  ).toHaveLength(0);
+  const sections = [...context.querySelectorAll('details')];
+  expect(sections.map((section) => section.querySelector('summary')?.textContent)).toEqual([
+    '関連するストック',
+    '関連する問い・気づき',
+  ]);
+  expect(sections.every((section) => !section.hasAttribute('open'))).toBe(true);
   expect(
     [...context.querySelectorAll('.pufu-context-questions li')].map((li) => li.textContent),
   ).toEqual(questions.map((question) => question.text));

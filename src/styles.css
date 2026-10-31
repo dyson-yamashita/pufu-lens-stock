@@ -3139,10 +3139,14 @@ textarea::placeholder {
   font-size: 13px;
   cursor: pointer;
 }
-.pufu-related-stocks {
+.pufu-related {
   margin-top: 12px;
   font-size: 13px;
   line-height: 1.8;
+}
+.pufu-related > summary {
+  color: var(--muted);
+  cursor: pointer;
 }
 .pufu-related-stocks ul {
   margin: 5px 0;
@@ -3230,8 +3234,7 @@ article.pufu-list-item {
   margin: 28px 0 12px;
 }
 .pufu-context {
-  border-left: 3px solid var(--primary);
-  padding: 5px 0 5px 18px;
+  padding: 5px 0;
   margin-bottom: 24px;
 }
 .pufu-context-label {
@@ -3244,9 +3247,6 @@ article.pufu-list-item {
   line-height: 1.9;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-.pufu-context-task {
-  margin-top: 18px;
 }
 .pufu-context-questions {
   margin: 10px 0 7px;

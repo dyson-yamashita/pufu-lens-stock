@@ -163,11 +163,26 @@ export default function PufuPage({
               );
             }}
           />
+          <div className="pufu-context-task">
+            <span className="question-origin pufu-context-label">
+              {t('ui.pufu_page.task_gaining_goal')}
+            </span>
+            <p>{pufu.task}</p>
+          </div>
+          <span className="field-hint">{pufu.context.project.name}</span>
+          {(pufu.stocks ?? (pufu.context.stock ? [pufu.context.stock] : [])).length > 0 && (
+            <details className="pufu-related pufu-related-stocks">
+              <summary>{t('ui.public_projects.related_stocks')}</summary>
+              <ul>
+                {(pufu.stocks ?? [pufu.context.stock!]).map((stock) => (
+                  <li key={stock.id}>{stock.title}</li>
+                ))}
+              </ul>
+            </details>
+          )}
           {questions.length > 0 && (
-            <div>
-              <span className="question-origin pufu-context-label">
-                {t('ui.app.questions_insights')}
-              </span>
+            <details className="pufu-related pufu-related-questions">
+              <summary>{t('ui.public_projects.related_questions_insights')}</summary>
               <ul className="pufu-context-questions">
                 {questions.map((question) => (
                   <li key={question.id}>
@@ -177,24 +192,7 @@ export default function PufuPage({
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-          <div className="pufu-context-task">
-            <span className="question-origin pufu-context-label">
-              {t('ui.pufu_page.task_gaining_goal')}
-            </span>
-            <p>{pufu.task}</p>
-          </div>
-          <span className="field-hint">{pufu.context.project.name}</span>
-          {(pufu.stocks ?? (pufu.context.stock ? [pufu.context.stock] : [])).length > 0 && (
-            <div className="pufu-related-stocks">
-              <span className="field-hint">{t('ui.public_projects.related_stocks')}</span>
-              <ul>
-                {(pufu.stocks ?? [pufu.context.stock!]).map((stock) => (
-                  <li key={stock.id}>{stock.title}</li>
-                ))}
-              </ul>
-            </div>
+            </details>
           )}
         </div>
       )}

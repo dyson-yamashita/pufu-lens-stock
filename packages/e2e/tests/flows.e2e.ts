@@ -40,14 +40,48 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
   );
   score.gainingGoal.text = 'E2Eプ譜の目標';
+  const { question } = (await fixture.request('/questions', 'POST', {
+    project_id: fixture.projectId,
+    text: 'E2Eプ譜の関連する問い',
+  })) as { question: { id: string } };
+  const stock = await fixture.request('/stocks', 'POST', {
+    project_id: fixture.projectId,
+    type: 'text',
+    title: 'E2Eプ譜の関連するストック',
+    text: 'プ譜の折りたたみ表示を確認するための本文です。',
+  });
   const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,
     request_id: requestId(),
     score,
   })) as { pufu: { id: string } };
+  await fixture.request(`/pufus/${pufu.id}/relations`, 'PATCH', {
+    revision: 1,
+    question_ids: [question.id],
+    stock_ids: [stock.id],
+  });
   await app.open('/#pufus');
   await screen.getByRole('button', /E2Eプ譜の目標/).click();
   await expect(screen.getByRole('button', '編集する')).toBeVisible();
+  const stocksToggle = browser.locator('.pufu-related-stocks > summary');
+  const questionsToggle = browser.locator('.pufu-related-questions > summary');
+  const stockList = browser.locator('.pufu-related-stocks ul');
+  const questionLink = browser
+    .locator('.pufu-related-questions')
+    .getByRole('button', 'E2Eプ譜の関連する問い');
+  await expect(stockList).toBeHidden();
+  await expect(questionLink).toBeHidden();
+  await stocksToggle.click();
+  await expect(stockList).toBeVisible();
+  await expect(stockList).toContainText('E2Eプ譜の関連するストック');
+  await expect(questionLink).toBeHidden();
+  await questionsToggle.click();
+  await expect(questionLink).toBeVisible();
+  await stocksToggle.click();
+  await expect(stockList).toBeHidden();
+  await expect(questionLink).toBeVisible();
+  await questionsToggle.click();
+  await expect(questionLink).toBeHidden();
   await agent.act(goals.editor);
   await expect(screen.getByRole('dialog', '第1局面のプ譜を編集')).toBeVisible();
   await browser
