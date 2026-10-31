@@ -45,6 +45,7 @@ export async function createGeneratedPufu(
       row.project_id !== project.id ||
       row.question_id !== (question?.id ?? null) ||
       row.task !== data.task ||
+      (context.title ?? '') !== (data.title ?? '') ||
       (context.details ?? '') !== (data.details ?? '') ||
       row.request_json !== null
     )
@@ -80,6 +81,7 @@ export async function createGeneratedPufu(
   };
   const context: PufuContext = {
     question: question ? { id: question.id, text: question.text!, source: question.source } : null,
+    title: data.title ?? '',
     task: data.task,
     details: data.details ?? '',
     project,
@@ -107,13 +109,14 @@ export async function createGeneratedPufu(
     reserveOperation(env, { id: jobId, user_id: principal.user.id, kind: 'pufu' }),
     assertOperation(env, jobId),
     env.DB.prepare(
-      `INSERT OR IGNORE INTO pufu_scores (id,user_id,project_id,question_id,task,input_json,editor_version)
-       SELECT ?,user_id,id,?,?,?,? FROM projects WHERE id=? AND user_id=?
+      `INSERT OR IGNORE INTO pufu_scores (id,user_id,project_id,question_id,title,task,input_json,editor_version)
+       SELECT ?,user_id,id,?,?,?,?,? FROM projects WHERE id=? AND user_id=?
        AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))
        AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=projects.id AND status='ready'))`,
     ).bind(
       id,
       question?.id ?? null,
+      data.title || null,
       data.task,
       JSON.stringify(context),
       pufuEditorVersion,

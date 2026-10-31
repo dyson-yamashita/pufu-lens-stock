@@ -1,5 +1,6 @@
 // Only application-owned error messages are eligible for translation.
 export const errorKeys: Record<string, string> = {
+  'タイトルは200文字以内で入力してください。': 'pufu.title_too_long',
   'AIの出力形式が正しくありません。': 'error.the_ai_output_format_is_invalid',
   'AIの出力形式が正しくありません。再試行してください。':
     'error.the_ai_output_format_is_invalid_please_retry',

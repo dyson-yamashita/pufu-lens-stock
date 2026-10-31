@@ -51,6 +51,7 @@ const sections = () => [
     content: (
       <>
         <p>{t('ui.user_manual.use_all_pufu_in_the_side_menu_or_the')}</p>
+        <p>{t('manual.pufu_titles')}</p>
         <p>{t('ui.user_manual.use_the_star_button_in_a_list_or_details')}</p>
         <ol>
           <li>{t('ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select')}</li>
@@ -62,6 +63,7 @@ const sections = () => [
           <li>{t('ui.user_manual.when_the_editor_is_narrow_tap_or_drag_its')}</li>
         </ol>
         <p>{t('ui.user_manual.open_edit_related_questions_insights_and_stocks_on_a')}</p>
+        <p>{t('ui.user_manual.to_delete_a_pufu_open_other_actions')}</p>
       </>
     ),
   },

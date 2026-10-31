@@ -7,6 +7,8 @@ import QuestionSettings from '../src/QuestionSettings';
 import PufuPage from '../src/PufuPage';
 import { api, send } from '../src/api';
 import type { Project, QuestionDetail } from '../shared/domain';
+import type { PufuPhase } from '../shared/pufu';
+import score from './fixtures/pufu-sparse.json';
 
 vi.mock('../src/api', async (original) => ({
   ...(await original<typeof import('../src/api')>()),
@@ -21,7 +23,7 @@ vi.mock('../src/PufuEditor', () => ({
   }: {
     pufu: { revision: number };
     onEditingStateChange?: (blocked: boolean) => void;
-    onSaved?: (revision: number) => void;
+    onSaved?: (revision: number, saved?: PufuPhase, currentPhase?: number) => void;
   }) => {
     useEffect(() => {
       onEditingStateChange?.(false);
@@ -35,7 +37,19 @@ vi.mock('../src/PufuEditor', () => ({
         'button',
         {
           onClick: () => {
-            onSaved?.(2);
+            onSaved?.(
+              2,
+              {
+                number: 1,
+                score: {
+                  ...score,
+                  gainingGoal: { ...score.gainingGoal, text: '保存直後の第一局面の目標' },
+                } as PufuPhase['score'],
+                created_at: '2026-10-31T00:00:00Z',
+                updated_at: '2026-10-31T00:00:00Z',
+              },
+              1,
+            );
             onEditingStateChange?.(false);
           },
         },
@@ -237,6 +251,7 @@ it('プ譜の関連保存で複数の問いとストックを送り、新revisio
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -265,6 +280,7 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -272,7 +288,10 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
       }),
     ),
   );
+  const deleteButton = document.querySelector<HTMLButtonElement>('.delete-action button')!;
+  expect(deleteButton.disabled).toBe(false);
   await click('編集を開始');
+  expect(deleteButton.disabled).toBe(true);
   const save = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
     (item) => item.textContent === '関連を保存',
   )!;
@@ -281,6 +300,10 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
   await submit();
   expect(send).not.toHaveBeenCalled();
   await click('編集を保存して閉じる');
+  expect(deleteButton.disabled).toBe(false);
+  expect(document.querySelector('.pufu-context-task p')?.textContent).toBe(
+    '保存直後の第一局面の目標',
+  );
   await submit();
   expect(send).toHaveBeenCalledWith(
     '/api/v1/pufus/pufu/relations',
@@ -293,6 +316,7 @@ it('関連保存後の取得に失敗した場合は編集を止め、書き込�
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -311,4 +335,23 @@ it('関連保存後の取得に失敗した場合は編集を止め、書き込�
   expect(send).toHaveBeenCalledTimes(1);
   expect(document.querySelector('.test-editor')?.textContent).toContain('editor revision 3');
   expect(document.querySelector('.test-editor')!.parentElement!.hasAttribute('inert')).toBe(false);
+});
+
+it('タイトル未設定時の見出しは第一局面の保存直後に獲得目標へ更新される', async () => {
+  await act(async () =>
+    root.render(
+      createElement(PufuPage, {
+        onDeleted: vi.fn(),
+        id: 'pufu',
+        onQuestion: vi.fn(),
+        onBack: vi.fn(),
+        onGuard: vi.fn(),
+      }),
+    ),
+  );
+  expect(document.querySelector('.pufu-title-row h2')?.textContent).toBe('課題');
+  await click('編集を保存して閉じる');
+  expect(document.querySelector('.pufu-title-row h2')?.textContent).toBe(
+    '保存直後の第一局面の目標',
+  );
 });

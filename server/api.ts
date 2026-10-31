@@ -1,3 +1,5 @@
+import { firstPhaseTaskColumn } from './pufu-title';
+import { pufuTitleSchema } from '../shared/pufu';
 import {
   allowedProjectIds,
   projectScopeJson,
@@ -96,7 +98,7 @@ const questionColumns =
 const questionJoins =
   'questions q JOIN projects p ON p.id = q.project_id LEFT JOIN stocks s ON s.id = q.stock_id LEFT JOIN articles a ON a.id = s.article_id';
 const pufuColumns =
-  'id,is_favorite,question_id,project_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
+  'id,is_favorite,title,question_id,project_id,task,status,error,model,editor_version,revision,current_phase,generation,created_at,updated_at';
 async function body<T>(c: import('hono').Context<AppEnv>, schema: z.ZodType<T>): Promise<T> {
   let value: unknown;
   try {
@@ -673,7 +675,7 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/questions/:id', async (c) => {
     const question = await ownedQuestion(c);
     const pufus = await c.env.DB.prepare(
-      `SELECT ${pufuColumns} FROM pufu_scores WHERE EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pufu_scores.id AND pq.question_id=?) AND user_id = ? AND project_id=? ORDER BY created_at DESC,id DESC`,
+      `SELECT ${pufuColumns},${firstPhaseTaskColumn('pufu_scores')} FROM pufu_scores WHERE EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pufu_scores.id AND pq.question_id=?) AND user_id = ? AND project_id=? ORDER BY created_at DESC,id DESC`,
     )
       .bind(question.id, c.get('principal').user.id, question.project_id)
       .all<PufuSummary>();
@@ -811,7 +813,7 @@ export function createApp(trustedPrincipal?: Principal) {
     const [, rows, phases] = await c.env.DB.batch([
       initialPufuPhase(c.env, id, userId),
       c.env.DB.prepare(
-        `SELECT ${pufuColumns},score_json,input_json FROM pufu_scores WHERE id = ? AND user_id = ?`,
+        `SELECT ${pufuColumns},${firstPhaseTaskColumn('pufu_scores')},score_json,input_json FROM pufu_scores WHERE id = ? AND user_id = ?`,
       ).bind(id, userId),
       c.env.DB.prepare(
         'SELECT number,score_json,created_at,updated_at FROM pufu_phases WHERE pufu_id = ? AND EXISTS (SELECT 1 FROM pufu_scores WHERE id = pufu_id AND user_id = ?) ORDER BY number',
@@ -836,6 +838,21 @@ export function createApp(trustedPrincipal?: Principal) {
       },
     });
   });
+  app.delete('/api/v1/pufus/:id', async (c) => {
+    const id = c.req.param('id');
+    const userId = c.get('principal').user.id;
+    const [, deleted] = await c.env.DB.batch([
+      c.env.DB.prepare(
+        "UPDATE processing_jobs SET status='done',error=NULL,updated_at=? WHERE user_id=? AND kind='pufu' AND target_id=? AND status<>'done' AND EXISTS (SELECT 1 FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id WHERE pf.id=? AND pf.user_id=? AND p.user_id=?)",
+      ).bind(now(), userId, id, id, userId, userId),
+      c.env.DB.prepare(
+        'DELETE FROM pufu_scores WHERE id=? AND user_id=? AND EXISTS (SELECT 1 FROM projects WHERE id=pufu_scores.project_id AND user_id=?) RETURNING id',
+      ).bind(id, userId, userId),
+    ]);
+    if (!deleted.results.length)
+      throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
+    return c.json({ ok: true });
+  });
   app.get('/api/v1/pufus', async (c) => {
     const principal = c.get('principal');
     const { user } = principal;
@@ -859,7 +876,7 @@ export function createApp(trustedPrincipal?: Principal) {
           .split(',')
           .map((column) => `pf.${column}`)
           .join(',')},
-          p.name AS project_name,q.text AS question_text,${pufuRelationsColumns('pf')}
+          ${firstPhaseTaskColumn('pf')},p.name AS project_name,q.text AS question_text,${pufuRelationsColumns('pf')}
           FROM ${joins} WHERE ${where} ORDER BY pf.created_at DESC,pf.id DESC LIMIT 24 OFFSET ?`,
       ).bind(...params, (page - 1) * 24),
       c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${joins} WHERE ${where}`).bind(...params),
@@ -870,6 +887,17 @@ export function createApp(trustedPrincipal?: Principal) {
       page,
       pageSize: 24,
     });
+  });
+  app.patch('/api/v1/pufus/:id/title', async (c) => {
+    const data = await body(c, z.strictObject({ title: pufuTitleSchema }));
+    const userId = c.get('principal').user.id;
+    const pufu = await c.env.DB.prepare(
+      'UPDATE pufu_scores SET title=? WHERE id=? AND user_id=? AND EXISTS (SELECT 1 FROM projects WHERE id=pufu_scores.project_id AND user_id=?) RETURNING id,title',
+    )
+      .bind(data.title || null, c.req.param('id'), userId, userId)
+      .first<Pick<PufuSummary, 'id' | 'title'>>();
+    if (!pufu) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
+    return c.json(pufu);
   });
   app.patch('/api/v1/pufus/:id/favorite', async (c) => {
     const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));

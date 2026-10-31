@@ -3,7 +3,7 @@ import { languages } from '../shared/locale';
 import { useEffect, useRef, useState } from 'react';
 import { getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
-import { pufuScoreSchema, type Pufu } from '../shared/pufu';
+import { pufuScoreSchema, type Pufu, type PufuPhase } from '../shared/pufu';
 import { send } from './api';
 import { useTheme } from './theme';
 import PufuImagePreview from './PufuImagePreview';
@@ -27,7 +27,7 @@ export default function PufuEditor({
   pufu: Pufu;
   onGuard: (guard: (() => boolean) | null) => void;
   onEditingStateChange?: (blocked: boolean) => void;
-  onSaved?: (revision: number) => void;
+  onSaved?: (revision: number, saved?: PufuPhase, currentPhase?: number) => void;
 }) {
   const { language } = useLanguage();
   const { theme } = useTheme();
@@ -143,7 +143,7 @@ export default function PufuEditor({
       ]);
       baseline.current = canonical(json);
       setRevision(result.revision);
-      onSaved?.(result.revision);
+      onSaved?.(result.revision, saved, result.current_phase);
       setDirty(false);
       if (append) setEditor(structuredClone(next));
       setNotice(
