@@ -94,7 +94,7 @@ export const legalEn = {
       blocks: [
         {
           type: 'paragraph',
-          text: "Publishing makes the project name and public introduction; stock titles, URLs, summaries, key points and topics; questions and insights; and the latest phases and reflections of linked Pufu scores accessible without signing in. The project is also listed on the home page's public-project directory. Before publishing, check for confidential information and third parties' personal information.",
+          text: "Publishing makes the project name and public introduction; stock titles, URLs, summaries, key points and topics; questions and insights; and all phases and reflections of linked Pufu scores accessible without signing in. The project is also listed on the home page's public-project directory. Before publishing, check for confidential information and third parties' personal information.",
         },
         {
           type: 'paragraph',

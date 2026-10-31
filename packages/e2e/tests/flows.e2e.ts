@@ -201,6 +201,29 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     request_id: requestId(),
     score,
   })) as { pufu: { id: string } };
+  const stock = await fixture.request('/stocks', 'POST', {
+    project_id: fixture.projectId,
+    type: 'text',
+    title: 'E2Eの公開するストック',
+    text: '公開プ譜の関連ストックの折りたたみを確認する本文です。',
+  });
+  await fixture.request(`/pufus/${pufu.id}/relations`, 'PATCH', {
+    revision: 1,
+    question_ids: [question.id],
+    stock_ids: [stock.id],
+  });
+  const nextScore = structuredClone(score);
+  nextScore.gainingGoal.text = 'E2Eの公開プ譜・次の局面';
+  await fixture.request(`/pufus/${pufu.id}/phases`, 'POST', {
+    revision: 2,
+    phase: 1,
+    score,
+  });
+  await fixture.request(`/pufus/${pufu.id}`, 'PATCH', {
+    revision: 3,
+    phase: 2,
+    score: nextScore,
+  });
   expect((await fetch(`${fixture.url}/api/public/projects/${publicId}`)).status).toBe(200);
   const cookies = await browser.cookies();
   await app.clearState();
@@ -210,15 +233,40 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await screen.getByRole('link', /E2Eの公開プ譜/).click();
   await expect(browser.locator('section[aria-label="課題"]')).toContainText('E2Eの公開プ譜');
-  await expect(browser.locator('section[aria-label="問い・気づき"]')).toContainText(
-    'E2Eの公開する問い',
-  );
+  const stockList = browser.locator('.pufu-related-stocks ul');
+  const questionList = browser.locator('.pufu-related-questions ul');
+  await expect(stockList).toBeHidden();
+  await expect(questionList).toBeHidden();
+  await browser.locator('.pufu-related-stocks > summary').click();
+  await expect(stockList).toBeVisible();
+  await expect(stockList).toContainText('E2Eの公開するストック');
+  await expect(questionList).toBeHidden();
+  await browser.locator('.pufu-related-questions > summary').click();
+  await expect(questionList).toBeVisible();
+  await expect(questionList).toContainText('E2Eの公開する問い');
+  await browser.locator('.pufu-related-stocks > summary').click();
+  await expect(stockList).toBeHidden();
+  await expect(questionList).toBeVisible();
+  await browser.locator('.pufu-related-questions > summary').click();
+  await expect(questionList).toBeHidden();
+  await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
+  await expect(screen.getByRole('button', '次の局面へ')).toHaveCount(0);
+  await expect(screen.getByRole('img', '第2局面のプ譜')).toContainText('E2Eの公開プ譜・次の局面');
+  await expect(browser.locator('.public-pufu-text')).toContainText('E2Eの公開プ譜・次の局面');
+  await screen.getByRole('button', '前の局面へ').click();
+  await expect(browser.locator('.pufu-phase-number')).toHaveText('第1局面');
+  await expect(screen.getByRole('button', '前の局面へ')).toHaveCount(0);
+  await expect(browser.locator('.public-pufu-text')).not.toContainText('E2Eの公開プ譜・次の局面');
   await expect(screen.getByRole('img', '第1局面のプ譜')).toBeVisible();
   await screen.getByRole('button', '第1局面のプ譜を拡大表示').click();
   await expect(screen.getByRole('dialog', '第1局面のプ譜')).toBeVisible();
   await screen.getByRole('button', '閉じる').click();
   await expect(browser.locator('[aria-label="プ譜（閲覧のみ）"] textarea')).toHaveCount(0);
   await expect(screen.getByRole('img', '第1局面のプ譜')).not.toContainText('50%');
+  await screen.getByRole('button', '次の局面へ').click();
+  await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
+  await expect(screen.getByRole('img', '第2局面のプ譜')).toContainText('E2Eの公開プ譜・次の局面');
+  await expect(browser.locator('.public-pufu-text')).toContainText('E2Eの公開プ譜・次の局面');
   await screen.getByRole('link', 'プ譜の一覧に戻る').click();
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await browser.setCookies(cookies);
@@ -226,7 +274,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();
   await screen.getByRole('button', '公開設定を保存').click();
   await expect(screen.getByRole('status').filter({ hasText: '非公開にしました。' })).toBeVisible();
-  for (const suffix of ['', '/pufus', `/pufus/${pufu.id}`])
+  for (const suffix of ['', '/pufus', `/pufus/${pufu.id}`, `/pufus/${pufu.id}?phase=1`])
     expect((await fetch(`${fixture.url}/api/public/projects/${publicId}${suffix}`)).status).toBe(
       404,
     );
