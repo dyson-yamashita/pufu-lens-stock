@@ -231,6 +231,12 @@ export function publicProjectsApp() {
     return c.json({ items: rows.results, total, page, has_more: page * limit < total });
   });
   app.get('/projects/:key/pufus/:id', async (c) => {
+    const requestedPhase = c.req.query('phase');
+    if (
+      requestedPhase !== undefined &&
+      (!/^[1-9]\d*$/.test(requestedPhase) || !Number.isSafeInteger(Number(requestedPhase)))
+    )
+      throw new HTTPException(400);
     // 公開の読み取りでは局面の初期化・ジョブ起動・コンテキスト取得を一切行わない。
     const row = await c.env.DB.prepare(
       `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,q.id AS question_id,q.text AS question_text,${pufuRelationsColumns('pf')},
@@ -241,14 +247,24 @@ export function publicProjectsApp() {
     )
       .bind(c.req.param('key'), c.req.param('id'))
       .first<
-        Omit<PublicPufu, 'score'> & {
+        Omit<PublicPufu, 'score' | 'phase'> & {
           score_json: string | null;
           questions_json: string;
           stocks_json: string;
         }
       >();
     if (!row?.score_json) throw notFound();
-    const score = pufuScoreSchema.parse(JSON.parse(row.score_json));
+    const phase = requestedPhase === undefined ? row.current_phase : Number(requestedPhase);
+    if (phase > row.current_phase) throw notFound();
+    // 公開可否を確認したプ譜の、指定された局面だけを読む。
+    const scoreJson =
+      phase === row.current_phase
+        ? row.score_json
+        : await c.env.DB.prepare('SELECT score_json FROM pufu_phases WHERE pufu_id=? AND number=?')
+            .bind(row.id, phase)
+            .first<string>('score_json');
+    if (!scoreJson) throw notFound();
+    const score = pufuScoreSchema.parse(JSON.parse(scoreJson));
     return c.json({
       pufu: {
         ...withRelations({ questions_json: row.questions_json, stocks_json: row.stocks_json }),
@@ -256,6 +272,7 @@ export function publicProjectsApp() {
         title: row.title,
         task: row.task,
         current_phase: row.current_phase,
+        phase,
         updated_at: row.updated_at,
         question_id: row.question_id,
         question_text: row.question_text,

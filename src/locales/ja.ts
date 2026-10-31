@@ -505,7 +505,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.stock_titles_urls_summaries_key_points_and_topics':
     'ストックのタイトル・URL・要約・要点・トピック',
   'ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of':
-    '問い・気づきと、紐づくプ譜の最新局面・振り返り',
+    '問い・気づきと、紐づくプ譜の各局面・振り返り',
   'ui.public_projects.memories_private_notes_retrieved_article_text_and_internal_project':
     'メモリ、個人メモ、取得した本文、内部用のプロジェクト概要は公開しません。',
   'ui.public_projects.additions_and_changes_made_while_published_are_also_reflected':
@@ -857,7 +857,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.share_the_displayed_public_url_the_project_is_also':
     '表示された参照用URLを共有します。トップページの公開プロジェクトにも掲載されます。',
   'ui.user_manual.public_pages_can_be_viewed_without_signing_in_and':
-    '公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の画像を押すと、拡大して閲覧できます。ストックのタイトル・URL・要約・要点・トピック、問い、紐づくプ譜の最新局面・振り返りが公開されます。',
+    '公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の関連ストックと問い・気づきは、見出しを押すと開閉できます。「◀」「▶」で前後の局面へ移動でき、画像を押すと選択中の局面を拡大して閲覧できます。ストックのタイトル・URL・要約・要点・トピック、問い、紐づくプ譜の各局面・振り返りが公開されます。',
   'ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text':
     'メモリ・個人メモ・詳細画面のコメント欄・取得した本文・内部用のプロジェクト概要は公開しません。プ譜の本文やエディター内の要素コメントは公開されるため、公開前に確認してください。公開をオフにして保存すると、参照用URLからも閲覧できなくなります。',
   'ui.user_manual.use_other_apps': 'ほかのアプリから使う',

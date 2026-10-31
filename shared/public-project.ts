@@ -45,6 +45,7 @@ export type PublicPufu = PufuRelations &
   PublicPufuSummary & {
     question_id: string;
     question_text: string;
+    phase: number;
     score: PufuScore;
   };
 export type PublicList<T> = { items: T[]; total: number; page: number; has_more: boolean };

@@ -242,6 +242,39 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(pufu.pufu.score.gainingGoal.text).toBe('公開する最新局面');
     expect(pufu.pufu.score.elements.people.comment.text).toBe('振り返り：公開する最新局面');
   });
+  it('匿名で過去の局面を指定でき、本文と振り返りだけを返し、読み取りで保存内容を変えない', async () => {
+    const key = await publish();
+    const before = await app.env.DB.prepare("SELECT * FROM pufu_scores WHERE id='pufu'").first();
+    const response = await get(`${root(key)}/pufus/pufu?phase=1`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    const { pufu } = (await response.json()) as { pufu: PublicPufu & { phase: number } };
+    expect(pufu).toMatchObject({ phase: 1, current_phase: 2 });
+    expect(pufu.score.gainingGoal.text).toBe('SECRET_OLD_PHASE');
+    expect(pufu.score.elements.people.comment.text).toBe('振り返り：SECRET_OLD_PHASE');
+    expect(JSON.stringify(pufu)).not.toMatch(
+      /SECRET_(USER_MEMORY|PROJECT_MEMORY|CONTEXT_NOTE|GENERATED|PUFU_ERROR|PUFU_MODEL)/,
+    );
+    expect(await app.env.DB.prepare("SELECT * FROM pufu_scores WHERE id='pufu'").first()).toEqual(
+      before,
+    );
+    expect((await get(`${root(key)}/pufus/pufu`)).status).toBe(200);
+    await publication('alice-project', false);
+    expect((await get(`${root(key)}/pufus/pufu?phase=1`)).status).toBe(404);
+  });
+  it('不正・存在しない局面や非公開のプ譜を局面指定で取得できない', async () => {
+    const key = await publish();
+    for (const phase of ['0', '-1', '1.5', 'abc', '', '9007199254740992'])
+      expect((await get(`${root(key)}/pufus/pufu?phase=${phase}`)).status).toBe(400);
+    for (const path of [
+      '/pufus/pufu?phase=3',
+      '/pufus/private-pufu?phase=1',
+      '/pufus/pending-pufu?phase=1',
+    ])
+      expect((await get(`${root(key)}${path}`)).status).toBe(404);
+    await app.env.DB.prepare("DELETE FROM pufu_phases WHERE pufu_id='pufu' AND number=1").run();
+    expect((await get(`${root(key)}/pufus/pufu?phase=1`)).status).toBe(404);
+  });
   it('プ譜タブの一覧と件数は閲覧可能な完成済みプ譜だけを返し、本文や内部情報を含めない', async () => {
     await app.env.DB.prepare(
       "INSERT INTO pufu_scores (id,user_id,project_id,task,input_json,score_json,editor_version,status) VALUES ('orphan','alice','alice-project','SECRET_UNLINKED_TASK','{}',?,'0.9.14','ready')",

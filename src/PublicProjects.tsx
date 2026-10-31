@@ -24,6 +24,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Network,
+  Triangle,
 } from 'lucide-react';
 import type {
   Publication,
@@ -828,9 +829,13 @@ function PublicQuestionDetail({
 }
 function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fromList: boolean }) {
   useLanguage();
+  const [selectedPhase, setSelectedPhase] = useState<number>();
   const { data, error, reload } = useResource<{
     pufu: PublicPufu;
-  }>(`${root}/pufus/${encodeURIComponent(id)}`);
+  }>(
+    `${root}/pufus/${encodeURIComponent(id)}${selectedPhase === undefined ? '' : `?phase=${selectedPhase}`}`,
+  );
+  const phase = data ? (data.pufu.phase ?? data.pufu.current_phase) : 1;
   return !data ? (
     <ResourceState error={error} retry={reload} />
   ) : (
@@ -861,8 +866,8 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
           </ul>
         </section>
         {(data.pufu.questions?.length || data.pufu.question_id) && (
-          <section aria-label={t('ui.app.questions_insights')}>
-            <h3 className="question-origin pufu-context-label">{t('ui.app.questions_insights')}</h3>
+          <details className="pufu-related pufu-related-questions">
+            <summary>{t('ui.public_projects.related_questions_insights')}</summary>
             <ul className="pufu-context-questions">
               {(
                 data.pufu.questions ??
@@ -877,13 +882,11 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
                 </li>
               ))}
             </ul>
-          </section>
+          </details>
         )}
         {Boolean(data.pufu.stocks?.length) && (
-          <section aria-label={t('ui.public_projects.related_stocks')}>
-            <h3 className="question-origin pufu-context-label">
-              {t('ui.public_projects.related_stocks')}
-            </h3>
+          <details className="pufu-related pufu-related-stocks">
+            <summary>{t('ui.public_projects.related_stocks')}</summary>
             <ul className="pufu-context-questions">
               {data.pufu.stocks?.map((stock) => (
                 <li key={stock.id}>
@@ -893,21 +896,45 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
                 </li>
               ))}
             </ul>
-          </section>
+          </details>
         )}
       </div>
       <p className="public-badge">
-        {t('ui.public_projects.latest_phase')}
-        {data.pufu.current_phase} ·{' '}
-        {data.pufu.current_phase % 2 === 0 ? t('ui.public_projects.reflection') : t('ui.app.pufu')}
+        {t('phase.number', { number: phase })} ·{' '}
+        {phase % 2 === 0 ? t('ui.public_projects.reflection') : t('ui.app.pufu')}
         {t('ui.public_projects.read_only')}
       </p>
+      <div className="pufu-toolbar">
+        <div
+          className="pufu-phase-navigation"
+          role="group"
+          aria-label={t('ui.pufu_editor.switch_phase')}
+        >
+          {phase > 1 && (
+            <button
+              className="icon-button pufu-phase-previous"
+              aria-label={t('ui.pufu_editor.previous_phase')}
+              onClick={() => setSelectedPhase(phase - 1)}
+            >
+              <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+            </button>
+          )}
+          <span className="pufu-phase-number" aria-live="polite">
+            {t('phase.number', { number: phase })}
+          </span>
+          {phase < data.pufu.current_phase && (
+            <button
+              className="icon-button pufu-phase-next"
+              aria-label={t('ui.pufu_editor.next_phase')}
+              onClick={() => setSelectedPhase(phase + 1)}
+            >
+              <Triangle size={12} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </div>
       <Suspense fallback={<ResourceState retry={reload} />}>
-        <PublicPufuScore
-          key={`${id}-${data.pufu.current_phase}`}
-          score={data.pufu.score}
-          phase={data.pufu.current_phase}
-        />
+        <PublicPufuScore key={`${id}-${phase}`} score={data.pufu.score} phase={phase} />
       </Suspense>
     </section>
   );
@@ -937,7 +964,12 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
       match[1] === 'stock' ? (
         <PublicStockDetailPage key={match[2]} root={root} id={match[2]} />
       ) : match[1] === 'pufu' ? (
-        <PublicPufuDetail root={root} id={match[2]} fromList={match[3] === 'pufus'} />
+        <PublicPufuDetail
+          key={`${root}-${match[2]}`}
+          root={root}
+          id={match[2]}
+          fromList={match[3] === 'pufus'}
+        />
       ) : (
         <PublicQuestionDetail
           key={match[2]}

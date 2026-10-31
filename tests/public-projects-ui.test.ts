@@ -6,7 +6,10 @@ import PublicProjectPage from '../src/PublicProjects';
 import { api } from '../src/api';
 import { setLanguage } from '../src/i18n';
 
-vi.mock('../src/PublicPufuScore', () => ({ default: () => null }));
+vi.mock('../src/PublicPufuScore', () => ({
+  default: ({ phase }: { phase: number }) =>
+    createElement('div', { 'data-testid': 'score' }, `第${phase}局面の本文と画像`),
+}));
 vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
 const stock = {
   id: 'stock',
@@ -249,17 +252,19 @@ it('プ譜タブから一覧・詳細を閲覧し、戻るとプ譜タブへ戻�
   expect(card?.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
   await navigate('#pufu/pufu?from=pufus');
   const task = document.querySelector('section[aria-label="課題"]');
-  const questions = document.querySelector('section[aria-label="問い・気づき"]');
+  const questions = document.querySelector('details.pufu-related-questions');
   expect(task?.querySelector('h3')?.textContent).toBe('課題');
   expect(task?.querySelector('li')?.textContent).toBe('問いから考える課題');
-  expect(questions?.querySelector('h3')?.textContent).toBe('問い・気づき');
+  expect(questions?.querySelector('summary')?.textContent).toBe('関連する問い・気づき');
+  expect(questions?.hasAttribute('open')).toBe(false);
   expect(questions?.querySelector('li a')?.getAttribute('href')).toBe('#question/ai');
   expect(questions?.querySelector('li a')?.textContent).toBe('AIが生成した問い');
   expect([...questions!.querySelectorAll('li a')].map((link) => link.textContent)).toEqual([
     'AIが生成した問い',
     '自分の問い',
   ]);
-  const stocks = document.querySelector('section[aria-label="関連するストック"]');
+  const stocks = document.querySelector('details.pufu-related-stocks');
+  expect(stocks?.hasAttribute('open')).toBe(false);
   expect([...stocks!.querySelectorAll('li a')].map((link) => link.getAttribute('href'))).toEqual([
     '#stock/stock',
     '#stock/second',
@@ -325,4 +330,51 @@ it('公開プ譜は一覧と詳細に設定したタイトルを表示し、課�
   expect(document.querySelector('.public-pufu-context')?.textContent).toContain(
     '問いから考える課題',
   );
+});
+
+it('公開プ譜は最新から前後の局面へ移動し、先頭・末尾の矢印と表示内容を切り替える', async () => {
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (url, options) => {
+    const parsed = new URL(url, 'https://example.com');
+    if (parsed.pathname.endsWith('/pufus/pufu')) {
+      const result = (await load(url, options)) as { pufu: Record<string, unknown> };
+      return {
+        pufu: {
+          ...result.pufu,
+          current_phase: 3,
+          phase: Number(parsed.searchParams.get('phase') ?? 3),
+        },
+      };
+    }
+    return load(url, options);
+  });
+  await render('#pufu/pufu?from=pufus');
+  const assertPhase = (phase: number) => {
+    expect(document.querySelector('.pufu-phase-number')?.textContent).toBe(`第${phase}局面`);
+    expect(document.querySelector('[data-testid="score"]')?.textContent).toBe(
+      `第${phase}局面の本文と画像`,
+    );
+    expect(Boolean(document.querySelector('button[aria-label="前の局面へ"]'))).toBe(phase > 1);
+    expect(Boolean(document.querySelector('button[aria-label="次の局面へ"]'))).toBe(phase < 3);
+    expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
+  };
+  const move = async (label: string) =>
+    act(async () =>
+      document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click(),
+    );
+  assertPhase(3);
+  await move('前の局面へ');
+  assertPhase(2);
+  expect(document.querySelector('.public-pufu-context + .public-badge')?.textContent).toContain(
+    '振り返り',
+  );
+  await move('前の局面へ');
+  assertPhase(1);
+  await move('次の局面へ');
+  assertPhase(2);
+  await move('次の局面へ');
+  assertPhase(3);
+  await navigate('#pufus');
+  await navigate('#pufu/pufu?from=pufus');
+  assertPhase(3);
 });
