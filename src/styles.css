@@ -4131,3 +4131,62 @@ article.pufu-list-item {
     display: none;
   }
 }
+
+.mcp-connections .token-row {
+  flex-wrap: wrap;
+}
+.mcp-connections .token-row > .mcp-connection-details {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+.mcp-connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mcp-connection-editor {
+  width: 100%;
+  min-width: 0;
+}
+.mcp-connection-editor fieldset {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.mcp-connection-editor label {
+  display: block;
+  margin-bottom: 12px;
+}
+.mcp-connection-editor input:not([type='checkbox']),
+.mcp-connection-editor select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.mcp-connection-editor .mcp-permission {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.mcp-connections .token-row > .mcp-connection-actions {
+  flex: 0 1 auto;
+}
+.mcp-connection-editor .mcp-permission input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: var(--primary);
+}
+
+.mcp-project-options {
+  margin-top: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}

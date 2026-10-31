@@ -40,6 +40,7 @@ describe('MCP OAuth連携', () => {
   async function authorize(
     options: {
       project?: string;
+      projects?: string[];
       selectedScopes?: string;
       user?: string;
       decision?: string;
@@ -96,6 +97,11 @@ describe('MCP OAuth連携', () => {
       decision: options.decision ?? 'approve',
       project_id: options.project ?? '',
     });
+    if (options.projects) {
+      form.set('project_access', 'selected');
+      form.delete('project_id');
+      options.projects.forEach((id) => form.append('project_id', id));
+    }
     for (const scope of (options.selectedScopes ?? scopes).split(' ')) form.append('scope', scope);
     const approve = await request('/oauth/authorize', {
       method: 'POST',
@@ -254,5 +260,24 @@ describe('MCP OAuth連携', () => {
     const response = await exchange(auth);
     expect(response.status).toBe(200);
     expect(await response.json()).not.toHaveProperty('refresh_token');
+  });
+  it('初回の複数選択で空選択・他人のプロジェクトを拒否し本人の選択を保存する', async () => {
+    expect((await authorize({ projects: [] })).approve.status).toBe(400);
+    expect((await authorize({ projects: ['alice-project', 'bob-project'] })).approve.status).toBe(
+      404,
+    );
+    const auth = await authorize({ projects: ['alice-project', 'alice-second'] });
+    expect(auth.approve.status).toBe(302);
+    const { document } = parseHTML(auth.html);
+    expect(document.querySelector('button[value="approve"]')?.className).toBe(
+      'button primary approve',
+    );
+    expect(document.querySelector('button[value="deny"]')?.className).toBe('button secondary');
+    expect(document.querySelectorAll('input[type="checkbox"][name="project_id"]')).toHaveLength(2);
+    expect((await exchange(auth)).status).toBe(200);
+    const listing = await request('/api/v1/mcp/connections', { headers: session });
+    expect(await listing.json()).toMatchObject({
+      connections: [{ project_ids: ['alice-project', 'alice-second'] }],
+    });
   });
 });

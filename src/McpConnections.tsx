@@ -1,6 +1,7 @@
+import McpConnectionEditor from './McpConnectionEditor';
 import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import { useEffect, useState } from 'react';
-import { Copy, Layers, LoaderCircle, Trash2 } from 'lucide-react';
+import { Copy, Layers, LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import XIntegration from './XIntegration';
 import { api } from './api';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
@@ -11,6 +12,7 @@ export default function McpConnections() {
   const [url, setUrl] = useState(() => `${window.location.origin}/mcp`);
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -111,9 +113,18 @@ export default function McpConnections() {
             {connections.map((connection) => (
               <li className="token-row" key={connection.id}>
                 <Layers size={19} aria-hidden="true" />
-                <div>
+                <div className="mcp-connection-details">
                   <strong>{connection.client_name}</strong>
-                  <p>{connection.project_name ?? t('ui.app.all_projects')}</p>
+                  <p>
+                    {connection.project_ids
+                      ? (
+                          connection.projects ??
+                          connection.project_ids.map((id) => ({ id, name: id }))
+                        )
+                          .map((project) => project.name)
+                          .join(t('ui.comments.separator'))
+                      : (connection.project_name ?? t('ui.app.all_projects'))}
+                  </p>
                   <p>
                     {connection.scopes
                       .map((scope) =>
@@ -132,38 +143,71 @@ export default function McpConnections() {
                       })}
                   </small>
                 </div>
-                <button
-                  className="button danger"
-                  disabled={busy !== null}
-                  onClick={async () => {
-                    if (
-                      !window.confirm(
-                        t('ui.mcp_connections.disconnect_value', {
-                          value0: connection.client_name,
-                        }),
-                      )
-                    )
-                      return;
-                    setBusy(connection.id);
-                    setError('');
-                    try {
-                      await api(`/api/v1/mcp/connections/${encodeURIComponent(connection.id)}`, {
-                        method: 'DELETE',
-                      });
-                      setConnections((items) => items.filter((item) => item.id !== connection.id));
-                      setNotice(t('ui.mcp_connections.integration_disconnected'));
-                    } catch (error) {
-                      setError(applicationError((error as Error).message));
-                    } finally {
-                      setBusy(null);
-                    }
-                  }}
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                  {busy === connection.id
-                    ? t('ui.mcp_connections.disconnecting')
-                    : t('ui.mcp_connections.disconnect')}
-                </button>
+                {editing === connection.id ? (
+                  <McpConnectionEditor
+                    connection={connection}
+                    onCancel={() => setEditing(null)}
+                    onSave={(updated) => {
+                      setConnections((items) =>
+                        items.map((item) => (item.id === updated.id ? updated : item)),
+                      );
+                      setEditing(null);
+                      setNotice(t('ui.mcp_connections.saved'));
+                    }}
+                  />
+                ) : (
+                  <div className="mcp-connection-actions">
+                    <button
+                      className="button secondary"
+                      disabled={busy !== null || editing !== null}
+                      onClick={() => {
+                        setEditing(connection.id);
+                        setNotice('');
+                        setError('');
+                      }}
+                    >
+                      <Pencil size={16} aria-hidden="true" />
+                      {t('ui.mcp_connections.edit')}
+                    </button>
+                    <button
+                      className="button danger"
+                      disabled={busy !== null || editing !== null}
+                      onClick={async () => {
+                        if (
+                          !window.confirm(
+                            t('ui.mcp_connections.disconnect_value', {
+                              value0: connection.client_name,
+                            }),
+                          )
+                        )
+                          return;
+                        setBusy(connection.id);
+                        setError('');
+                        try {
+                          await api(
+                            `/api/v1/mcp/connections/${encodeURIComponent(connection.id)}`,
+                            {
+                              method: 'DELETE',
+                            },
+                          );
+                          setConnections((items) =>
+                            items.filter((item) => item.id !== connection.id),
+                          );
+                          setNotice(t('ui.mcp_connections.integration_disconnected'));
+                        } catch (error) {
+                          setError(applicationError((error as Error).message));
+                        } finally {
+                          setBusy(null);
+                        }
+                      }}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                      {busy === connection.id
+                        ? t('ui.mcp_connections.disconnecting')
+                        : t('ui.mcp_connections.disconnect')}
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

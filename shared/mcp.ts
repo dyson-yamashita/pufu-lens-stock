@@ -12,7 +12,10 @@ export type McpConnection = {
   client_name: string;
   project_id: string | null;
   project_name: string | null;
+  project_ids?: string[] | null;
+  projects?: { id: string; name: string }[];
   scopes: string[];
+  authorized_scopes?: string[];
   created_at: string;
   expires_at: string | null;
 };

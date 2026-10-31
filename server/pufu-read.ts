@@ -1,3 +1,4 @@
+import { projectScopeJson } from './project-access';
 import { HTTPException } from 'hono/http-exception';
 import { pufuScoreSchema, type PufuScore } from '../shared/pufu';
 import type { Env, Principal } from './env';
@@ -12,7 +13,7 @@ async function readQuestionPufuRecord(
   questionId: string | null | undefined,
   pufuId?: string,
 ) {
-  const projectId = principal.tokenProjectId ?? null;
+  const projectId = projectScopeJson(principal) ?? null;
   const selectedId = pufuId ?? null;
   if (!questionId && !pufuId)
     throw new HTTPException(400, { message: 'pufu_idまたはquestion_idを指定してください。' });
@@ -28,7 +29,7 @@ async function readQuestionPufuRecord(
       ORDER BY created_at DESC,id DESC LIMIT 1
     )
     LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
-    WHERE q.id=? AND p.user_id=? AND (? IS NULL OR q.project_id=?)`,
+    WHERE q.id=? AND p.user_id=? AND (? IS NULL OR q.project_id IN (SELECT value FROM json_each(?)))`,
       ).bind(
         selectedId,
         selectedId,
@@ -43,7 +44,7 @@ async function readQuestionPufuRecord(
       pf.score_json,ph.score_json AS phase_score_json,pf.updated_at,pf.revision,pf.status AS pufu_status,${pufuRelationsColumns('pf')}
       FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
       LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
-      WHERE pf.id=? AND pf.user_id=? AND p.user_id=? AND (? IS NULL OR p.id=?)`,
+      WHERE pf.id=? AND pf.user_id=? AND p.user_id=? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?)))`,
       ).bind(pufuId, principal.user.id, principal.user.id, projectId, projectId);
   const row = await query.first<{
     question_id: string | null;

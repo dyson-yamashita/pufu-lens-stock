@@ -65,5 +65,26 @@
       "表示名を翻訳・書き換えない",
       "英語SVGと実Editorの英語見出し、保存済みスコアの不変性"
     ]
+  },
+  {
+    "id": "MCP-001",
+    "title": "MCP連携の編集と保存",
+    "sources": [
+      "src/McpConnections.tsx",
+      "src/McpConnectionEditor.tsx",
+      "server/mcp-oauth.ts",
+      "server/mcp-connection-settings.ts",
+      "server/mcp.ts",
+      "shared/mcp.ts",
+      "server/project-access.ts",
+      "server/mcp-consent-style.ts"
+    ],
+    "aspects": [
+      "連携先の表示名・参照プロジェクト・権限を変更",
+      "再読込後も設定を保持",
+      "キャンセル時に変更を保存しない",
+      "初回許可画面で複数プロジェクトを選択",
+      "編集時の全件/複数選択の切替と保存"
+    ]
   }
 ]

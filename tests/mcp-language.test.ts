@@ -36,7 +36,9 @@ describe('MCP account language', () => {
         body: JSON.stringify({ jsonrpc: '2.0', id: requestId, method, params }),
       }),
       app.env,
-      app.ctx,
+      // Each fetch has its own execution context in Workers. OAuth attaches
+      // request-specific props/auth to it, including during concurrent calls.
+      Object.create(app.ctx),
     );
     expect(response.status).toBe(200);
     const messages = response.headers.get('Content-Type')?.includes('application/json')

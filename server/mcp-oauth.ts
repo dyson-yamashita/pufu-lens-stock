@@ -1,8 +1,12 @@
+import { mcpConsentStyle } from './mcp-consent-style';
 import OAuthProvider, {
   AuthorizationError,
+  OAuthError,
   CimdFetchError,
 } from '@cloudflare/workers-oauth-provider';
 import type { OAuthResourceContext, GrantSummary } from '@cloudflare/workers-oauth-provider';
+import { z } from 'zod';
+import { getMcpConnectionSettings } from './mcp-connection-settings';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
@@ -15,7 +19,11 @@ import { hash } from './security';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
 import { cleanupIfAccountDeleted } from './account';
 
-export type McpGrantProps = { userId: string; projectId: string | null };
+export type McpGrantProps = {
+  userId: string;
+  projectId: string | null;
+  projectIds?: string[] | null;
+};
 export type McpContext = OAuthResourceContext<McpGrantProps>;
 const escape = (value: string) => value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
@@ -67,20 +75,17 @@ function authorizationApp() {
       )
       .join('');
     const projectOptions = projects.results
-      .map((project) => `<option value="${escape(project.id)}">${escape(project.name)}</option>`)
+      .map(
+        (project) =>
+          `<label class="permission"><input type="checkbox" name="project_id" value="${escape(project.id)}"> ${escape(project.name)}</label>`,
+      )
       .join('');
     for (const [name, value] of consent.headers) c.header(name, value);
     const preference = getCookie(c, 'pufu_lens_theme');
     const themeAttribute =
       preference === 'light' || preference === 'dark' ? ` data-theme="${preference}"` : '';
     return c.html(
-      `<!doctype html><html lang="${language}"${themeAttribute}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(t('MCP連携の許可'))} | Pufu Lens</title><style>
-:root{color-scheme:light;--text:#252c32;--page:#f8f9fa;--card:#fff;--border:#b7c0cc}
-:root[data-theme="dark"]{color-scheme:dark;--text:#e5eaf3;--page:#101827;--card:#172033;--border:#667b98}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--text:#e5eaf3;--page:#101827;--card:#172033;--border:#667b98}}
-body{font-family:system-ui,sans-serif;line-height:1.8;color:var(--text);background:var(--page);margin:0;padding:24px}main{max-width:560px;margin:32px auto;background:var(--card);padding:28px;border:1px solid var(--border);border-radius:16px}h1{font-size:24px}.permission{display:block;margin:12px 0}input,select,button{font:inherit}select{display:block;width:100%;padding:10px;margin:8px 0 20px}button{padding:10px 20px;cursor:pointer;margin:8px 8px 0 0}p{overflow-wrap:anywhere}small{display:block}
-input,select,button{color:var(--text);background:var(--card);border:1px solid var(--border)}input[type="checkbox"]{accent-color:var(--text)}fieldset{border:1px solid var(--border)}
-</style></head><body><main><p>Pufu Lens · ${escape(t('MCP連携'))}</p><h1>${escape(t('mcp.consentTitle', { client: details.clientName }))}</h1><p>${escape(t('mcp.consentIdentity', { name: principal.user.name }))}</p><p>${details.clientDomain ? escape(t('mcp.clientDomain', { domain: details.clientDomain })) : escape(t('クライアント名は接続元が登録した名称です。'))}<br>${escape(t('mcp.redirectHost'))}: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? `<p>${escape(t('このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。'))}</p>` : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset><legend>${escape(t('許可する操作'))}</legend>${scopes}</fieldset><p><label for="project">${escape(t('アクセスを許可するプロジェクト'))}</label><select id="project" name="project_id"><option value="">${escape(t('すべてのプロジェクト'))}</option>${projectOptions}</select><small>${escape(t('選択した範囲のデータが接続先で利用されます。'))}</small></p><button name="decision" value="approve">${escape(t('連携を許可'))}</button><button name="decision" value="deny">${escape(t('許可しない'))}</button></form></main></body></html>`,
+      `<!doctype html><html lang="${language}"${themeAttribute}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(t('MCP連携の許可'))} | Pufu Lens</title><style>${mcpConsentStyle}</style></head><body><main><p>Pufu Lens · ${escape(t('MCP連携'))}</p><h1>${escape(t('mcp.consentTitle', { client: details.clientName }))}</h1><p>${escape(t('mcp.consentIdentity', { name: principal.user.name }))}</p><p>${details.clientDomain ? escape(t('mcp.clientDomain', { domain: details.clientDomain })) : escape(t('クライアント名は接続元が登録した名称です。'))}<br>${escape(t('mcp.redirectHost'))}: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? `<p>${escape(t('このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。'))}</p>` : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset class="project-access"><legend>${escape(t('アクセスを許可するプロジェクト'))}</legend><label class="permission"><input type="radio" name="project_access" value="all" checked> ${escape(t('すべてのプロジェクト'))}</label><label class="permission"><input type="radio" name="project_access" value="selected"> ${escape(t('選択したプロジェクト'))}</label><div class="project-options">${projectOptions}</div><small>${escape(t('プロジェクトを複数選択できます。すべてを選ぶと、今後作成するプロジェクトにもアクセスできます。'))}</small></fieldset><fieldset><legend>${escape(t('許可する操作'))}</legend>${scopes}</fieldset><p class="selection-required">${escape(t('アクセスを許可するプロジェクトを選択してください。'))}</p><div class="actions"><button class="button primary selection-required" type="button" disabled>${escape(t('連携を許可'))}</button><button class="button primary approve" name="decision" value="approve">${escape(t('連携を許可'))}</button><button class="button secondary" name="decision" value="deny">${escape(t('許可しない'))}</button></div></form></main></body></html>`,
     );
   });
   app.post('/oauth/authorize', async (c) => {
@@ -101,15 +106,42 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
       await c.env.OAUTH_KV!.delete(key);
       return new Response(null, { status: 302, headers: denied.headers });
     }
-    const projectId =
-      typeof form.project_id === 'string' && form.project_id ? form.project_id : null;
-    const project = projectId
-      ? await c.env.DB.prepare('SELECT id,name FROM projects WHERE id=? AND user_id=?')
-          .bind(projectId, principal.user.id)
-          .first<{ id: string; name: string }>()
-      : null;
-    if (projectId && !project)
+    if (
+      form.project_access !== undefined &&
+      !['all', 'selected'].includes(String(form.project_access))
+    )
+      throw new HTTPException(400, { message: '連携の設定を確認してください。' });
+    const values = (Array.isArray(form.project_id) ? form.project_id : [form.project_id]).filter(
+      (value) => value !== undefined && value !== '',
+    );
+    const selection =
+      form.project_access === 'all' || (form.project_access === undefined && !values.length)
+        ? null
+        : values;
+    const parsedProjects = z
+      .array(z.string().min(1).max(200))
+      .min(1)
+      .max(100)
+      .nullable()
+      .safeParse(selection);
+    if (!parsedProjects.success)
+      throw new HTTPException(400, {
+        message: 'アクセスを許可するプロジェクトを選択してください。',
+      });
+    const projectIds = parsedProjects.data === null ? null : [...new Set(parsedProjects.data)];
+    const projects =
+      projectIds === null
+        ? []
+        : (
+            await c.env.DB.prepare(
+              'SELECT id,name FROM projects WHERE user_id=? AND id IN (SELECT value FROM json_each(?))',
+            )
+              .bind(principal.user.id, JSON.stringify(projectIds))
+              .all<{ id: string; name: string }>()
+          ).results;
+    if (projectIds !== null && projects.length !== projectIds.length)
       throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
+    const projectId = projectIds?.length === 1 ? projectIds[0] : null;
     const scope = (Array.isArray(form.scope) ? form.scope : [form.scope]).filter(
       (value): value is string => typeof value === 'string',
     );
@@ -123,9 +155,12 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
       metadata: {
         client_name: details.clientName,
         project_id: projectId,
-        project_name: project?.name ?? null,
+        project_name: projectId
+          ? (projects.find((project) => project.id === projectId)?.name ?? null)
+          : null,
+        project_ids: projectIds,
       },
-      props: { userId: principal.user.id, projectId } satisfies McpGrantProps,
+      props: { userId: principal.user.id, projectId, projectIds } satisfies McpGrantProps,
     });
     if (await cleanupIfAccountDeleted(c.env, principal.user.id))
       throw new HTTPException(401, { message: '退会済みのアカウントでは連携できません。' });
@@ -152,29 +187,133 @@ input,select,button{color:var(--text);background:var(--card);border:1px solid va
     } while (cursor);
     return result;
   };
+  const connection = async (
+    c: import('hono').Context<AppEnv>,
+    grant: GrantSummary,
+  ): Promise<McpConnection> => {
+    const settings = await getMcpConnectionSettings(c.env, c.get('principal').user.id, grant.id);
+    const projectIds: string[] | null = settings
+      ? settings.project_ids === null
+        ? settings.project_id
+          ? [settings.project_id]
+          : null
+        : (JSON.parse(settings.project_ids) as string[])
+      : (grant.metadata?.project_ids ??
+        (grant.metadata?.project_id ? [grant.metadata.project_id] : null));
+    const rows =
+      projectIds === null
+        ? []
+        : (
+            await c.env.DB.prepare(
+              'SELECT id,name FROM projects WHERE user_id=? AND id IN (SELECT value FROM json_each(?))',
+            )
+              .bind(c.get('principal').user.id, JSON.stringify(projectIds))
+              .all<{ id: string; name: string }>()
+          ).results;
+    const projects =
+      projectIds?.map((id) => ({
+        id,
+        name: rows.find((project) => project.id === id)?.name ?? id,
+      })) ?? [];
+    const projectId = projectIds?.length === 1 ? projectIds[0] : null;
+    return {
+      id: grant.id,
+      client_name:
+        settings?.client_name ??
+        grant.metadata?.client_name ??
+        translate(resolveLanguage(c.get('principal').user.language), 'MCPクライアント'),
+      project_id: projectId,
+      project_name: projectId ? projects[0].name : null,
+      project_ids: projectIds,
+      projects,
+      scopes: settings
+        ? grant.scope.filter((scope) => (JSON.parse(settings.scopes) as string[]).includes(scope))
+        : grant.scope,
+      authorized_scopes: grant.scope,
+      created_at: new Date(grant.createdAt * 1000).toISOString(),
+      expires_at: grant.expiresAt ? new Date(grant.expiresAt * 1000).toISOString() : null,
+    };
+  };
   app.get('/api/v1/mcp/connections', async (c) =>
     c.json({
       enabled: !!c.env.OAUTH_PROVIDER,
       url: `${c.env.APP_URL}/mcp`,
-      connections: (c.env.OAUTH_PROVIDER ? await grants(c) : []).map(
-        (grant) =>
-          ({
-            id: grant.id,
-            client_name:
-              grant.metadata?.client_name ??
-              translate(resolveLanguage(c.get('principal').user.language), 'MCPクライアント'),
-            project_id: grant.metadata?.project_id ?? null,
-            project_name: grant.metadata?.project_name ?? null,
-            scopes: grant.scope,
-            created_at: new Date(grant.createdAt * 1000).toISOString(),
-            expires_at: grant.expiresAt ? new Date(grant.expiresAt * 1000).toISOString() : null,
-          }) satisfies McpConnection,
+      connections: await Promise.all(
+        (c.env.OAUTH_PROVIDER ? await grants(c) : []).map((grant) => connection(c, grant)),
       ),
     }),
   );
+  app.patch('/api/v1/mcp/connections/:id', async (c) => {
+    const grant = (await grants(c)).find((grant) => grant.id === c.req.param('id'));
+    if (!grant) throw new HTTPException(404);
+    const parsed = z
+      .object({
+        client_name: z.string().trim().min(1).max(100),
+        project_id: z.string().min(1).max(200).nullable().optional(),
+        project_ids: z.array(z.string().min(1).max(200)).min(1).max(100).nullable().optional(),
+        scopes: z
+          .array(
+            z.enum(
+              Object.keys(mcpScopes) as [keyof typeof mcpScopes, ...(keyof typeof mcpScopes)[]],
+            ),
+          )
+          .max(Object.keys(mcpScopes).length),
+      })
+      .strict()
+      .refine((value) => (value.project_id !== undefined) !== (value.project_ids !== undefined))
+      .safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success)
+      throw new HTTPException(400, { message: '連携の設定を確認してください。' });
+    const data = parsed.data;
+    if (data.scopes.some((scope) => !grant.scope.includes(scope)))
+      throw new HTTPException(400, {
+        message: '権限を追加するには、接続先から連携をやり直してください。',
+      });
+    const userId = c.get('principal').user.id;
+    const projectIds =
+      data.project_ids === undefined
+        ? data.project_id
+          ? [data.project_id]
+          : null
+        : data.project_ids === null
+          ? null
+          : [...new Set(data.project_ids)];
+    if (projectIds !== null) {
+      const projects = await c.env.DB.prepare(
+        'SELECT id FROM projects WHERE user_id=? AND id IN (SELECT value FROM json_each(?))',
+      )
+        .bind(userId, JSON.stringify(projectIds))
+        .all();
+      if (projects.results.length !== projectIds.length)
+        throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
+    }
+    const saved = await c.env.DB.prepare(
+      `INSERT INTO mcp_connection_settings (user_id,grant_id,client_name,project_id,scopes,project_ids) VALUES (?,?,?,?,?,?)
+      ON CONFLICT(user_id,grant_id) DO UPDATE SET client_name=excluded.client_name,project_id=excluded.project_id,scopes=excluded.scopes,project_ids=excluded.project_ids WHERE mcp_connection_settings.revoked=0`,
+    )
+      .bind(
+        userId,
+        grant.id,
+        data.client_name,
+        projectIds?.length === 1 ? projectIds[0] : null,
+        JSON.stringify([...new Set(data.scopes)]),
+        projectIds === null ? null : JSON.stringify(projectIds),
+      )
+      .run();
+    if (!saved.meta.changes) throw new HTTPException(404);
+    return c.json({ connection: await connection(c, grant) });
+  });
   app.delete('/api/v1/mcp/connections/:id', async (c) => {
     const id = c.req.param('id');
     if (!(await grants(c)).some((grant) => grant.id === id)) throw new HTTPException(404);
+    // Retain a tombstone: a request authenticated before KV revocation must
+    // never fall back to the original, possibly broader grant permissions.
+    await c.env.DB.prepare(
+      `INSERT INTO mcp_connection_settings (user_id,grant_id,client_name,project_id,scopes,revoked)
+      VALUES (?,?,'',NULL,'[]',1) ON CONFLICT(user_id,grant_id) DO UPDATE SET revoked=1,scopes='[]'`,
+    )
+      .bind(c.get('principal').user.id, id)
+      .run();
     await c.env.OAUTH_PROVIDER!.revokeGrant(id, c.get('principal').user.id);
     return c.json({ ok: true });
   });
@@ -266,9 +405,22 @@ export function createMcpOAuthProvider(
         requiredScopes: Object.keys(mcpScopes),
         accessTokenTTL: 3600,
         refreshTokenTTL: 30 * 86400,
-        tokenExchangeCallback: async ({ scope, userId }) => {
+        tokenExchangeCallback: async ({ scope, userId, grantId, grantType }) => {
           exchangeUserId = userId;
-          return { refreshTokenTTL: scope.includes('offline_access') ? 30 * 86400 : 0 };
+          const settings = await getMcpConnectionSettings(bindings, userId, grantId);
+          if (settings?.revoked)
+            throw new OAuthError('invalid_grant', { description: 'Connection revoked.' });
+          const allowed = settings ? (JSON.parse(settings.scopes) as string[]) : scope;
+          if (grantType === 'refresh_token' && !allowed.includes('offline_access'))
+            throw new OAuthError('invalid_scope', {
+              description: 'Offline access has been disabled.',
+            });
+          return {
+            refreshTokenTTL:
+              scope.includes('offline_access') && allowed.includes('offline_access')
+                ? 30 * 86400
+                : 0,
+          };
         },
         resourceMetadata: { resource: `${env.APP_URL}/mcp`, authorization_servers: [env.APP_URL] },
         defaultHandler: {

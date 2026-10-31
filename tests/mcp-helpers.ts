@@ -9,7 +9,7 @@ export const allMcpScopes = [
 ];
 export async function mcpTokens(
   app: Awaited<ReturnType<typeof testApp>>,
-  projectId: string | null = null,
+  projectId: string | string[] | null = null,
   scopes = allMcpScopes,
   user = 'alice',
 ) {
@@ -44,7 +44,11 @@ export async function mcpTokens(
   });
   const html = await page.text();
   const handle = /name="handle" value="([^"]+)"/.exec(html)![1];
-  const form = new URLSearchParams({ handle, decision: 'approve', project_id: projectId ?? '' });
+  const form = new URLSearchParams({ handle, decision: 'approve' });
+  if (Array.isArray(projectId)) {
+    form.set('project_access', 'selected');
+    projectId.forEach((id) => form.append('project_id', id));
+  } else form.set('project_id', projectId ?? '');
   scopes.forEach((scope) => form.append('scope', scope));
   const approved = await request('/oauth/authorize', {
     method: 'POST',

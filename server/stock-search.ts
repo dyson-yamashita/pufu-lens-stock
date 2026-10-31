@@ -1,9 +1,11 @@
+import { projectListFilter } from './project-access';
 import type { Env } from './env';
 import { embedSearchText, SearchError, searchTimeout } from './search-ai';
 
 export type StockSearch = {
   userId: string;
   projectId: string | null;
+  projectIds?: string[] | null;
   q: string;
   status: string;
   source: string;
@@ -22,14 +24,16 @@ const match =
   '(instr(lower(COALESCE(s.title,a.title)),lower(?))>0 OR instr(lower(a.summary_json),lower(?))>0 OR instr(lower(s.note),lower(?))>0)';
 const queryParams = (q: string) => [q, q, q];
 function filter(options: StockSearch) {
+  const projects = projectListFilter(options.projectId, options.projectIds);
   return {
     where:
-      "s.user_id=? AND ((? IS NULL AND p.show_in_all_lists=1) OR s.project_id=?) AND (?='all' OR (?='processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status=?) AND (?='all' OR a.source_type=?)" +
+      's.user_id=? AND ' +
+      projects.sql +
+      " AND (?='all' OR (?='processing' AND a.status IN ('queued','extracting','summarizing')) OR a.status=?) AND (?='all' OR a.source_type=?)" +
       (options.favorite === 'true' ? ' AND s.is_favorite=1' : ''),
     params: [
       options.userId,
-      options.projectId,
-      options.projectId,
+      ...projects.params,
       options.status,
       options.status,
       options.status,
@@ -139,17 +143,34 @@ async function semantic(env: Env, options: StockSearch) {
   if (coverage!.indexed) {
     const values = await embedSearchText(env, options.userId, options.q, 'query');
     try {
-      const response = await searchTimeout(
-        env.SEARCH_INDEX.query(values, {
-          topK: candidateLimit,
-          namespace: options.userId,
-          returnValues: false,
-          returnMetadata: 'none',
-          ...(options.projectId ? { filter: { project_id: options.projectId } } : {}),
-        }),
+      const selected = options.projectId ? [options.projectId] : options.projectIds;
+      // Keep each metadata filter bounded, then rank the union across selected projects.
+      const groups: (string[] | null)[] = selected == null ? [null] : [];
+      if (selected)
+        for (let start = 0; start < selected.length; start += 10)
+          groups.push(selected.slice(start, start + 10));
+      const responses = await searchTimeout(
+        Promise.all(
+          groups.map((group) =>
+            env.SEARCH_INDEX!.query(values, {
+              topK: candidateLimit,
+              namespace: options.userId,
+              returnValues: false,
+              returnMetadata: 'none',
+              ...(group
+                ? { filter: { project_id: group.length === 1 ? group[0] : { $in: group } } }
+                : {}),
+            }),
+          ),
+        ),
       );
-      if (!Array.isArray(response.matches)) throw new SearchError('service_error');
-      matches = response.matches.slice(0, candidateLimit);
+      if (responses.some((response) => !Array.isArray(response.matches)))
+        throw new SearchError('service_error');
+      matches = responses
+        .flatMap((response) => response.matches)
+        .filter((item) => typeof item.id === 'string' && Number.isFinite(item.score))
+        .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+        .slice(0, candidateLimit);
     } catch {
       throw new SearchError('service_error');
     }
@@ -246,7 +267,11 @@ async function semantic(env: Env, options: StockSearch) {
       requested_mode: options.mode,
       mode: options.mode,
       candidate_limit: candidateLimit,
-      candidates_truncated: lexical.length > candidateLimit || matches.length === candidateLimit,
+      candidates_truncated:
+        lexical.length > candidateLimit ||
+        (options.projectIds == null
+          ? matches.length === candidateLimit
+          : semanticRank.length === candidateLimit),
       total_scope: 'candidates',
       indexed_count: coverage!.indexed,
       pending_count: pending,

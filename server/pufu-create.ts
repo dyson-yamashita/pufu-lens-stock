@@ -1,3 +1,4 @@
+import { projectScopeJson } from './project-access';
 import { HTTPException } from 'hono/http-exception';
 import type { z } from 'zod';
 import type { Question } from '../shared/domain';
@@ -21,9 +22,9 @@ export async function createGeneratedPufu(
   question?: Question,
 ) {
   const project = await env.DB.prepare(
-    'SELECT id,name,description FROM projects WHERE id=? AND user_id=? AND (? IS NULL OR id=?)',
+    'SELECT id,name,description FROM projects WHERE id=? AND user_id=? AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))',
   )
-    .bind(projectId, principal.user.id, principal.tokenProjectId, principal.tokenProjectId)
+    .bind(projectId, principal.user.id, projectScopeJson(principal), projectScopeJson(principal))
     .first<PufuContext['project']>();
   if (!project) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
   const id = `pufu-${principal.user.id}-${data.request_id}`;
@@ -108,7 +109,7 @@ export async function createGeneratedPufu(
     env.DB.prepare(
       `INSERT OR IGNORE INTO pufu_scores (id,user_id,project_id,question_id,task,input_json,editor_version)
        SELECT ?,user_id,id,?,?,?,? FROM projects WHERE id=? AND user_id=?
-       AND (? IS NULL OR id=?)
+       AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))
        AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=projects.id AND status='ready'))`,
     ).bind(
       id,
@@ -118,8 +119,8 @@ export async function createGeneratedPufu(
       pufuEditorVersion,
       project.id,
       principal.user.id,
-      principal.tokenProjectId,
-      principal.tokenProjectId,
+      projectScopeJson(principal),
+      projectScopeJson(principal),
       question?.id ?? null,
       question?.id ?? null,
     ),

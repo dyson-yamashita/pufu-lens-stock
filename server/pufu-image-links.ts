@@ -1,3 +1,4 @@
+import { projectScopeJson } from './project-access';
 import { HTTPException } from 'hono/http-exception';
 import type { Env, Principal } from './env';
 import type { generateQuestionPufuImage } from './pufu-images';
@@ -54,7 +55,7 @@ export async function issuePufuImageLink(env: Env, principal: Principal, image: 
       FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
       WHERE pf.id=? AND (? IS NULL OR EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pf.id AND pq.question_id=?)) AND p.id=? AND p.user_id=? AND pf.user_id=p.user_id
       AND pf.status='ready' AND pf.current_phase=? AND pf.revision=?
-      AND (? IS NULL OR p.id=?)
+      AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?)))
       AND (SELECT COUNT(*) FROM pufu_image_links WHERE user_id=p.user_id AND expires_at>?)<?`,
     )
       .bind(
@@ -69,8 +70,8 @@ export async function issuePufuImageLink(env: Env, principal: Principal, image: 
         principal.user.id,
         metadata.phase,
         metadata.revision,
-        principal.tokenProjectId,
-        principal.tokenProjectId,
+        projectScopeJson(principal),
+        projectScopeJson(principal),
         new Date().toISOString(),
         activeLimit,
       )

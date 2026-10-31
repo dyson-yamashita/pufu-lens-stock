@@ -1,3 +1,4 @@
+import { projectScopeJson } from './project-access';
 import { HTTPException } from 'hono/http-exception';
 import type { z } from 'zod';
 import { appendSavedPufuPhaseSchema, pufuScoreSchema, type PufuScore } from '../shared/pufu';
@@ -23,12 +24,12 @@ export async function appendSavedPufuPhase(
   if (new TextEncoder().encode(JSON.stringify(data)).byteLength > 262144)
     throw new HTTPException(413, { message: '送信内容が大きすぎます。' });
   const owner =
-    'pf.id=? AND pf.user_id=? AND EXISTS (SELECT 1 FROM projects p WHERE p.id=pf.project_id AND p.user_id=pf.user_id) AND (? IS NULL OR pf.project_id=?)';
+    'pf.id=? AND pf.user_id=? AND EXISTS (SELECT 1 FROM projects p WHERE p.id=pf.project_id AND p.user_id=pf.user_id) AND (? IS NULL OR pf.project_id IN (SELECT value FROM json_each(?)))';
   const ownerValues = [
     data.pufu_id,
     principal.user.id,
-    principal.tokenProjectId,
-    principal.tokenProjectId,
+    projectScopeJson(principal),
+    projectScopeJson(principal),
   ];
   const pufu = await env.DB.prepare(
     `SELECT pf.project_id,pf.status,pf.current_phase,pf.revision,
