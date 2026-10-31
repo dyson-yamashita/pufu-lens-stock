@@ -4096,9 +4096,27 @@ article.pufu-list-item {
   margin: 0;
   font-size: 12px;
 }
+.login-header-links .language-select > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .login-header-links .language-select select {
   width: auto;
-  min-width: 105px;
+  min-width: 80px;
+  min-height: 44px;
+  padding: 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.login-header-links .language-select select:hover {
+  border-color: var(--border);
+  background: var(--wash);
 }
 @media (max-width: 760px) {
   .login-page > header {
@@ -4108,13 +4126,6 @@ article.pufu-list-item {
   .login-header-links {
     flex-wrap: wrap;
     gap: 12px;
-  }
-  .login-header-links .language-select > label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
   .login-caption {
     display: none;

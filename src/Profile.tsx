@@ -60,13 +60,6 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
           </div>
         </div>
         <form onSubmit={submit} noValidate aria-busy={busy}>
-          <LanguageSelect
-            id="profile-language"
-            value={language}
-            onChange={chooseLanguage}
-            disabled={busy}
-            hint
-          />
           <label htmlFor="profile-name">
             {t('ui.onboarding.nickname_display_name')}
             <span className="profile-required">{t('ui.onboarding.required')}</span>
@@ -120,6 +113,13 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
               {fieldErrors.bio}
             </p>
           )}
+          <LanguageSelect
+            id="profile-language"
+            value={language}
+            onChange={chooseLanguage}
+            disabled={busy}
+            hint
+          />
           {error && (
             <p className="form-error" role="alert">
               {error}

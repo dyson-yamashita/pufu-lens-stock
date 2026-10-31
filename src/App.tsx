@@ -280,12 +280,12 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
       <header>
         <Brand />
         <div className="login-header-links">
-          <LanguageSelect id="site-language" value={language} onChange={setLanguage} />
           <span className="login-caption">{t('ui.app.read_collect_connect')}</span>
           <a className="text-link" href="/manual">
             <BookOpen size={17} aria-hidden="true" />
             {t('ui.app.manual')}
           </a>
+          <LanguageSelect id="site-language" value={language} onChange={setLanguage} />
         </div>
       </header>
       <main className="login-main">
