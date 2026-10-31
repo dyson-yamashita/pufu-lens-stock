@@ -63,6 +63,9 @@ test('LANG-001 初回言語選択と再読込・別ブラウザー状態・設�
     await app.clearState();
     await browser.setCookies(cookies);
     await app.open('/#profile');
+    // clearState reopens the anonymous base page; a hash-only open reuses it.
+    // Reload so App reads the restored session in a fresh document.
+    await browser.reload();
     await expect(browser.locator('#profile-language')).toHaveValue('en');
     await expect(screen.getByRole('heading', 'Profile', { exact: true })).toBeVisible();
     await expect(browser.locator('html')).toHaveAttribute('lang', 'en');
@@ -102,7 +105,7 @@ test('LANG-001 初回言語選択と再読込・別ブラウザー状態・設�
     await browser.locator('#profile-language').selectOption({ value: 'ja' });
     await browser.locator('.profile-card form button[type="submit"]').click();
     await expect(browser.locator('html')).toHaveAttribute('lang', 'ja');
-    await app.open('/#profile');
+    await browser.reload();
     await expect(browser.locator('#profile-language')).toHaveValue('ja');
     await expect(screen.getByRole('heading', 'プロフィール', { exact: true })).toBeVisible();
     expect((await identity()).user).toMatchObject({ name: 'Language test user', language: 'ja' });
