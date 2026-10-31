@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import App from '../src/App';
 import QuestionPage from '../src/QuestionPage';
+import PufuPage from '../src/PufuPage';
 import XIntegration from '../src/XIntegration';
 import { api, send } from '../src/api';
 import type { Project, Question, Stock } from '../shared/domain';
@@ -121,6 +122,16 @@ beforeEach(() => {
         return { stock };
       case '/api/v1/questions/question':
         return { question, pufus: [] };
+      case '/api/v1/pufus/pufu':
+        return {
+          pufu: {
+            id: 'pufu',
+            task: '検証を進める',
+            status: 'failed',
+            context: { project, question: null, stock: null },
+            is_favorite: 0,
+          },
+        };
       case '/api/v1/comments':
         return { comments: [], has_more: false };
       case '/api/v1/integrations/x':
@@ -136,26 +147,34 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-type Screen = 'project' | 'stock' | 'question' | 'x';
+type Screen = 'project' | 'stock' | 'question' | 'pufu' | 'x';
 async function render(screen: Screen) {
   if (screen === 'project') window.location.hash = '#settings/project';
   await act(async () =>
     root.render(
-      screen === 'x'
-        ? createElement(XIntegration)
-        : screen === 'question'
-          ? createElement(QuestionPage, {
-              id: 'question',
-              resolve: false,
-              projects: [project],
-              onUpdated() {},
-              onBack() {},
-              onResolve() {},
-              onPufu() {},
-              onStock: async () => {},
-              onDeleted,
-            })
-          : createElement(App),
+      screen === 'pufu'
+        ? createElement(PufuPage, {
+            id: 'pufu',
+            onQuestion() {},
+            onBack() {},
+            onGuard() {},
+            onDeleted,
+          })
+        : screen === 'x'
+          ? createElement(XIntegration)
+          : screen === 'question'
+            ? createElement(QuestionPage, {
+                id: 'question',
+                resolve: false,
+                projects: [project],
+                onUpdated() {},
+                onBack() {},
+                onResolve() {},
+                onPufu() {},
+                onStock: async () => {},
+                onDeleted,
+              })
+            : createElement(App),
     ),
   );
   if (screen === 'stock')
@@ -188,6 +207,7 @@ it.each([
   ['project', 'プロジェクトを削除', '/api/v1/projects/project', '調査プロジェクト'],
   ['stock', 'このストックを削除', '/api/v1/stocks/stock', '調べている記事'],
   ['question', '問い・気づきを削除', '/api/v1/questions/question', '何を検証する？'],
+  ['pufu', 'プ譜を削除', '/api/v1/pufus/pufu', '検証を進める'],
   ['x', 'Xの認証情報を削除', '/api/v1/integrations/x', 'X'],
 ] as const)(
   '%s: 削除を通常操作から分離し、対象の確認後だけDELETEを送る',
@@ -216,7 +236,7 @@ it.each([
     await act(async () => button(label, document.querySelector('.delete-confirmation')!).click());
     expect(deletes()).toEqual([[path, { method: 'DELETE' }]]);
     expect(send).not.toHaveBeenCalled();
-    if (screen === 'question') expect(onDeleted).toHaveBeenCalledOnce();
+    if (screen === 'question' || screen === 'pufu') expect(onDeleted).toHaveBeenCalledOnce();
   },
 );
 

@@ -836,6 +836,21 @@ export function createApp(trustedPrincipal?: Principal) {
       },
     });
   });
+  app.delete('/api/v1/pufus/:id', async (c) => {
+    const id = c.req.param('id');
+    const userId = c.get('principal').user.id;
+    const [, deleted] = await c.env.DB.batch([
+      c.env.DB.prepare(
+        "UPDATE processing_jobs SET status='done',error=NULL,updated_at=? WHERE user_id=? AND kind='pufu' AND target_id=? AND status<>'done' AND EXISTS (SELECT 1 FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id WHERE pf.id=? AND pf.user_id=? AND p.user_id=?)",
+      ).bind(now(), userId, id, id, userId, userId),
+      c.env.DB.prepare(
+        'DELETE FROM pufu_scores WHERE id=? AND user_id=? AND EXISTS (SELECT 1 FROM projects WHERE id=pufu_scores.project_id AND user_id=?) RETURNING id',
+      ).bind(id, userId, userId),
+    ]);
+    if (!deleted.results.length)
+      throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
+    return c.json({ ok: true });
+  });
   app.get('/api/v1/pufus', async (c) => {
     const principal = c.get('principal');
     const { user } = principal;

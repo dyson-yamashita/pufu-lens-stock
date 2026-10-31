@@ -13,7 +13,7 @@ export default function PufuFavoriteButton({
   pufu: Favorite;
   onSaved: (saved: Favorite) => void;
   onError: (message: string) => void;
-  onBusyChange: () => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
   useLanguage();
   const [busy, setBusy] = useState(false);
@@ -29,7 +29,7 @@ export default function PufuFavoriteButton({
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        onBusyChange();
+        onBusyChange(true);
         onError('');
         try {
           const saved = await send<Favorite>(
@@ -41,7 +41,7 @@ export default function PufuFavoriteButton({
         } catch (error) {
           onError(applicationError((error as Error).message));
         } finally {
-          onBusyChange();
+          onBusyChange(false);
           setBusy(false);
         }
       }}

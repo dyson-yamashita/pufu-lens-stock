@@ -21,7 +21,7 @@ vi.mock('../src/PufuEditor', () => ({
   }: {
     pufu: { revision: number };
     onEditingStateChange?: (blocked: boolean) => void;
-    onSaved?: (revision: number) => void;
+    onSaved?: (revision: number, task?: string) => void;
   }) => {
     useEffect(() => {
       onEditingStateChange?.(false);
@@ -35,7 +35,7 @@ vi.mock('../src/PufuEditor', () => ({
         'button',
         {
           onClick: () => {
-            onSaved?.(2);
+            onSaved?.(2, '保存後の課題');
             onEditingStateChange?.(false);
           },
         },
@@ -237,6 +237,7 @@ it('プ譜の関連保存で複数の問いとストックを送り、新revisio
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -265,6 +266,7 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
@@ -272,7 +274,10 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
       }),
     ),
   );
+  const deleteButton = document.querySelector<HTMLButtonElement>('.delete-action button')!;
+  expect(deleteButton.disabled).toBe(false);
   await click('編集を開始');
+  expect(deleteButton.disabled).toBe(true);
   const save = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
     (item) => item.textContent === '関連を保存',
   )!;
@@ -281,6 +286,8 @@ it('プ譜編集中は関連保存を防ぎ、編集を保存した後は最新r
   await submit();
   expect(send).not.toHaveBeenCalled();
   await click('編集を保存して閉じる');
+  expect(deleteButton.disabled).toBe(false);
+  expect(document.querySelector('.pufu-context-task p')?.textContent).toBe('保存後の課題');
   await submit();
   expect(send).toHaveBeenCalledWith(
     '/api/v1/pufus/pufu/relations',
@@ -293,6 +300,7 @@ it('関連保存後の取得に失敗した場合は編集を止め、書き込�
   await act(async () =>
     root.render(
       createElement(PufuPage, {
+        onDeleted: vi.fn(),
         id: 'pufu',
         onQuestion: vi.fn(),
         onBack: vi.fn(),
