@@ -4,7 +4,7 @@ import type { Env } from './env';
 import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp-oauth';
 import { handleMcp } from './mcp';
 import { publicPagesApp } from './public-pages';
-import { legalLanguageResponse } from './legal-language';
+import { publicDocumentRoutes } from '../shared/public-document-routes';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { AppEnv } from './env';
@@ -28,14 +28,24 @@ entry.use(
   '/oauth/*',
   bodyLimit({ maxSize: 16384, onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413) }),
 );
-entry.on(['GET', 'HEAD'], ['/privacy', '/privacy/', '/terms', '/terms/'], async (c) => {
-  return (await legalLanguageResponse(c.req.raw, c.env)) ?? c.notFound();
-});
 const publicPages = publicPagesApp();
-entry.on(['GET', 'HEAD'], ['/p/*', '/robots.txt', '/sitemap.xml', '/sitemaps/*'], (c) =>
-  publicPages.fetch(c.req.raw, c.env, c.executionCtx),
+// Keep these aligned with wrangler.jsonc assets.run_worker_first (see shared/public-document-routes.ts).
+entry.on(
+  ['GET', 'HEAD'],
+  [...publicDocumentRoutes, '/p/*', '/robots.txt', '/sitemap.xml', '/sitemaps/*'],
+  (c) => publicPages.fetch(c.req.raw, c.env, c.executionCtx),
 );
 entry.all('*', (c) => {
+  // Unknown non-API navigations become hard 404s with the same document secure headers.
+  if (
+    ['GET', 'HEAD'].includes(c.req.method) &&
+    !c.req.path.startsWith('/api/') &&
+    c.req.path !== '/mcp' &&
+    !c.req.path.startsWith('/oauth/') &&
+    !c.req.path.startsWith('/.well-known/')
+  ) {
+    return publicPages.fetch(c.req.raw, c.env, c.executionCtx);
+  }
   if (!c.env.OAUTH_KV) {
     if (c.req.method === 'GET' && c.req.path === '/api/v1/mcp/connections')
       return mcpAuthorizationApp.fetch(c.req.raw, c.env, c.executionCtx);

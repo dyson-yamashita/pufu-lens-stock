@@ -5,8 +5,12 @@ import {
   initializeLanguage,
   applyAccountLanguage,
   useLanguage,
+  setLanguage as persistLanguage,
+  homeHref,
+  manualHref,
 } from './i18n';
 import LanguageSelect from './LanguageSelect';
+import type { Language } from '../shared/locale';
 import {
   useCallback,
   useEffect,
@@ -267,7 +271,7 @@ function FormError({ error }: { error: string }) {
 }
 function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<void> }) {
   useLanguage();
-  const { language, setLanguage } = useLanguage();
+  const { language } = useLanguage();
   const withdrawn = new URLSearchParams(window.location.search).get('withdrawn');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(
@@ -275,17 +279,26 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
       ? t('ui.app.google_sign_in_could_not_be_completed_please_try')
       : '',
   );
+  const onLanguageChange = (next: Language) => {
+    persistLanguage(next);
+    const target = homeHref(next);
+    const current = window.location.pathname.replace(/\/$/, '') || '/';
+    const normalized = target.replace(/\/$/, '') || '/';
+    if (current !== normalized && typeof window.location.assign === 'function') {
+      window.location.assign(target);
+    }
+  };
   return (
     <div className="login-page">
       <header>
         <Brand />
         <div className="login-header-links">
           <span className="login-caption">{t('ui.app.read_collect_connect')}</span>
-          <a className="text-link" href="/manual">
+          <a className="text-link" href={manualHref(language)}>
             <BookOpen size={17} aria-hidden="true" />
             {t('ui.app.manual')}
           </a>
-          <LanguageSelect id="site-language" value={language} onChange={setLanguage} />
+          <LanguageSelect id="site-language" value={language} onChange={onLanguageChange} />
         </div>
       </header>
       <main className="login-main">
@@ -942,7 +955,7 @@ export default function App() {
         <div className="sidebar-bottom">
           <a
             className="nav-item"
-            href="/manual"
+            href={manualHref()}
             target="_blank"
             rel="noreferrer"
             aria-label={t('ui.app.user_manual_opens_in_a_new_tab')}

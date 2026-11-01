@@ -1,6 +1,13 @@
 import { createInstance } from 'i18next';
 import { useSyncExternalStore } from 'react';
 import { browserLanguage, languages, resolveLanguage, type Language } from '../shared/locale';
+import {
+  homePath,
+  legalPath,
+  manualPath,
+  pathLanguage,
+  type LegalPage,
+} from '../shared/site-paths';
 import { ja } from './locales/ja';
 import { en } from './locales/en';
 import { errorKeys } from './locales/error-keys';
@@ -41,8 +48,14 @@ export function getLanguage(): Language {
 export function intlLocale(): string {
   return languages[getLanguage()].intlLocale;
 }
-export function legalHref(page: 'privacy' | 'terms', language = getLanguage()): string {
-  return language === 'ja' ? `/${page}?lang=ja` : `/${language}/${page}`;
+export function legalHref(page: LegalPage, language = getLanguage()): string {
+  return legalPath(page, language);
+}
+export function homeHref(language = getLanguage()): string {
+  return homePath(language);
+}
+export function manualHref(language = getLanguage()): string {
+  return manualPath(language);
 }
 function updateDocument(language: Language) {
   if (typeof document === 'undefined') return;
@@ -53,7 +66,18 @@ function updateDocument(language: Language) {
     .querySelector('meta[name="description"]')
     ?.setAttribute('content', translateUi(language, 'site.description'));
 }
+/** Build-time / SSR language for static markup (Node has no window). */
+export function setServerLanguage(language: Language): void {
+  serverStore.language = resolveLanguage(language);
+}
 export function initializeLanguage(): Language {
+  // Public language URLs win over browser/localStorage so crawlers and shared links stay stable.
+  const fromPath = typeof window === 'undefined' ? null : pathLanguage(window.location.pathname);
+  if (fromPath) {
+    store().language = fromPath;
+    updateDocument(fromPath);
+    return fromPath;
+  }
   let saved: unknown;
   try {
     saved = window.localStorage.getItem(languagePreferenceKey);
@@ -70,10 +94,12 @@ export function initializeLanguage(): Language {
 export function setLanguage(language: Language): void {
   const current = store();
   current.language = resolveLanguage(language);
-  try {
-    window.localStorage.setItem(languagePreferenceKey, current.language);
-  } catch {
-    /* Best effort for anonymous pages. */
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(languagePreferenceKey, current.language);
+    } catch {
+      /* Best effort for anonymous pages. */
+    }
   }
   updateDocument(current.language);
   for (const listener of current.listeners) listener();
@@ -91,7 +117,7 @@ const subscribe = (listener: () => void) => {
   };
 };
 export function useLanguage(): { language: Language; setLanguage: typeof setLanguage } {
-  const language = useSyncExternalStore(subscribe, getLanguage, () => 'ja' as Language);
+  const language = useSyncExternalStore(subscribe, getLanguage, getLanguage);
   return { language, setLanguage };
 }
 export function t(message: string, values: Record<string, string | number> = {}): string {

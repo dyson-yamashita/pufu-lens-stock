@@ -13,8 +13,19 @@
   "assets": {
     "binding": "ASSETS",
     "directory": "dist/client",
-    "not_found_handling": "single-page-application",
+    // Document HTML/text routes must match shared/public-document-routes.ts so secureHeaders apply.
+    // /en/* covers /en/manual, /en/privacy, /en/terms (and unknown /en/... → Worker 404).
     "run_worker_first": [
+      "/",
+      "/en",
+      "/en/*",
+      "/manual",
+      "/manual/",
+      "/privacy",
+      "/privacy/",
+      "/terms",
+      "/terms/",
+      "/llms.txt",
       "/p/*",
       "/robots.txt",
       "/sitemap.xml",
@@ -23,10 +34,6 @@
       "/mcp",
       "/oauth/*",
       "/.well-known/*",
-      "/privacy",
-      "/privacy/",
-      "/terms",
-      "/terms/",
     ],
   },
   "d1_databases": [
