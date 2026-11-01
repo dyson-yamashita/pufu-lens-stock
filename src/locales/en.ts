@@ -496,6 +496,11 @@ export const en: Record<string, string> = {
   'ui.public_projects.stocks': ' stocks',
   'ui.public_projects.questions_insights': ' questions & insights',
   'ui.public_projects.no_public_projects_yet': 'No public projects yet.',
+  'ui.public_projects.allow_search_indexing': 'Allow search engine indexing',
+  'ui.public_projects.search_indexing_help':
+    'Off by default. When on, this project and its public questions and Pufu are submitted for discovery, including later additions and edits. Anyone with the URL can still view public content when off. Search inclusion is not guaranteed; results and third-party copies may remain after turning this off.',
+  'ui.public_projects.search_indexing_confirmation':
+    'I understand that allowing indexing lets search engines and AI search reference public content, and external copies may remain after permission is withdrawn.',
   'ui.public_projects.publication_settings': 'Publication settings',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     'Publication settings saved. The project is also listed on the home page.',
@@ -863,6 +868,8 @@ export const en: Record<string, string> = {
     'YouTube contributes to memory only when you write a note; only that note is used. Video content, captions and metadata are not used. Memory updates when notes are added, edited or removed, and does not update merely from saving a URL or viewing or playing a video.',
   'ui.user_manual.to_exclude_a_project_from_your_user_memory_turn':
     "To exclude a project from your user memory, turn off Update your memory when adding stocks during creation or under Settings → Advanced settings. It is on by default. Project memory still updates, but later user-memory updates also exclude that project's articles.",
+  'ui.user_manual.public_search_indexing':
+    'To help people discover a project through search, turn on Allow search engine indexing in Publication settings, save, and review the confirmation. It is off by default and also applies to later additions and edits. Public URLs remain accessible when indexing is off. Inclusion is not guaranteed, and search results or external copies may remain after permission is withdrawn. Making a project private also turns indexing permission off.',
   'ui.user_manual.open_settings_for_the_project_you_want_to_share':
     'Open Settings for the project you want to share.',
   'ui.user_manual.in_publication_settings_enable_publishing_enter_a_public_introduction':

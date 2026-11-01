@@ -39,14 +39,19 @@
       "src/PublicPufuScore.tsx",
       "src/PufuImagePreview.tsx",
       "server/public-projects.ts",
-      "server/privacy.ts"
+      "server/privacy.ts",
+      "server/public-pages.ts",
+      "shared/public-route.ts"
     ],
     "aspects": [
       "確認前は匿名で取得できない",
       "確認後に匿名で閲覧できる",
       "公開プ譜タブから詳細を開いて一覧へ戻る",
       "公開プ譜の関連ストックと問いの個別開閉、前後の局面移動、画像・本文の切り替えと拡大、進捗非表示",
-      "非公開化後は匿名で取得できない"
+      "非公開化後は匿名で取得できない",
+      "検索掲載の初期OFFと確認後の有効化",
+      "直接URLの初期HTML・no-store・固有メタ情報とサイトマップ",
+      "非公開化後のHTML本文・サイトマップの配信停止"
     ]
   },
   {

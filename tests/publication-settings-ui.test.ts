@@ -30,6 +30,7 @@ beforeEach(() => {
   });
   publication = {
     is_public: false,
+    search_indexable: false,
     public_id: null,
     public_description: '公開用の紹介文',
     published_at: null,
@@ -115,7 +116,7 @@ it('公開への変更は3項目すべてを確認してOKを押した後だけ�
   await act(async () => button('OK', confirmation).click());
   expect(send).toHaveBeenCalledExactlyOnceWith(
     '/api/v1/projects/project/publication',
-    { is_public: true, public_description: '公開用の紹介文' },
+    { is_public: true, search_indexable: false, public_description: '公開用の紹介文' },
     'PATCH',
   );
   expect(document.querySelector('dialog')).toBeNull();
@@ -197,7 +198,7 @@ it.each([false, true])(
     expect(document.querySelector('dialog')).toBeNull();
     expect(send).toHaveBeenCalledExactlyOnceWith(
       '/api/v1/projects/project/publication',
-      { is_public: isPublic, public_description: '公開用の紹介文' },
+      { is_public: isPublic, search_indexable: false, public_description: '公開用の紹介文' },
       'PATCH',
     );
   },
@@ -212,11 +213,30 @@ it('非公開への変更はすぐ保存し、再公開するときは改めて�
   expect(document.querySelector('dialog')).toBeNull();
   expect(send).toHaveBeenCalledExactlyOnceWith(
     '/api/v1/projects/project/publication',
-    { is_public: false, public_description: '公開用の紹介文' },
+    { is_public: false, search_indexable: false, public_description: '公開用の紹介文' },
     'PATCH',
   );
   expect(document.querySelector('.publication-url')).toBeNull();
   await startPublishing();
   expect(button('OK', dialog()).disabled).toBe(true);
   expect(send).toHaveBeenCalledTimes(1);
+});
+
+it('検索掲載は公開と別に選択し、既に公開済みでも有効化時に確認する', async () => {
+  publication.is_public = true;
+  publication.public_id = 'public-project';
+  await render();
+  const search = document.querySelector<HTMLInputElement>('[data-search-indexable]')!;
+  expect(search.checked).toBeFalsy();
+  await toggle(search);
+  await submit();
+  expect(send).not.toHaveBeenCalled();
+  expect(dialog().textContent).toContain('検索');
+  await confirmAll();
+  await act(async () => button('OK', dialog()).click());
+  expect(send).toHaveBeenCalledExactlyOnceWith(
+    '/api/v1/projects/project/publication',
+    { is_public: true, search_indexable: true, public_description: '公開用の紹介文' },
+    'PATCH',
+  );
 });

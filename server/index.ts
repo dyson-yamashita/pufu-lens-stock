@@ -3,6 +3,7 @@ import { scheduledMaintenance } from './jobs';
 import type { Env } from './env';
 import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp-oauth';
 import { handleMcp } from './mcp';
+import { publicPagesApp } from './public-pages';
 import { legalLanguageResponse } from './legal-language';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -30,6 +31,10 @@ entry.use(
 entry.on(['GET', 'HEAD'], ['/privacy', '/privacy/', '/terms', '/terms/'], async (c) => {
   return (await legalLanguageResponse(c.req.raw, c.env)) ?? c.notFound();
 });
+const publicPages = publicPagesApp();
+entry.on(['GET', 'HEAD'], ['/p/*', '/robots.txt', '/sitemap.xml', '/sitemaps/*'], (c) =>
+  publicPages.fetch(c.req.raw, c.env, c.executionCtx),
+);
 entry.all('*', (c) => {
   if (!c.env.OAUTH_KV) {
     if (c.req.method === 'GET' && c.req.path === '/api/v1/mcp/connections')

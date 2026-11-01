@@ -1,3 +1,4 @@
+import { publicHref, publicHash, publicPathPattern } from '../shared/public-route';
 import { pufuDisplayTitle } from '../shared/pufu';
 import { applicationError, t, intlLocale, useLanguage } from './i18n';
 import {
@@ -56,6 +57,10 @@ const PublicPufuScore = lazy(async () => {
     };
   }
 });
+function publicLink(hash: string) {
+  const route = publicPathPattern.exec(window.location.pathname ?? '');
+  return route ? publicHref(`/p/${route[1]}`, hash) : hash;
+}
 function useResource<T>(path: string) {
   const [state, setState] = useState<{
     path: string;
@@ -102,6 +107,10 @@ function PublicBrand() {
     </a>
   );
 }
+function initialPublicPage() {
+  const value = Number(new URLSearchParams(window.location.search ?? '').get('page'));
+  return Number.isInteger(value) && value >= 1 && value <= 5000 ? value : 1;
+}
 function Pagination({
   page,
   hasMore,
@@ -113,13 +122,23 @@ function Pagination({
 }) {
   useLanguage();
   if (page === 1 && !hasMore) return null;
+  const change = (next: number) => {
+    const route = publicPathPattern.exec(window.location.pathname ?? '');
+    if (route) {
+      const url = new URL(window.location.href);
+      if (next === 1) url.searchParams.delete('page');
+      else url.searchParams.set('page', String(next));
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+    onChange(next);
+  };
   return (
     <nav className="public-pagination" aria-label={t('ui.public_projects.pagination')}>
-      <button className="button secondary" disabled={page === 1} onClick={() => onChange(page - 1)}>
+      <button className="button secondary" disabled={page === 1} onClick={() => change(page - 1)}>
         {t('ui.app.previous')}
       </button>
       <span>{t('pagination.page', { page })}</span>
-      <button className="button secondary" disabled={!hasMore} onClick={() => onChange(page + 1)}>
+      <button className="button secondary" disabled={!hasMore} onClick={() => change(page + 1)}>
         {t('ui.app.next')}
       </button>
     </nav>
@@ -127,7 +146,7 @@ function Pagination({
 }
 export function PublicProjectDirectory() {
   useLanguage();
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPublicPage);
   const { data, error, reload } = useResource<PublicList<PublicProject>>(
     `/api/public/projects?page=${page}`,
   );
@@ -216,6 +235,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
   const id = useId();
   const [saved, setSaved] = useState(initial);
   const [enabled, setEnabled] = useState(initial.is_public);
+  const [searchIndexable, setSearchIndexable] = useState(initial.search_indexable ?? false);
   const [description, setDescription] = useState(initial.public_description);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -235,10 +255,15 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         publication: Publication;
       }>(
         `/api/v1/projects/${encodeURIComponent(projectId)}/publication`,
-        { is_public: enabled, public_description: description },
+        {
+          is_public: enabled,
+          search_indexable: enabled && searchIndexable,
+          public_description: description,
+        },
         'PATCH',
       );
       setSaved(result.publication);
+      setSearchIndexable(result.publication.search_indexable ?? false);
       setDescription(result.publication.public_description);
       setConfirming(false);
       setMessage(
@@ -261,7 +286,8 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
           if (inFlight.current || confirming) return;
           setError('');
           setMessage('');
-          if (enabled && !saved.is_public) setConfirming(true);
+          if (enabled && (!saved.is_public || (searchIndexable && !saved.search_indexable)))
+            setConfirming(true);
           else void save();
         }}
       >
@@ -275,6 +301,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
             disabled={busy}
             onChange={(e) => {
               setEnabled(e.target.checked);
+              if (!e.target.checked) setSearchIndexable(false);
               setMessage('');
             }}
             aria-describedby={`${id}-scope`}
@@ -282,6 +309,21 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         </label>
         <p className="public-help" id={`${id}-scope`}>
           {t('ui.public_projects.publishing_creates_a_url_viewable_without_sign_in_and')}
+        </p>
+        <label className="project-memory-toggle" htmlFor={`${id}-search`}>
+          <span>{t('ui.public_projects.allow_search_indexing')}</span>
+          <input
+            id={`${id}-search`}
+            type="checkbox"
+            data-search-indexable
+            checked={searchIndexable}
+            disabled={busy || !enabled}
+            onChange={(e) => setSearchIndexable(e.target.checked)}
+            aria-describedby={`${id}-search-help`}
+          />
+        </label>
+        <p className="public-help" id={`${id}-search-help`}>
+          {t('ui.public_projects.search_indexing_help')}
         </p>
         <div className="publication-scope">
           <strong>{t('ui.public_projects.what_will_be_published')}</strong>
@@ -366,6 +408,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
       {confirming && (
         <PublicationConfirmation
           triggerRef={saveRef}
+          searchIndexable={searchIndexable}
           busy={busy}
           error={error}
           onClose={() => {
@@ -386,12 +429,14 @@ const publicationChecks = () => [
 ];
 function PublicationConfirmation({
   triggerRef,
+  searchIndexable,
   busy,
   error,
   onClose,
   onConfirm,
 }: {
   triggerRef: RefObject<HTMLButtonElement | null>;
+  searchIndexable: boolean;
   busy: boolean;
   error: string;
   onClose: () => void;
@@ -431,6 +476,9 @@ function PublicationConfirmation({
       <p id={`${id}-intro`} className="public-help">
         {t('ui.public_projects.review_the_content_for_safe_sharing_check_every_box')}
       </p>
+      {searchIndexable && (
+        <p className="public-help">{t('ui.public_projects.search_indexing_confirmation')}</p>
+      )}
       <div className="publication-checks">
         {publicationChecks().map((text, index) => (
           <label key={text} className="publication-check">
@@ -494,7 +542,7 @@ function StockCard({ stock }: { stock: PublicStock }) {
   return (
     <a
       className="public-content-card public-stock-card"
-      href={`#stock/${encodeURIComponent(stock.id)}`}
+      href={publicLink(`#stock/${encodeURIComponent(stock.id)}`)}
     >
       <p className="public-meta">
         <BookOpen size={16} aria-hidden="true" />
@@ -568,7 +616,7 @@ function PublicQuestionCard({ question }: { question: PublicQuestion }) {
   return (
     <a
       className="public-content-card public-question-card"
-      href={`#question/${encodeURIComponent(question.id)}`}
+      href={publicLink(`#question/${encodeURIComponent(question.id)}`)}
     >
       <QuestionLabels
         question={{ source: question.source, has_pufu: question.pufu_count > 0 ? 1 : 0 }}
@@ -594,7 +642,7 @@ function PublicQuestionCard({ question }: { question: PublicQuestion }) {
 }
 function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
   useLanguage();
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPublicPage);
   const { data, error, reload } = useResource<PublicStockDetail>(
     `${root}/stocks/${encodeURIComponent(id)}?page=${page}`,
   );
@@ -602,7 +650,7 @@ function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
     <ResourceState error={error} retry={reload} />
   ) : (
     <section aria-label={t('ui.public_projects.stock_details')}>
-      <a className="text-link" href="#stocks">
+      <a className="text-link" href={publicLink('#stocks')}>
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_stocks')}
       </a>
@@ -686,7 +734,7 @@ function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
           <a
             className="public-content-card public-pufu-card"
             key={pufu.id}
-            href={`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`}
+            href={publicLink(`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`)}
           >
             <h3>{pufuDisplayTitle(pufu)}</h3>
             <p className="public-help">
@@ -719,7 +767,7 @@ function PublicQuestionDetail({
   projectName: string;
 }) {
   useLanguage();
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPublicPage);
   const { data, error, reload } = useResource<{
     question: PublicQuestion;
     stock: PublicStock | null;
@@ -734,7 +782,7 @@ function PublicQuestionDetail({
       className="question-detail-page public-question-detail"
       aria-label={t('ui.public_projects.question_or_insight_details')}
     >
-      <a className="back-link" href="#questions">
+      <a className="back-link" href={publicLink('#questions')}>
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_questions_insights')}
       </a>
@@ -760,7 +808,7 @@ function PublicQuestionDetail({
         <h3 className="question-text">{data.question.text}</h3>
         {(data.question.stocks ?? (data.stock ? [data.stock] : [])).map((stock) => (
           <div className="question-detail-source" key={stock.id}>
-            <a href={`#stock/${encodeURIComponent(stock.id)}`}>
+            <a href={publicLink(`#stock/${encodeURIComponent(stock.id)}`)}>
               <BookOpen size={17} aria-hidden="true" />
               <span>{stock.title}</span>
               <ArrowRight size={16} aria-hidden="true" />
@@ -793,7 +841,7 @@ function PublicQuestionDetail({
             <a
               className="pufu-list-item"
               key={pufu.id}
-              href={`#pufu/${encodeURIComponent(pufu.id)}`}
+              href={publicLink(`#pufu/${encodeURIComponent(pufu.id)}`)}
             >
               <span>
                 <strong>{pufuDisplayTitle(pufu)}</strong>
@@ -817,7 +865,7 @@ function PublicQuestionDetail({
           <StockDetails stock={stock} heading="h4" />
           <a
             className="text-link public-detail-link"
-            href={`#stock/${encodeURIComponent(stock.id)}`}
+            href={publicLink(`#stock/${encodeURIComponent(stock.id)}`)}
           >
             {t('ui.public_projects.view_stock_details_2')}
             <ArrowRight size={16} aria-hidden="true" />
@@ -829,7 +877,10 @@ function PublicQuestionDetail({
 }
 function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fromList: boolean }) {
   useLanguage();
-  const [selectedPhase, setSelectedPhase] = useState<number>();
+  const [selectedPhase, setSelectedPhase] = useState<number | undefined>(() => {
+    const value = new URLSearchParams(window.location.search ?? '').get('phase');
+    return value && /^[1-9]\d*$/.test(value) ? Number(value) : undefined;
+  });
   const { data, error, reload } = useResource<{
     pufu: PublicPufu;
   }>(
@@ -842,13 +893,13 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
     <section>
       <a
         className="text-link"
-        href={
+        href={publicLink(
           fromList
             ? '#pufus'
             : data.pufu.question_id
               ? `#question/${encodeURIComponent(data.pufu.question_id)}`
-              : '#questions'
-        }
+              : '#questions',
+        )}
       >
         <ArrowLeft size={16} aria-hidden="true" />
         {fromList
@@ -876,7 +927,10 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
                   : [])
               ).map((question) => (
                 <li key={question.id}>
-                  <a className="text-link" href={`#question/${encodeURIComponent(question.id)}`}>
+                  <a
+                    className="text-link"
+                    href={publicLink(`#question/${encodeURIComponent(question.id)}`)}
+                  >
                     {question.text}
                   </a>
                 </li>
@@ -890,7 +944,10 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
             <ul className="pufu-context-questions">
               {data.pufu.stocks?.map((stock) => (
                 <li key={stock.id}>
-                  <a className="text-link" href={`#stock/${encodeURIComponent(stock.id)}`}>
+                  <a
+                    className="text-link"
+                    href={publicLink(`#stock/${encodeURIComponent(stock.id)}`)}
+                  >
                     {stock.title}
                   </a>
                 </li>
@@ -945,13 +1002,21 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
   const { data, error, reload } = useResource<{
     project: PublicProjectDetail;
   }>(root);
-  const [hash, setHash] = useState(window.location.hash);
-  const [stockPage, setStockPage] = useState(1);
-  const [questionPage, setQuestionPage] = useState(1);
-  const [pufuPage, setPufuPage] = useState(1);
+  const [hash, setHash] = useState(
+    publicHash(window.location.pathname ?? '', window.location.search ?? '', window.location.hash),
+  );
+  const [stockPage, setStockPage] = useState(initialPublicPage);
+  const [questionPage, setQuestionPage] = useState(initialPublicPage);
+  const [pufuPage, setPufuPage] = useState(initialPublicPage);
   useEffect(() => {
     const listener = () => {
-      setHash(window.location.hash);
+      setHash(
+        publicHash(
+          window.location.pathname ?? '',
+          window.location.search ?? '',
+          window.location.hash,
+        ),
+      );
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', listener);
@@ -1011,7 +1076,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
             )}
             <nav className="public-tabs" aria-label={t('ui.public_projects.public_projects')}>
               <a
-                href="#stocks"
+                href={publicLink('#stocks')}
                 aria-current={
                   match?.[1] === 'stock' || (!match && !['#questions', '#pufus'].includes(hash))
                     ? 'page'
@@ -1023,7 +1088,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 <span>{data.project.stock_count}</span>
               </a>
               <a
-                href="#questions"
+                href={publicLink('#questions')}
                 aria-current={
                   hash === '#questions' || match?.[1] === 'question' ? 'page' : undefined
                 }
@@ -1033,7 +1098,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 <span>{data.project.question_count}</span>
               </a>
               <a
-                href="#pufus"
+                href={publicLink('#pufus')}
                 aria-current={hash === '#pufus' || match?.[1] === 'pufu' ? 'page' : undefined}
               >
                 <Network size={18} aria-hidden="true" />

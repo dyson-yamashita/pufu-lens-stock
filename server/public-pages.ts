@@ -1,0 +1,263 @@
+import { Hono, type Context } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import { secureHeaders } from 'hono/secure-headers';
+import type { AppEnv } from './env';
+import { publicProjectsApp, publicPufuWhere, publicQuestionWhere } from './public-projects';
+import type {
+  PublicProjectDetail,
+  PublicList,
+  PublicStock,
+  PublicQuestion,
+  PublicPufu,
+  PublicPufuSummary,
+  PublicStockDetail,
+} from '../shared/public-project';
+import { elementKeys, pufuDisplayTitle, type PufuScore } from '../shared/pufu';
+import { publicPathPattern } from '../shared/public-route';
+
+const publicApi = publicProjectsApp();
+const sitemapSize = 1000;
+const escape = (value: unknown) =>
+  String(value ?? '').replace(
+    /[&<>"']/g,
+    (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!,
+  );
+const link = (href: string, text: string) => `<a href="${escape(href)}">${escape(text)}</a>`;
+const paragraph = (text: string) => `<p>${escape(text)}</p>`;
+function pageNumber(value: string | undefined) {
+  const page = value === undefined ? 1 : Number(value);
+  if (!Number.isInteger(page) || page < 1 || page > 5000) throw new HTTPException(400);
+  return page;
+}
+async function readPublic<T>(c: Context<AppEnv>, path: string): Promise<T> {
+  // Process-local call: no network, session, private API, or generation context.
+  const response = await publicApi.request(
+    new URL(`/projects/${path}`, c.env.APP_URL),
+    {},
+    c.env,
+    c.executionCtx,
+  );
+  if (!response.ok)
+    throw new HTTPException(response.status === 404 ? 404 : response.status === 400 ? 400 : 500);
+  return response.json() as Promise<T>;
+}
+function stockText(stock: PublicStock) {
+  const source =
+    stock.source_url && /^https?:\/\//i.test(stock.source_url)
+      ? link(stock.source_url, '出典を読む')
+      : '';
+  return `<article><h2>${escape(stock.title)}</h2>${paragraph(stock.summary?.overview ?? '')}<ul>${stock.summary?.keyPoints.map((point) => `<li>${escape(point)}</li>`).join('') ?? ''}</ul>${source}</article>`;
+}
+function pufuText(score: PufuScore) {
+  const labels = ['人員', '予算', '時間', '品質', '商流', '環境', '競合', '外敵'];
+  const nodes = [
+    { label: '獲得目標', node: score.gainingGoal },
+    { label: '勝利条件', node: score.winCondition },
+    ...elementKeys.map((key, i) => ({ label: labels[i], node: score.elements[key] })),
+    ...score.purposes.flatMap((purpose, i) => [
+      { label: `中間目的 ${i + 1}`, node: purpose },
+      ...purpose.measures.map((node, j) => ({ label: `施策 ${i + 1}.${j + 1}`, node })),
+    ]),
+  ];
+  return `<dl>${nodes.map(({ label, node }) => `<dt>${label}</dt><dd>${paragraph(node.text)}${node.comment.text ? paragraph(node.comment.text) : ''}</dd>`).join('')}</dl>`;
+}
+function pagination(base: string, view: string, page: number, hasMore: boolean) {
+  const href = (n: number) => `${base}?view=${view}&page=${n}`;
+  return `<nav aria-label="ページ切替">${page > 1 ? link(href(page - 1), '前へ') : ''} ${hasMore ? link(href(page + 1), '次へ') : ''}</nav>`;
+}
+function errorPage(status: number, method: string) {
+  const text =
+    status === 404
+      ? '公開されているページが見つかりません。'
+      : status === 400
+        ? 'URLを確認してください。'
+        : 'ページを取得できませんでした。';
+  return new Response(
+    method === 'HEAD'
+      ? null
+      : `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="robots" content="noindex, follow"><title>${text}</title><body><main><h1>${text}</h1>${link('/', 'Pufu Lens')}</main></body></html>`,
+    {
+      status,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex, follow',
+      },
+    },
+  );
+}
+
+async function projectPage(c: Context<AppEnv>) {
+  const match = publicPathPattern.exec(c.req.path);
+  if (!match) throw new HTTPException(404);
+  const [, key, kind, id] = match;
+  const base = `/p/${key}`;
+  const { project } = await readPublic<{ project: PublicProjectDetail }>(c, key);
+  const page = pageNumber(c.req.query('page'));
+  const query = new URLSearchParams();
+  let title = project.name;
+  let description = project.public_description || project.name;
+  let content = '';
+  if (kind === 'pufus') {
+    const phase = c.req.query('phase');
+    const { pufu } = await readPublic<{ pufu: PublicPufu }>(
+      c,
+      `${key}/pufus/${id}${phase === undefined ? '' : `?phase=${encodeURIComponent(phase)}`}`,
+    );
+    title = `${pufuDisplayTitle(pufu)} | ${project.name}`;
+    description = pufu.task;
+    content = `<h2>${escape(pufuDisplayTitle(pufu))}</h2>${paragraph(pufu.task)}<p>第${pufu.phase}局面</p>${pufuText(pufu.score)}<h2>関連する問い</h2><ul>${(pufu.questions ?? []).map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>`;
+  } else if (kind === 'questions') {
+    const result = await readPublic<{
+      question: PublicQuestion;
+      stocks: PublicStock[];
+      pufus: PublicPufuSummary[];
+      has_more: boolean;
+    }>(c, `${key}/questions/${id}?page=${page}`);
+    title = `${result.question.text} | ${project.name}`;
+    description = result.question.text;
+    content = `<h2>${escape(result.question.text)}</h2><h3>関連するストック</h3><ul>${result.stocks.map((s) => `<li>${link(`${base}/stocks/${encodeURIComponent(s.id)}`, s.title)}</li>`).join('')}</ul><h3>関連するプ譜</h3><ul>${result.pufus.map((p) => `<li>${link(`${base}/pufus/${encodeURIComponent(p.id)}`, pufuDisplayTitle(p))}</li>`).join('')}</ul>${pagination(`${base}/questions/${id}`, 'questions', page, result.has_more)}`;
+  } else if (kind === 'stocks') {
+    const result = await readPublic<PublicStockDetail>(c, `${key}/stocks/${id}?page=${page}`);
+    title = `${result.stock.title} | ${project.name}`;
+    description = result.stock.summary?.overview || result.stock.title;
+    content = `${stockText(result.stock)}<h3>関連する問い</h3><ul>${result.questions.map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>${pagination(`${base}/stocks/${id}`, 'stocks', page, result.has_more)}`;
+  } else {
+    const view = c.req.query('view') ?? 'stocks';
+    if (!['stocks', 'questions', 'pufus'].includes(view)) throw new HTTPException(400);
+    if (view !== 'stocks') query.set('view', view);
+    if (view === 'pufus') {
+      const result = await readPublic<PublicList<PublicPufuSummary>>(
+        c,
+        `${key}/pufus?page=${page}`,
+      );
+      content = `<h2>プ譜</h2><ul>${result.items.map((p) => `<li>${link(`${base}/pufus/${encodeURIComponent(p.id)}`, pufuDisplayTitle(p))}</li>`).join('')}</ul>${pagination(base, view, page, result.has_more)}`;
+    } else if (view === 'questions') {
+      const result = await readPublic<PublicList<PublicQuestion>>(
+        c,
+        `${key}/questions?page=${page}`,
+      );
+      content = `<h2>問い・気づき</h2><ul>${result.items.map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>${pagination(base, view, page, result.has_more)}`;
+    } else {
+      const result = await readPublic<PublicList<PublicStock>>(c, `${key}/stocks?page=${page}`);
+      content = `<h2>ストック</h2>${result.items.map((s) => `${link(`${base}/stocks/${encodeURIComponent(s.id)}`, s.title)}${stockText(s)}`).join('')}${pagination(base, view, page, result.has_more)}`;
+    }
+  }
+  if (page > 1) query.set('page', String(page));
+  const canonical = new URL(
+    `${base}${kind ? `/${kind}/${id}` : ''}${query.size ? `?${query}` : ''}`,
+    c.env.APP_URL,
+  ).href;
+  const indexable =
+    Boolean(project.search_indexable) && kind !== 'stocks' && c.req.query('phase') === undefined;
+  const robots = indexable ? 'index, follow' : 'noindex, follow';
+  const fullTitle = `${title} | Pufu Lens`;
+  const shortDescription = description.replace(/\s+/g, ' ').slice(0, 200);
+  const meta = `<meta name="robots" content="${robots}"><link rel="canonical" href="${escape(canonical)}"><meta property="og:type" content="${kind ? 'article' : 'website'}"><meta property="og:site_name" content="Pufu Lens"><meta property="og:title" content="${escape(fullTitle)}"><meta property="og:description" content="${escape(shortDescription)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:image" content="${escape(new URL('/pufu-lens-logo.png', c.env.APP_URL).href)}">`;
+  if (!c.env.ASSETS) throw new Error('Public assets binding unavailable');
+  const assets = await c.env.ASSETS.fetch(new Request(new URL('/', c.env.APP_URL)));
+  if (!assets.ok) throw new Error('Public HTML template unavailable');
+  const template = await assets.text();
+  const root = /<!--public-root-start-->[\s\S]*?<!--public-root-end-->/;
+  if (!root.test(template)) throw new Error('Public HTML template markers unavailable');
+  const body = `<div class="public-page"><header class="public-header">${link('/', 'Pufu Lens')}</header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')}</nav>${content}</main></div>`;
+  const document = template
+    .replace(root, () => body)
+    .replace(/<title>[\s\S]*?<\/title>/, () => `<title>${escape(fullTitle)}</title>`)
+    .replace(
+      /<meta\s+name="description"[\s\S]*?\/>/,
+      () => `<meta name="description" content="${escape(shortDescription)}">`,
+    )
+    .replace('</head>', () => `${meta}</head>`);
+  c.header('X-Robots-Tag', robots);
+  return c.html(document);
+}
+
+const eligible = 'p.is_public=1 AND p.search_indexable=1';
+const xml = (body: string) => `<?xml version="1.0" encoding="UTF-8"?>${body}`;
+const xmlHeaders = { 'Content-Type': 'application/xml; charset=utf-8' };
+export function publicPagesApp() {
+  const app = new Hono<AppEnv>();
+  app.use('*', secureHeaders());
+  app.use('*', async (c, next) => {
+    c.header('Cache-Control', 'no-store');
+    await next();
+  });
+  app.onError((error, c) => {
+    if (!(error instanceof HTTPException)) console.error('public_page_failed');
+    return errorPage(error instanceof HTTPException ? error.status : 500, c.req.method);
+  });
+  app.get('/p/*', projectPage);
+  app.get('/robots.txt', (c) =>
+    c.text(`User-agent: *\nAllow: /\n\nSitemap: ${new URL('/sitemap.xml', c.env.APP_URL).href}\n`),
+  );
+  app.get('/sitemap.xml', async (c) => {
+    // Enumerate only occupied ranges, never all ranges between min/max rowid.
+    // Each leaf XML still performs an indexed read of at most 1000 source rows.
+    const rows = await c.env.DB.prepare(
+      `SELECT p.public_id,'project' AS kind,0 AS bucket
+      FROM projects p WHERE ${eligible}
+      UNION ALL SELECT p.public_id,'questions' AS kind,CAST((q.rowid-1)/${sitemapSize} AS INTEGER)+1 AS bucket
+      FROM projects p JOIN questions q INDEXED BY public_search_questions_project ON q.project_id=p.id
+      WHERE ${eligible} AND ${publicQuestionWhere} GROUP BY p.public_id,bucket
+      UNION ALL SELECT p.public_id,'pufus' AS kind,CAST((pf.rowid-1)/${sitemapSize} AS INTEGER)+1 AS bucket
+      FROM projects p JOIN pufu_scores pf INDEXED BY public_search_pufus_project ON pf.project_id=p.id
+      WHERE ${eligible} AND ${publicPufuWhere} GROUP BY p.public_id,bucket
+      LIMIT 50001`,
+    ).all<{ public_id: string; kind: string; bucket: number }>();
+    if (rows.results.length > 50000) throw new Error('Sitemap index capacity exceeded');
+    const files = rows.results.map((row) => {
+      const root = `/sitemaps/${encodeURIComponent(row.public_id)}`;
+      const file = row.kind === 'project' ? 'project.xml' : `${row.kind}-${row.bucket}.xml`;
+      return `<sitemap><loc>${escape(new URL(`${root}/${file}`, c.env.APP_URL).href)}</loc></sitemap>`;
+    });
+    return c.body(
+      xml(
+        `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${files.join('')}</sitemapindex>`,
+      ),
+      200,
+      xmlHeaders,
+    );
+  });
+  app.get('/sitemaps/:key/:file', async (c) => {
+    const key = c.req.param('key');
+    if (!/^[A-Za-z0-9_-]+$/.test(key)) throw new HTTPException(404);
+    const project = await c.env.DB.prepare(
+      `SELECT p.id FROM projects p WHERE p.public_id=? AND ${eligible}`,
+    )
+      .bind(key)
+      .first<{ id: string }>();
+    if (!project) throw new HTTPException(404);
+    const file = c.req.param('file');
+    let paths: string[];
+    if (file === 'project.xml') paths = [`/p/${encodeURIComponent(key)}`];
+    else {
+      const match = /^(questions|pufus)-([1-9]\d*)\.xml$/.exec(file);
+      if (!match) throw new HTTPException(404);
+      const bucket = Number(match[2]);
+      const upper = bucket * sitemapSize + 1;
+      if (!Number.isSafeInteger(upper)) throw new HTTPException(404);
+      const lower = upper - sitemapSize;
+      const questions = match[1] === 'questions';
+      const rows = await c.env.DB.prepare(
+        questions
+          ? `SELECT q.id FROM questions q INDEXED BY public_search_questions_project JOIN projects p ON p.id=q.project_id WHERE q.project_id=? AND q.rowid>=? AND q.rowid<? AND ${eligible} AND ${publicQuestionWhere} LIMIT ?`
+          : `SELECT pf.id FROM pufu_scores pf INDEXED BY public_search_pufus_project JOIN projects p ON p.id=pf.project_id WHERE pf.project_id=? AND pf.rowid>=? AND pf.rowid<? AND ${eligible} AND ${publicPufuWhere} LIMIT ?`,
+      )
+        .bind(project.id, lower, upper, sitemapSize)
+        .all<{ id: string }>();
+      paths = rows.results.map(
+        (row) => `/p/${encodeURIComponent(key)}/${match[1]}/${encodeURIComponent(row.id)}`,
+      );
+    }
+    return c.body(
+      xml(
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((path) => `<url><loc>${escape(new URL(path, c.env.APP_URL).href)}</loc></url>`).join('')}</urlset>`,
+      ),
+      200,
+      xmlHeaders,
+    );
+  });
+  app.notFound((c) => errorPage(404, c.req.method));
+  return app;
+}

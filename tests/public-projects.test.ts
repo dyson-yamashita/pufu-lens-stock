@@ -79,6 +79,37 @@ describe('公開プロジェクトの参照専用API', () => {
     await app.dispose();
   });
 
+  it('検索掲載は初期OFFで、所有者の明示設定だけで有効になり非公開化すると解除する', async () => {
+    expect(
+      await (await app.request('/api/v1/projects/alice-project/publication')).json(),
+    ).toMatchObject({ publication: { search_indexable: false } });
+    const key = await publish();
+    const body = { is_public: true, public_description: '紹介', search_indexable: true };
+    expect(
+      (
+        await app.request('/api/v1/projects/alice-project/publication', {
+          method: 'PATCH',
+          body,
+          user: 'bob',
+        })
+      ).status,
+    ).toBe(404);
+    const update = await app.request('/api/v1/projects/alice-project/publication', {
+      method: 'PATCH',
+      body,
+    });
+    expect(update.status).toBe(200);
+    expect(await update.json()).toMatchObject({ publication: { search_indexable: true } });
+    await publication(); // 既存クライアントの省略は設定を維持。
+    expect(await (await get(root(key))).json()).toMatchObject({ project: { search_indexable: 1 } });
+    await publication('alice-project', false);
+    expect(
+      await (await app.request('/api/v1/projects/alice-project/publication')).json(),
+    ).toMatchObject({ publication: { search_indexable: false } });
+    await publish();
+    expect(await (await get(root(key))).json()).toMatchObject({ project: { search_indexable: 0 } });
+  });
+
   it.each(['queued', 'generating', 'failed'])(
     '短文メモの問いが%sでも、最後に確定した公開問いとプ譜を閲覧できる',
     async (status) => {

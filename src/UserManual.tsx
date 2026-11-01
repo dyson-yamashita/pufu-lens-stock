@@ -119,6 +119,7 @@ const sections = () => [
           <li>{t('ui.user_manual.share_the_displayed_public_url_the_project_is_also')}</li>
         </ol>
         <p>{t('ui.user_manual.public_pages_can_be_viewed_without_signing_in_and')}</p>
+        <p>{t('ui.user_manual.public_search_indexing')}</p>
         <p className="manual-note">
           {t('ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text')}
         </p>

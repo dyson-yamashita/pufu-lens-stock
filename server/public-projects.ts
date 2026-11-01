@@ -17,9 +17,9 @@ import { stockRelationsColumn, pufuRelationsColumns, withRelations } from './rel
 const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
 // 再生成ではtextを保持する。未完成のAI問いはNULLなので公開しない。
-const publicQuestionWhere = "(q.status='ready' OR (q.source='ai' AND q.text IS NOT NULL))";
+export const publicQuestionWhere = "(q.status='ready' OR (q.source='ai' AND q.text IS NOT NULL))";
 // 個別の公開詳細と同じ、完成済みで公開可能な問いに紐づくプ譜だけを数える。
-const publicPufuWhere = `pf.user_id=p.user_id AND pf.status='ready'
+export const publicPufuWhere = `pf.user_id=p.user_id AND pf.status='ready'
   AND EXISTS(SELECT 1 FROM pufu_questions pq JOIN questions q ON q.id=pq.question_id
     WHERE pq.pufu_id=pf.id AND ${publicQuestionWhere})
   AND COALESCE((SELECT ph.score_json FROM pufu_phases ph WHERE ph.pufu_id=pf.id AND ph.number=pf.current_phase),pf.score_json) IS NOT NULL`;
@@ -61,6 +61,10 @@ function pageOptions(value: string | undefined) {
 }
 export function publicProjectsApp() {
   const app = new Hono<AppEnv>();
+  app.use('*', async (c, next) => {
+    c.header('X-Robots-Tag', 'noindex');
+    await next();
+  });
   app.get('/projects', async (c) => {
     const { page, limit, offset } = pageOptions(c.req.query('page'));
     let cache: Cache | undefined;
@@ -120,7 +124,7 @@ export function publicProjectsApp() {
   });
   app.get('/projects/:key', async (c) => {
     const project = await c.env.DB.prepare(
-      `SELECT ${projectColumns},${publicPufuCount} AS pufu_count FROM projects p WHERE ${publicWhere}`,
+      `SELECT ${projectColumns},p.search_indexable,${publicPufuCount} AS pufu_count FROM projects p WHERE ${publicWhere}`,
     )
       .bind(c.req.param('key'))
       .first<PublicProjectDetail>();
@@ -285,18 +289,28 @@ export function publicProjectsApp() {
 
 const publicationSchema = z.strictObject({
   is_public: z.boolean(),
+  search_indexable: z.boolean().optional(),
   public_description: z.string().trim().max(1000),
 });
 export function publicationApp() {
   const app = new Hono<AppEnv>();
   async function read(c: import('hono').Context<AppEnv>, id: string) {
     const row = await c.env.DB.prepare(
-      'SELECT is_public,public_id,public_description,published_at FROM projects WHERE id=? AND user_id=?',
+      'SELECT is_public,search_indexable,public_id,public_description,published_at FROM projects WHERE id=? AND user_id=?',
     )
       .bind(id, c.get('principal').user.id)
-      .first<Omit<Publication, 'is_public'> & { is_public: number }>();
+      .first<
+        Omit<Publication, 'is_public' | 'search_indexable'> & {
+          is_public: number;
+          search_indexable: number;
+        }
+      >();
     if (!row) throw new HTTPException(404, { message: 'プロジェクトが見つかりません。' });
-    return { ...row, is_public: Boolean(row.is_public) };
+    return {
+      ...row,
+      is_public: Boolean(row.is_public),
+      search_indexable: Boolean(row.search_indexable),
+    };
   }
   app.get('/:id/publication', async (c) =>
     c.json({ publication: await read(c, c.req.param('id')) }),
@@ -308,12 +322,14 @@ export function publicationApp() {
     if (!data.success)
       throw new HTTPException(400, { message: '公開設定の入力内容を確認してください。' });
     await c.env.DB.prepare(
-      `UPDATE projects SET public_id=COALESCE(public_id,?),public_description=?,
+      `UPDATE projects SET public_id=COALESCE(public_id,?),public_description=?,search_indexable=CASE WHEN ?=0 THEN 0 ELSE COALESCE(?,search_indexable) END,
       published_at=CASE WHEN ?=1 AND is_public=0 THEN ? ELSE published_at END,is_public=? WHERE id=? AND user_id=?`,
     )
       .bind(
         crypto.randomUUID(),
         data.data.public_description,
+        Number(data.data.is_public),
+        data.data.search_indexable === undefined ? null : Number(data.data.search_indexable),
         Number(data.data.is_public),
         now(),
         Number(data.data.is_public),
