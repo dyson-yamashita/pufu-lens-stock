@@ -494,6 +494,11 @@ export const ja: Record<string, string> = {
   'ui.public_projects.stocks': ' ストック',
   'ui.public_projects.questions_insights': ' 問い・気づき',
   'ui.public_projects.no_public_projects_yet': '公開プロジェクトはまだありません。',
+  'ui.public_projects.allow_search_indexing': '検索エンジンへの掲載を許可する',
+  'ui.public_projects.search_indexing_help':
+    '初期状態はOFFです。ONにすると、このプロジェクトと公開する問い・プ譜を検索対象として案内します。公開後の追加・編集も対象です。OFFでもURLを知る人は閲覧できます。検索掲載は保証されず、解除後も検索結果や第三者のコピーが残る場合があります。',
+  'ui.public_projects.search_indexing_confirmation':
+    '検索掲載を許可した場合、公開内容が検索エンジンやAI検索に参照され、解除後も外部のコピーが残る場合があることを理解しました。',
   'ui.public_projects.publication_settings': '公開設定',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     '公開設定を保存しました。トップページにも掲載されています。',
@@ -850,6 +855,8 @@ export const ja: Record<string, string> = {
     'YouTubeは、自分でメモを書いた場合だけ、そのメモをメモリに反映します。動画の内容・字幕・動画情報は使いません。メモの追加・編集・削除に合わせて更新し、URLの保存だけや動画の表示・再生では更新しません。',
   'ui.user_manual.to_exclude_a_project_from_your_user_memory_turn':
     'ユーザーメモリに含めたくないプロジェクトは、作成時または「設定」の「詳細設定」で「ストック追加時にユーザーのメモリを更新する」をオフにします。初期値はオンです。オフでもプロジェクトのメモリは更新されますが、後日のユーザーメモリ更新でも、そのプロジェクトの記事は対象から外れます。',
+  'ui.user_manual.public_search_indexing':
+    '検索から見つけてもらいたい場合は、公開設定で「検索エンジンへの掲載を許可する」をONにして保存し、確認画面で内容を確認してください。初期状態はOFFです。公開後の追加・編集も対象になります。OFFでも公開URLから閲覧できます。掲載は保証されず、解除後も検索結果や外部のコピーが残る場合があります。非公開にすると検索掲載の許可も解除されます。',
   'ui.user_manual.open_settings_for_the_project_you_want_to_share':
     '公開したいプロジェクトの「設定」を開きます。',
   'ui.user_manual.in_publication_settings_enable_publishing_enter_a_public_introduction':

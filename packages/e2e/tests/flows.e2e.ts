@@ -176,9 +176,10 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(screen.getByRole('dialog', '公開前のご確認')).toBeVisible();
   await expect(screen.getByRole('button', 'OK')).toBeDisabled();
   const before = (await fixture.request(`/projects/${fixture.projectId}/publication`)) as {
-    publication: { public_id: string | null; is_public: boolean };
+    publication: { public_id: string | null; is_public: boolean; search_indexable: boolean };
   };
   expect(before.publication.is_public).toBe(false);
+  expect(before.publication.search_indexable).toBe(false);
   await agent.act(goals.publish);
   await expect(screen.getByRole('dialog', '公開前のご確認')).toBeHidden();
   const published = (await fixture.request(`/projects/${fixture.projectId}/publication`)) as {
@@ -186,6 +187,14 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   };
   expect(published.publication.is_public).toBe(true);
   const publicId = published.publication.public_id;
+  const beforeIndexing = await fetch(`${fixture.url}/p/${publicId}`);
+  expect(beforeIndexing.headers.get('X-Robots-Tag')).toBe('noindex, follow');
+  await screen.getByLabel('検索エンジンへの掲載を許可する').check();
+  await screen.getByRole('button', '公開設定を保存').click();
+  for (let i = 0; i < 3; i++)
+    await browser.locator('.publication-confirmation input[type="checkbox"]').nth(i).check();
+  await screen.getByRole('button', 'OK').click();
+  await expect(screen.getByRole('dialog', '公開前のご確認')).toBeHidden();
   const { question } = (await fixture.request('/questions', 'POST', {
     project_id: fixture.projectId,
     text: 'E2Eの公開する問い',
@@ -225,11 +234,19 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     score: nextScore,
   });
   expect((await fetch(`${fixture.url}/api/public/projects/${publicId}`)).status).toBe(200);
+  const initialHtml = await fetch(`${fixture.url}/p/${publicId}/pufus/${pufu.id}`);
+  expect(initialHtml.status).toBe(200);
+  expect(initialHtml.headers.get('Cache-Control')).toBe('no-store');
+  expect(initialHtml.headers.get('X-Robots-Tag')).toBe('index, follow');
+  expect(await initialHtml.text()).toContain('E2Eの公開プ譜・次の局面');
+  expect(await (await fetch(`${fixture.url}/sitemaps/${publicId}/pufus-1.xml`)).text()).toContain(
+    `/p/${publicId}/pufus/${pufu.id}`,
+  );
   const cookies = await browser.cookies();
   await app.clearState();
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
-  await browser.locator('.public-tabs a[href="#pufus"]').click();
+  await browser.locator('.public-tabs a').filter({ hasText: 'プ譜' }).click();
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await screen.getByRole('link', /E2Eの公開プ譜/).click();
   await expect(browser.locator('section[aria-label="課題"]')).toContainText('E2Eの公開プ譜');
@@ -278,4 +295,8 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     expect((await fetch(`${fixture.url}/api/public/projects/${publicId}${suffix}`)).status).toBe(
       404,
     );
+  const revokedHtml = await fetch(`${fixture.url}/p/${publicId}/pufus/${pufu.id}`);
+  expect(revokedHtml.status).toBe(404);
+  expect(await revokedHtml.text()).not.toContain('E2Eの公開プ譜');
+  expect(await (await fetch(`${fixture.url}/sitemap.xml`)).text()).not.toContain(publicId);
 });

@@ -1,3 +1,4 @@
+import { publicPathPattern, publicHref } from '../shared/public-route';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -8,7 +9,11 @@ import PageLanguage from './PageLanguage';
 import { browserLanguage, resolveLanguage } from '../shared/locale';
 import './styles.css';
 
-const publicRoute = /^\/p\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname);
+const publicRoute = publicPathPattern.exec(window.location.pathname);
+if (publicRoute && window.location.hash) {
+  const next = publicHref(`/p/${publicRoute[1]}`, window.location.hash);
+  window.history.replaceState(null, '', next);
+}
 const legalRoute = /^\/(?:(en)\/)?(privacy|terms)\/?$/.exec(window.location.pathname);
 
 createRoot(document.getElementById('root')!).render(

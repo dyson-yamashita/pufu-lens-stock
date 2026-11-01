@@ -4,6 +4,7 @@ import type { PufuScore } from './pufu';
 
 export type Publication = {
   is_public: boolean;
+  search_indexable: boolean;
   public_id: string | null;
   public_description: string;
   published_at: string | null;
@@ -16,7 +17,7 @@ export type PublicProject = {
   stock_count: number;
   question_count: number;
 };
-export type PublicProjectDetail = PublicProject & { pufu_count: number };
+export type PublicProjectDetail = PublicProject & { pufu_count: number; search_indexable: number };
 export type PublicStock = {
   id: string;
   title: string;

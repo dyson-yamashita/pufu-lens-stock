@@ -378,3 +378,49 @@ it('公開プ譜は最新から前後の局面へ移動し、先頭・末尾の�
   await navigate('#pufu/pufu?from=pufus');
   assertPhase(3);
 });
+
+it('個別URLを直接開くと該当のプ譜を表示し、戻り先も通常URLになる', async () => {
+  window.location.pathname = '/p/project/pufus/pufu';
+  window.location.search = '?from=pufus';
+  await render('');
+  expect(document.querySelector('section[aria-label="課題"]')?.textContent).toContain(
+    '問いから考える課題',
+  );
+  expect(
+    document.querySelector('a.text-link[href="/p/project?view=pufus"]')?.textContent,
+  ).toContain('プ譜の一覧に戻る');
+  expect(document.querySelector('a[href="/p/project/questions/ai"]')?.textContent).toContain(
+    'AIが生成した問い',
+  );
+});
+
+it.each(['stocks/stock', 'questions/ai'])(
+  '個別URLのページ番号をJS起動後も維持する: %s',
+  async (detail) => {
+    window.location.pathname = `/p/project/${detail}`;
+    window.location.search = '?page=2';
+    await render('');
+    expect(api).toHaveBeenCalledWith(
+      `/api/public/projects/project/${detail}?page=2`,
+      expect.anything(),
+    );
+  },
+);
+
+it('詳細のページ送りでURLを更新し、共有・再読込で同じページを参照できる', async () => {
+  window.location.pathname = '/p/project/questions/ai';
+  window.location.search = '?page=2';
+  window.location.href = 'https://example.com/p/project/questions/ai?page=2';
+  const replaceState = vi.fn();
+  Object.defineProperty(window, 'history', { configurable: true, value: { replaceState } });
+  await render('');
+  const previous = [...document.querySelectorAll('button')].find(
+    (button) => button.textContent === '前へ',
+  )!;
+  await act(async () => previous.click());
+  expect(replaceState).toHaveBeenCalledWith(null, '', '/p/project/questions/ai');
+  expect(api).toHaveBeenCalledWith(
+    '/api/public/projects/project/questions/ai?page=1',
+    expect.anything(),
+  );
+});
