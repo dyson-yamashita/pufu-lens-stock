@@ -114,7 +114,9 @@ it('titleに</title>を含む公開名でもtitle要素を破れない', async (
   expect(document.querySelector('title')?.textContent).toContain(
     'Alice</title><script>alert(1)</script>',
   );
-  expect(document.querySelector('head script:not([src]):not([type="application/ld+json"])')).toBeNull();
+  expect(
+    document.querySelector('head script:not([src]):not([type="application/ld+json"])'),
+  ).toBeNull();
 });
 it.each([
   '/questions/hidden',

@@ -115,7 +115,10 @@ function assemblePublicDocument(
     jsonLd?: unknown;
   },
 ): string {
-  if (!template.includes('<!--public-root-start-->') || !template.includes('<!--public-root-end-->')) {
+  if (
+    !template.includes('<!--public-root-start-->') ||
+    !template.includes('<!--public-root-end-->')
+  ) {
     throw new Error('Public HTML template markers unavailable');
   }
   const { document } = parseHTML(template);
