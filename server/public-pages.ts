@@ -15,6 +15,7 @@ import type {
 import { elementKeys, pufuDisplayTitle, type PufuScore } from '../shared/pufu';
 import { publicPathPattern } from '../shared/public-route';
 import { articleJsonLd, jsonLdScript } from '../shared/seo';
+import { publicDocumentAssetPaths } from '../shared/public-document-routes';
 import { homePath, legalPath, manualPath, siteOrigin } from '../shared/site-paths';
 
 const publicApi = publicProjectsApp();
@@ -248,24 +249,6 @@ const eligible = 'p.is_public=1 AND p.search_indexable=1';
 const xml = (body: string) => `<?xml version="1.0" encoding="UTF-8"?>${body}`;
 const xmlHeaders = { 'Content-Type': 'application/xml; charset=utf-8' };
 
-const documentPaths = [
-  '/',
-  '/en',
-  '/en/',
-  '/manual',
-  '/manual/',
-  '/en/manual',
-  '/en/manual/',
-  '/privacy',
-  '/privacy/',
-  '/terms',
-  '/terms/',
-  '/en/privacy',
-  '/en/privacy/',
-  '/en/terms',
-  '/en/terms/',
-] as const;
-
 export function publicPagesApp() {
   const app = new Hono<AppEnv>();
   // Same secureHeaders() defaults as before for /p/* — HSTS, X-Frame-Options, CORP/COOP, etc.
@@ -283,12 +266,8 @@ export function publicPagesApp() {
     c.text(llmsTxt(c.env.APP_URL), 200, { 'Content-Type': 'text/plain; charset=utf-8' }),
   );
 
-  for (const path of documentPaths) {
-    app.on(['GET', 'HEAD'], path, async (c) => {
-      const pathname = c.req.path.replace(/\/$/, '') || '/';
-      const assetPath = pathname === '/' ? '/' : pathname === '/en' ? '/en/' : `${pathname}/`;
-      return assetDocument(c, assetPath);
-    });
+  for (const [path, assetPath] of Object.entries(publicDocumentAssetPaths)) {
+    app.on(['GET', 'HEAD'], path, (c) => assetDocument(c, assetPath));
   }
 
   app.get('/p/*', projectPage);

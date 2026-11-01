@@ -4,6 +4,7 @@ import type { Env } from './env';
 import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp-oauth';
 import { handleMcp } from './mcp';
 import { publicPagesApp } from './public-pages';
+import { publicDocumentRoutes } from '../shared/public-document-routes';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { AppEnv } from './env';
@@ -28,30 +29,11 @@ entry.use(
   bodyLimit({ maxSize: 16384, onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413) }),
 );
 const publicPages = publicPagesApp();
-const publicDocumentRoutes = [
-  '/',
-  '/en',
-  '/en/',
-  '/manual',
-  '/manual/',
-  '/en/manual',
-  '/en/manual/',
-  '/privacy',
-  '/privacy/',
-  '/terms',
-  '/terms/',
-  '/en/privacy',
-  '/en/privacy/',
-  '/en/terms',
-  '/en/terms/',
-  '/llms.txt',
-  '/p/*',
-  '/robots.txt',
-  '/sitemap.xml',
-  '/sitemaps/*',
-] as const;
-entry.on(['GET', 'HEAD'], [...publicDocumentRoutes], (c) =>
-  publicPages.fetch(c.req.raw, c.env, c.executionCtx),
+// Keep these aligned with wrangler.jsonc assets.run_worker_first (see shared/public-document-routes.ts).
+entry.on(
+  ['GET', 'HEAD'],
+  [...publicDocumentRoutes, '/p/*', '/robots.txt', '/sitemap.xml', '/sitemaps/*'],
+  (c) => publicPages.fetch(c.req.raw, c.env, c.executionCtx),
 );
 entry.all('*', (c) => {
   // Unknown non-API navigations become hard 404s with the same document secure headers.

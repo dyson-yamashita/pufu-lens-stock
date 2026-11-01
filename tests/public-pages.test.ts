@@ -217,7 +217,7 @@ it('別プロジェクトの大量挿入によるrowidの隙間を空サイト�
   );
 });
 
-it('問い・プ譜HTMLにArticle JSON-LDを埋め込み、llms.txtと不明URLのhard 404にセキュリティヘッダーを付ける', async () => {
+it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.txtと不明URLのhard 404にセキュリティヘッダーを付ける', async () => {
   await allow();
   const question = await read(`/p/${key}/questions/q`);
   expect(question.headers.get('Strict-Transport-Security')).toContain('max-age=');
@@ -225,8 +225,22 @@ it('問い・プ譜HTMLにArticle JSON-LDを埋め込み、llms.txtと不明URL�
   const questionHtml = await question.text();
   expect(questionHtml).toContain('application/ld+json');
   expect(questionHtml).toContain('"@type":"Article"');
-  const pufuHtml = await (await read(`/p/${key}/pufus/pf`)).text();
-  expect(pufuHtml).toContain('"@type":"Article"');
+  const pufu = await read(`/p/${key}/pufus/pf`);
+  expect(pufu.headers.get('X-Robots-Tag')).toBe('index, follow');
+  expect(await pufu.text()).toContain('"@type":"Article"');
+  const stock = await read(`/p/${key}/stocks/stock`);
+  expect(stock.status).toBe(200);
+  expect(stock.headers.get('X-Robots-Tag')).toBe('index, follow');
+  expect(stock.headers.get('Strict-Transport-Security')).toContain('max-age=');
+  expect(await stock.text()).toContain('"@type":"Article"');
+  const home = await read('/');
+  expect(home.status).toBe(200);
+  expect(home.headers.get('Strict-Transport-Security')).toContain('max-age=');
+  expect(home.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+  const manual = await read('/manual');
+  expect(manual.headers.get('Strict-Transport-Security')).toContain('max-age=');
+  const english = await read('/en');
+  expect(english.headers.get('Strict-Transport-Security')).toContain('max-age=');
   const llms = await read('/llms.txt');
   expect(llms.status).toBe(200);
   expect(llms.headers.get('Strict-Transport-Security')).toContain('max-age=');

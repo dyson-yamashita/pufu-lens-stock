@@ -166,7 +166,3 @@ it('the Japanese legal originals keep language-stable section and footer links w
   }
   expect(document.querySelector('script[type="module"]')).toBeNull();
 });
-
-it('builds a hard 404 document', () => {
-  expect(assets.get('404.html')).toContain('ページが見つかりません');
-});

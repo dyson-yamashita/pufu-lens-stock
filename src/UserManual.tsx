@@ -1,4 +1,4 @@
-import { t, useLanguage, legalHref, homeHref, setServerLanguage, translateUi } from './i18n';
+import { t, useLanguage, legalHref, homeHref, translateUi } from './i18n';
 import { useEffect } from 'react';
 import { ArrowUp, BookOpen } from 'lucide-react';
 import type { Language } from '../shared/locale';
@@ -197,7 +197,6 @@ const sections = (tr: typeof t) => [
 ];
 export default function UserManual({ language: forced }: { language?: Language }) {
   const current = useLanguage();
-  if (forced) setServerLanguage(forced);
   const language = forced ?? current.language;
   const tr = (key: string, values?: Record<string, string | number>) =>
     translateUi(language, key, values);
