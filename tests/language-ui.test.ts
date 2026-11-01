@@ -94,12 +94,16 @@ const completed = (language: 'ja' | 'en'): User => ({
 });
 
 it.each([
-  ['en-US', 'Open local demo', 'en'],
-  ['fr-FR', 'Open local demo', 'en'],
-  ['ja-JP', 'ローカルデモを開く', 'ja'],
+  ['/', 'en-US', 'ローカルデモを開く', 'ja'],
+  ['/en', 'ja-JP', 'Open local demo', 'en'],
+  ['/', 'ja-JP', 'ローカルデモを開く', 'ja'],
 ])(
-  'uses primary browser language %s for real landing controls',
-  async (primary, label, language) => {
+  'uses landing URL %s for real landing controls despite browser %s',
+  async (pathname, primary, label, language) => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { hash: '', pathname, search: '', assign() {} },
+    });
     Object.defineProperty(window.navigator, 'language', { value: primary });
     await render();
     expect(document.querySelector('.demo-login')?.textContent).toContain(label);
@@ -109,9 +113,12 @@ it.each([
 );
 
 it('keeps explicit anonymous English choice when a new account has its default Japanese language and saves onboarding', async () => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { hash: '', pathname: '/en', search: '', assign() {} },
+  });
   Object.defineProperty(window.navigator, 'language', { value: 'ja-JP' });
   await render();
-  await select('site-language', 'en');
   expect(document.querySelector('.demo-login')?.textContent).toContain('Open local demo');
   user = { ...completed('ja'), name: '', onboarding_completed_at: null };
   await act(async () => root.unmount());
@@ -250,8 +257,14 @@ it.each([false, true])(
 );
 
 it('the account-aware public shell remains readable when identity lookup fails', async () => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { hash: '', pathname: '/en/manual', search: '', assign() {} },
+  });
   vi.mocked(api).mockRejectedValue(new ApiError('Unavailable', 503));
-  await act(async () => root.render(createElement(PageLanguage, {}, createElement(UserManual))));
+  await act(async () =>
+    root.render(createElement(PageLanguage, {}, createElement(UserManual, { language: 'en' }))),
+  );
   expect(document.querySelector('h1')?.textContent).toBe('User manual');
   expect(document.querySelector('.manual-toc')).not.toBeNull();
 });

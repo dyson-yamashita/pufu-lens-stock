@@ -41,7 +41,9 @@
       "server/public-projects.ts",
       "server/privacy.ts",
       "server/public-pages.ts",
-      "shared/public-route.ts"
+      "server/document-headers.ts",
+      "shared/public-route.ts",
+      "shared/seo.ts"
     ],
     "aspects": [
       "確認前は匿名で取得できない",

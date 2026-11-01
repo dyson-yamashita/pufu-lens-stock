@@ -217,11 +217,13 @@ D1の`comments`テーブルに`target_type`（`stock / question / pufu`）、`ta
 
 公開設定の「検索エンジンへの掲載を許可する」は公開可否と別の設定です。既存・新規プロジェクトとも初期OFFで、公開中のみ有効化できます。有効化時は公開確認を表示し、所有者のセッションだけが変更できます。非公開化で許可も解除し、再公開だけでは有効化しません。公開後の追加・編集も対象です。OFFは閲覧制限ではなく、検索掲載や外部コピーの削除は保証しません。
 
-`/p/:key`、`/p/:key/stocks/:id`、`/p/:key/questions/:id`、`/p/:key/pufus/:id` はWorkerが既存公開APIと同じ権限・公開フィールドだけから初期HTMLを生成します。個別URLと一覧の通常リンク、ページ固有title・description・canonical・OGPを提供し、既存ハッシュURLもブラウザーで引き継ぎます。プ譜の `?phase=N` は過去局面の閲覧用で、正規URLは最新のプ譜です。検索掲載OFF、ストック詳細、局面指定URLはnoindexです。公開JSONもnoindexです。
+`/p/:key`、`/p/:key/stocks/:id`、`/p/:key/questions/:id`、`/p/:key/pufus/:id` はWorkerが既存公開APIと同じ権限・公開フィールドだけから初期HTMLを生成します。個別URLと一覧の通常リンク、ページ固有title・description・canonical・OGP、問い・ストック・プ譜の Article JSON-LD を提供し、既存ハッシュURLもブラウザーで引き継ぎます。プ譜の `?phase=N` は過去局面の閲覧用で、正規URLは最新のプ譜です。検索掲載OFFと局面指定URLはnoindexです。公開JSONもnoindexです。
 
-`/robots.txt` はクロールを許可し、`/sitemap.xml` からプロジェクト別の `/sitemaps/:key/project.xml` と、最大1,000行の固定範囲を読む `/sitemaps/:key/questions-:bucket.xml`・`/sitemaps/:key/pufus-:bucket.xml` を案内します。掲載許可した公開プロジェクトと公開可能な問い・プ譜だけを列挙し、実在する行の範囲だけを案内します。分割XMLの読み取りは索引で範囲を制限しますが、サイトマップ一覧の集約コストは掲載対象件数に比例するため、運用時の計測対象です。HTML・OGPメタ情報・サイトマップは `Cache-Control: no-store` で保存せず、毎回現在の公開設定を確認します。OGP画像は公開ロゴを使用し、内容由来の画像キャッシュは作りません。非公開化・削除後はHTMLも404となり本文・OGPを返しません。DB障害時は古い内容へフォールバックしません。
+トップ（`/`・`/en`）とマニュアル（`/manual`・`/en/manual`）、法務はビルド時の言語別静的HTMLをWorkerが配信します。`Accept-Language` による自動転送は行わず、hreflang（x-default含む）とURL言語に一致する `lang`・title・description・canonicalを付けます。これらの公開HTMLと `/llms.txt`、存在しないパスの hard 404 は `/p/*` と同じ Hono `secureHeaders()` を通します（HSTS・X-Frame-Options など。既定スタックはCSPを設定しません）。
 
-本番反映前に `0041_public_search.sql` を含むマイグレーションを適用してください。AI処理や追加bindingは不要です。
+`/robots.txt` はクロールを許可し、`/sitemap.xml` から静的ページの `/sitemaps/site.xml` と、プロジェクト別の `/sitemaps/:key/project.xml`、最大1,000行の固定範囲を読む `/sitemaps/:key/questions-:bucket.xml`・`/sitemaps/:key/pufus-:bucket.xml`・`/sitemaps/:key/stocks-:bucket.xml` を案内します。掲載許可した公開プロジェクトと公開可能なストック・問い・プ譜、および言語別のトップ・マニュアル・法務を列挙し、日付がある箇所は `lastmod` を付けます。分割XMLの読み取りは索引で範囲を制限しますが、サイトマップ一覧の集約コストは掲載対象件数に比例するため、運用時の計測対象です。HTML・OGPメタ情報・サイトマップは `Cache-Control: no-store` で保存せず、毎回現在の公開設定を確認します。OGP画像は公開ロゴを使用し、内容由来の画像キャッシュは作りません。非公開化・削除後はHTMLも404となり本文・OGPを返しません。DB障害時は古い内容へフォールバックしません。存在しないパスはSPAの200ではなくHTTP 404を返します。
+
+本番反映前に `0042_public_search_stocks.sql` を含むマイグレーションを適用してください。AI処理や追加bindingは不要です。
 
 トップページの公開一覧（`GET /api/public/projects`）だけは、ページごとのJSONをWorkers Cache APIに60秒保存します。各取得でD1の最新revisionを1行確認し、キャッシュがあれば一覧の取得・件数集計を省きます。公開プロジェクトの追加・公開設定・名前・紹介文・削除と、公開プロジェクト内のストック・問いの追加・削除・所属・公開件数の変更は、DBトリガーが同じトランザクションでrevisionを更新します。非公開化や退会後の取得では、他拠点に残る旧revisionのキャッシュも再利用しません。キャッシュ投入が更新より遅れても旧revisionにだけ保存します。
 

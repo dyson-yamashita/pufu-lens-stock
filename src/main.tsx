@@ -6,7 +6,6 @@ import PublicProjectPage from './PublicProjects';
 import UserManual from './UserManual';
 import LegalPage from './LegalPage';
 import PageLanguage from './PageLanguage';
-import { browserLanguage, resolveLanguage } from '../shared/locale';
 import './styles.css';
 
 const publicRoute = publicPathPattern.exec(window.location.pathname);
@@ -15,24 +14,18 @@ if (publicRoute && window.location.hash) {
   window.history.replaceState(null, '', next);
 }
 const legalRoute = /^\/(?:(en)\/)?(privacy|terms)\/?$/.exec(window.location.pathname);
+const manualRoute = /^\/(?:(en)\/)?manual\/?$/.exec(window.location.pathname);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {legalRoute ? (
       <LegalPage
         page={legalRoute[2] as 'privacy' | 'terms'}
-        language={
-          legalRoute[1] === 'en'
-            ? 'en'
-            : resolveLanguage(
-                new URLSearchParams(window.location.search).get('lang'),
-                browserLanguage(window.navigator?.language ?? 'ja'),
-              )
-        }
+        language={legalRoute[1] === 'en' ? 'en' : 'ja'}
       />
-    ) : /^\/manual\/?$/.test(window.location.pathname) ? (
+    ) : manualRoute ? (
       <PageLanguage browserOnly>
-        <UserManual />
+        <UserManual language={manualRoute[1] === 'en' ? 'en' : 'ja'} />
       </PageLanguage>
     ) : publicRoute ? (
       <PageLanguage>

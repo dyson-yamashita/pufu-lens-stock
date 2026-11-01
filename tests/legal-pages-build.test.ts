@@ -73,28 +73,62 @@ it.each([
   const html = assets.get(`${page}/index.html`);
   expect(html).toBeDefined();
   const { document } = parseHTML(html!);
+  expect(document.documentElement.lang).toBe('ja');
   expect(document.title).toBe(`${title} | Pufu Lens`);
   expect(document.querySelector('main h1')?.textContent).toBe(title);
   expect(document.querySelector(`#${section} h2`)).not.toBeNull();
   expect(document.querySelector('#retention, #termination')).not.toBeNull();
   expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
-  for (const href of ['/', '/privacy?lang=ja', '/terms?lang=ja', '#legal-start']) {
+  for (const href of ['/', '/privacy', '/terms', '#legal-start']) {
     expect(document.querySelector(`a[href="${href}"]`)).not.toBeNull();
   }
+  expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toContain(
+    `/${page}`,
+  );
+  expect(document.querySelector('link[hreflang="x-default"]')).not.toBeNull();
+  expect(document.querySelector('script[type="application/ld+json"]')).not.toBeNull();
   const stylesheet = document.querySelector('link[rel="stylesheet"]')?.getAttribute('href');
   expect(assets.has(stylesheet!.slice(1))).toBe(true);
   expect(document.querySelector('script[src="/theme.js"]')).not.toBeNull();
   expect(document.querySelector('script[type="module"]')).toBeNull();
 });
 
-it('トップの初期HTMLにサービス説明と法的文書へのリンクを残し、アプリも起動できる', () => {
-  const { document } = parseHTML(assets.get('index.html')!);
-  expect(document.querySelector('#root h1')?.textContent).toContain('Pufu Lens');
-  expect(document.querySelector('#root p')?.textContent?.length).toBeGreaterThan(20);
-  for (const href of ['/privacy', '/terms']) {
-    expect(document.querySelector(`#root a[href="${href}"]`)).not.toBeNull();
+it('トップと英語トップにクロール可能な本文・hreflang・JSON-LDを残し、アプリも起動できる', () => {
+  for (const [file, lang, path] of [
+    ['index.html', 'ja', '/'],
+    ['en/index.html', 'en', '/en'],
+  ] as const) {
+    const { document } = parseHTML(assets.get(file)!);
+    expect(document.documentElement.lang).toBe(lang);
+    expect(document.querySelector('#root h1')?.textContent?.length).toBeGreaterThan(5);
+    expect(document.querySelector('#root p')?.textContent?.length).toBeGreaterThan(20);
+    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toContain(path);
+    expect(document.querySelector('link[hreflang="en"]')).not.toBeNull();
+    expect(
+      [...document.querySelectorAll('script[type="application/ld+json"]')]
+        .map((node) => node.textContent)
+        .join('\n'),
+    ).toContain('SoftwareApplication');
+    expect(document.querySelector('script[type="module"]')).not.toBeNull();
   }
-  expect(document.querySelector('script[type="module"]')).not.toBeNull();
+});
+
+it('マニュアルの日英静的HTMLに本文・HowTo/FAQ JSON-LDを含める', () => {
+  for (const [file, lang, title] of [
+    ['manual/index.html', 'ja', 'ユーザーマニュアル'],
+    ['en/manual/index.html', 'en', 'User manual'],
+  ] as const) {
+    const { document } = parseHTML(assets.get(file)!);
+    expect(document.documentElement.lang).toBe(lang);
+    expect(document.querySelector('main h1')?.textContent).toBe(title);
+    expect(document.querySelectorAll('main section').length).toBeGreaterThan(5);
+    expect(
+      [...document.querySelectorAll('script[type="application/ld+json"]')]
+        .map((node) => node.textContent)
+        .join('\n'),
+    ).toMatch(/HowTo|FAQPage/);
+    expect(document.querySelector('script[type="module"]')).toBeNull();
+  }
 });
 
 it.each([
@@ -111,7 +145,7 @@ it.each([
     expect(document.querySelector('main h1')?.textContent).toBe(title);
     expect(document.querySelector(`#${section} h2`)).not.toBeNull();
     expect(document.querySelectorAll('main section').length).toBeGreaterThanOrEqual(10);
-    expect(document.querySelector(`a[href="/${page}?lang=ja"]`)).not.toBeNull();
+    expect(document.querySelector(`a[href="/${page}"]`)).not.toBeNull();
     for (const path of ['/en/privacy', '/en/terms'])
       expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
     expect(document.querySelector('script[type="module"]')).toBeNull();
@@ -120,15 +154,19 @@ it.each([
   },
 );
 
-it('the Japanese legal originals keep explicit language through section and footer links without JavaScript', () => {
+it('the Japanese legal originals keep language-stable section and footer links without JavaScript', () => {
   const { document } = parseHTML(assets.get('terms/index.html')!);
   for (const path of [
-    '/privacy?lang=ja#publication',
-    '/privacy?lang=ja#processors',
-    '/privacy?lang=ja#retention',
+    '/privacy#publication',
+    '/privacy#processors',
+    '/privacy#retention',
     '/en/terms',
   ]) {
     expect(document.querySelector(`a[href="${path}"]`)).not.toBeNull();
   }
   expect(document.querySelector('script[type="module"]')).toBeNull();
+});
+
+it('builds a hard 404 document', () => {
+  expect(assets.get('404.html')).toContain('ページが見つかりません');
 });

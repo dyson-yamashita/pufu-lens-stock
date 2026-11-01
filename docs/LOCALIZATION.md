@@ -4,23 +4,23 @@
 
 ## 言語の優先順位
 
-- 未ログインのトップとマニュアルは、明示したブラウザー内設定、ブラウザーの主言語の順に選びます。日本語の地域変種は日本語、それ以外は英語へフォールバックします。
+- 公開の言語付きURLはパスで言語を固定します。日本語は `/`・`/manual`・`/privacy`・`/terms`、英語は `/en`・`/en/manual`・`/en/privacy`・`/en/terms` です。これらの応答は `Accept-Language` で転送しません。
+- 未ログインで言語URL以外の画面へ入る場合は、明示したブラウザー内設定、ブラウザーの主言語の順に選びます。日本語の地域変種は日本語、それ以外は英語へフォールバックします。
 - 初回登録では選択した言語をアカウントへ保存します。登録済みのアプリ画面とMCPはアカウント設定を優先します。新規アカウントのDB既定値だけでは、登録前の選択を上書きしません。
-- 通常の `/privacy` と `/terms` は、Workerが `Accept-Language` の最優先言語を解決します。英語では `/en/privacy` と `/en/terms` へ一時転送します。`?lang=ja` は日本語原文を明示し、再転送を防ぎます。応答は `no-store` と `Vary: Accept-Language` を付け、認証やDBへ依存しません。
-- 法務の本文はビルド時に日本語・英語の静的HTMLとして出力し、JavaScriptなしでも読めます。マニュアルは通常のSPAで、ブラウザーの選択から表示します。これらの表示はアカウントの生成言語を変更しません。
+- トップ・マニュアル・法務の本文はビルド時に言語別の静的HTMLとして出力し、JavaScriptなしでも読めます。Workerが既存の `secureHeaders()` 経由で配信します。これらの表示はアカウントの生成言語を変更しません。
 
 ## 主な編集先
 
-| 対象                                               | 編集先                                                                          |
-| -------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 言語コード・表示名・Intl書式・生成指示・Editor対応 | `shared/locale.ts`                                                              |
-| サーバーの生成テンプレートとMCP文言                | `shared/locales/`                                                               |
-| アプリ専用のi18nextとブラウザー選択                | `src/i18n.ts`                                                                   |
-| 画面・既知エラーの翻訳                             | `src/locales/`                                                                  |
-| マニュアルの構造・操作説明                         | `src/UserManual.tsx` とその翻訳キー                                             |
-| 法務の本文とビルド                                 | `src/LegalPage.tsx`、`src/locales/legal-en.ts`、`scripts/legal-pages-plugin.ts` |
-| 法務の配信時言語選択                               | `server/legal-language.ts`、`wrangler.jsonc`                                    |
-| 画像ラベルと改行                                   | `shared/pufu-image-labels.ts`、`packages/pufu-image/src/svg.ts`                 |
+| 対象                                                 | 編集先                                                                                                           |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 言語コード・表示名・Intl書式・生成指示・Editor対応   | `shared/locale.ts`                                                                                               |
+| サーバーの生成テンプレートとMCP文言                  | `shared/locales/`                                                                                                |
+| アプリ専用のi18nextとブラウザー選択                  | `src/i18n.ts`                                                                                                    |
+| 画面・既知エラーの翻訳                               | `src/locales/`                                                                                                   |
+| マニュアルの構造・操作説明                           | `src/UserManual.tsx` とその翻訳キー                                                                              |
+| 法務・トップ・マニュアルの静的HTMLとhreflang/JSON-LD | `src/LegalPage.tsx`、`src/HomeShell.tsx`、`src/UserManual.tsx`、`scripts/legal-pages-plugin.ts`、`shared/seo.ts` |
+| 公開HTMLの配信とセキュリティヘッダー                 | `server/public-pages.ts`、`server/document-headers.ts`、`wrangler.jsonc`                                         |
+| 画像ラベルと改行                                     | `shared/pufu-image-labels.ts`、`packages/pufu-image/src/svg.ts`                                                  |
 
 アプリは独立したi18nextインスタンスを使います。Pufu Editorは独自のReact-i18nextインスタンスを使うため、アプリのインスタンスをグローバル登録したり、Editorをアプリの `I18nextProvider` で包んだりしません。Editorへは明示的な `lang` を渡します。
 
@@ -28,7 +28,7 @@
 
 1. `shared/locale.ts` のレジストリへBCP 47コードと設定を追加します。アカウント列はTEXTで、言語追加のたびのDB列追加やenum移行は不要です。
 2. サーバー辞書、MCP記述ガイドライン、UI辞書とその言語マップを追加します。型付き `Record<Language, ...>` により登録漏れを確認します。文章中の変数は静的キーと補間値へ分け、ユーザーの文章を翻訳キーにしません。
-3. マニュアル、法務本文、静的出力・明示言語リンクを対応させます。法務はSPAだけを変更しても配信済みの静的HTMLには反映されません。
+3. マニュアル、法務本文、トップ、静的出力・言語別URLリンクを対応させます。静的HTMLはビルド成果物なので、SPAだけを変更しても配信済みHTMLには反映されません。
 4. Editorとフォント・文字幅・改行・必要な文字方向を確認します。現在のPufu Editor 0.9.19は `ja` / `en` 対応です。第三言語を有効にする前にEditor側の対応も必要です。
 5. catalog coverage、ブラウザー言語・保存設定・既存アカウントの優先順位、生成ジョブ、MCP、画像と実Editorを検証します。E2Eの `LANG-001` はdesktop/phoneを対象にします。
 

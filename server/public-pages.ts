@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { secureHeaders } from 'hono/secure-headers';
 import type { AppEnv } from './env';
+import { documentSecureHeaders } from './document-headers';
 import { publicProjectsApp, publicPufuWhere, publicQuestionWhere } from './public-projects';
 import type {
   PublicProjectDetail,
@@ -14,6 +14,8 @@ import type {
 } from '../shared/public-project';
 import { elementKeys, pufuDisplayTitle, type PufuScore } from '../shared/pufu';
 import { publicPathPattern } from '../shared/public-route';
+import { articleJsonLd, jsonLdScript } from '../shared/seo';
+import { homePath, legalPath, manualPath, siteOrigin } from '../shared/site-paths';
 
 const publicApi = publicProjectsApp();
 const sitemapSize = 1000;
@@ -87,6 +89,16 @@ function errorPage(status: number, method: string) {
   );
 }
 
+function lastmod(value: string | null | undefined): string {
+  if (!value) return '';
+  const date = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? `<lastmod>${date}</lastmod>` : '';
+}
+
+function urlEntry(loc: string, modified?: string | null) {
+  return `<url><loc>${escape(loc)}</loc>${lastmod(modified)}</url>`;
+}
+
 async function projectPage(c: Context<AppEnv>) {
   const match = publicPathPattern.exec(c.req.path);
   if (!match) throw new HTTPException(404);
@@ -98,6 +110,8 @@ async function projectPage(c: Context<AppEnv>) {
   let title = project.name;
   let description = project.public_description || project.name;
   let content = '';
+  let datePublished: string | null = null;
+  let dateModified: string | null = null;
   if (kind === 'pufus') {
     const phase = c.req.query('phase');
     const { pufu } = await readPublic<{ pufu: PublicPufu }>(
@@ -106,6 +120,7 @@ async function projectPage(c: Context<AppEnv>) {
     );
     title = `${pufuDisplayTitle(pufu)} | ${project.name}`;
     description = pufu.task;
+    dateModified = pufu.updated_at;
     content = `<h2>${escape(pufuDisplayTitle(pufu))}</h2>${paragraph(pufu.task)}<p>第${pufu.phase}局面</p>${pufuText(pufu.score)}<h2>関連する問い</h2><ul>${(pufu.questions ?? []).map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>`;
   } else if (kind === 'questions') {
     const result = await readPublic<{
@@ -116,11 +131,13 @@ async function projectPage(c: Context<AppEnv>) {
     }>(c, `${key}/questions/${id}?page=${page}`);
     title = `${result.question.text} | ${project.name}`;
     description = result.question.text;
+    datePublished = result.question.created_at;
     content = `<h2>${escape(result.question.text)}</h2><h3>関連するストック</h3><ul>${result.stocks.map((s) => `<li>${link(`${base}/stocks/${encodeURIComponent(s.id)}`, s.title)}</li>`).join('')}</ul><h3>関連するプ譜</h3><ul>${result.pufus.map((p) => `<li>${link(`${base}/pufus/${encodeURIComponent(p.id)}`, pufuDisplayTitle(p))}</li>`).join('')}</ul>${pagination(`${base}/questions/${id}`, 'questions', page, result.has_more)}`;
   } else if (kind === 'stocks') {
     const result = await readPublic<PublicStockDetail>(c, `${key}/stocks/${id}?page=${page}`);
     title = `${result.stock.title} | ${project.name}`;
     description = result.stock.summary?.overview || result.stock.title;
+    datePublished = result.stock.created_at;
     content = `${stockText(result.stock)}<h3>関連する問い</h3><ul>${result.questions.map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>${pagination(`${base}/stocks/${id}`, 'stocks', page, result.has_more)}`;
   } else {
     const view = c.req.query('view') ?? 'stocks';
@@ -148,12 +165,24 @@ async function projectPage(c: Context<AppEnv>) {
     `${base}${kind ? `/${kind}/${id}` : ''}${query.size ? `?${query}` : ''}`,
     c.env.APP_URL,
   ).href;
-  const indexable =
-    Boolean(project.search_indexable) && kind !== 'stocks' && c.req.query('phase') === undefined;
+  const indexable = Boolean(project.search_indexable) && c.req.query('phase') === undefined;
   const robots = indexable ? 'index, follow' : 'noindex, follow';
   const fullTitle = `${title} | Pufu Lens`;
   const shortDescription = description.replace(/\s+/g, ' ').slice(0, 200);
-  const meta = `<meta name="robots" content="${robots}"><link rel="canonical" href="${escape(canonical)}"><meta property="og:type" content="${kind ? 'article' : 'website'}"><meta property="og:site_name" content="Pufu Lens"><meta property="og:title" content="${escape(fullTitle)}"><meta property="og:description" content="${escape(shortDescription)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:image" content="${escape(new URL('/pufu-lens-logo.png', c.env.APP_URL).href)}">`;
+  const structured =
+    kind === 'questions' || kind === 'pufus' || kind === 'stocks'
+      ? jsonLdScript(
+          articleJsonLd({
+            url: canonical,
+            title: fullTitle,
+            description: shortDescription,
+            datePublished,
+            dateModified: dateModified ?? datePublished,
+            origin: c.env.APP_URL,
+          }),
+        )
+      : '';
+  const meta = `<meta name="robots" content="${robots}"><link rel="canonical" href="${escape(canonical)}"><meta property="og:type" content="${kind ? 'article' : 'website'}"><meta property="og:site_name" content="Pufu Lens"><meta property="og:title" content="${escape(fullTitle)}"><meta property="og:description" content="${escape(shortDescription)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:image" content="${escape(new URL('/pufu-lens-logo.png', c.env.APP_URL).href)}">${structured}`;
   if (!c.env.ASSETS) throw new Error('Public assets binding unavailable');
   const assets = await c.env.ASSETS.fetch(new Request(new URL('/', c.env.APP_URL)));
   if (!assets.ok) throw new Error('Public HTML template unavailable');
@@ -173,12 +202,74 @@ async function projectPage(c: Context<AppEnv>) {
   return c.html(document);
 }
 
+/** Serve a built static document through the Worker so secureHeaders apply. */
+async function assetDocument(c: Context<AppEnv>, assetPath: string) {
+  if (!c.env.ASSETS) throw new HTTPException(503, { message: 'Document unavailable.' });
+  const assetUrl = new URL(assetPath, c.req.url);
+  const asset = await c.env.ASSETS.fetch(new Request(assetUrl, c.req.raw));
+  if (asset.status === 404) throw new HTTPException(404);
+  const response = new Response(c.req.method === 'HEAD' ? null : asset.body, asset);
+  response.headers.set('Cache-Control', 'no-store');
+  return response;
+}
+
+function llmsTxt(origin: string): string {
+  const root = siteOrigin(origin);
+  return `# Pufu Lens
+
+> Pufu Lens helps people save articles and text as Stocks, organize them in projects, and grow questions, insights, Memory, and Pufu diagrams with AI.
+
+Pufu Lens is a web app at ${root}/. Product terms: Stock, Pufu, Memory, MCP.
+
+## Languages
+
+- Japanese (default): ${root}/ , ${root}/manual , ${root}/privacy , ${root}/terms
+- English: ${root}/en , ${root}/en/manual , ${root}/en/privacy , ${root}/en/terms
+- Language is selected by URL. Responses do not auto-redirect based on Accept-Language.
+
+## Key public paths
+
+- Home: ${root}/ and ${root}/en
+- User manual: ${root}/manual and ${root}/en/manual
+- Public projects: ${root}/p/<public-id>
+- Public stocks / questions / Pufu: ${root}/p/<public-id>/stocks/<id> , .../questions/<id> , .../pufus/<id>
+- Privacy / Terms: ${root}/privacy , ${root}/terms and /en/... variants
+- Sitemap: ${root}/sitemap.xml
+- Robots: ${root}/robots.txt
+
+## Optional
+
+- Only projects that owners publish and mark search-indexable appear in the sitemap.
+- Public pages expose title, description, canonical, Open Graph, and JSON-LD where applicable.
+`;
+}
+
 const eligible = 'p.is_public=1 AND p.search_indexable=1';
 const xml = (body: string) => `<?xml version="1.0" encoding="UTF-8"?>${body}`;
 const xmlHeaders = { 'Content-Type': 'application/xml; charset=utf-8' };
+
+const documentPaths = [
+  '/',
+  '/en',
+  '/en/',
+  '/manual',
+  '/manual/',
+  '/en/manual',
+  '/en/manual/',
+  '/privacy',
+  '/privacy/',
+  '/terms',
+  '/terms/',
+  '/en/privacy',
+  '/en/privacy/',
+  '/en/terms',
+  '/en/terms/',
+] as const;
+
 export function publicPagesApp() {
   const app = new Hono<AppEnv>();
-  app.use('*', secureHeaders());
+  // Same secureHeaders() defaults as before for /p/* — HSTS, X-Frame-Options, CORP/COOP, etc.
+  app.use('*', documentSecureHeaders());
   app.use('*', async (c, next) => {
     c.header('Cache-Control', 'no-store');
     await next();
@@ -187,13 +278,25 @@ export function publicPagesApp() {
     if (!(error instanceof HTTPException)) console.error('public_page_failed');
     return errorPage(error instanceof HTTPException ? error.status : 500, c.req.method);
   });
+
+  app.on(['GET', 'HEAD'], '/llms.txt', (c) =>
+    c.text(llmsTxt(c.env.APP_URL), 200, { 'Content-Type': 'text/plain; charset=utf-8' }),
+  );
+
+  for (const path of documentPaths) {
+    app.on(['GET', 'HEAD'], path, async (c) => {
+      const pathname = c.req.path.replace(/\/$/, '') || '/';
+      const assetPath = pathname === '/' ? '/' : pathname === '/en' ? '/en/' : `${pathname}/`;
+      return assetDocument(c, assetPath);
+    });
+  }
+
   app.get('/p/*', projectPage);
   app.get('/robots.txt', (c) =>
     c.text(`User-agent: *\nAllow: /\n\nSitemap: ${new URL('/sitemap.xml', c.env.APP_URL).href}\n`),
   );
   app.get('/sitemap.xml', async (c) => {
-    // Enumerate only occupied ranges, never all ranges between min/max rowid.
-    // Each leaf XML still performs an indexed read of at most 1000 source rows.
+    const origin = c.env.APP_URL;
     const rows = await c.env.DB.prepare(
       `SELECT p.public_id,'project' AS kind,0 AS bucket
       FROM projects p WHERE ${eligible}
@@ -203,17 +306,45 @@ export function publicPagesApp() {
       UNION ALL SELECT p.public_id,'pufus' AS kind,CAST((pf.rowid-1)/${sitemapSize} AS INTEGER)+1 AS bucket
       FROM projects p JOIN pufu_scores pf INDEXED BY public_search_pufus_project ON pf.project_id=p.id
       WHERE ${eligible} AND ${publicPufuWhere} GROUP BY p.public_id,bucket
+      UNION ALL SELECT p.public_id,'stocks' AS kind,CAST((s.rowid-1)/${sitemapSize} AS INTEGER)+1 AS bucket
+      FROM projects p JOIN stocks s INDEXED BY public_search_stocks_project ON s.project_id=p.id
+      WHERE ${eligible} GROUP BY p.public_id,bucket
       LIMIT 50001`,
     ).all<{ public_id: string; kind: string; bucket: number }>();
     if (rows.results.length > 50000) throw new Error('Sitemap index capacity exceeded');
-    const files = rows.results.map((row) => {
-      const root = `/sitemaps/${encodeURIComponent(row.public_id)}`;
-      const file = row.kind === 'project' ? 'project.xml' : `${row.kind}-${row.bucket}.xml`;
-      return `<sitemap><loc>${escape(new URL(`${root}/${file}`, c.env.APP_URL).href)}</loc></sitemap>`;
-    });
+    const files = [
+      `<sitemap><loc>${escape(new URL('/sitemaps/site.xml', origin).href)}</loc></sitemap>`,
+      ...rows.results.map((row) => {
+        const root = `/sitemaps/${encodeURIComponent(row.public_id)}`;
+        const file = row.kind === 'project' ? 'project.xml' : `${row.kind}-${row.bucket}.xml`;
+        return `<sitemap><loc>${escape(new URL(`${root}/${file}`, origin).href)}</loc></sitemap>`;
+      }),
+    ];
     return c.body(
       xml(
         `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${files.join('')}</sitemapindex>`,
+      ),
+      200,
+      xmlHeaders,
+    );
+  });
+  app.get('/sitemaps/site.xml', (c) => {
+    const origin = c.env.APP_URL;
+    const paths = [
+      homePath('ja'),
+      homePath('en'),
+      manualPath('ja'),
+      manualPath('en'),
+      legalPath('privacy', 'ja'),
+      legalPath('privacy', 'en'),
+      legalPath('terms', 'ja'),
+      legalPath('terms', 'en'),
+    ];
+    return c.body(
+      xml(
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths
+          .map((path) => urlEntry(new URL(path === '/' ? '/' : path, origin).href))
+          .join('')}</urlset>`,
       ),
       200,
       xmlHeaders,
@@ -229,30 +360,50 @@ export function publicPagesApp() {
       .first<{ id: string }>();
     if (!project) throw new HTTPException(404);
     const file = c.req.param('file');
-    let paths: string[];
-    if (file === 'project.xml') paths = [`/p/${encodeURIComponent(key)}`];
-    else {
-      const match = /^(questions|pufus)-([1-9]\d*)\.xml$/.exec(file);
-      if (!match) throw new HTTPException(404);
-      const bucket = Number(match[2]);
-      const upper = bucket * sitemapSize + 1;
-      if (!Number.isSafeInteger(upper)) throw new HTTPException(404);
-      const lower = upper - sitemapSize;
-      const questions = match[1] === 'questions';
-      const rows = await c.env.DB.prepare(
-        questions
-          ? `SELECT q.id FROM questions q INDEXED BY public_search_questions_project JOIN projects p ON p.id=q.project_id WHERE q.project_id=? AND q.rowid>=? AND q.rowid<? AND ${eligible} AND ${publicQuestionWhere} LIMIT ?`
-          : `SELECT pf.id FROM pufu_scores pf INDEXED BY public_search_pufus_project JOIN projects p ON p.id=pf.project_id WHERE pf.project_id=? AND pf.rowid>=? AND pf.rowid<? AND ${eligible} AND ${publicPufuWhere} LIMIT ?`,
-      )
-        .bind(project.id, lower, upper, sitemapSize)
-        .all<{ id: string }>();
-      paths = rows.results.map(
-        (row) => `/p/${encodeURIComponent(key)}/${match[1]}/${encodeURIComponent(row.id)}`,
+    const origin = c.env.APP_URL;
+    if (file === 'project.xml') {
+      return c.body(
+        xml(
+          `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlEntry(new URL(`/p/${encodeURIComponent(key)}`, origin).href)}</urlset>`,
+        ),
+        200,
+        xmlHeaders,
       );
     }
+    const match = /^(questions|pufus|stocks)-([1-9]\d*)\.xml$/.exec(file);
+    if (!match) throw new HTTPException(404);
+    const bucket = Number(match[2]);
+    const upper = bucket * sitemapSize + 1;
+    if (!Number.isSafeInteger(upper)) throw new HTTPException(404);
+    const lower = upper - sitemapSize;
+    const kind = match[1];
+    const rows =
+      kind === 'questions'
+        ? await c.env.DB.prepare(
+            `SELECT q.id,q.created_at AS modified FROM questions q INDEXED BY public_search_questions_project JOIN projects p ON p.id=q.project_id WHERE q.project_id=? AND q.rowid>=? AND q.rowid<? AND ${eligible} AND ${publicQuestionWhere} LIMIT ?`,
+          )
+            .bind(project.id, lower, upper, sitemapSize)
+            .all<{ id: string; modified: string }>()
+        : kind === 'pufus'
+          ? await c.env.DB.prepare(
+              `SELECT pf.id,pf.updated_at AS modified FROM pufu_scores pf INDEXED BY public_search_pufus_project JOIN projects p ON p.id=pf.project_id WHERE pf.project_id=? AND pf.rowid>=? AND pf.rowid<? AND ${eligible} AND ${publicPufuWhere} LIMIT ?`,
+            )
+              .bind(project.id, lower, upper, sitemapSize)
+              .all<{ id: string; modified: string }>()
+          : await c.env.DB.prepare(
+              `SELECT s.id,s.created_at AS modified FROM stocks s INDEXED BY public_search_stocks_project JOIN projects p ON p.id=s.project_id WHERE s.project_id=? AND s.rowid>=? AND s.rowid<? AND ${eligible} LIMIT ?`,
+            )
+              .bind(project.id, lower, upper, sitemapSize)
+              .all<{ id: string; modified: string }>();
+    const entries = rows.results.map((row) =>
+      urlEntry(
+        new URL(`/p/${encodeURIComponent(key)}/${kind}/${encodeURIComponent(row.id)}`, origin).href,
+        row.modified,
+      ),
+    );
     return c.body(
       xml(
-        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((path) => `<url><loc>${escape(new URL(path, c.env.APP_URL).href)}</loc></url>`).join('')}</urlset>`,
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join('')}</urlset>`,
       ),
       200,
       xmlHeaders,

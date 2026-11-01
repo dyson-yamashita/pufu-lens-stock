@@ -64,14 +64,19 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 it.each([
-  ['en-US', null, 'User manual', '/en/privacy'],
-  ['ja-JP', null, 'ユーザーマニュアル', '/privacy?lang=ja'],
-  ['ja-JP', 'en', 'User manual', '/en/privacy'],
+  ['/manual', 'en-US', null, 'ユーザーマニュアル', '/privacy'],
+  ['/manual', 'ja-JP', 'en', 'ユーザーマニュアル', '/privacy'],
+  ['/en/manual', 'ja-JP', null, 'User manual', '/en/privacy'],
+  ['/en/manual', 'ja-JP', 'ja', 'User manual', '/en/privacy'],
 ])(
-  'the production manual entry follows primary %s and saved %s independently of the account',
-  async (browser, preference, heading, privacy) => {
+  'manual URL %s forces its language over browser %s and saved %s',
+  async (pathname, browser, preference, heading, privacy) => {
     primary.language = browser;
     saved = preference;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { pathname, search: '', hash: '' },
+    });
     await act(async () => {
       await import('../src/main');
     });
