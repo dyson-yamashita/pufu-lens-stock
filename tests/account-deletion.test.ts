@@ -234,9 +234,9 @@ describe('退会と登録データの削除', () => {
     );
     await scheduledMaintenance(app.env);
     expect((await app.env.DB.prepare('SELECT * FROM account_deletions').all()).results).toEqual([]);
-    expect(
-      (await app.env.DB.prepare('SELECT * FROM account_deletion_jobs').all()).results,
-    ).toEqual([]);
+    expect((await app.env.DB.prepare('SELECT * FROM account_deletion_jobs').all()).results).toEqual(
+      [],
+    );
   });
 
   it('複数ページの本文は削除要求を保持して最後まで削除する', async () => {
