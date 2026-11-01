@@ -102,7 +102,7 @@ function PublicBrand() {
   useLanguage();
   return (
     <a href="/" className="brand">
-      <img src="/pufu-lens-logo.png" alt="" width="38" height="38" />
+      <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
       <span>Pufu Lens</span>
     </a>
   );
