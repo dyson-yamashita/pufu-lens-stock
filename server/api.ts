@@ -210,7 +210,7 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(comments|projects|stocks|stocks\/[^/]+(?:\/content)?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
+          /^\/api\/v1\/(comments|projects|memory|stocks|stocks\/[^/]+(?:\/content)?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
             c.req.path,
           )) ||
         (c.req.method === 'POST' &&
@@ -1359,8 +1359,15 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({ ok: true }, 202);
   });
   app.get('/api/v1/memory', async (c) => {
-    const { user } = c.get('principal');
-    const projectId = c.req.query('project_id') || null;
+    const principal = c.get('principal');
+    const { user } = principal;
+    const requestedProjectId = c.req.query('project_id') || null;
+    if (principal.kind === 'mcp' && !requestedProjectId)
+      throw new HTTPException(400, { message: '取得するプロジェクトを指定してください。' });
+    const projectId =
+      principal.kind === 'mcp'
+        ? resolveProjectId(principal, requestedProjectId)
+        : requestedProjectId;
     const owner = projectId
       ? await ownedProject(c.env, user.id, projectId)
       : await c.env.DB.prepare(

@@ -143,6 +143,7 @@ const sections = () => [
           {t('ui.user_manual.register_the_url_under_integrations_mcp_integration_in_the')}
         </li>
         <li>{t('ui.user_manual.edit_mcp_connection')}</li>
+        <li>{t('manual.mcp_project_memory')}</li>
         <li>
           <strong>{t('ui.user_manual.create_and_edit_pufu_in_chatgpt_and_other_apps')}</strong>
           {t('ui.user_manual.allow_create_edit_pufu_in_your_mcp_connection_to')}

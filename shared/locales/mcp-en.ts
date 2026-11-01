@@ -1,6 +1,23 @@
 import { mcpJa } from './mcp-ja';
 
 export const mcpEn = {
+  '生成言語が変更されたため、全件更新が必要です。':
+    'A full rebuild is needed because the generation language changed.',
+  '以前のメモリの反映履歴がないため、全件更新が必要です。':
+    'A full rebuild is needed because the previous memory has no source history.',
+  '全件更新の要求を受け付けています。': 'A full memory rebuild has been requested.',
+  '自己紹介やプロジェクト情報が変更されたため、全件更新が必要です。':
+    'A full rebuild is needed because the bio or project information changed.',
+  '反映済みの記事が削除・移動・変更されたため、全件更新が必要です。':
+    'A full rebuild is needed because a reflected article was deleted, moved or changed.',
+  'mcp.memory.instructions':
+    'Retrieve saved project memory with get_project_memory. Specify project_id; memories:read permission is required.',
+  'mcp.memory.description':
+    "Get the selected project's saved memory (text, interests, knowledge with source article IDs, and questions), update status and article coverage. project_id is required; use an ID from list_projects. Requires memories:read. Returns memory: null when not yet generated. Does not generate or rebuild memories and does not retrieve account-wide user memory.",
+  'mcp.memory.project_id': 'ID of an account-owned project authorized for this connection.',
+  プロジェクトメモリ取得: 'Get project memory',
+  プロジェクトのメモリを閲覧: 'Read project memories',
+  '取得するプロジェクトを指定してください。': 'Specify the project to retrieve.',
   選択したプロジェクト: 'Selected projects',
   'プロジェクトを複数選択できます。すべてを選ぶと、今後作成するプロジェクトにもアクセスできます。':
     'Select one or more projects. All projects also allows access to projects created in the future.',

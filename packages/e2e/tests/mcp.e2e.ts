@@ -33,9 +33,10 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
     code_challenge: createHash('sha256').update(verifier).digest('base64url'),
     code_challenge_method: 'S256',
     resource: `${url}/mcp`,
-    scope: 'projects:read stocks:read offline_access',
+    scope: 'projects:read stocks:read memories:read offline_access',
   });
   await app.open(`/oauth/authorize?${params}`);
+  await expect(screen.getByLabel('プロジェクトのメモリを閲覧', { exact: true })).toBeChecked();
   await screen.getByLabel('選択したプロジェクト', { exact: true }).check();
   await screen.getByLabel(fixture.projectName, { exact: true }).check();
   await screen.getByLabel('E2E追加プロジェクト', { exact: true }).check();
@@ -55,6 +56,8 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await screen
     .getByLabel('ストックを検索・閲覧（本文・コメントを含む）', { exact: true })
     .uncheck();
+  await expect(screen.getByLabel('プロジェクトのメモリを閲覧', { exact: true })).toBeChecked();
+  await screen.getByLabel('プロジェクトのメモリを閲覧', { exact: true }).uncheck();
   await screen.getByRole('button', '保存', { exact: true }).click();
   await expect(row).toContainText('仕事用ChatGPT');
   await expect(row).toContainText(fixture.projectName);
@@ -67,6 +70,7 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await expect(
     screen.getByLabel('ストックを検索・閲覧（本文・コメントを含む）', { exact: true }),
   ).not.toBeChecked();
+  await expect(screen.getByLabel('プロジェクトのメモリを閲覧', { exact: true })).not.toBeChecked();
   await screen.getByLabel('連携先の表示名').fill('保存しない名前');
   await screen.getByRole('button', 'キャンセル', { exact: true }).click();
   await expect(row).toContainText('仕事用ChatGPT');
