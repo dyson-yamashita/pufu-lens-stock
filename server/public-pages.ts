@@ -1,5 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { parseHTML } from 'linkedom';
 import type { AppEnv } from './env';
 import { documentSecureHeaders } from './document-headers';
 import { publicProjectsApp, publicPufuWhere, publicQuestionWhere } from './public-projects';
@@ -14,7 +15,7 @@ import type {
 } from '../shared/public-project';
 import { elementKeys, pufuDisplayTitle, type PufuScore } from '../shared/pufu';
 import { publicPathPattern } from '../shared/public-route';
-import { articleJsonLd, jsonLdScript } from '../shared/seo';
+import { articleJsonLd } from '../shared/seo';
 import { publicDocumentAssetPaths } from '../shared/public-document-routes';
 import { homePath, legalPath, manualPath, siteOrigin } from '../shared/site-paths';
 
@@ -100,6 +101,66 @@ function urlEntry(loc: string, modified?: string | null) {
   return `<url><loc>${escape(loc)}</loc>${lastmod(modified)}</url>`;
 }
 
+/** Rewrite built home HTML into a public page via DOM (no regex HTML "sanitization"). */
+function assemblePublicDocument(
+  template: string,
+  options: {
+    title: string;
+    description: string;
+    body: string;
+    robots: string;
+    canonical: string;
+    ogType: string;
+    ogImage: string;
+    jsonLd?: unknown;
+  },
+): string {
+  if (!template.includes('<!--public-root-start-->') || !template.includes('<!--public-root-end-->')) {
+    throw new Error('Public HTML template markers unavailable');
+  }
+  const { document } = parseHTML(template);
+  for (const el of document.querySelectorAll(
+    'link[rel="canonical"], link[hreflang], script[type="application/ld+json"]',
+  )) {
+    el.remove();
+  }
+  document.title = options.title;
+  let description = document.querySelector('meta[name="description"]');
+  if (!description) {
+    description = document.createElement('meta');
+    description.setAttribute('name', 'description');
+    document.head.appendChild(description);
+  }
+  description.setAttribute('content', options.description);
+  const root = document.getElementById('root');
+  if (!root) throw new Error('Public HTML template root unavailable');
+  root.innerHTML = options.body;
+
+  const appendMeta = (attrs: Record<string, string>) => {
+    const meta = document.createElement('meta');
+    for (const [key, value] of Object.entries(attrs)) meta.setAttribute(key, value);
+    document.head.appendChild(meta);
+  };
+  appendMeta({ name: 'robots', content: options.robots });
+  const canonical = document.createElement('link');
+  canonical.setAttribute('rel', 'canonical');
+  canonical.setAttribute('href', options.canonical);
+  document.head.appendChild(canonical);
+  appendMeta({ property: 'og:type', content: options.ogType });
+  appendMeta({ property: 'og:site_name', content: 'Pufu Lens' });
+  appendMeta({ property: 'og:title', content: options.title });
+  appendMeta({ property: 'og:description', content: options.description });
+  appendMeta({ property: 'og:url', content: options.canonical });
+  appendMeta({ property: 'og:image', content: options.ogImage });
+  if (options.jsonLd !== undefined) {
+    const script = document.createElement('script');
+    script.setAttribute('type', 'application/ld+json');
+    script.textContent = JSON.stringify(options.jsonLd).replace(/</g, '\\u003c');
+    document.head.appendChild(script);
+  }
+  return document.toString();
+}
+
 async function projectPage(c: Context<AppEnv>) {
   const match = publicPathPattern.exec(c.req.path);
   if (!match) throw new HTTPException(404);
@@ -170,41 +231,34 @@ async function projectPage(c: Context<AppEnv>) {
   const robots = indexable ? 'index, follow' : 'noindex, follow';
   const fullTitle = `${title} | Pufu Lens`;
   const shortDescription = description.replace(/\s+/g, ' ').slice(0, 200);
-  const structured =
+  const jsonLd =
     kind === 'questions' || kind === 'pufus' || kind === 'stocks'
-      ? jsonLdScript(
-          articleJsonLd({
-            url: canonical,
-            title: fullTitle,
-            description: shortDescription,
-            datePublished,
-            dateModified: dateModified ?? datePublished,
-            origin: c.env.APP_URL,
-          }),
-        )
-      : '';
-  const meta = `<meta name="robots" content="${robots}"><link rel="canonical" href="${escape(canonical)}"><meta property="og:type" content="${kind ? 'article' : 'website'}"><meta property="og:site_name" content="Pufu Lens"><meta property="og:title" content="${escape(fullTitle)}"><meta property="og:description" content="${escape(shortDescription)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:image" content="${escape(new URL('/pufu-lens-logo.png', c.env.APP_URL).href)}">${structured}`;
+      ? articleJsonLd({
+          url: canonical,
+          title: fullTitle,
+          description: shortDescription,
+          datePublished,
+          dateModified: dateModified ?? datePublished,
+          origin: c.env.APP_URL,
+        })
+      : undefined;
   if (!c.env.ASSETS) throw new Error('Public assets binding unavailable');
   const assets = await c.env.ASSETS.fetch(new Request(new URL('/', c.env.APP_URL)));
   if (!assets.ok) throw new Error('Public HTML template unavailable');
   const template = await assets.text();
-  const root = /<!--public-root-start-->[\s\S]*?<!--public-root-end-->/;
-  if (!root.test(template)) throw new Error('Public HTML template markers unavailable');
   const body = `<div class="public-page"><header class="public-header">${link('/', 'Pufu Lens')}</header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')}</nav>${content}</main></div>`;
-  // Built home HTML may already carry canonical/hreflang/JSON-LD; strip those so
-  // page-specific SEO is the only remaining set (LinkeDOM often omits `/>` on meta).
-  const cleaned = template
-    .replace(/<link\b[^>]*\brel=(["']?)canonical\1[^>]*>/gi, '')
-    .replace(/<link\b[^>]*\bhreflang=(["']?)[^"'\s>]+\1[^>]*>/gi, '')
-    .replace(/<script\b[^>]*\btype=(["']?)application\/ld\+json\1[^>]*>[\s\S]*?<\/script>/gi, '');
-  const document = cleaned
-    .replace(root, () => body)
-    .replace(/<title>[\s\S]*?<\/title>/, () => `<title>${escape(fullTitle)}</title>`)
-    .replace(
-      /<meta\b[^>]*\bname=(["']?)description\1[^>]*>/i,
-      () => `<meta name="description" content="${escape(shortDescription)}">`,
-    )
-    .replace('</head>', () => `${meta}</head>`);
+  // Built home HTML may already carry canonical/hreflang/JSON-LD; remove those nodes
+  // via DOM and set page-specific title/description/meta (avoids regex HTML sanitization).
+  const document = assemblePublicDocument(template, {
+    title: fullTitle,
+    description: shortDescription,
+    body,
+    robots,
+    canonical,
+    ogType: kind ? 'article' : 'website',
+    ogImage: new URL('/pufu-lens-logo.png', c.env.APP_URL).href,
+    jsonLd,
+  });
   c.header('X-Robots-Tag', robots);
   return c.html(document);
 }
