@@ -1,5 +1,6 @@
 export const mcpScopes = {
   'projects:read': 'プロジェクトの一覧を取得',
+  'memories:read': 'プロジェクトのメモリを閲覧',
   'stocks:read': 'ストックを検索・閲覧（本文・コメントを含む）',
   'stocks:write': 'ストックとコメントを追加',
   'questions:read': '問い・気づきとプ譜を検索・閲覧、コメントを閲覧',

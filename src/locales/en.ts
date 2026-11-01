@@ -1,4 +1,6 @@
 export const en: Record<string, string> = {
+  'manual.mcp_project_memory':
+    'To read project memory from ChatGPT or another app, allow “Read project memories” when connecting through MCP, then ask for the memory of a specific project. Reconnect from the client to add this permission to an existing connection. The client can retrieve saved project memories and update status within the authorized scope; account-wide user memory is excluded.',
   'pufu.title_too_long': 'Keep the title within 200 characters.',
   'pufu.title_hint':
     'Optionally enter a short title. Leave blank to show the gaining goal from phase 1.',

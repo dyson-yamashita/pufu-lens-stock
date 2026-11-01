@@ -935,6 +935,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'add_question',
       'add_stock',
       'create_pufu',
+      'get_project_memory',
       'get_pufu',
       'get_pufu_guideline',
       'get_pufu_image',
