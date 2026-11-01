@@ -697,7 +697,7 @@ DNS・Google Cloud設定と審査状態はコード変更だけでは確認・�
    pnpm run deploy:workers
    ```
 
-`APP_URL` はパス・クエリ・フラグメント・認証情報を含まないHTTPSオリジンにします。末尾の `/` は除去されます。未設定、不正なURL、localhost、`.invalid` のダミー値では本番ビルドを停止します。`.dev.vars.production` の値は本番ビルドへ自動注入されません。`pnpm run deploy` も同じ環境変数が必要です。通常の `pnpm run build` とローカル開発には不要です。D1・KVも未設定・不正形式・ゼロのIDでは本番ビルドを停止します。生成された `dist` はGit管理対象外です。`db:migrate:production` は本番ビルドが生成した `dist/pufu_lens_stock/wrangler.json` を明示的に使うため、先に本番ビルドを成功させてください。`deploy:workers` は `dist/pufu_lens_pdf_parser/wrangler.json` のPDF専用Workerを先に配置し、成功後に `dist/pufu_lens_stock/wrangler.json` の本体を配置します。PDF専用Workerは `wrangler.pdf.jsonc`、本体の接続先は `wrangler.jsonc` の `services` で定義します。ローカル開発もViteのauxiliary Workerとして同じ構成を使用し、別プロセスの起動操作は不要です。
+`APP_URL` はパス・クエリ・フラグメント・認証情報を含まないHTTPSオリジンにします。末尾の `/` は除去されます。未設定、不正なURL、localhost、`.invalid` のダミー値では本番ビルドを停止します。`.dev.vars.production` の値は本番ビルドへ自動注入されません。`pnpm run deploy` も同じ環境変数が必要です。通常の `pnpm run build` とローカル開発には不要です。D1・KVも未設定・不正形式・ゼロのIDでは本番ビルドを停止します。生成された `dist` はGit管理対象外です。`db:migrate:production` は本番ビルドが生成した `dist/pufu_lens_stock/wrangler.json` を明示的に使うため、先に本番ビルドを成功させてください。`deploy:workers` は `dist/pufu_lens_pdf_parser/wrangler.json` のPDF専用Workerを先に配置し、成功後に `dist/pufu_lens_stock/wrangler.json` の本体を配置します。PDF専用Workerは `wrangler.pdf.jsonc`、本体の接続先は `wrangler.jsonc` の `services` で定義します。ローカル開発もViteのauxiliary Workerとして同じ構成を使用し、別プロセスの起動操作は不要です。Workers Observability（logs / traces / issues）は両 `wrangler` 設定の `observability` で有効化しており、ダッシュボードだけの有効化は次のデプロイで上書きされます。
 
 この設定はアプリのURL設定であり、Cloudflareのドメイン割り当てやGoogle側のOAuth設定は変更しません。URLは秘密情報として扱いません。Git履歴やActionsのログなどから既存URLが見える場合があります。
 
