@@ -98,7 +98,10 @@ it('トップと英語トップにクロール可能な本文・hreflang・JSON-
     ['index.html', 'ja', '/'],
     ['en/index.html', 'en', '/en'],
   ] as const) {
-    const { document } = parseHTML(assets.get(file)!);
+    const html = assets.get(file)!;
+    expect(html).toContain('<!--public-root-start-->');
+    expect(html).toContain('<!--public-root-end-->');
+    const { document } = parseHTML(html);
     expect(document.documentElement.lang).toBe(lang);
     expect(document.querySelector('#root h1')?.textContent?.length).toBeGreaterThan(5);
     expect(document.querySelector('#root p')?.textContent?.length).toBeGreaterThan(20);

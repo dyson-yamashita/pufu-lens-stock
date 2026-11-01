@@ -191,11 +191,17 @@ async function projectPage(c: Context<AppEnv>) {
   const root = /<!--public-root-start-->[\s\S]*?<!--public-root-end-->/;
   if (!root.test(template)) throw new Error('Public HTML template markers unavailable');
   const body = `<div class="public-page"><header class="public-header">${link('/', 'Pufu Lens')}</header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')}</nav>${content}</main></div>`;
-  const document = template
+  // Built home HTML may already carry canonical/hreflang/JSON-LD; strip those so
+  // page-specific SEO is the only remaining set (LinkeDOM often omits `/>` on meta).
+  const cleaned = template
+    .replace(/<link\b[^>]*\brel=(["']?)canonical\1[^>]*>/gi, '')
+    .replace(/<link\b[^>]*\bhreflang=(["']?)[^"'\s>]+\1[^>]*>/gi, '')
+    .replace(/<script\b[^>]*\btype=(["']?)application\/ld\+json\1[^>]*>[\s\S]*?<\/script>/gi, '');
+  const document = cleaned
     .replace(root, () => body)
     .replace(/<title>[\s\S]*?<\/title>/, () => `<title>${escape(fullTitle)}</title>`)
     .replace(
-      /<meta\s+name="description"[\s\S]*?\/>/,
+      /<meta\b[^>]*\bname=(["']?)description\1[^>]*>/i,
       () => `<meta name="description" content="${escape(shortDescription)}">`,
     )
     .replace('</head>', () => `${meta}</head>`);

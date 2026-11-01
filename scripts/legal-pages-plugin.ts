@@ -75,7 +75,10 @@ function prepareDocument(
   document.querySelector('meta[name="description"]')?.setAttribute('content', options.description);
   ensureCanonical(document, options.path);
   appendHeadHtml(document, `${options.hreflang}${jsonLdScript(options.jsonLd)}`);
-  document.getElementById('root')!.innerHTML = options.body;
+  // Keep the public-page SSR markers: Japanese home becomes ASSETS `/` and
+  // server/public-pages.ts replaces only the marked region.
+  document.getElementById('root')!.innerHTML =
+    `<!--public-root-start-->${options.body}<!--public-root-end-->`;
   if (!options.keepModule) removeModuleScripts(document);
   return document.toString();
 }
