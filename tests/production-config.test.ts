@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
   productionAppUrl,
@@ -12,6 +13,17 @@ describe('任意の検索インデックス名', () => {
     expect(searchIndexName('pufu-search-production')).toBe('pufu-search-production');
     expect(() => searchIndexName('https://private.example/secret')).toThrow('VECTORIZE_INDEX_NAME');
     expect(() => searchIndexName('x'.repeat(65))).toThrow('VECTORIZE_INDEX_NAME');
+  });
+});
+
+describe('本番の workers.dev 公開', () => {
+  it('本番の stock Worker で workers.dev と preview URL を無効のままにする', async () => {
+    const source = await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+    const production = source.match(/"production"\s*:\s*\{([\s\S]*?)\n {4}\}/)?.[1] ?? '';
+    expect(production).toMatch(/"workers_dev"\s*:\s*false\b/);
+    expect(production).toMatch(/"preview_urls"\s*:\s*false\b/);
+    expect(production).not.toMatch(/"workers_dev"\s*:\s*true\b/);
+    expect(production).not.toMatch(/"preview_urls"\s*:\s*true\b/);
   });
 });
 
