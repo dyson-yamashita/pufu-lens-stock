@@ -1,6 +1,7 @@
 import type { Env, Job } from './env';
 import { isDemo } from './env';
 import { getOAuthApi } from '@cloudflare/workers-oauth-provider';
+import { isWorkflowInstanceNotFound } from './workflow-instance';
 
 export async function requestAccountDeletion(env: Env, userId: string): Promise<void> {
   // 後処理のIDを確保してから、本人の全データと認証を同一トランザクションで削除する。
@@ -66,7 +67,7 @@ export async function cleanupAccount(env: Env, userId: string): Promise<boolean>
         }
       } catch (error) {
         // 未起動・保持期限切れ・前回削除済みのインスタンスは削除不要。
-        if (!(error instanceof Error) || error.message !== 'instance.not_found') throw error;
+        if (!isWorkflowInstanceNotFound(error)) throw error;
       }
       await env.DB.prepare('DELETE FROM account_deletion_jobs WHERE id = ? AND user_id = ?')
         .bind(job.id, userId)
