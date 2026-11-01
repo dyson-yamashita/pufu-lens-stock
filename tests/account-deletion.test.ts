@@ -220,6 +220,25 @@ describe('退会と登録データの削除', () => {
     expect((await app.env.CONTENT.list({ prefix: 'alice/' })).objects).toEqual([]);
   });
 
+  it('本番API形式のinstance.not_foundでも退会後処理を完了する', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect((await remove()).status).toBe(200);
+    await app.env.DB.batch([
+      app.env.DB.prepare("INSERT INTO account_deletions(user_id) VALUES ('alice')"),
+      app.env.DB.prepare(
+        "INSERT INTO account_deletion_jobs(id,user_id,kind) VALUES ('gone','alice','article')",
+      ),
+    ]);
+    vi.mocked(app.env.ARTICLE_WORKFLOW.get).mockRejectedValue(
+      new Error('workflows.api.error.instance.not_found'),
+    );
+    await scheduledMaintenance(app.env);
+    expect((await app.env.DB.prepare('SELECT * FROM account_deletions').all()).results).toEqual([]);
+    expect((await app.env.DB.prepare('SELECT * FROM account_deletion_jobs').all()).results).toEqual(
+      [],
+    );
+  });
+
   it('複数ページの本文は削除要求を保持して最後まで削除する', async () => {
     await Promise.all(
       Array.from({ length: 101 }, (_, i) => app.env.CONTENT.put(`alice/orphans/${i}.txt`, '本文')),
