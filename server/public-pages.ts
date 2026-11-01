@@ -124,7 +124,9 @@ function assemblePublicDocument(
   )) {
     el.remove();
   }
-  document.title = options.title;
+  // LinkeDOM does not HTML-escape title text on serialize; pre-escape like the old
+  // `<title>${escape(...)}</title>` path so `</title>` cannot break out of the element.
+  document.title = escape(options.title);
   let description = document.querySelector('meta[name="description"]');
   if (!description) {
     description = document.createElement('meta');

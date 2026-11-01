@@ -100,6 +100,22 @@ it('プ譜と問いの個別URLは本文、固有title、OGPを返し、利用�
   const question = await read(`/p/${key}/questions/q`);
   expect(await question.text()).toContain('実践の問い？');
 });
+it('titleに</title>を含む公開名でもtitle要素を破れない', async () => {
+  await app.env.DB.prepare("UPDATE projects SET name=? WHERE id='alice-project'")
+    .bind('Alice</title><script>alert(1)</script>')
+    .run();
+  await allow();
+  const html = await (await read(`/p/${key}`)).text();
+  const titleTag = html.match(/<title>[\s\S]*?<\/title>/)?.[0] ?? '';
+  expect(titleTag).toContain('Alice&lt;/title&gt;&lt;script&gt;alert(1)&lt;/script&gt;');
+  expect(titleTag).not.toContain('<script>');
+  const { document } = parseHTML(html);
+  expect(document.querySelectorAll('title')).toHaveLength(1);
+  expect(document.querySelector('title')?.textContent).toContain(
+    'Alice</title><script>alert(1)</script>',
+  );
+  expect(document.querySelector('head script:not([src]):not([type="application/ld+json"])')).toBeNull();
+});
 it.each([
   '/questions/hidden',
   '/pufus/missing',
