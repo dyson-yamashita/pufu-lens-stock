@@ -95,6 +95,18 @@ it('英語ランディングでも3ステップ文言とマニュアルリンク
     'Grow questions, insights and memory',
     'Think it through with Pufu',
   ]);
+  expect(section?.textContent).toContain(
+    'Save articles you find interesting to a project, by URL or text.',
+  );
+  expect(section?.textContent).toContain(
+    'Summaries spark questions and insights, and your interests and knowledge connect in memory.',
+  );
+  expect(section?.textContent).toContain(
+    'Pufu is a one-page thinking map of a goal and the moves toward it. Use it to plan your next step.',
+  );
+  expect(section?.textContent).toContain(
+    'You can also use your stocks, questions and insights from ChatGPT and other AI apps (MCP connection).',
+  );
   expect(section?.querySelector('a[href="/en/manual#integrations"]')?.textContent).toBe(
     'How to connect',
   );
