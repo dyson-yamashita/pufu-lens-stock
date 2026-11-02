@@ -32,7 +32,7 @@ export const ja: Record<string, string> = {
   'ui.app.close': '閉じる',
   'ui.app.google_sign_in_could_not_be_completed_please_try':
     'Googleログインを完了できませんでした。もう一度お試しください。',
-  'ui.app.read_collect_connect': '読む。集める。つながる。',
+  'ui.app.read_collect_connect': '集める。つながる。行動する。',
   'ui.app.manual': 'マニュアル',
   'ui.app.turn_collected_knowledge': '集めた知識を、',
   'ui.app.into_connected': 'つながる',
@@ -63,6 +63,16 @@ export const ja: Record<string, string> = {
   'ui.app.step_mcp_title': 'MCPでAIと繋がる',
   'ui.app.step_mcp_body':
     'ChatGPTなどのAIと連携し、ストックや問い・気づきを使って考えを深められます。',
+  'ui.app.use_cases': 'ユースケース',
+  'ui.app.use_case_learning_title': '学んだことを蓄積する',
+  'ui.app.use_case_learning_body':
+    '読んだ記事や本、勉強したこと、気づきをストック。AIと振り返りながら知識を深め、自分だけの学びの記録を育てます。',
+  'ui.app.use_case_business_title': '新規事業やアイデアを検討する',
+  'ui.app.use_case_business_body':
+    '市場調査や顧客の声、思いついたアイデアを集め、解決したい課題を問いにする。プ譜で事業化に向けた施策を整理します。',
+  'ui.app.use_case_sharing_title': '仲間と気づきを共有する',
+  'ui.app.use_case_sharing_body':
+    '日々の活動で得た気づきや疑問、アイデアをストック。問いやプ譜を通じて互いの考えや目標を共有し、異なる視点から議論を深めながら、新しい発見や次の行動につなげます。',
   'ui.app.find_connections_beyond_what_you_read': '読んだ先に、つながりがある。',
   'ui.app.today_s_article': '明日のアイデアにつながる、',
   'ui.app.tomorrow_s_idea': '今日のひと記事。',

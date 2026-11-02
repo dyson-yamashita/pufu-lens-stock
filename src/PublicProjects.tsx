@@ -200,6 +200,7 @@ export function PublicProjectDirectory() {
                     {project.pufu_count}
                     {t('ui.public_projects.pufus')}
                   </span>
+                  <ArrowRight className="public-project-card-arrow" size={18} aria-hidden="true" />
                 </div>
               </a>
             ))}

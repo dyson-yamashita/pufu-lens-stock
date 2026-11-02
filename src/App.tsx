@@ -310,7 +310,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             <span>{t('ui.app.memory_2')}</span>
             {t('ui.app.separator')}
           </h1>
-          <p>
+          <p className="login-description">
             {t('ui.app.save_interesting_articles_to_projects')}
             <br />
             {t('ui.app.connect_their_key_points_with_your_interests')}
@@ -405,7 +405,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
       >
         <h2 id="what-you-can-do-heading">{t('ui.app.what_you_can_do')}</h2>
         <div className="what-you-can-do-steps">
-          <article className="what-you-can-do-card">
+          <article className="what-you-can-do-item">
             <div className="what-you-can-do-heading">
               <span className="what-you-can-do-number" aria-hidden="true">
                 1
@@ -414,7 +414,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             </div>
             <p>{t('ui.app.step_stock_body')}</p>
           </article>
-          <article className="what-you-can-do-card">
+          <article className="what-you-can-do-item">
             <div className="what-you-can-do-heading">
               <span className="what-you-can-do-number" aria-hidden="true">
                 2
@@ -423,7 +423,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             </div>
             <p>{t('ui.app.step_grow_body')}</p>
           </article>
-          <article className="what-you-can-do-card">
+          <article className="what-you-can-do-item">
             <div className="what-you-can-do-heading">
               <span className="what-you-can-do-number" aria-hidden="true">
                 3
@@ -432,7 +432,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             </div>
             <p>{t('ui.app.step_pufu_body')}</p>
           </article>
-          <article className="what-you-can-do-card">
+          <article className="what-you-can-do-item">
             <div className="what-you-can-do-heading">
               <span className="what-you-can-do-number" aria-hidden="true">
                 4
@@ -441,6 +441,26 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             </div>
             <p>{t('ui.app.step_mcp_body')}</p>
           </article>
+        </div>
+      </section>
+      <section id="use-cases" className="what-you-can-do" aria-labelledby="use-cases-heading">
+        <h2 id="use-cases-heading">{t('ui.app.use_cases')}</h2>
+        <div className="use-case-list">
+          {[
+            ['ui.app.use_case_learning_title', 'ui.app.use_case_learning_body'],
+            ['ui.app.use_case_business_title', 'ui.app.use_case_business_body'],
+            ['ui.app.use_case_sharing_title', 'ui.app.use_case_sharing_body'],
+          ].map(([title, body], index) => (
+            <article className="what-you-can-do-item" key={title}>
+              <div className="what-you-can-do-heading">
+                <span className="what-you-can-do-number" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <h3>{t(title)}</h3>
+              </div>
+              <p>{t(body)}</p>
+            </article>
+          ))}
         </div>
       </section>
       <PublicProjectDirectory />
