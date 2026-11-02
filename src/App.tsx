@@ -55,6 +55,7 @@ import type {
   Config,
   Memory,
   MemoryCoverage,
+  MemoryVersion,
   Project,
   Stock,
   TokenInfo,
@@ -80,6 +81,7 @@ import Pufus from './Pufus';
 import McpConnections from './McpConnections';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
+import MemoryHistory from './MemoryHistory';
 import ScrollHeader from './ScrollHeader';
 import LegalLinks from './LegalLinks';
 import { PublicProjectDirectory, ProjectPublicationSettings } from './PublicProjects';
@@ -1422,6 +1424,8 @@ export default function App() {
           ) : route.view === 'memory' ? (
             <div className="memory-page">
               <MemoryPanel
+                key={route.projectId ?? 'user'}
+                historyProjectId={route.projectId ?? undefined}
                 response={memoryResponse}
                 project={selected}
                 full
@@ -1781,18 +1785,21 @@ function StockFavoriteButton({
 function MemoryPanel({
   response,
   project,
+  historyProjectId,
   full = false,
   onRebuild,
   onEvidence,
 }: {
   response: MemoryResponse;
   project?: Project;
+  historyProjectId?: string;
   full?: boolean;
   onRebuild?: () => void;
   onEvidence: (id: string) => Promise<void>;
 }) {
   useLanguage();
-  const memory = response.memory;
+  const [historical, setHistorical] = useState<MemoryVersion | null>(null);
+  const memory = historical ? { ...historical, updated_at: historical.saved_at } : response.memory;
   const data = memory?.data;
   return (
     <section className={`memory-card ${full ? 'full-memory' : ''}`}>
@@ -1815,16 +1822,32 @@ function MemoryPanel({
           ? t('ui.app.from_the_articles_collected_in_this_project')
           : t('ui.app.interests_across_eligible_projects')}
       </p>
-      {response.coverage?.full_rebuild_reason && (
+      {full && (
+        <MemoryHistory
+          projectId={historyProjectId}
+          currentRevision={response.memory?.revision}
+          updatedAt={response.memory?.updated_at}
+          onSelect={setHistorical}
+        />
+      )}
+      {historical && (
+        <div className="memory-history-notice" role="status">
+          <strong>{t('ui.memory_history.viewing', { revision: historical.revision })}</strong>
+          <p>{t('ui.memory_history.historical_note')}</p>
+        </div>
+      )}
+      {!historical && response.coverage?.full_rebuild_reason && (
         <p className="update-note">{applicationError(response.coverage.full_rebuild_reason)}</p>
       )}
-      {response.pending && <p className="update-note">{t('ui.app.incorporating_new_articles')}</p>}
+      {!historical && response.pending && (
+        <p className="update-note">{t('ui.app.incorporating_new_articles')}</p>
+      )}
       {response.error && (
         <p className="form-error" role="alert">
           {applicationError(response.error)}
         </p>
       )}
-      {!data?.interests.length && !data?.knowledge.length ? (
+      {!data?.interests.length && !data?.knowledge.length && !data?.questions.length ? (
         <div className="memory-empty">
           <div className="memory-seed">
             <span />
@@ -1899,7 +1922,11 @@ function MemoryPanel({
             {t('ui.app.saving_an_article_does_not_imply_agreement_with_its')}
           </p>
           <div className="memory-controls">
-            <button className="button secondary" disabled={response.pending} onClick={onRebuild}>
+            <button
+              className="button secondary"
+              disabled={response.pending || Boolean(historical)}
+              onClick={onRebuild}
+            >
               <RefreshCw size={16} aria-hidden="true" />
               {t('ui.app.regenerate')}
             </button>

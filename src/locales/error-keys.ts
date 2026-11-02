@@ -1,5 +1,10 @@
 // Only application-owned error messages are eligible for translation.
 export const errorKeys: Record<string, string> = {
+  '履歴の版番号を正しく指定してください。': 'error.memory_history_revision',
+  'メモリ履歴が見つかりません。': 'error.memory_history_not_found',
+  'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。':
+    'error.memory_history_unavailable',
+
   'タイトルは200文字以内で入力してください。': 'pufu.title_too_long',
   'AIの出力形式が正しくありません。': 'error.the_ai_output_format_is_invalid',
   'AIの出力形式が正しくありません。再試行してください。':

@@ -1,3 +1,4 @@
+import { cleanupMemoryHistory } from './memory-history';
 import type { Env, Job } from './env';
 import { admitJob, retryAt } from './usage';
 import { now, queueQuestionJobStatement, jobFailureStatements } from './db';
@@ -81,6 +82,7 @@ export async function scheduledMaintenance(env: Env): Promise<void> {
     console.error('search_index_maintenance_pending');
   }
   await cleanupDeletedAccounts(env);
+  await cleanupMemoryHistory(env);
   try {
     await cleanupExpiredPufuImageLinks(env);
   } catch {

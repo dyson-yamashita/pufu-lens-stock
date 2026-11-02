@@ -1,13 +1,8 @@
+import { saveMemoryWithHistory } from './memory-history';
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import type { Env, Job } from './env';
 import { isDemo } from './env';
-import {
-  articleMemoryStatements,
-  memorySaveStatement,
-  now,
-  queueQuestionStatements,
-  jobFailureStatements,
-} from './db';
+import { articleMemoryStatements, now, queueQuestionStatements, jobFailureStatements } from './db';
 import { fetchArticle } from './ingest';
 import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import {
@@ -20,12 +15,7 @@ import {
   topicCounts,
   type AiCall,
 } from './ai';
-import {
-  loadMemoryInputPage,
-  memoryUpdateState,
-  memorySourceStatements,
-  type MemoryInput,
-} from './memory';
+import { loadMemoryInputPage, memoryUpdateState, type MemoryInput } from './memory';
 import { dispatchJobs } from './jobs';
 import type { ArticleSummary, MemoryData } from '../shared/domain';
 import { runPufu } from './pufu';
@@ -369,8 +359,9 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
             resolveLanguage(job.language),
           );
       await step.do('save-if-revision-current', async () => {
-        await this.env.DB.batch([
-          memorySaveStatement(this.env, {
+        await saveMemoryWithHistory(
+          this.env,
+          {
             userId: job.user_id,
             projectId: project ? job.target_id : null,
             revision: job.revision,
@@ -380,12 +371,10 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
             model: modelName(this.env),
             contextHash: state.contextHash,
             language: resolveLanguage(job.language),
-          }),
-          ...memorySourceStatements(this.env, state.id, job.revision, inputs),
-          this.env.DB.prepare(
-            "UPDATE processing_jobs SET status = 'done', error = NULL, updated_at = ? WHERE id = ?",
-          ).bind(now(), job.id),
-        ]);
+          },
+          inputs,
+        );
+        await done(this.env, job.id);
       });
     } catch (error) {
       if (await deferLimitedJob(this.env, job, error)) return;

@@ -1,6 +1,16 @@
 import { mcpJa } from './mcp-ja';
 
 export const mcpEn = {
+  '履歴の版番号を正しく指定してください。': 'Enter a valid memory history revision.',
+  'メモリ履歴が見つかりません。': 'Memory history was not found.',
+  'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。':
+    'Could not load memory history. Please try again later.',
+  プロジェクトメモリ履歴: 'Project memory history',
+
+  'mcp.memory.revision': 'Optional historical revision. Omit to read the latest memory.',
+  'mcp.memory.history_description':
+    'List saved project memory versions, newest first, 24 per page, without their content. Pass next_before as before for the next page. Use get_project_memory with revision to read a version.',
+
   '生成言語が変更されたため、全件更新が必要です。':
     'A full rebuild is needed because the generation language changed.',
   '以前のメモリの反映履歴がないため、全件更新が必要です。':
@@ -11,7 +21,7 @@ export const mcpEn = {
   '反映済みの記事が削除・移動・変更されたため、全件更新が必要です。':
     'A full rebuild is needed because a reflected article was deleted, moved or changed.',
   'mcp.memory.instructions':
-    'Retrieve saved project memory with get_project_memory. Specify project_id; memories:read permission is required.',
+    'Retrieve saved project memory with get_project_memory. Specify project_id; memories:read permission is required. Find past versions with list_project_memory_versions and pass revision to get_project_memory.',
   'mcp.memory.description':
     "Get the selected project's saved memory (text, interests, knowledge with source article IDs, and questions), update status and article coverage. project_id is required; use an ID from list_projects. Requires memories:read. Returns memory: null when not yet generated. Does not generate or rebuild memories and does not retrieve account-wide user memory.",
   'mcp.memory.project_id': 'ID of an account-owned project authorized for this connection.',

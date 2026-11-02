@@ -1,6 +1,27 @@
 export const en: Record<string, string> = {
+  'error.memory_history_revision': 'Enter a valid memory history revision.',
+  'error.memory_history_not_found': 'Memory history was not found.',
+  'error.memory_history_unavailable': 'Could not load memory history. Please try again later.',
+
+  'manual.memory_history':
+    'Open “Memory history” on the memory page and select a date and revision to read an earlier version. Select “Latest memory” to return. Completed updates are recorded automatically. Versions from before recording began cannot be recovered; the existing memory is preserved on its next update. Historical summaries may retain information from stocks you later delete. History is private and is deleted when you delete its project or your account.',
+
+  'ui.memory_history.title': 'Memory history',
+  'ui.memory_history.caption':
+    'Revisit your interests, knowledge and questions at each point in time.',
+  'ui.memory_history.latest': 'Latest memory',
+  'ui.memory_history.current': 'Current version',
+  'ui.memory_history.version': 'Revision {{revision}} · {{count}} articles',
+  'ui.memory_history.empty': 'No earlier versions yet. Future updates will be recorded.',
+  'ui.memory_history.more': 'Load earlier versions',
+  'ui.memory_history.loading': 'Loading history…',
+  'ui.memory_history.retry': 'Retry',
+  'ui.memory_history.viewing': 'Viewing revision {{revision}}',
+  'ui.memory_history.historical_note':
+    'This is a historical summary. The current situation and available sources may differ.',
+
   'manual.mcp_project_memory':
-    'To read project memory from ChatGPT or another app, allow “Read project memories” when connecting through MCP, then ask for the memory of a specific project. Reconnect from the client to add this permission to an existing connection. The client can retrieve saved project memories and update status within the authorized scope; account-wide user memory is excluded.',
+    'To read project memory from ChatGPT or another app, allow “Read project memories” when connecting through MCP, then ask for the memory of a specific project. Reconnect from the client to add this permission to an existing connection. The client can retrieve saved project memories and update status within the authorized scope; account-wide user memory is excluded. You can also list saved memory versions and retrieve their content by revision.',
   'pufu.title_too_long': 'Keep the title within 200 characters.',
   'pufu.title_hint':
     'Optionally enter a short title. Leave blank to show the gaining goal from phase 1.',

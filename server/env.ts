@@ -10,6 +10,7 @@ export type EmbeddingAI = {
 export interface Env {
   DB: D1Database;
   CONTENT: R2Bucket;
+  MEMORY_HISTORY: R2Bucket;
   ASSETS?: Fetcher;
   PDF_PARSER?: Fetcher;
   OAUTH_KV?: KVNamespace;

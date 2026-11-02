@@ -4293,3 +4293,88 @@ article.pufu-list-item {
 .pufu-context > .pufu-title-form {
   margin-bottom: 16px;
 }
+
+/* Memory versions use the same private reader as the latest memory. */
+.memory-history {
+  margin: 1.25rem 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.memory-history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.memory-history-toggle span {
+  flex: 1;
+  font-weight: 600;
+}
+.memory-history-body {
+  padding: 0 1rem 1rem;
+}
+.memory-history-caption {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+.memory-history-list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 280px;
+  overflow: auto;
+  margin: 0.8rem 0;
+}
+.memory-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.memory-version small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.memory-version[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--wash);
+}
+.memory-version:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.memory-history-notice {
+  border-left: 3px solid var(--accent);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background: var(--wash);
+  border-radius: 0 8px 8px 0;
+}
+.memory-history-notice strong {
+  font-size: 0.88rem;
+}
+.memory-history-notice p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0.35rem 0 0;
+  line-height: 1.7;
+}

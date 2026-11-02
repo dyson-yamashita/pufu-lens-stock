@@ -151,7 +151,10 @@ export async function withRuntime<T>(
             migrations_dir: join(repo, 'migrations'),
           },
         ],
-        r2_buckets: [{ binding: 'CONTENT', bucket_name: 'e2e-content' }],
+        r2_buckets: [
+          { binding: 'CONTENT', bucket_name: 'e2e-content' },
+          { binding: 'MEMORY_HISTORY', bucket_name: 'e2e-memory-history' },
+        ],
         kv_namespaces: [{ binding: 'OAUTH_KV', id: '00000000000000000000000000000000' }],
         ratelimits: built.ratelimits,
         workflows: built.workflows,

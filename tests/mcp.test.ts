@@ -942,6 +942,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
       'get_question',
       'get_stock',
       'list_comments',
+      'list_project_memory_versions',
       'list_projects',
       'list_pufus',
       'list_questions',
