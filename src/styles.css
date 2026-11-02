@@ -2304,7 +2304,7 @@ p {
 }
 .login-main {
   max-width: 1320px;
-  margin: 60px auto 24px;
+  margin: 24px auto 24px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -2329,9 +2329,15 @@ p {
   line-height: 2.2;
 }
 .google-button {
+  --button: #3b65a4;
+  --button-hover: #31578e;
   margin-top: 31px;
   gap: 16px;
   min-width: 230px;
+}
+:root[data-theme='dark'] .google-button {
+  --button: #c4dcff;
+  --button-hover: #d2e2fa;
 }
 .google-g {
   font-family: Arial, sans-serif;
@@ -2728,7 +2734,7 @@ p {
   }
   .login-main {
     grid-template-columns: 1fr;
-    margin: 30px auto 16px;
+    margin: 12px auto 16px;
     padding: 0 28px;
     gap: 5px;
   }
@@ -3521,7 +3527,6 @@ article.pufu-list-item {
   max-width: 1180px;
   margin: 0 auto 80px;
   padding: 40px 28px 0;
-  border-top: 1px solid var(--border);
 }
 .public-section-heading {
   display: flex;

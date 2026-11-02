@@ -32,7 +32,7 @@ export const ja: Record<string, string> = {
   'ui.app.close': '閉じる',
   'ui.app.google_sign_in_could_not_be_completed_please_try':
     'Googleログインを完了できませんでした。もう一度お試しください。',
-  'ui.app.read_collect_connect': '読む。集める。つながる。',
+  'ui.app.read_collect_connect': '集める。つながる。行動する。',
   'ui.app.manual': 'マニュアル',
   'ui.app.turn_collected_knowledge': '集めた知識を、',
   'ui.app.into_connected': 'つながる',

@@ -32,7 +32,7 @@ export const en: Record<string, string> = {
   'ui.app.close': 'Close',
   'ui.app.google_sign_in_could_not_be_completed_please_try':
     'Google sign-in could not be completed. Please try again.',
-  'ui.app.read_collect_connect': 'Read. Collect. Connect.',
+  'ui.app.read_collect_connect': 'Collect. Connect. Act.',
   'ui.app.manual': 'Manual',
   'ui.app.turn_collected_knowledge': 'Turn collected knowledge',
   'ui.app.into_connected': 'into connected ',
