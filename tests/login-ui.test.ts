@@ -60,7 +60,7 @@ afterEach(async () => {
 
 const render = () => act(async () => root.render(createElement(App)));
 
-it('ログイン画面に「できること」4カードを出し、旧チップ文言は出さない', async () => {
+it('ログイン画面に「できること」4項目を出し、旧チップ文言は出さない', async () => {
   await render();
   const section = document.querySelector('#what-you-can-do');
   expect(section).not.toBeNull();
@@ -99,7 +99,7 @@ it('ログイン画面に「できること」4カードを出し、旧チップ
   expect(document.querySelector('#what-you-can-do h3')).not.toBeNull();
 });
 
-it('英語ランディングでも4カードを表示する', async () => {
+it('英語ランディングでも4項目を表示する', async () => {
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: { hash: '', pathname: '/en', search: '' },
@@ -132,7 +132,7 @@ it('英語ランディングでも4カードを表示する', async () => {
   );
 });
 
-it('デモ無効でも4カードは同じ構成で出す', async () => {
+it('デモ無効でも4項目は同じ構成で出す', async () => {
   vi.mocked(api).mockImplementation(async (path) => {
     if (path === '/api/config') return { demo: false, googleConfigured: true, aiEnabled: false };
     if (path === '/api/v1/me') throw new ApiError('Unauthorized', 401);

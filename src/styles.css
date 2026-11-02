@@ -2328,6 +2328,9 @@ p {
   color: var(--muted);
   line-height: 2.2;
 }
+.login-copy .login-description {
+  font-size: 15px;
+}
 .google-button {
   --button: #3b65a4;
   --button-hover: #31578e;
@@ -2371,17 +2374,19 @@ p {
   margin: 0 0 28px;
   font-size: 24px;
 }
-.what-you-can-do-steps {
+.what-you-can-do-steps,
+.use-case-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 22px;
+  gap: 32px;
 }
-.what-you-can-do-card {
+.what-you-can-do-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.use-case-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.what-you-can-do-item {
   min-width: 0;
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--card);
 }
 .what-you-can-do-heading {
   display: flex;
@@ -2396,18 +2401,16 @@ p {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  background: var(--wash);
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
 }
-.what-you-can-do-card h3 {
+.what-you-can-do-item h3 {
   margin: 0;
   font-size: 17px;
   line-height: 1.5;
 }
-.what-you-can-do-card p {
+.what-you-can-do-item p {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -2760,7 +2763,8 @@ p {
   .what-you-can-do {
     padding: 36px 20px 0;
   }
-  .what-you-can-do-steps {
+  .what-you-can-do-steps,
+  .use-case-list {
     grid-template-columns: 1fr;
   }
   .token-row {
@@ -3627,9 +3631,16 @@ article.pufu-list-item {
   padding: 3px 7px;
 }
 .public-project-card .public-card-footer {
+  position: relative;
   flex-wrap: wrap;
   gap: 10px;
   padding-top: 10px;
+  padding-right: 28px;
+}
+.public-project-card-arrow {
+  position: absolute;
+  right: 0;
+  bottom: 0;
 }
 .public-card-footer {
   display: flex;

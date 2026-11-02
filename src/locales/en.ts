@@ -65,6 +65,16 @@ export const en: Record<string, string> = {
   'ui.app.step_mcp_title': 'Connect with AI via MCP',
   'ui.app.step_mcp_body':
     'Connect with ChatGPT and other AI apps to explore your stocks, questions and insights.',
+  'ui.app.use_cases': 'Use cases',
+  'ui.app.use_case_learning_title': 'Build on what you learn',
+  'ui.app.use_case_learning_body':
+    'Stock articles and books you read, things you study, and insights you discover. Reflect with AI to deepen your knowledge and grow a learning record of your own.',
+  'ui.app.use_case_business_title': 'Explore new businesses and ideas',
+  'ui.app.use_case_business_body':
+    'Gather market research, customer feedback, and ideas, then frame the problems you want to solve as questions. Use Pufu to organize the steps toward turning your idea into a business.',
+  'ui.app.use_case_sharing_title': 'Share insights with others',
+  'ui.app.use_case_sharing_body':
+    'Stock insights, questions, and ideas from your daily activities. Share your thoughts and goals through questions and Pufu, deepen discussions with different perspectives, and turn them into new discoveries and next steps.',
   'ui.app.find_connections_beyond_what_you_read': 'Find connections beyond what you read.',
   'ui.app.today_s_article': "Today's article,",
   'ui.app.tomorrow_s_idea': "tomorrow's idea.",
