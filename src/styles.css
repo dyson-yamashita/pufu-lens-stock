@@ -2275,9 +2275,18 @@ p {
   margin-bottom: 17px;
 }
 .login-page {
+  --login-accent: #c94b16;
+  --login-button: #ff672a;
+  --login-button-hover: #ff7d48;
+  --on-login-button: #351708;
   min-height: 100dvh;
   background: var(--page);
   overflow: hidden;
+}
+:root[data-theme='dark'] .login-page {
+  --login-accent: #ffae8d;
+  --login-button: var(--login-accent);
+  --login-button-hover: #ffc5ab;
 }
 .login-page > header {
   display: flex;
@@ -2332,20 +2341,17 @@ p {
   font-size: 15px;
 }
 .google-button {
-  --button: #3b65a4;
-  --button-hover: #31578e;
+  --button: var(--login-button);
+  --button-hover: var(--login-button-hover);
+  --on-button: var(--on-login-button);
   margin-top: 31px;
   gap: 16px;
   min-width: 230px;
 }
-:root[data-theme='dark'] .google-button {
-  --button: #c4dcff;
-  --button-hover: #d2e2fa;
-}
 .google-g {
   font-family: Arial, sans-serif;
   background: #fff;
-  color: #4285f4;
+  color: #c94b16;
   padding: 3px 6px;
   border-radius: 50%;
   font-size: 13px;
@@ -2404,8 +2410,9 @@ p {
   justify-content: center;
   width: 28px;
   height: 28px;
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--login-accent);
+  font-size: 20px;
+  line-height: 1;
   font-weight: 600;
 }
 .what-you-can-do-item h3 {
