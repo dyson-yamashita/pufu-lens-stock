@@ -449,8 +449,13 @@ p {
   flex-direction: column;
   position: fixed;
   height: 100dvh;
-  overflow-y: auto;
+  overflow: hidden;
   z-index: 20;
+}
+.sidebar > nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .sidebar .brand {
   margin: 0 0 28px 8px;
@@ -545,8 +550,10 @@ p {
   padding: 15px;
 }
 .sidebar-bottom {
+  flex-shrink: 0;
   margin-top: auto;
-  padding-top: 40px;
+  padding-top: 24px;
+  padding-bottom: 12px;
 }
 .user-row {
   display: flex;
@@ -1701,11 +1708,18 @@ p {
   border-radius: 8px;
 }
 .youtube-thumbnail-fallback {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 120px;
   padding: 24px 12px;
   color: var(--muted);
   background: var(--wash);
   border-radius: 8px;
+  text-align: center;
 }
 .original-link {
   display: inline-flex;
@@ -3398,6 +3412,8 @@ article.pufu-list-item {
 }
 .pufu-image-preview {
   margin: 16px 0 24px;
+  /* Reserve space before SVG decode; createPufuSvg uses width 1760 with variable height. */
+  min-height: min(52vw, 420px);
 }
 .pufu-image-open {
   display: block;
@@ -3791,6 +3807,73 @@ article.pufu-list-item {
   margin: 20px 0;
   overflow-wrap: anywhere;
 }
+.public-page-skeleton {
+  min-height: calc(100dvh - 220px);
+}
+.public-skeleton-badge {
+  width: 72px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--wash);
+}
+.public-skeleton-title {
+  width: min(420px, 70%);
+  height: 36px;
+  margin: 20px 0;
+  border-radius: 8px;
+  background: var(--wash);
+}
+.public-skeleton-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  margin: 30px 0;
+  padding-bottom: 14px;
+}
+.public-skeleton-tabs span {
+  display: block;
+  width: 96px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--wash);
+}
+.public-content-skeleton {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin: 28px 0;
+  min-height: 320px;
+}
+.public-skeleton-card {
+  min-height: 148px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(90deg, var(--wash) 25%, var(--card) 50%, var(--wash) 75%);
+  background-size: 200% 100%;
+  animation: public-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.public-pufu-score-skeleton {
+  margin-top: 28px;
+  width: 100%;
+  min-height: min(52vw, 420px);
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  background: var(--wash);
+  box-shadow: 0 4px 16px var(--shadow);
+}
+@keyframes public-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-skeleton-card {
+    animation: none;
+  }
+}
 .public-tabs {
   display: flex;
   overflow-x: auto;
@@ -3901,6 +3984,10 @@ article.pufu-list-item {
   }
   .public-main {
     padding: 30px 20px;
+  }
+  .public-content-skeleton {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 280px;
   }
   .public-project-card {
     padding: 16px;

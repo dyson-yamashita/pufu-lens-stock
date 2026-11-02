@@ -227,6 +227,30 @@ it('the account-aware public shell still resolves the saved account language', a
   expect(document.querySelector('h1')?.textContent).toBe('en');
 });
 
+it('the account-aware public shell renders children before identity resolves', async () => {
+  let resolveMe!: (value: unknown) => void;
+  user = completed('en');
+  Object.defineProperty(window.navigator, 'language', { value: 'ja-JP' });
+  vi.mocked(api).mockImplementation((path) => {
+    if (path === '/api/v1/me') {
+      return new Promise((resolve) => {
+        resolveMe = resolve;
+      });
+    }
+    return Promise.resolve({});
+  });
+  function AccountContent() {
+    return createElement('h1', {}, useLanguage().language);
+  }
+  await act(async () =>
+    root.render(createElement(PageLanguage, {}, createElement(AccountContent))),
+  );
+  expect(document.querySelector('.boot')).toBeNull();
+  expect(document.querySelector('h1')?.textContent).toBe('ja');
+  await act(async () => resolveMe({ user }));
+  expect(document.querySelector('h1')?.textContent).toBe('en');
+});
+
 it.each([false, true])(
   'uses English typing without Japanese composition (reduced motion: %s)',
   async (reduced) => {
