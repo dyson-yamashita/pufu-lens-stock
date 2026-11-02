@@ -2387,6 +2387,9 @@ p {
 }
 .what-you-can-do-item {
   min-width: 0;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--card);
 }
 .what-you-can-do-heading {
   display: flex;
