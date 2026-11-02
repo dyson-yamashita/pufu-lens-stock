@@ -67,6 +67,44 @@ describe('公開プロジェクト一覧のキャッシュ', () => {
     expect(cached.headers.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
+  it('プ譜の作成・完成状態・問いとの関連・局面・削除をキャッシュ済みの件数に反映する', async () => {
+    const count = async (expected: number) =>
+      expect(await (await directory()).json()).toMatchObject({ items: [{ pufu_count: expected }] });
+    await count(0);
+    await app.env.DB.prepare(
+      "INSERT INTO pufu_scores (id,user_id,question_id,task,input_json,score_json,editor_version,status) VALUES ('pufu','alice','question','公開する課題','{}','{}','0.9.19','ready')",
+    ).run();
+    await count(1);
+    for (const status of ['generating', 'ready']) {
+      await app.env.DB.prepare("UPDATE pufu_scores SET status=? WHERE id='pufu'")
+        .bind(status)
+        .run();
+      await count(status === 'ready' ? 1 : 0);
+    }
+    await app.env.DB.prepare("DELETE FROM pufu_questions WHERE pufu_id='pufu'").run();
+    await count(0);
+    await app.env.DB.prepare(
+      "INSERT INTO pufu_questions (pufu_id,question_id) VALUES ('pufu','question')",
+    ).run();
+    await count(1);
+    await app.env.DB.prepare("UPDATE pufu_scores SET score_json=NULL WHERE id='pufu'").run();
+    await count(0);
+    await app.env.DB.prepare(
+      "INSERT INTO pufu_phases (pufu_id,number,score_json,created_at,updated_at) VALUES ('pufu',1,'{}','2026-11-02','2026-11-02')",
+    ).run();
+    await count(1);
+    await app.env.DB.prepare("UPDATE pufu_phases SET number=2 WHERE pufu_id='pufu'").run();
+    await count(0);
+    await app.env.DB.prepare("UPDATE pufu_scores SET current_phase=2 WHERE id='pufu'").run();
+    await count(1);
+    await app.env.DB.prepare("DELETE FROM pufu_phases WHERE pufu_id='pufu'").run();
+    await count(0);
+    await app.env.DB.prepare("UPDATE pufu_scores SET score_json='{}' WHERE id='pufu'").run();
+    await count(1);
+    await app.env.DB.prepare("DELETE FROM pufu_scores WHERE id='pufu'").run();
+    await count(0);
+  });
+
   it.each([
     ['非公開化', "UPDATE projects SET is_public=0 WHERE id='alice-project'"],
     ['プロジェクト削除', "DELETE FROM projects WHERE id='alice-project'"],

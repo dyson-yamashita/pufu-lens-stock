@@ -406,38 +406,42 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
         <h2 id="what-you-can-do-heading">{t('ui.app.what_you_can_do')}</h2>
         <div className="what-you-can-do-steps">
           <article className="what-you-can-do-card">
-            <span className="what-you-can-do-number" aria-hidden="true">
-              1
-            </span>
-            <h3>{t('ui.app.step_stock_title')}</h3>
+            <div className="what-you-can-do-heading">
+              <span className="what-you-can-do-number" aria-hidden="true">
+                1
+              </span>
+              <h3>{t('ui.app.step_stock_title')}</h3>
+            </div>
             <p>{t('ui.app.step_stock_body')}</p>
           </article>
           <article className="what-you-can-do-card">
-            <span className="what-you-can-do-number" aria-hidden="true">
-              2
-            </span>
-            <h3>{t('ui.app.step_grow_title')}</h3>
+            <div className="what-you-can-do-heading">
+              <span className="what-you-can-do-number" aria-hidden="true">
+                2
+              </span>
+              <h3>{t('ui.app.step_grow_title')}</h3>
+            </div>
             <p>{t('ui.app.step_grow_body')}</p>
           </article>
           <article className="what-you-can-do-card">
-            <span className="what-you-can-do-number" aria-hidden="true">
-              3
-            </span>
-            <h3>{t('ui.app.step_pufu_title')}</h3>
+            <div className="what-you-can-do-heading">
+              <span className="what-you-can-do-number" aria-hidden="true">
+                3
+              </span>
+              <h3>{t('ui.app.step_pufu_title')}</h3>
+            </div>
             <p>{t('ui.app.step_pufu_body')}</p>
           </article>
+          <article className="what-you-can-do-card">
+            <div className="what-you-can-do-heading">
+              <span className="what-you-can-do-number" aria-hidden="true">
+                4
+              </span>
+              <h3>{t('ui.app.step_mcp_title')}</h3>
+            </div>
+            <p>{t('ui.app.step_mcp_body')}</p>
+          </article>
         </div>
-        <p className="what-you-can-do-note">
-          {t('ui.app.mcp_plain_note')}{' '}
-          <a className="text-link" href={`${manualHref(language)}#integrations`}>
-            {t('ui.app.how_to_connect')}
-          </a>
-        </p>
-        <p className="what-you-can-do-examples">
-          <a className="text-link" href="#public-projects">
-            {t('ui.app.see_public_examples')}
-          </a>
-        </p>
       </section>
       <PublicProjectDirectory />
       <footer className="login-footer">

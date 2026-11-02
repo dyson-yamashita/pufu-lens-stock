@@ -195,6 +195,11 @@ export function PublicProjectDirectory() {
                     {project.question_count}
                     {t('ui.public_projects.questions_insights')}
                   </span>
+                  <span>
+                    <Network size={16} aria-hidden="true" />
+                    {project.pufu_count}
+                    {t('ui.public_projects.pufus')}
+                  </span>
                 </div>
               </a>
             ))}

@@ -26,7 +26,8 @@ export const publicPufuWhere = `pf.user_id=p.user_id AND pf.status='ready'
 const publicPufuCount = `(SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id=p.id AND ${publicPufuWhere})`;
 const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
-  (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count`;
+  (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count,
+  ${publicPufuCount} AS pufu_count`;
 const stockColumns =
   "s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
 const stockJoins =
@@ -81,7 +82,7 @@ export function publicProjectsApp() {
       ).first<string>('revision');
       if (!revision) throw new Error('Public directory revision is missing');
       cacheKey = new Request(
-        new URL(`/__cache/public-projects/v1/${revision}?page=${page}`, c.env.APP_URL),
+        new URL(`/__cache/public-projects/v2/${revision}?page=${page}`, c.env.APP_URL),
       );
       try {
         const cached = await cache.match(cacheKey);
@@ -124,7 +125,7 @@ export function publicProjectsApp() {
   });
   app.get('/projects/:key', async (c) => {
     const project = await c.env.DB.prepare(
-      `SELECT ${projectColumns},p.search_indexable,${publicPufuCount} AS pufu_count FROM projects p WHERE ${publicWhere}`,
+      `SELECT ${projectColumns},p.search_indexable FROM projects p WHERE ${publicWhere}`,
     )
       .bind(c.req.param('key'))
       .first<PublicProjectDetail>();

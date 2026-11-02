@@ -33,7 +33,20 @@ beforeEach(() => {
   vi.mocked(api).mockImplementation(async (path) => {
     if (path === '/api/config') return { demo: true, googleConfigured: true, aiEnabled: false };
     if (path === '/api/v1/me') throw new ApiError('Unauthorized', 401);
-    if (path.startsWith('/api/public/projects')) return { items: [], total: 0, has_more: false };
+    if (path.startsWith('/api/public/projects'))
+      return {
+        items: [
+          {
+            public_id: 'sample',
+            name: '公開プロジェクト',
+            stock_count: 23,
+            question_count: 23,
+            pufu_count: 4,
+          },
+        ],
+        total: 1,
+        has_more: false,
+      };
     return {};
   });
   root = createRoot(document.getElementById('root')!);
@@ -47,14 +60,19 @@ afterEach(async () => {
 
 const render = () => act(async () => root.render(createElement(App)));
 
-it('ログイン画面に「できること」3ステップとMCP案内を出し、旧チップ文言は出さない', async () => {
+it('ログイン画面に「できること」4カードを出し、旧チップ文言は出さない', async () => {
   await render();
   const section = document.querySelector('#what-you-can-do');
   expect(section).not.toBeNull();
   expect(section?.getAttribute('aria-hidden')).toBeNull();
   expect(section?.querySelector('h2')?.textContent).toBe('Pufu Lensでできること');
   const titles = [...section!.querySelectorAll('h3')].map((node) => node.textContent);
-  expect(titles).toEqual(['記事をストックする', '問い・気づきとメモリに育てる', 'プ譜で考える']);
+  expect(titles).toEqual([
+    '記事をストックする',
+    '「問い・気づき」と「メモリ」を育てる',
+    'プ譜で考える',
+    'MCPでAIと繋がる',
+  ]);
   expect(section?.textContent).toContain(
     '気になった記事を、URLかテキストでプロジェクトに保存します。',
   );
@@ -65,15 +83,14 @@ it('ログイン画面に「できること」3ステップとMCP案内を出し
     '目指すゴールと打ち手を1枚にまとめる思考の地図「プ譜」で、次の一手を整理します。',
   );
   expect(section?.textContent).toContain(
-    'ChatGPTなどのAIから、ストックや問い・気づきを使うこともできます（MCP連携）。',
+    'ChatGPTなどのAIと連携し、ストックや問い・気づきを使って考えを深められます。',
   );
-  expect(section?.querySelector('a[href="/manual#integrations"]')?.textContent).toBe(
-    '連携のしかた',
-  );
-  expect(section?.querySelector('a[href="#public-projects"]')?.textContent).toBe(
-    '公開プロジェクトで実例を見る',
-  );
+  expect(section?.querySelector('a[href="/manual#integrations"]')).toBeNull();
+  expect(section?.querySelector('a[href="#public-projects"]')).toBeNull();
   expect(document.querySelector('#public-projects')).not.toBeNull();
+  expect(document.querySelector('.public-project-card .public-card-footer')?.textContent).toContain(
+    '4 プ譜',
+  );
   expect(document.querySelector('.login-features')).toBeNull();
   expect(document.body.textContent).not.toContain('プロジェクトで整理');
   expect(document.body.textContent).not.toContain('記事からメモリへ');
@@ -82,7 +99,7 @@ it('ログイン画面に「できること」3ステップとMCP案内を出し
   expect(document.querySelector('#what-you-can-do h3')).not.toBeNull();
 });
 
-it('英語ランディングでも3ステップ文言とマニュアルリンクを出す', async () => {
+it('英語ランディングでも4カードを表示する', async () => {
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: { hash: '', pathname: '/en', search: '' },
@@ -94,6 +111,7 @@ it('英語ランディングでも3ステップ文言とマニュアルリンク
     'Stock articles',
     'Grow questions, insights and memory',
     'Think it through with Pufu',
+    'Connect with AI via MCP',
   ]);
   expect(section?.textContent).toContain(
     'Save articles you find interesting to a project, by URL or text.',
@@ -105,17 +123,16 @@ it('英語ランディングでも3ステップ文言とマニュアルリンク
     'Pufu is a one-page thinking map of a goal and the moves toward it. Use it to plan your next step.',
   );
   expect(section?.textContent).toContain(
-    'You can also use your stocks, questions and insights from ChatGPT and other AI apps (MCP connection).',
+    'Connect with ChatGPT and other AI apps to explore your stocks, questions and insights.',
   );
-  expect(section?.querySelector('a[href="/en/manual#integrations"]')?.textContent).toBe(
-    'How to connect',
-  );
-  expect(section?.querySelector('a[href="#public-projects"]')?.textContent).toBe(
-    'See examples in public projects',
+  expect(section?.querySelector('a[href="/en/manual#integrations"]')).toBeNull();
+  expect(section?.querySelector('a[href="#public-projects"]')).toBeNull();
+  expect(document.querySelector('.public-project-card .public-card-footer')?.textContent).toContain(
+    '4 Pufu',
   );
 });
 
-it('デモ無効でも3ステップセクションは同じ構成で出す', async () => {
+it('デモ無効でも4カードは同じ構成で出す', async () => {
   vi.mocked(api).mockImplementation(async (path) => {
     if (path === '/api/config') return { demo: false, googleConfigured: true, aiEnabled: false };
     if (path === '/api/v1/me') throw new ApiError('Unauthorized', 401);
@@ -124,6 +141,6 @@ it('デモ無効でも3ステップセクションは同じ構成で出す', asy
   });
   await render();
   expect(document.querySelector('.demo-login')).toBeNull();
-  expect(document.querySelectorAll('#what-you-can-do h3')).toHaveLength(3);
-  expect(document.querySelector('#what-you-can-do a[href="#public-projects"]')).not.toBeNull();
+  expect(document.querySelectorAll('#what-you-can-do h3')).toHaveLength(4);
+  expect(document.querySelector('#public-projects')).not.toBeNull();
 });

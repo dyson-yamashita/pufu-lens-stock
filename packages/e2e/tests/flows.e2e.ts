@@ -244,6 +244,10 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   );
   const cookies = await browser.cookies();
   await app.clearState();
+  await app.open('/');
+  await expect(
+    browser.locator(`.public-project-card[href="/p/${publicId}"] .public-card-footer`),
+  ).toContainText('1 プ譜');
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
   await browser.locator('.public-tabs a').filter({ hasText: 'プ譜' }).click();

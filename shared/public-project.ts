@@ -16,8 +16,9 @@ export type PublicProject = {
   published_at: string;
   stock_count: number;
   question_count: number;
+  pufu_count: number;
 };
-export type PublicProjectDetail = PublicProject & { pufu_count: number; search_indexable: number };
+export type PublicProjectDetail = PublicProject & { search_indexable: number };
 export type PublicStock = {
   id: string;
   title: string;
