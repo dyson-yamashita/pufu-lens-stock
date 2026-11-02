@@ -2304,7 +2304,7 @@ p {
 }
 .login-main {
   max-width: 1320px;
-  margin: 60px auto 85px;
+  margin: 60px auto 24px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -2367,7 +2367,7 @@ p {
 }
 .what-you-can-do-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 22px;
 }
 .what-you-can-do-card {
@@ -2377,13 +2377,19 @@ p {
   border-radius: 14px;
   background: var(--card);
 }
+.what-you-can-do-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
 .what-you-can-do-number {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  margin-bottom: 14px;
   border-radius: 50%;
   background: var(--wash);
   color: var(--muted);
@@ -2391,7 +2397,7 @@ p {
   font-weight: 600;
 }
 .what-you-can-do-card h3 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 17px;
   line-height: 1.5;
 }
@@ -2400,16 +2406,6 @@ p {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.8;
-}
-.what-you-can-do-note,
-.what-you-can-do-examples {
-  margin: 24px 0 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.8;
-}
-.what-you-can-do-examples {
-  margin-top: 12px;
 }
 .login-art {
   position: relative;
@@ -2538,6 +2534,9 @@ p {
   }
 }
 @media (max-width: 1250px) {
+  .what-you-can-do-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .question-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2729,7 +2728,7 @@ p {
   }
   .login-main {
     grid-template-columns: 1fr;
-    margin: 30px auto 45px;
+    margin: 30px auto 16px;
     padding: 0 28px;
     gap: 5px;
   }

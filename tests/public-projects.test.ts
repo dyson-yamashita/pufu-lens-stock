@@ -332,11 +332,13 @@ describe('公開プロジェクトの参照専用API', () => {
       has_more: false,
     });
     expect(await (await get(root(key))).json()).toMatchObject({ project: { pufu_count: 1 } });
+    expect(await (await get('')).json()).toMatchObject({ items: [{ pufu_count: 1 }] });
     await app.env.DB.prepare(
       "UPDATE questions SET source='user',status='generating' WHERE id='question'",
     ).run();
     expect(await (await get(`${root(key)}/pufus`)).json()).toMatchObject({ items: [], total: 0 });
     expect(await (await get(root(key))).json()).toMatchObject({ project: { pufu_count: 0 } });
+    expect(await (await get('')).json()).toMatchObject({ items: [{ pufu_count: 0 }] });
   });
   it('ストック詳細は同じ保存先・ストックの完成した問いだけを返し、AI生成やジョブを起動しない', async () => {
     const key = await publish();

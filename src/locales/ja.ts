@@ -55,15 +55,14 @@ export const ja: Record<string, string> = {
   'ui.app.what_you_can_do': 'Pufu Lensでできること',
   'ui.app.step_stock_title': '記事をストックする',
   'ui.app.step_stock_body': '気になった記事を、URLかテキストでプロジェクトに保存します。',
-  'ui.app.step_grow_title': '問い・気づきとメモリに育てる',
+  'ui.app.step_grow_title': '「問い・気づき」と「メモリ」を育てる',
   'ui.app.step_grow_body': '要約から問い・気づきが生まれ、関心と知識がメモリにつながります。',
   'ui.app.step_pufu_title': 'プ譜で考える',
   'ui.app.step_pufu_body':
     '目指すゴールと打ち手を1枚にまとめる思考の地図「プ譜」で、次の一手を整理します。',
-  'ui.app.mcp_plain_note':
-    'ChatGPTなどのAIから、ストックや問い・気づきを使うこともできます（MCP連携）。',
-  'ui.app.how_to_connect': '連携のしかた',
-  'ui.app.see_public_examples': '公開プロジェクトで実例を見る',
+  'ui.app.step_mcp_title': 'MCPでAIと繋がる',
+  'ui.app.step_mcp_body':
+    'ChatGPTなどのAIと連携し、ストックや問い・気づきを使って考えを深められます。',
   'ui.app.find_connections_beyond_what_you_read': '読んだ先に、つながりがある。',
   'ui.app.today_s_article': '明日のアイデアにつながる、',
   'ui.app.tomorrow_s_idea': '今日のひと記事。',
@@ -502,6 +501,7 @@ export const ja: Record<string, string> = {
     '集めたストックと、そこから生まれた問い・気づきを公開しています。',
   'ui.public_projects.stocks': ' ストック',
   'ui.public_projects.questions_insights': ' 問い・気づき',
+  'ui.public_projects.pufus': ' プ譜',
   'ui.public_projects.no_public_projects_yet': '公開プロジェクトはまだありません。',
   'ui.public_projects.allow_search_indexing': '検索エンジンへの掲載を許可する',
   'ui.public_projects.search_indexing_help':

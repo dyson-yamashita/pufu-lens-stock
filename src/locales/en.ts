@@ -62,10 +62,9 @@ export const en: Record<string, string> = {
   'ui.app.step_pufu_title': 'Think it through with Pufu',
   'ui.app.step_pufu_body':
     'Pufu is a one-page thinking map of a goal and the moves toward it. Use it to plan your next step.',
-  'ui.app.mcp_plain_note':
-    'You can also use your stocks, questions and insights from ChatGPT and other AI apps (MCP connection).',
-  'ui.app.how_to_connect': 'How to connect',
-  'ui.app.see_public_examples': 'See examples in public projects',
+  'ui.app.step_mcp_title': 'Connect with AI via MCP',
+  'ui.app.step_mcp_body':
+    'Connect with ChatGPT and other AI apps to explore your stocks, questions and insights.',
   'ui.app.find_connections_beyond_what_you_read': 'Find connections beyond what you read.',
   'ui.app.today_s_article': "Today's article,",
   'ui.app.tomorrow_s_idea': "tomorrow's idea.",
@@ -505,6 +504,7 @@ export const en: Record<string, string> = {
     'Sharing collected stocks and the questions and insights they inspired.',
   'ui.public_projects.stocks': ' stocks',
   'ui.public_projects.questions_insights': ' questions & insights',
+  'ui.public_projects.pufus': ' Pufu',
   'ui.public_projects.no_public_projects_yet': 'No public projects yet.',
   'ui.public_projects.allow_search_indexing': 'Allow search engine indexing',
   'ui.public_projects.search_indexing_help':
