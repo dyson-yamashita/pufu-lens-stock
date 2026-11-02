@@ -1,6 +1,6 @@
 import { publicHref, publicHash, publicPathPattern } from '../shared/public-route';
 import { pufuDisplayTitle } from '../shared/pufu';
-import { applicationError, t, intlLocale, useLanguage } from './i18n';
+import { applicationError, t, intlLocale, useLanguage, manualHref } from './i18n';
 import {
   lazy,
   Suspense,
@@ -151,7 +151,11 @@ export function PublicProjectDirectory() {
     `/api/public/projects?page=${page}`,
   );
   return (
-    <section className="public-directory" aria-labelledby="public-directory-heading">
+    <section
+      id="public-projects"
+      className="public-directory"
+      aria-labelledby="public-directory-heading"
+    >
       <div className="public-section-heading">
         <h2 id="public-directory-heading">{t('ui.public_projects.public_projects')}</h2>
       </div>
@@ -997,7 +1001,7 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
   );
 }
 export default function PublicProjectPage({ publicId }: { publicId: string }) {
-  useLanguage();
+  const { language } = useLanguage();
   const root = `/api/public/projects/${encodeURIComponent(publicId)}`;
   const { data, error, reload } = useResource<{
     project: PublicProjectDetail;
@@ -1106,6 +1110,14 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 <span>{data.project.pufu_count}</span>
               </a>
             </nav>
+            {(hash === '#pufus' || match?.[1] === 'pufu') && (
+              <p className="public-help public-pufu-help">
+                {t('ui.public_projects.pufu_help')}{' '}
+                <a className="text-link" href={`${manualHref(language)}#pufu`}>
+                  {t('ui.public_projects.learn_more_about_pufu')}
+                </a>
+              </p>
+            )}
             {content}
           </>
         )}
