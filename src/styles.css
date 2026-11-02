@@ -449,6 +449,7 @@ p {
   flex-direction: column;
   position: fixed;
   height: 100dvh;
+  /* Pin sidebar-bottom on typical heights; short viewports fall back below. */
   overflow: hidden;
   z-index: 20;
 }
@@ -456,6 +457,16 @@ p {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+}
+@media (max-height: 640px) {
+  .sidebar {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .sidebar > nav {
+    flex: 0 1 auto;
+    overflow-y: visible;
+  }
 }
 .sidebar .brand {
   margin: 0 0 28px 8px;

@@ -81,14 +81,18 @@ function useResource<T>(path: string) {
   }, [path, retry]);
   return { ...(state.path === path ? state : { path }), reload: () => setRetry((v) => v + 1) };
 }
-function PublicContentSkeleton() {
+function PublicContentSkeleton({ announce = true }: { announce?: boolean } = {}) {
   useLanguage();
   return (
     <div
       className="public-content-skeleton"
-      role="status"
-      aria-busy="true"
-      aria-label={t('ui.public_projects.loading')}
+      {...(announce
+        ? {
+            role: 'status' as const,
+            'aria-busy': true,
+            'aria-label': t('ui.public_projects.loading'),
+          }
+        : { 'aria-hidden': true })}
     >
       <div className="public-skeleton-card" />
       <div className="public-skeleton-card" />
@@ -98,8 +102,14 @@ function PublicContentSkeleton() {
   );
 }
 function PublicPageSkeleton() {
+  useLanguage();
   return (
-    <div className="public-page-skeleton" aria-busy="true">
+    <div
+      className="public-page-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label={t('ui.public_projects.loading')}
+    >
       <div className="public-skeleton-badge" />
       <div className="public-skeleton-title" />
       <div className="public-skeleton-tabs" aria-hidden="true">
@@ -107,7 +117,7 @@ function PublicPageSkeleton() {
         <span />
         <span />
       </div>
-      <PublicContentSkeleton />
+      <PublicContentSkeleton announce={false} />
     </div>
   );
 }
