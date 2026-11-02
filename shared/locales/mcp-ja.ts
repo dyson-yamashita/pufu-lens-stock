@@ -1,4 +1,14 @@
 export const mcpJa = {
+  '履歴の版番号を正しく指定してください。': '履歴の版番号を正しく指定してください。',
+  'メモリ履歴が見つかりません。': 'メモリ履歴が見つかりません。',
+  'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。':
+    'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。',
+  プロジェクトメモリ履歴: 'プロジェクトメモリ履歴',
+
+  'mcp.memory.revision': '任意の履歴の版番号。省略すると最新メモリを返します。',
+  'mcp.memory.history_description':
+    'プロジェクトの保存済みメモリ履歴を新しい順に24件ずつ取得します。本文は含みません。next_beforeがあればbeforeに指定してください。get_project_memoryにrevisionを指定すると、その版の本文を取得できます。',
+
   '生成言語が変更されたため、全件更新が必要です。':
     '生成言語が変更されたため、全件更新が必要です。',
   '以前のメモリの反映履歴がないため、全件更新が必要です。':
@@ -9,7 +19,7 @@ export const mcpJa = {
   '反映済みの記事が削除・移動・変更されたため、全件更新が必要です。':
     '反映済みの記事が削除・移動・変更されたため、全件更新が必要です。',
   'mcp.memory.instructions':
-    'プロジェクトの保存済みメモリはget_project_memoryで取得します。project_idを明示し、memories:read権限が必要です。',
+    'プロジェクトの保存済みメモリはget_project_memoryで取得します。project_idを明示し、memories:read権限が必要です。過去版はlist_project_memory_versionsで探し、get_project_memoryのrevisionに指定します。',
   'mcp.memory.description':
     '指定したプロジェクトの保存済みメモリ（本文・関心・知識と根拠記事ID・問い）、更新状況、記事の反映状況を取得します。project_idは必須で、list_projectsのIDを指定します。memories:read権限が必要です。未生成の場合はmemory: nullを返します。AI生成・再更新は行いません。ユーザー全体のメモリは取得しません。',
   'mcp.memory.project_id':

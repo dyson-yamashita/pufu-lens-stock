@@ -1,6 +1,27 @@
 export const ja: Record<string, string> = {
+  'error.memory_history_revision': '履歴の版番号を正しく指定してください。',
+  'error.memory_history_not_found': 'メモリ履歴が見つかりません。',
+  'error.memory_history_unavailable':
+    'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。',
+
+  'manual.memory_history':
+    'メモリ画面の「メモリの履歴」を開き、日時と版番号から過去の内容を選べます。「最新のメモリ」で現在の内容へ戻れます。更新後のメモリを自動で記録します。保存開始前の版は復元できませんが、開始時に残っているメモリは次回更新で保管します。過去の要約には、後から削除したストックの情報が残る場合があります。履歴は公開されず、プロジェクト削除・退会で削除されます。',
+
+  'ui.memory_history.title': 'メモリの履歴',
+  'ui.memory_history.caption': '保存した時点の関心・知識・問いを振り返れます。',
+  'ui.memory_history.latest': '最新のメモリ',
+  'ui.memory_history.current': '現在の内容',
+  'ui.memory_history.version': '第{{revision}}版 · {{count}}件の記事',
+  'ui.memory_history.empty': '過去の履歴はまだありません。これからの更新が記録されます。',
+  'ui.memory_history.more': '以前の履歴を読み込む',
+  'ui.memory_history.loading': '履歴を読み込み中…',
+  'ui.memory_history.retry': '再試行',
+  'ui.memory_history.viewing': '第{{revision}}版を表示中',
+  'ui.memory_history.historical_note':
+    '当時の要約です。現在の状況や参照できる記事とは異なる場合があります。',
+
   'manual.mcp_project_memory':
-    'ChatGPTなどからプロジェクトのメモリを読むには、MCP連携時に「プロジェクトのメモリを閲覧」を許可し、対象プロジェクトを指定して取得を依頼します。既存の連携には接続先からの再連携で権限を追加してください。許可した範囲の保存済みメモリと更新状況を取得でき、ユーザー全体のメモリは対象外です。',
+    'ChatGPTなどからプロジェクトのメモリを読むには、MCP連携時に「プロジェクトのメモリを閲覧」を許可し、対象プロジェクトを指定して取得を依頼します。既存の連携には接続先からの再連携で権限を追加してください。許可した範囲の保存済みメモリと更新状況を取得でき、ユーザー全体のメモリは対象外です。履歴の一覧と、版番号を指定した過去のメモリも取得できます。',
   'pufu.title_too_long': 'タイトルは200文字以内で入力してください。',
   'pufu.title_hint':
     '短いタイトルを任意で設定できます。空欄の場合は第一局面の獲得目標を表示します。',

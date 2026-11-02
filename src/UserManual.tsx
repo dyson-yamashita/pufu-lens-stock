@@ -93,6 +93,7 @@ const sections = (tr: typeof t) => [
           )}
         </p>
         <p>{tr('ui.user_manual.use_source_articles_beside_a_knowledge_item_to_view')}</p>
+        <p>{tr('manual.memory_history')}</p>
         <p>{tr('ui.user_manual.youtube_contributes_to_memory_only_when_you_write_a')}</p>
         <p className="manual-note">
           {tr('ui.user_manual.to_exclude_a_project_from_your_user_memory_turn')}

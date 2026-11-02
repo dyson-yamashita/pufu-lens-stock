@@ -102,5 +102,21 @@
       "初回許可画面で複数プロジェクトを選択",
       "編集時の全件/複数選択の切替と保存"
     ]
+  },
+  {
+    "id": "MEMORY-001",
+    "title": "メモリの版履歴",
+    "sources": [
+      "src/MemoryHistory.tsx",
+      "src/MemoryKnowledge.tsx",
+      "server/memory-history.ts",
+      "server/workflows.ts"
+    ],
+    "aspects": [
+      "過去版を選択して当時の記事数・内容を表示",
+      "最新へ戻る",
+      "過去版表示中は再生成を無効化",
+      "再読込後もR2の履歴を取得"
+    ]
   }
 ]

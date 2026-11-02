@@ -44,7 +44,10 @@
       "migrations_dir": "migrations",
     },
   ],
-  "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
+  "r2_buckets": [
+    { "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" },
+    { "binding": "MEMORY_HISTORY", "bucket_name": "pufu-lens-memory-history" },
+  ],
   "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
   // VECTORIZE_INDEX_NAMEを指定した場合だけ、ViteがSEARCH_INDEXを追加します。
   "services": [{ "binding": "PDF_PARSER", "service": "pufu-lens-pdf-parser" }],
@@ -84,7 +87,10 @@
           "migrations_dir": "migrations",
         },
       ],
-      "r2_buckets": [{ "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" }],
+      "r2_buckets": [
+        { "binding": "CONTENT", "bucket_name": "pufu-lens-stock-content" },
+        { "binding": "MEMORY_HISTORY", "bucket_name": "pufu-lens-memory-history" },
+      ],
       "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
       "services": [{ "binding": "PDF_PARSER", "service": "pufu-lens-pdf-parser" }],
       "vectorize": [],

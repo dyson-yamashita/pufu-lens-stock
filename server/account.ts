@@ -78,6 +78,10 @@ export async function cleanupAccount(env: Env, userId: string): Promise<boolean>
     if (contents.objects.length)
       await env.CONTENT.delete(contents.objects.map((object) => object.key));
     if (contents.truncated) return false;
+    const histories = await env.MEMORY_HISTORY.list({ prefix: `${userId}/`, limit: 100 });
+    if (histories.objects.length)
+      await env.MEMORY_HISTORY.delete(histories.objects.map((object) => object.key));
+    if (histories.truncated) return false;
     if (env.OAUTH_KV) {
       // Cronではfetch時のOAUTH_PROVIDERがないため、SDKの公式ヘルパーを利用する。
       const unusedHandler = { fetch: () => new Response(null, { status: 404 }) };

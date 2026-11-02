@@ -683,6 +683,7 @@ DNS・Google Cloud設定と審査状態はコード変更だけでは確認・�
    pnpm exec wrangler login
    pnpm exec wrangler d1 create stock-db
    pnpm exec wrangler r2 bucket create pufu-lens-stock-content
+   pnpm exec wrangler r2 bucket create pufu-lens-memory-history
    pnpm exec wrangler kv namespace create OAUTH_KV --env production
    ```
 
@@ -691,7 +692,7 @@ DNS・Google Cloud設定と審査状態はコード変更だけでは確認・�
    - `vars.APP_URL` の `https://app.example.invalid` はダミー値のままにします。本番ビルド時にプロセス環境変数 `APP_URL` から生成設定へ注入します。
    - 独自ドメインを使う場合はCloudflareのWorkerのルート／カスタムドメインを設定します。
    - `LOCAL_DEMO_ENABLED` は `false` のままにします。
-   - R2は公開アクセスを有効にしません。
+   - R2は両バケットとも公開アクセス（r2.dev・カスタムドメイン）を有効にしません。`MEMORY_HISTORY` は履歴専用です。Workerバインディングからのみ参照し、本文・署名付きURL・内部キーを公開ページへ返しません。
 
 3. GoogleのSecretを登録します。値は対話入力してください。
 
@@ -858,3 +859,13 @@ pnpm run check
 - `server/workflows.ts`：記事・メモリの非同期処理
 - `migrations/`：D1のスキーマ
 - `tests/`：認証、二重保存、削除、メモリ競合、処理パイプラインの検証
+
+## メモリの版履歴
+
+成功したメモリ更新ごとに、本文・構造化データ・根拠記事IDを非公開R2 `MEMORY_HISTORY` に保存します。D1 `memory_versions` は本人・プロジェクト・版番号・日時・記事数・モデル・言語・R2キーを管理し、最新メモリは従来どおりD1に置きます。Jevや追加のAI判定は呼びません。既存メモリは次の更新時に旧版として保管します。保存開始以前の失われた版は再構築しません。
+
+- `GET /api/v1/memory/history?project_id=...&before=...`：新しい順に24件、本文なし。`next_before` による続きの取得。project_id省略時は本人の全体メモリ。
+- `GET /api/v1/memory/history/:revision?project_id=...`：保存済みの特定版。本文は認証済みサーバーがR2から読み、JSONで返します。
+- MCP `list_project_memory_versions` と `get_project_memory(revision?)`：`memories:read` と許可プロジェクトを毎回確認。全体メモリへのアクセスは許可しません。既存の最新取得の応答形式を維持します。
+
+R2保存が成功してから、最新メモリ・反映履歴・版一覧を同じD1 batchで確定します。古いrevisionは公開せず、同じ版の再試行は二重登録・上書きをしません。ストック削除後も当時の要約は履歴として残ります。プロジェクト削除は版一覧を即時削除し、CronでR2も削除します。退会は既存の削除再試行に履歴バケットも含めます。削除と競合した遅延保存も掃除対象へ戻します。外部PUTの呼び出しごとに独立したIDでD1へintentを永続化し、その呼び出しが完了したIDのみを正常な版登録と同じbatchで消去します。書き込み元が中断された場合のintentには外部書き込み完了の確認が取れないため、削除済み所有者のキーを再削除する最小限のマーカーとして保持し、Cronで繰り返し回収します。これにより、先行する削除より遅く完了したPUTも回収対象になります。

@@ -178,6 +178,20 @@ export type Stock = {
   created_at: string;
   model: string | null;
 };
+export type MemoryVersion = {
+  revision: number;
+  saved_at: string;
+  article_count: number;
+  model: string;
+  language: string;
+  text: string;
+  data: MemoryData;
+};
+export type MemoryVersionList = {
+  versions: Omit<MemoryVersion, 'text' | 'data'>[];
+  has_more: boolean;
+  next_before: number | null;
+};
 export type Memory = {
   id: string;
   project_id: string | null;

@@ -1,3 +1,9 @@
+import {
+  listMemoryVersions,
+  readMemoryVersion,
+  queueHistoryCleanup,
+  historyPrefix,
+} from './memory-history';
 import { firstPhaseTaskColumn } from './pufu-title';
 import { pufuTitleSchema } from '../shared/pufu';
 import {
@@ -210,7 +216,7 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(comments|projects|memory|stocks|stocks\/[^/]+(?:\/content)?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
+          /^\/api\/v1\/(comments|projects|memory(?:\/history(?:\/[^/]+)?)?|stocks|stocks\/[^/]+(?:\/content)?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
             c.req.path,
           )) ||
         (c.req.method === 'POST' &&
@@ -418,6 +424,7 @@ export function createApp(trustedPrincipal?: Principal) {
     const { user } = c.get('principal');
     await ownedProject(c.env, user.id, c.req.param('id'));
     await c.env.DB.batch([
+      queueHistoryCleanup(c.env, historyPrefix(user.id, c.req.param('id'))),
       c.env.DB.prepare('DELETE FROM projects WHERE id = ? AND user_id = ?').bind(
         c.req.param('id'),
         user.id,
@@ -1357,6 +1364,39 @@ export function createApp(trustedPrincipal?: Principal) {
     ]);
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true }, 202);
+  });
+  app.get('/api/v1/memory/history', async (c) => {
+    const principal = c.get('principal');
+    const requested = c.req.query('project_id') || null;
+    if (principal.kind === 'mcp' && !requested)
+      throw new HTTPException(400, { message: '取得するプロジェクトを指定してください。' });
+    const projectId = principal.kind === 'mcp' ? resolveProjectId(principal, requested) : requested;
+    if (projectId) await ownedProject(c.env, principal.user.id, projectId);
+    const parsed = z.coerce.number().int().min(0).safeParse(c.req.query('before'));
+    if (c.req.query('before') !== undefined && !parsed.success)
+      throw new HTTPException(400, { message: '履歴の版番号を正しく指定してください。' });
+    return c.json(
+      await listMemoryVersions(
+        c.env,
+        principal.user.id,
+        projectId,
+        c.req.query('before') === undefined ? undefined : parsed.data,
+      ),
+    );
+  });
+  app.get('/api/v1/memory/history/:revision', async (c) => {
+    const principal = c.get('principal');
+    const requested = c.req.query('project_id') || null;
+    if (principal.kind === 'mcp' && !requested)
+      throw new HTTPException(400, { message: '取得するプロジェクトを指定してください。' });
+    const projectId = principal.kind === 'mcp' ? resolveProjectId(principal, requested) : requested;
+    if (projectId) await ownedProject(c.env, principal.user.id, projectId);
+    const parsed = z.coerce.number().int().min(0).safeParse(c.req.param('revision'));
+    if (!parsed.success)
+      throw new HTTPException(400, { message: '履歴の版番号を正しく指定してください。' });
+    const version = await readMemoryVersion(c.env, principal.user.id, projectId, parsed.data);
+    if (!version) throw new HTTPException(404, { message: 'メモリ履歴が見つかりません。' });
+    return c.json({ version });
   });
   app.get('/api/v1/memory', async (c) => {
     const principal = c.get('principal');

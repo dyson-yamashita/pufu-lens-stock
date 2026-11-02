@@ -1,3 +1,4 @@
+import { saveMemoryWithHistory } from '../server/memory-history';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CallToolResult, ListToolsResult } from '@modelcontextprotocol/server';
 import worker from '../server/index';
@@ -149,5 +150,50 @@ describe('MCPのプロジェクトメモリ取得', () => {
       );
       expect(response.status).toBe(status);
     }
+  });
+  it('専用権限とプロジェクト範囲を保ち、履歴一覧と指定版本文を取得する', async () => {
+    await saveMemoryWithHistory(
+      app.env,
+      {
+        userId: 'alice',
+        projectId: 'alice-project',
+        revision: 0,
+        text: '保存した履歴本文',
+        dataJson: JSON.stringify({ interests: ['当時の関心'], knowledge: [], questions: [] }),
+        articleCount: 0,
+        model: 'test',
+        language: 'ja',
+        contextHash: 'test',
+      },
+      [],
+    );
+    const token = await mcpToken(app, 'alice-project', ['memories:read']);
+    const list = await rpc<CallToolResult>(token, 'tools/call', {
+      name: 'list_project_memory_versions',
+      arguments: { project_id: 'alice-project' },
+    });
+    expect(list.isError).not.toBe(true);
+    expect(list.structuredContent).toMatchObject({ versions: [{ revision: 0 }] });
+    expect(JSON.stringify(list.structuredContent)).not.toContain('保存した履歴本文');
+    expect(
+      (await call(token, { project_id: 'alice-project', revision: 0 })).structuredContent,
+    ).toMatchObject({ version: { text: '保存した履歴本文', data: { interests: ['当時の関心'] } } });
+    expect(
+      (await call(token, { project_id: 'alice-second', revision: 0 })).structuredContent,
+    ).toMatchObject({ status: 403 });
+    const noScope = await mcpToken(app);
+    expect((await call(noScope, { project_id: 'alice-project', revision: 0 })).isError).toBe(true);
+    expect(
+      (
+        await rpc<CallToolResult>(noScope, 'tools/call', {
+          name: 'list_project_memory_versions',
+          arguments: { project_id: 'alice-project' },
+        })
+      ).isError,
+    ).toBe(true);
+    expect(
+      (await call(token, { project_id: 'alice-project', revision: 999 })).structuredContent,
+    ).toMatchObject({ status: 404 });
+    expect(app.env.MEMORY_WORKFLOW.create).not.toHaveBeenCalled();
   });
 });

@@ -57,7 +57,7 @@ export async function testApp(
     } }`,
     compatibilityDate: '2026-07-30',
     d1Databases: { DB: 'test-database' },
-    r2Buckets: { CONTENT: 'test-content' },
+    r2Buckets: { CONTENT: 'test-content', MEMORY_HISTORY: 'test-memory-history' },
     kvNamespaces: { OAUTH_KV: 'test-oauth' },
     ratelimits: {
       OAUTH_REGISTRATION_RATE_LIMITER: {
@@ -67,6 +67,7 @@ export async function testApp(
     },
   });
   const DB = (await runtime.getD1Database('DB')) as unknown as D1Database;
+  const MEMORY_HISTORY = (await runtime.getR2Bucket('MEMORY_HISTORY')) as unknown as R2Bucket;
   const CONTENT = (await runtime.getR2Bucket('CONTENT')) as unknown as R2Bucket;
   const OAUTH_KV = (await runtime.getKVNamespace('OAUTH_KV')) as unknown as KVNamespace;
   const migrations = [
@@ -119,6 +120,7 @@ export async function testApp(
     !migrations.includes('0036_language.sql')
   )
     migrations.push('0036_language.sql');
+  if (!migrations.includes('0044_memory_history.sql')) migrations.push('0044_memory_history.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(
@@ -140,6 +142,7 @@ export async function testApp(
   const env: Env = {
     DB,
     CONTENT,
+    MEMORY_HISTORY,
     OAUTH_KV,
     OAUTH_REGISTRATION_RATE_LIMITER: {
       async limit(options: RateLimitOptions): Promise<RateLimitOutcome> {
