@@ -464,7 +464,8 @@ p {
     overflow-y: auto;
   }
   .sidebar > nav {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    min-height: auto;
     overflow-y: visible;
   }
 }
