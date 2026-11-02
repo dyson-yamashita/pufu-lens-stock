@@ -2356,18 +2356,60 @@ p {
   margin-top: 13px;
   font-size: 11px;
 }
-.login-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  color: var(--muted);
-  margin-top: 31px;
-  font-size: 9px;
+.what-you-can-do {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 28px 0;
 }
-.login-features span {
-  display: flex;
-  gap: 6px;
+.what-you-can-do > h2 {
+  margin: 0 0 28px;
+  font-size: 24px;
+}
+.what-you-can-do-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.what-you-can-do-card {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.what-you-can-do-number {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--wash);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.what-you-can-do-card h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.what-you-can-do-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.what-you-can-do-note,
+.what-you-can-do-examples {
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.what-you-can-do-examples {
+  margin-top: 12px;
 }
 .login-art {
   position: relative;
@@ -2710,8 +2752,11 @@ p {
   .google-button {
     margin-top: 24px;
   }
-  .login-features {
-    margin-top: 25px;
+  .what-you-can-do {
+    padding: 36px 20px 0;
+  }
+  .what-you-can-do-steps {
+    grid-template-columns: 1fr;
   }
   .token-row {
     padding: 17px;
@@ -3654,6 +3699,9 @@ article.pufu-list-item {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.85;
+}
+.public-pufu-help {
+  margin: 0 0 24px;
 }
 .publication-scope {
   padding: 18px;

@@ -40,6 +40,7 @@ let root: Root;
 let document: Document;
 beforeEach(() => {
   pufuTitle = null;
+  setLanguage('ja');
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
   document = dom.document as unknown as Document;
   vi.stubGlobal('window', dom.window);
@@ -246,11 +247,20 @@ it('プ譜タブから一覧・詳細を閲覧し、戻るとプ譜タブへ戻�
   expect(document.querySelector('.public-tabs a[aria-current="page"]')?.getAttribute('href')).toBe(
     '#pufus',
   );
+  const help = document.querySelector('.public-pufu-help');
+  expect(help?.textContent).toContain(
+    'プ譜は、目指すゴールと打ち手を1枚にまとめた思考の地図です。局面ごとに振り返りながら更新します。',
+  );
+  expect(help?.querySelector('a')?.getAttribute('href')).toBe('/manual#pufu');
+  expect(help?.querySelector('a')?.textContent).toBe('プ譜について詳しく');
   const card = document.querySelector('.public-pufu-card');
   expect(card?.textContent).toContain('問いから考える課題');
   expect(card?.textContent).toContain('第1局面');
   expect(card?.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
   await navigate('#pufu/pufu?from=pufus');
+  expect(
+    document.querySelector('.public-pufu-help')?.querySelector('a')?.getAttribute('href'),
+  ).toBe('/manual#pufu');
   const task = document.querySelector('section[aria-label="課題"]');
   const questions = document.querySelector('details.pufu-related-questions');
   expect(task?.querySelector('h3')?.textContent).toBe('課題');
@@ -279,6 +289,29 @@ it('プ譜タブから一覧・詳細を閲覧し、戻るとプ譜タブへ戻�
   expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
   await navigate('#pufus');
   expect(document.querySelector('.public-pufu-card')?.textContent).toContain('問いから考える課題');
+});
+
+it('ストック・問いタブではプ譜ヘルプを出さない', async () => {
+  await render('#stocks');
+  expect(document.querySelector('.public-pufu-help')).toBeNull();
+  await navigate('#questions');
+  expect(document.querySelector('.public-pufu-help')).toBeNull();
+  await navigate('#question/ai');
+  expect(document.querySelector('.public-pufu-help')).toBeNull();
+  await navigate('#stock/stock');
+  expect(document.querySelector('.public-pufu-help')).toBeNull();
+});
+
+it('英語のプ譜タブでは定義とマニュアルリンクを英語で出す', async () => {
+  setLanguage('en');
+  await render('#pufus');
+  const help = document.querySelector('.public-pufu-help');
+  expect(help?.textContent).toContain(
+    'Pufu is a one-page thinking map of a goal and the moves toward it, updated phase by phase with reflections.',
+  );
+  expect(help?.querySelector('a')?.getAttribute('href')).toBe('/en/manual#pufu');
+  expect(help?.querySelector('a')?.textContent).toBe('Learn more about Pufu');
+  expect(document.querySelector('.public-tabs a[href="#pufus"]')?.textContent).toContain('Pufu');
 });
 it('プ譜がない場合は空の状態を表示する', async () => {
   const load = vi.mocked(api).getMockImplementation()!;

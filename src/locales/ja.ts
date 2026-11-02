@@ -52,9 +52,18 @@ export const ja: Record<string, string> = {
     '退会しました。残りのデータの削除は自動で継続します。',
   'ui.app.your_account_and_registered_data_have_been_deleted':
     '退会が完了し、登録したデータを削除しました。',
-  'ui.app.organize_with_projects': 'プロジェクトで整理',
-  'ui.app.from_articles_to_memory': '記事からメモリへ',
-  'ui.app.connect_ai_with_mcp': 'MCPでAIと連携',
+  'ui.app.what_you_can_do': 'Pufu Lensでできること',
+  'ui.app.step_stock_title': '記事をストックする',
+  'ui.app.step_stock_body': '気になった記事を、URLかテキストでプロジェクトに保存します。',
+  'ui.app.step_grow_title': '問い・気づきとメモリに育てる',
+  'ui.app.step_grow_body': '要約から問い・気づきが生まれ、関心と知識がメモリにつながります。',
+  'ui.app.step_pufu_title': 'プ譜で考える',
+  'ui.app.step_pufu_body':
+    '目指すゴールと打ち手を1枚にまとめる思考の地図「プ譜」で、次の一手を整理します。',
+  'ui.app.mcp_plain_note':
+    'ChatGPTなどのAIから、ストックや問い・気づきを使うこともできます（MCP連携）。',
+  'ui.app.how_to_connect': '連携のしかた',
+  'ui.app.see_public_examples': '公開プロジェクトで実例を見る',
   'ui.app.find_connections_beyond_what_you_read': '読んだ先に、つながりがある。',
   'ui.app.today_s_article': '明日のアイデアにつながる、',
   'ui.app.tomorrow_s_idea': '今日のひと記事。',
@@ -555,6 +564,9 @@ export const ja: Record<string, string> = {
   'ui.public_projects.separator': ' · ',
   'ui.public_projects.reflection': '振り返り',
   'ui.public_projects.no_pufu_available_for_publication_yet': '公開できるプ譜はまだありません。',
+  'ui.public_projects.pufu_help':
+    'プ譜は、目指すゴールと打ち手を1枚にまとめた思考の地図です。局面ごとに振り返りながら更新します。',
+  'ui.public_projects.learn_more_about_pufu': 'プ譜について詳しく',
   'ui.public_projects.question_or_insight_details': '問い・気づきの詳細',
   'ui.public_projects.back_to_questions_insights': '問い・気づきの一覧に戻る',
   'ui.public_projects.reflect_on_a_question_or_insight_and_take_the':

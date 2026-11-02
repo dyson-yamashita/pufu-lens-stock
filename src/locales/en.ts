@@ -53,9 +53,19 @@ export const en: Record<string, string> = {
     'Your account was deleted. Remaining data will continue to be deleted automatically.',
   'ui.app.your_account_and_registered_data_have_been_deleted':
     'Your account and registered data have been deleted.',
-  'ui.app.organize_with_projects': 'Organize with projects',
-  'ui.app.from_articles_to_memory': 'From articles to memory',
-  'ui.app.connect_ai_with_mcp': 'Connect AI with MCP',
+  'ui.app.what_you_can_do': 'What you can do with Pufu Lens',
+  'ui.app.step_stock_title': 'Stock articles',
+  'ui.app.step_stock_body': 'Save articles you find interesting to a project, by URL or text.',
+  'ui.app.step_grow_title': 'Grow questions, insights and memory',
+  'ui.app.step_grow_body':
+    'Summaries spark questions and insights, and your interests and knowledge connect in memory.',
+  'ui.app.step_pufu_title': 'Think it through with Pufu',
+  'ui.app.step_pufu_body':
+    'Pufu is a one-page thinking map of a goal and the moves toward it. Use it to plan your next step.',
+  'ui.app.mcp_plain_note':
+    'You can also use your stocks, questions and insights from ChatGPT and other AI apps (MCP connection).',
+  'ui.app.how_to_connect': 'How to connect',
+  'ui.app.see_public_examples': 'See examples in public projects',
   'ui.app.find_connections_beyond_what_you_read': 'Find connections beyond what you read.',
   'ui.app.today_s_article': "Today's article,",
   'ui.app.tomorrow_s_idea': "tomorrow's idea.",
@@ -558,6 +568,9 @@ export const en: Record<string, string> = {
   'ui.public_projects.reflection': 'Reflection',
   'ui.public_projects.no_pufu_available_for_publication_yet':
     'No Pufu available for publication yet.',
+  'ui.public_projects.pufu_help':
+    'Pufu is a one-page thinking map of a goal and the moves toward it, updated phase by phase with reflections.',
+  'ui.public_projects.learn_more_about_pufu': 'Learn more about Pufu',
   'ui.public_projects.question_or_insight_details': 'Question or insight details',
   'ui.public_projects.back_to_questions_insights': 'Back to questions & insights',
   'ui.public_projects.reflect_on_a_question_or_insight_and_take_the':

@@ -365,20 +365,6 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             </p>
           )}
           <FormError error={error} />
-          <div className="login-features">
-            <span>
-              <Folder size={17} aria-hidden="true" />
-              {t('ui.app.organize_with_projects')}
-            </span>
-            <span>
-              <Sparkles size={17} aria-hidden="true" />
-              {t('ui.app.from_articles_to_memory')}
-            </span>
-            <span>
-              <Network size={17} aria-hidden="true" />
-              {t('ui.app.connect_ai_with_mcp')}
-            </span>
-          </div>
         </div>
         <div className="login-art" aria-hidden="true">
           <div className="orbit orbit-one" />
@@ -412,6 +398,47 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
           </div>
         </div>
       </main>
+      <section
+        id="what-you-can-do"
+        className="what-you-can-do"
+        aria-labelledby="what-you-can-do-heading"
+      >
+        <h2 id="what-you-can-do-heading">{t('ui.app.what_you_can_do')}</h2>
+        <div className="what-you-can-do-steps">
+          <article className="what-you-can-do-card">
+            <span className="what-you-can-do-number" aria-hidden="true">
+              1
+            </span>
+            <h3>{t('ui.app.step_stock_title')}</h3>
+            <p>{t('ui.app.step_stock_body')}</p>
+          </article>
+          <article className="what-you-can-do-card">
+            <span className="what-you-can-do-number" aria-hidden="true">
+              2
+            </span>
+            <h3>{t('ui.app.step_grow_title')}</h3>
+            <p>{t('ui.app.step_grow_body')}</p>
+          </article>
+          <article className="what-you-can-do-card">
+            <span className="what-you-can-do-number" aria-hidden="true">
+              3
+            </span>
+            <h3>{t('ui.app.step_pufu_title')}</h3>
+            <p>{t('ui.app.step_pufu_body')}</p>
+          </article>
+        </div>
+        <p className="what-you-can-do-note">
+          {t('ui.app.mcp_plain_note')}{' '}
+          <a className="text-link" href={`${manualHref(language)}#integrations`}>
+            {t('ui.app.how_to_connect')}
+          </a>
+        </p>
+        <p className="what-you-can-do-examples">
+          <a className="text-link" href="#public-projects">
+            {t('ui.app.see_public_examples')}
+          </a>
+        </p>
+      </section>
       <PublicProjectDirectory />
       <footer className="login-footer">
         <LegalLinks />
