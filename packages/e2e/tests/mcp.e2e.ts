@@ -43,6 +43,14 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await screen.getByRole('button', '連携を許可', { exact: true }).click();
   await expect(browser.locator('.app-shell')).toBeVisible();
   await app.open('/#mcp');
+  await expect(screen.getByRole('link', 'スキルのインストール方法')).toHaveAttribute(
+    'href',
+    '/manual#skills',
+  );
+  await expect(screen.getByRole('link', '配布スキル一覧（GitHub）')).toHaveAttribute(
+    'href',
+    'https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills',
+  );
   const row = browser.locator('.mcp-connections .token-row');
   await expect(row).toContainText('E2E ChatGPT');
   await screen.getByRole('button', '編集', { exact: true }).click();
@@ -84,4 +92,13 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   });
   await fixture.request(`/mcp/connections/${connections[0].id}`, 'DELETE');
   await fixture.request(`/projects/${second.id}`, 'DELETE');
+  await screen.getByRole('link', 'スキルのインストール方法').click();
+  await expect(browser.locator('#skills')).toBeVisible();
+  await expect(browser.locator('#skills pre').first()).toContainText(
+    'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill deepen-questions -g',
+  );
+  await expect(browser.locator('#skills a')).toHaveAttribute(
+    'href',
+    'https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills',
+  );
 });

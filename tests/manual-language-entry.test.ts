@@ -82,6 +82,16 @@ it.each([
     });
     expect(document.querySelector('h1')?.textContent).toBe(heading);
     expect(document.querySelector(`a[href="${privacy}"]`)).not.toBeNull();
+    const skills = document.querySelector('#skills');
+    expect(skills).not.toBeNull();
+    expect(skills?.querySelector('pre code')?.textContent).toBe(
+      'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill deepen-questions -g',
+    );
+    expect(
+      skills?.querySelector(
+        'a[href="https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills"]',
+      ),
+    ).not.toBeNull();
     expect(api).not.toHaveBeenCalled();
   },
 );

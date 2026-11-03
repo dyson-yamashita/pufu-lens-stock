@@ -1,4 +1,27 @@
 export const ja: Record<string, string> = {
+  'skills.title': 'AIクライアント用スキル',
+  'skills.deepen_questions': '問いを深める',
+  'skills.manual_title': 'スキルで問いを深める',
+  'skills.description':
+    '「問いを深める」スキルは、複数のストック・既存の問い・メモやコメントを材料に、言い換えを避けた新しい問いを提案します。意見を伝えて磨き、登録を依頼するとPufu Lensへ保存できます。',
+  'skills.client_requirement':
+    'Codex CLIやClaude Codeなど、ローカルのスキルに対応したAIクライアントで使います。スキルのインストールと、このページのMCP接続・認可は別の設定です。',
+  'skills.cost':
+    '問いを深く考える処理は、利用するAIクライアントの契約・利用枠を使います。スキルは既存のストックを読み、問いを保存します。Pufu Lensの意味検索や再生成は自動で実行しません。',
+  'skills.installation_link': 'スキルのインストール方法',
+  'skills.source_link': '配布スキル一覧（GitHub）',
+  'skills.prerequisites':
+    'ローカルのスキルとMCPに対応したCodex CLI・Claude CodeなどのAIクライアント、Node.js 22.20以降、Gitを用意します。',
+  'skills.install_step':
+    'ターミナルで次のコマンドを実行し、利用するAIクライアントを選びます。-gは、プロジェクトをまたいで使うための指定です。表示されない場合はクライアントを再起動してください。',
+  'skills.connect_step':
+    'Pufu Lensの「外部連携」に表示されたMCPサーバーのURLをAIクライアントに登録して認可します。プロジェクト一覧、ストックと問い・気づきの検索・閲覧を許可し、保存する場合は「問い・気づきと、問い・気づき・プ譜のコメントを追加」も許可します。対象プロジェクトを必要な範囲に絞ってください。',
+  'skills.use_step':
+    'AIクライアントに「deepen-questionsを使って、○○プロジェクトのストックと既存の問いから問いを深めて」と依頼します。候補への意見を伝え、保存したい問いの登録を依頼します。新しい論点がなければ、無理に問いを追加しません。',
+  'skills.privacy':
+    '取得した資料は、利用するAIサービスで処理されます。メモ・コメントは非公開ですが、それらをもとに登録した問いの本文は、プロジェクトを公開すると公開対象になります。保存前に個人情報や私的な内容が含まれていないか確認してください。',
+  'skills.update':
+    'インストール済みスキルを更新するには、次のコマンドを実行します。新しいスキルは配布一覧から選んで別途インストールできます。',
   'error.memory_history_revision': '履歴の版番号を正しく指定してください。',
   'error.memory_history_not_found': 'メモリ履歴が見つかりません。',
   'error.memory_history_unavailable':

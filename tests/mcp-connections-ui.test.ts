@@ -22,6 +22,21 @@ it('接続一覧を読み込む前から現在のサイトの接続URLとコピ�
   expect(document.querySelector('button[aria-label="MCPサーバーのURLをコピー"]')).not.toBeNull();
 });
 
+it.each([
+  ['ja', '/manual#skills', 'スキルのインストール方法'],
+  ['en', '/en/manual#skills', 'How to install skills'],
+] as const)('未接続でも%sのスキル導入案内と配布先へ移動できる', (language, href, label) => {
+  vi.stubGlobal('window', { location: { origin: 'https://lens.example.com' } });
+  setLanguage(language);
+  const { document } = parseHTML(renderToStaticMarkup(createElement(McpConnections)));
+  expect(document.querySelector(`a[href="${href}"]`)?.textContent).toBe(label);
+  expect(
+    document.querySelector(
+      'a[href="https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills"]',
+    ),
+  ).not.toBeNull();
+});
+
 it('shows granted connection permissions in English while retaining connection names and scope IDs', async () => {
   const dom = parseHTML('<html><head></head><body><div id="root"></div></body></html>');
   vi.stubGlobal('window', dom.window);

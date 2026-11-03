@@ -1,4 +1,27 @@
 export const en: Record<string, string> = {
+  'skills.title': 'Skills for AI clients',
+  'skills.deepen_questions': 'Deepen questions',
+  'skills.manual_title': 'Deepen questions with a skill',
+  'skills.description':
+    'The Deepen questions skill draws on multiple stocks, existing questions, notes and comments to suggest questions that go beyond paraphrases. Refine them with your feedback and ask to save selected questions in Pufu Lens.',
+  'skills.client_requirement':
+    'Use an AI client that supports local skills, such as Codex CLI or Claude Code. Installing the skill and authorizing the MCP connection on this page are separate steps.',
+  'skills.cost':
+    'Reasoning uses your AI client’s subscription or usage allowance. The skill reads existing stocks and saves questions. It does not automatically run Pufu Lens semantic search or regeneration.',
+  'skills.installation_link': 'How to install skills',
+  'skills.source_link': 'Available skills (GitHub)',
+  'skills.prerequisites':
+    'Prepare an AI client with local skill and MCP support, such as Codex CLI or Claude Code, Node.js 22.20 or later, and Git.',
+  'skills.install_step':
+    'Run this command in your terminal and select your AI client. The -g option makes the skill available across projects. Restart your client if the skill does not appear.',
+  'skills.connect_step':
+    'Register the MCP server URL shown under Pufu Lens Integrations in your AI client and authorize it. Allow listing projects and searching and reading stocks and questions/insights. To save, also allow “Add questions and insights, and comments on questions, insights and pufus”. Limit access to the projects you need.',
+  'skills.use_step':
+    'Ask your AI client: “Use deepen-questions to deepen questions from the stocks and existing questions in project X.” Give feedback on the candidates and ask to register the ones you want to keep. The skill can recommend continuing an existing question when there is no new angle.',
+  'skills.privacy':
+    'Retrieved material is processed by your AI service. Notes and comments are private, but question text based on them becomes public if you publish the project. Check for personal or private information before saving.',
+  'skills.update':
+    'Run the following command to update the installed skill. You can install additional skills separately from the available skills list.',
   'error.memory_history_revision': 'Enter a valid memory history revision.',
   'error.memory_history_not_found': 'Memory history was not found.',
   'error.memory_history_unavailable': 'Could not load memory history. Please try again later.',

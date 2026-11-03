@@ -87,6 +87,8 @@
     "title": "MCP連携の編集と保存",
     "sources": [
       "src/McpConnections.tsx",
+      "src/UserManual.tsx",
+      "shared/skills.ts",
       "src/McpConnectionEditor.tsx",
       "server/mcp-oauth.ts",
       "server/mcp-connection-settings.ts",
@@ -96,6 +98,7 @@
       "server/mcp-consent-style.ts"
     ],
     "aspects": [
+      "外部連携からスキル導入手順へ移動し、マニュアルのコマンドと配布先を確認",
       "連携先の表示名・参照プロジェクト・権限を変更",
       "プロジェクトメモリ閲覧権限の初回同意・解除・再読込後の保持",
       "再読込後も設定を保持",
