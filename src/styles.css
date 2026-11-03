@@ -3757,6 +3757,12 @@ article.pufu-list-item {
 .public-pufu-help {
   margin: 0 0 24px;
 }
+.public-pufu-goal {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+}
 .publication-scope {
   padding: 18px;
   margin: 20px 0;

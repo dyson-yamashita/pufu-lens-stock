@@ -323,6 +323,7 @@ describe('公開プロジェクトの参照専用API', () => {
           id: 'pufu',
           title: null,
           task: '公開する課題',
+          latest_gaining_goal: '公開する最新局面',
           current_phase: 2,
           updated_at: expect.any(String),
         },
@@ -406,6 +407,9 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       pufu: { score: { gainingGoal: { text: '古い本文' } } },
+    });
+    expect(await (await get(`${root(key)}/pufus`)).json()).toMatchObject({
+      items: [{ id: 'pufu', latest_gaining_goal: '古い本文' }],
     });
     expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM processing_jobs').first()).toEqual(
       before,

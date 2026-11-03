@@ -223,8 +223,11 @@ export function publicProjectsApp() {
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf
-        JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND ${publicPufuWhere}
+        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,
+        json_extract(COALESCE(ph.score_json,pf.score_json),'$.gainingGoal.text') AS latest_gaining_goal
+        FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
+        LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
+        WHERE ${publicWhere} AND ${publicPufuWhere}
         ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), limit, offset),
       c.env.DB.prepare(

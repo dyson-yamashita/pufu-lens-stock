@@ -38,6 +38,7 @@ export type PublicQuestion = StockRelations & {
 };
 export type PublicPufuSummary = {
   title?: string | null;
+  latest_gaining_goal?: string | null;
   id: string;
   task: string;
   current_phase: number;
