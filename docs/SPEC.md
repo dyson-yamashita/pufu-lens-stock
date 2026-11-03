@@ -256,9 +256,9 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 
 ### 外部AI用スキルの配布
 
-公開リポジトリの [`skills/`](../skills/README.md) に利用者向けAgent Skillsを置きます。開発用 `.agents/skills/` とは分離し、skills CLIの取得URLを `https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills` に限定します。最初のスキルは `deepen-questions`（1.0.0）です。新しいスキルは `skills/<name>/SKILL.md` と必要な参照資料・評価ケースを追加し、バージョンを管理します。
+公開リポジトリの [`skills/`](../skills/README.md) に利用者向けAgent Skillsを置きます。開発用 `.agents/skills/` とは分離し、skills CLIの取得URLを `https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills` に限定します。最初のスキルは `deepen-questions`（1.1.0）です。新しいスキルは `skills/<name>/SKILL.md` と必要な参照資料・評価ケースを追加し、バージョンを管理します。
 
-スキルは利用者のAIクライアント上で、複数ストック・既存の問い・本人のメモやコメントから問いを育てます。既存MCPで取得・登録し、新規のサーバーAI処理やAPI・DB項目は追加しません。キーワード検索と必要な詳細取得を標準とし、意味検索・要約やメモリの再生成は起動しません。登録依頼がある場合だけ `add_question` で保存します。保存元は既存の `user`、作成経緯は任意の非公開メモに残します。問い同士の関連付けは構造化せず参照IDで記録します。
+スキルは利用者のAIクライアント上で、複数ストック・既存の問い・本人のメモやコメントから、根拠と目的→未検証の仮説→検証する問い→支持・見直し・保留の条件→確かめ方を整理します。利用者が示した仮説を出発点にでき、各候補に既存の問いとの差を示します。材料不足なら補助質問へ分け、同じ答えで足りる場合は既存の問いで検討を続けます。既存MCPで取得・登録し、新規のサーバーAI処理やAPI・DB項目は追加しません。キーワード検索と必要な詳細取得を標準とし、意味検索・要約やメモリの再生成は起動しません。登録依頼がある場合だけ `add_question` で保存し、`text` に検証する問い、既存の非公開 `note`（2,000文字以内）に仮説・検証の要点・根拠ID・既存との差・スキル版を残します。保存元は既存の `user` です。問い同士の関連付けは構造化せず参照IDで記録します。
 
 導入方法の編集元は `src/UserManual.tsx` の `#skills` 節です。日英で利用条件・インストール・別途必要なMCP認可・使い方・更新・費用・公開範囲を案内します。外部連携ページには紹介と、表示言語のマニュアル節およびGitHub配布一覧へのリンクを表示します。配布URLと導入コマンドは `shared/skills.ts` を参照し、一覧を増やしても取得元がずれないようにします。GitHubのmain向け案内はこの変更のマージ後に有効となります。プラグインの公開申請や本番反映はこの変更に含めません。
 

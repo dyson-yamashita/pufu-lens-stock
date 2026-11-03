@@ -3,7 +3,7 @@ export const en: Record<string, string> = {
   'skills.deepen_questions': 'Deepen questions',
   'skills.manual_title': 'Deepen questions with a skill',
   'skills.description':
-    'The Deepen questions skill draws on multiple stocks, existing questions, notes and comments to suggest questions that go beyond paraphrases. Refine them with your feedback and ask to save selected questions in Pufu Lens.',
+    'The Deepen questions skill uses stocks, existing questions, notes and comments to form hypotheses, then suggests questions, judgment criteria and ways to check them. Refine the candidates with your feedback and ask to save the questions with their hypotheses and verification notes in Pufu Lens.',
   'skills.client_requirement':
     'Use an AI client that supports local skills, such as Codex CLI or Claude Code. Installing the skill and authorizing the MCP connection on this page are separate steps.',
   'skills.cost':
@@ -17,7 +17,7 @@ export const en: Record<string, string> = {
   'skills.connect_step':
     'Register the MCP server URL shown under Pufu Lens Integrations in your AI client and authorize it. Allow listing projects and searching and reading stocks and questions/insights. To save, also allow “Add questions and insights, and comments on questions, insights and pufus”. Limit access to the projects you need.',
   'skills.use_step':
-    'Ask your AI client: “Use deepen-questions to deepen questions from the stocks and existing questions in project X.” Give feedback on the candidates and ask to register the ones you want to keep. The skill can recommend continuing an existing question when there is no new angle.',
+    'Ask your AI client: “Use deepen-questions to form hypotheses and questions to check them from the material in project X.” Include any hypothesis you already want to examine. Review the evidence, hypothesis, conditions for support or revision, and next check; give feedback and ask to register the questions you want to keep. Hypotheses and verification notes are saved in each question’s private note. Continue an existing question when there is no new angle.',
   'skills.privacy':
     'Retrieved material is processed by your AI service. Notes and comments are private, but question text based on them becomes public if you publish the project. Check for personal or private information before saving.',
   'skills.update':
