@@ -1,14 +1,14 @@
-# Pufu Lens skills
+# Pufu Lensのスキル
 
 利用者のCodex・Claude Codeなどで実行するAgent Skillsです。推論は利用者のAIの利用枠を使い、Pufu Lensへのデータ取得・保存には既存のMCP接続を使います。スキルの導入だけではMCP接続や認可は完了しません。
 
-| Skill                                         | 用途                                                                   |
-| --------------------------------------------- | ---------------------------------------------------------------------- |
-| [deepen-questions](deepen-questions/SKILL.md) | 複数ストック・既存の問い・本人の意見から、言い換えを避けて問いを育てる |
+| スキル                                        | 用途                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [deepen-questions](deepen-questions/SKILL.md) | 複数ストック・既存の問い・本人の意見から仮説を立て、それを確かめる問いと判断条件・確かめ方を考える |
+
+`deepen-questions` の資料探索は、通常1回の検討で最大3回までハイブリッド検索を使い、Pufu Lensの検索用AIの利用枠を消費します。単語検索のみの指定も可能です。仮説や問いを考える推論は利用者側のAIで行います。
 
 インストール方法・利用条件・使い方は、Pufu Lensのユーザーマニュアルの「スキルで問いを深める」を参照してください。外部連携ページからも開けます。配布には[skills CLI](https://github.com/vercel-labs/skills)を使い、取得先をこのディレクトリに限定します。リポジトリルートを指定すると、開発用 `.agents/skills/` も探索対象になるため、マニュアルのURLを使ってください。
-
-These Agent Skills run in your own AI client using your AI allowance. Connect and authorize Pufu Lens MCP separately. See “Deepen questions with a skill” in the Pufu Lens user manual, also linked from Integrations. Install from this directory rather than the repository root to keep development skills out of the selection.
 
 ## スキルを追加・更新する開発者向け
 
