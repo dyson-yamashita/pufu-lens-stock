@@ -47,7 +47,6 @@ export const test = base.extend<{ fixture: Fixture }>({
     const { id } = await request('/projects', 'POST', {
       name: projectName,
       description: 'E2E専用の使い捨てデータ',
-      auto_generate_questions: true,
     });
     const projectId = String(id);
     await use({ url, projectId, projectName, cookie, request });
