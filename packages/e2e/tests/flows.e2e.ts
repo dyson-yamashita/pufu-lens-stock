@@ -12,6 +12,29 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   fixture,
 }) => {
   await app.open(`/#project/${fixture.projectId}`);
+  const menu = screen.getByRole('button', 'メニューを開く');
+  if (await menu.isVisible()) await menu.click();
+  await screen.getByRole('button', 'プロジェクトを追加', { exact: true }).click();
+  const projectName = 'E2E自動生成オフの保存先';
+  await screen.getByLabel('プロジェクト名', { exact: true }).fill(projectName);
+  await browser.locator('.project-advanced > summary').click();
+  const autoQuestions = screen.getByRole('switch', 'ストックから問い・気づきを自動生成する');
+  await expect(autoQuestions).not.toBeChecked();
+  await screen
+    .getByRole('dialog', '新しいプロジェクト')
+    .getByRole('button', 'プロジェクトを作成', { exact: true })
+    .click();
+  await expect(screen.getByRole('heading', projectName, { exact: true })).toBeVisible();
+  const { projects } = (await fixture.request('/projects')) as {
+    projects: { id: string; name: string; auto_generate_questions: boolean }[];
+  };
+  const project = projects.find(({ name }) => name === projectName)!;
+  expect(project.auto_generate_questions).toBe(false);
+  await app.open(`/#settings/${project.id}`);
+  await browser.locator('.project-advanced > summary').click();
+  await expect(autoQuestions).not.toBeChecked();
+  await fixture.request(`/projects/${project.id}`, 'DELETE');
+  await app.open(`/#project/${fixture.projectId}`);
   await agent.act(goals.stock);
   await expect(screen.getByRole('dialog', '記事をストック')).toBeVisible();
   await screen.getByRole('tab', 'テキスト').click();

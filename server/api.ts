@@ -385,7 +385,7 @@ export function createApp(trustedPrincipal?: Principal) {
         data.description,
         Number(data.show_in_all_lists ?? true),
         Number(data.include_in_user_memory ?? true),
-        Number(data.auto_generate_questions ?? true),
+        Number(data.auto_generate_questions ?? false),
       ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
