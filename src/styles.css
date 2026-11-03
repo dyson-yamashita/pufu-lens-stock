@@ -1700,6 +1700,7 @@ p {
 .youtube-player {
   display: block;
   width: 100%;
+  height: auto;
   aspect-ratio: 16 / 9;
   min-height: 200px;
   border: 0;
