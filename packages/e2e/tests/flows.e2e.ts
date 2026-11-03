@@ -207,6 +207,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,
     question_id: question.id,
+    title: 'E2Eの公開プ譜タイトル',
     request_id: requestId(),
     score,
   })) as { pufu: { id: string } };
@@ -251,6 +252,8 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
   await browser.locator('.public-tabs a').filter({ hasText: 'プ譜' }).click();
+  await expect(browser.locator('.public-pufu-card h3')).toHaveText('E2Eの公開プ譜タイトル');
+  await expect(browser.locator('.public-pufu-card h3 + p')).toHaveText('E2Eの公開プ譜・次の局面');
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await screen.getByRole('link', /E2Eの公開プ譜/).click();
   await expect(browser.locator('section[aria-label="課題"]')).toContainText('E2Eの公開プ譜');

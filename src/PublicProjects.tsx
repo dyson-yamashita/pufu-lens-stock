@@ -794,6 +794,9 @@ function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             href={publicLink(`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`)}
           >
             <h3>{pufuDisplayTitle(pufu)}</h3>
+            {pufu.title && pufu.latest_gaining_goal && (
+              <p className="public-pufu-goal">{pufu.latest_gaining_goal}</p>
+            )}
             <p className="public-help">
               {t('phase.number', { number: pufu.current_phase })}
               {t('ui.public_projects.separator')}

@@ -90,6 +90,7 @@ beforeEach(() => {
             id: 'pufu',
             title: pufuTitle,
             task: '問いから考える課題',
+            latest_gaining_goal: '最新局面で目指す獲得目標',
             current_phase: 1,
             updated_at: '2026-10-18',
           },
@@ -313,6 +314,7 @@ it('プ譜タブから一覧・詳細を閲覧し、戻るとプ譜タブへ戻�
   expect(help?.querySelector('a')?.textContent).toBe('プ譜について詳しく');
   const card = document.querySelector('.public-pufu-card');
   expect(card?.textContent).toContain('問いから考える課題');
+  expect(card?.querySelector('.public-pufu-goal')).toBeNull();
   expect(card?.textContent).toContain('第1局面');
   expect(card?.getAttribute('href')).toBe('#pufu/pufu?from=pufus');
   await navigate('#pufu/pufu?from=pufus');
@@ -415,7 +417,10 @@ it.each([
 it('公開プ譜は一覧と詳細に設定したタイトルを表示し、課題本文も保持する', async () => {
   pufuTitle = '短い公開タイトル';
   await render('#pufus');
-  expect(document.querySelector('.public-pufu-card')?.textContent).toContain(pufuTitle);
+  const card = document.querySelector('.public-pufu-card');
+  expect(card?.querySelector('h3')?.textContent).toBe(pufuTitle);
+  expect(card?.querySelector('h3 + p')?.textContent).toBe('最新局面で目指す獲得目標');
+  expect(card?.textContent).not.toContain('問いから考える課題');
   await navigate('#pufu/pufu');
   expect(document.querySelector('h2.public-detail-title')?.textContent).toBe(pufuTitle);
   expect(document.querySelector('.public-pufu-context')?.textContent).toContain(
