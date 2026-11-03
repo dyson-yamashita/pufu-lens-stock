@@ -38,7 +38,6 @@ try {
   const project = await request('/projects', 'POST', {
     name: 'ローカル動作検証',
     description: '検証終了後に、この検証で作成したデータだけを削除します。',
-    auto_generate_questions: true,
   });
   projectId = project.id;
   const saved = await request('/stocks', 'POST', {
