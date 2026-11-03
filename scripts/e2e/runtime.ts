@@ -1,8 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { runnerEnvironment, type E2EMode } from './policy.ts';
 
@@ -228,8 +228,4 @@ export async function withRuntime<T>(
     process.removeListener('SIGTERM', onSignal);
     await rm(scratch, { recursive: true, force: true });
   }
-}
-export async function saveJson(path: string, value: unknown) {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(value, null, 2) + '\n');
 }

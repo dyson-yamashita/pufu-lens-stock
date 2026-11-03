@@ -164,7 +164,6 @@ export const ja: Record<string, string> = {
   'ui.app.all': 'すべて',
   'ui.app.text': 'テキスト',
   'ui.app.favorites': 'お気に入り',
-  'ui.app.items': '件',
   'ui.app.loading_articles': '記事を読み込んでいます。',
   'ui.app.no_matching_articles': '該当する記事はありません',
   'ui.app.start_growing_your_knowledge_here': 'ここから、知識が育ちはじめます',
@@ -485,7 +484,6 @@ export const ja: Record<string, string> = {
   'ui.onboarding.the_name_used_in_the_app_it_does_not':
     'アプリ内で使う名前です。本名である必要はありません。80文字まで。',
   'ui.onboarding.agree_to_the_terms': '利用条件への同意',
-  'ui.onboarding.i_agree': 'に同意します',
   'ui.onboarding.links_open_in_a_new_tab_please_review_both':
     'リンク先は新しいタブで開きます。両方の内容をご確認ください。',
   'ui.profile.edit_profile': 'プロフィールの編集',
@@ -523,7 +521,6 @@ export const ja: Record<string, string> = {
     'プ譜の画像を読み込めませんでした。再読み込みしてください。',
   'ui.public_projects.loading': '読み込んでいます…',
   'ui.public_projects.pagination': 'ページ切り替え',
-  'ui.public_projects.page': 'ページ',
   'ui.public_projects.public_projects': '公開プロジェクト',
   'ui.public_projects.discover_your_next_idea_through_someone_else_s_interests':
     '誰かの関心から、次のアイデアへ。ストックと問い・気づき、その先のプ譜をのぞいてみませんか。',
@@ -591,7 +588,6 @@ export const ja: Record<string, string> = {
   'ui.public_projects.no_stocks_yet': 'ストックはまだありません。',
   'ui.public_projects.no_questions_or_insights_available_for_publication_yet':
     '公開できる問い・気づきはまだありません。',
-  'ui.public_projects.phase': '第',
   'ui.public_projects.separator': ' · ',
   'ui.public_projects.reflection': '振り返り',
   'ui.public_projects.no_pufu_available_for_publication_yet': '公開できるプ譜はまだありません。',
@@ -604,7 +600,6 @@ export const ja: Record<string, string> = {
     '問い・気づきを見つめ直し、次の一歩へ。',
   'ui.public_projects.pufu_for_this_question_or_insight': 'この問い・気づきのプ譜',
   'ui.public_projects.view_ideas_organized_by_task': '課題ごとにまとめられた案を閲覧できます。',
-  'ui.public_projects.phase_2': '局面',
   'ui.public_projects.read_only': ' · 閲覧のみ',
   'ui.public_projects.no_pufu_for_this_question_or_insight_yet':
     'この問い・気づきのプ譜はまだありません。',
@@ -612,7 +607,6 @@ export const ja: Record<string, string> = {
   'ui.public_projects.back_to_question_or_insight': '問い・気づきに戻る',
   'ui.public_projects.task': '課題',
   'ui.public_projects.related_stocks': '関連するストック',
-  'ui.public_projects.latest_phase': '最新の局面 ',
   'ui.public_projects.home': 'トップへ',
   'ui.public_projects.pufu_lens_connect_knowledge_into_memory':
     'Pufu Lens · 集めた知識を、つながる記憶に。',
@@ -744,7 +738,6 @@ export const ja: Record<string, string> = {
   'ui.pufus.question_or_insight': '問い・気づき：',
   'ui.pufus.value_more': ' (他{{value0}}件)',
   'ui.pufus.stock': 'ストック：',
-  'ui.pufus.phase': ' · 第',
   'ui.question_form.save_your_own_question_or_insight_in_a_project':
     'プロジェクトに自分の問い・気づきを保存します。関連するストックは任意で選べます。',
   'ui.question_form.no_projects_available': 'プロジェクトがありません',
@@ -801,10 +794,8 @@ export const ja: Record<string, string> = {
   'ui.questions.take_the_next_step_with_questions_and_insights': '問い・気づきから、次の一歩へ',
   'ui.questions.use_add_question_or_insight_to_save_thoughts_from':
     '「問い・気づきを追加」から、日常や会話で生まれた問い・気づきを保存できます。自動生成がオンのプロジェクトでは、ストックの要約からAIの問い・気づきも生成されます。',
-  'ui.relation_picker.related': '関連する',
   'ui.relation_picker.optional_multiple_selections_allowed': '任意・複数選択可',
   'ui.relation_picker.selected': '選択済み ',
-  'ui.relation_picker.search': 'を検索',
   'ui.relation_picker.search_article_titles_and_more': '記事のタイトルなどで検索',
   'ui.relation_picker.search_question_and_insight_text': '問い・気づきの本文で検索',
   'ui.relation_picker.loading': ' 読み込んでいます…',
@@ -956,13 +947,9 @@ export const ja: Record<string, string> = {
   'ui.user_manual.a_basic_guide_to_collecting_articles_developing_questions_and':
     '記事を集め、問いを育て、次のアイデアにつなげるための基本ガイドです。',
   'ui.user_manual.start_here': 'まずは、ここから',
-  'ui.user_manual.sign_in_with_google_and_enter_a_nickname_display':
-    'Googleでログインし、ニックネーム（表示名）を入力します。',
   'ui.user_manual.and': 'と',
   'ui.user_manual.review_both_documents_check_both_consent_boxes_and_press':
     'を確認し、両方への同意にチェックして「OK」を押します。完了するまでは、再度ログインしても登録画面が表示されます。',
-  'ui.user_manual.add_a_project_from_the_side_menu_you_can':
-    'サイドメニューからプロジェクトを追加します。ニックネームは「プロフィール」で変更できます。',
   'ui.user_manual.save_interesting_article_urls_or_your_own_text_as':
     '気になった記事のURLや、自分のテキストをストックします。',
   'ui.user_manual.choose_a_question_and_explore_solutions_with_pufu':

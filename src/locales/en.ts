@@ -166,7 +166,6 @@ export const en: Record<string, string> = {
   'ui.app.all': 'All',
   'ui.app.text': 'Text',
   'ui.app.favorites': 'Favorites',
-  'ui.app.items': ' items',
   'ui.app.loading_articles': 'Loading articles.',
   'ui.app.no_matching_articles': 'No matching articles',
   'ui.app.start_growing_your_knowledge_here': 'Start growing your knowledge here',
@@ -487,7 +486,6 @@ export const en: Record<string, string> = {
   'ui.onboarding.the_name_used_in_the_app_it_does_not':
     'The name used in the app. It does not need to be your real name. Up to 80 characters.',
   'ui.onboarding.agree_to_the_terms': 'Agree to the terms',
-  'ui.onboarding.i_agree': ' — I agree',
   'ui.onboarding.links_open_in_a_new_tab_please_review_both':
     'Links open in a new tab. Please review both documents.',
   'ui.profile.edit_profile': 'Edit profile',
@@ -526,7 +524,6 @@ export const en: Record<string, string> = {
     'Could not load the Pufu image. Please reload.',
   'ui.public_projects.loading': 'Loading…',
   'ui.public_projects.pagination': 'Pagination',
-  'ui.public_projects.page': ' page',
   'ui.public_projects.public_projects': 'Public projects',
   'ui.public_projects.discover_your_next_idea_through_someone_else_s_interests':
     "Discover your next idea through someone else's interests. Explore their stocks, questions, insights and Pufu.",
@@ -594,7 +591,6 @@ export const en: Record<string, string> = {
   'ui.public_projects.no_stocks_yet': 'No stocks yet.',
   'ui.public_projects.no_questions_or_insights_available_for_publication_yet':
     'No questions or insights available for publication yet.',
-  'ui.public_projects.phase': 'Phase ',
   'ui.public_projects.separator': ' · ',
   'ui.public_projects.reflection': 'Reflection',
   'ui.public_projects.no_pufu_available_for_publication_yet':
@@ -608,7 +604,6 @@ export const en: Record<string, string> = {
     'Reflect on a question or insight and take the next step.',
   'ui.public_projects.pufu_for_this_question_or_insight': 'Pufu for this question or insight',
   'ui.public_projects.view_ideas_organized_by_task': 'View ideas organized by task.',
-  'ui.public_projects.phase_2': ' phase',
   'ui.public_projects.read_only': ' · Read only',
   'ui.public_projects.no_pufu_for_this_question_or_insight_yet':
     'No Pufu for this question or insight yet.',
@@ -616,7 +611,6 @@ export const en: Record<string, string> = {
   'ui.public_projects.back_to_question_or_insight': 'Back to question or insight',
   'ui.public_projects.task': 'Task',
   'ui.public_projects.related_stocks': 'Related stocks',
-  'ui.public_projects.latest_phase': 'Latest phase ',
   'ui.public_projects.home': 'Home',
   'ui.public_projects.pufu_lens_connect_knowledge_into_memory':
     'Pufu Lens · Connect knowledge into memory.',
@@ -751,7 +745,6 @@ export const en: Record<string, string> = {
   'ui.pufus.question_or_insight': 'Question or insight: ',
   'ui.pufus.value_more': ' ({{value0}} more)',
   'ui.pufus.stock': 'Stock: ',
-  'ui.pufus.phase': ' · Phase ',
   'ui.question_form.save_your_own_question_or_insight_in_a_project':
     'Save your own question or insight in a project. Related stocks are optional.',
   'ui.question_form.no_projects_available': 'No projects available',
@@ -813,11 +806,9 @@ export const en: Record<string, string> = {
     'Take the next step with questions and insights',
   'ui.questions.use_add_question_or_insight_to_save_thoughts_from':
     'Use Add question or insight to save thoughts from everyday life or conversations. Projects with automatic generation enabled also generate AI questions and insights from stock summaries.',
-  'ui.relation_picker.related': 'Related ',
   'ui.relation_picker.optional_multiple_selections_allowed':
     'Optional · Multiple selections allowed',
   'ui.relation_picker.selected': 'Selected ',
-  'ui.relation_picker.search': ' search',
   'ui.relation_picker.search_article_titles_and_more': 'Search article titles and more',
   'ui.relation_picker.search_question_and_insight_text': 'Search question and insight text',
   'ui.relation_picker.loading': ' Loading…',
@@ -970,13 +961,9 @@ export const en: Record<string, string> = {
   'ui.user_manual.a_basic_guide_to_collecting_articles_developing_questions_and':
     'A basic guide to collecting articles, developing questions and connecting them to your next idea.',
   'ui.user_manual.start_here': 'Start here',
-  'ui.user_manual.sign_in_with_google_and_enter_a_nickname_display':
-    'Sign in with Google and enter a nickname (display name).',
   'ui.user_manual.and': ' and ',
   'ui.user_manual.review_both_documents_check_both_consent_boxes_and_press':
     ', then check both consent boxes and press OK. Until registration is complete, the registration screen appears on later sign-ins too.',
-  'ui.user_manual.add_a_project_from_the_side_menu_you_can':
-    'Add a project from the side menu. You can change your nickname in Profile.',
   'ui.user_manual.save_interesting_article_urls_or_your_own_text_as':
     'Save interesting article URLs or your own text as stocks.',
   'ui.user_manual.choose_a_question_and_explore_solutions_with_pufu':
