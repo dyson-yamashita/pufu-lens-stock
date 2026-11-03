@@ -7,7 +7,7 @@ export const en: Record<string, string> = {
   'skills.client_requirement':
     'Use an AI client that supports local skills, such as Codex CLI or Claude Code. Installing the skill and authorizing the MCP connection on this page are separate steps.',
   'skills.cost':
-    'Reasoning uses your AI client’s subscription or usage allowance. The skill reads existing stocks and saves questions. It does not automatically run Pufu Lens semantic search or regeneration.',
+    'Reasoning about hypotheses and questions uses your AI client’s subscription or usage allowance. To find related stocks, the skill normally makes up to three searches combining keywords and meaning per investigation, using Pufu Lens’s search AI allowance. You can request keyword-only search. It does not regenerate summaries or memories.',
   'skills.installation_link': 'How to install skills',
   'skills.source_link': 'Available skills (GitHub)',
   'skills.prerequisites':

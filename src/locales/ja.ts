@@ -7,7 +7,7 @@ export const ja: Record<string, string> = {
   'skills.client_requirement':
     'Codex CLIやClaude Codeなど、ローカルのスキルに対応したAIクライアントで使います。スキルのインストールと、このページのMCP接続・認可は別の設定です。',
   'skills.cost':
-    '問いを深く考える処理は、利用するAIクライアントの契約・利用枠を使います。スキルは既存のストックを読み、問いを保存します。Pufu Lensの意味検索や再生成は自動で実行しません。',
+    '仮説や問いを考える処理は、利用するAIクライアントの契約・利用枠を使います。関連するストックを探す際は、通常1回の検討で最大3回まで語句と意味を組み合わせた検索を行い、Pufu Lensの検索用AIの利用枠を使います。単語検索のみと指定することもできます。要約やメモリの再生成は行いません。',
   'skills.installation_link': 'スキルのインストール方法',
   'skills.source_link': '配布スキル一覧（GitHub）',
   'skills.prerequisites':
