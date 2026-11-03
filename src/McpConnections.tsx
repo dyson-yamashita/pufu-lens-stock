@@ -1,11 +1,12 @@
 import McpConnectionEditor from './McpConnectionEditor';
-import { applicationError, t, intlLocale, useLanguage } from './i18n';
+import { applicationError, t, intlLocale, useLanguage, manualHref } from './i18n';
 import { useEffect, useState } from 'react';
 import { Copy, Layers, LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import XIntegration from './XIntegration';
 import { api } from './api';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
 import { translate } from '../shared/locale';
+import { skillsSourceUrl } from '../shared/skills';
 export default function McpConnections() {
   const { language } = useLanguage();
   const [connections, setConnections] = useState<McpConnection[]>([]);
@@ -82,6 +83,21 @@ export default function McpConnections() {
           </p>
         )}
         <p>{t('ui.mcp_connections.ask_the_connected_app_to_find_stocks_in_a')}</p>
+      </section>
+      <h2 className="integration-heading">{t('skills.title')}</h2>
+      <section className="connect-guide" aria-label={t('skills.title')}>
+        <h3>{t('skills.deepen_questions')}</h3>
+        <p>{t('skills.description')}</p>
+        <p>{t('skills.client_requirement')}</p>
+        <p>{t('skills.cost')}</p>
+        <div className="form-actions">
+          <a className="text-link" href={`${manualHref(language)}#skills`}>
+            {t('skills.installation_link')}
+          </a>
+          <a className="text-link" href={skillsSourceUrl} target="_blank" rel="noreferrer">
+            {t('skills.source_link')}
+          </a>
+        </div>
       </section>
       {error && (
         <p className="error-box" role="alert">
