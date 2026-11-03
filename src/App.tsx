@@ -1976,7 +1976,7 @@ function ProjectForm({
   );
   const userMemoryId = useId();
   const [autoGenerateQuestions, setAutoGenerateQuestions] = useState(
-    project?.auto_generate_questions ?? true,
+    project?.auto_generate_questions ?? false,
   );
   const autoQuestionsId = useId();
   const [busy, setBusy] = useState(false);

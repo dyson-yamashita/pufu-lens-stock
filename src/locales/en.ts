@@ -860,7 +860,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     'For questions you added yourself, unlink the stocks and save before changing the destination project on the same screen. Move AI-generated questions from their source article. Moves across projects are unavailable in cases such as multiple related stocks.',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
-    'To stop automatic question generation, turn off Automatically generate questions and insights from stocks when creating a project or under Settings → Advanced settings, then save. It is on by default. Existing questions, manual additions, and summary/memory settings stay the same. Generation already started may still finish.',
+    'Automatic question generation is off by default for new projects. To enable it, turn on Automatically generate questions and insights from stocks when creating a project or under Settings → Advanced settings, then save. Turning it off again keeps existing questions, manual additions, and summary/memory settings unchanged. Generation already started may still finish.',
   'ui.user_manual.to_delete_a_question_or_insight_open_other_actions':
     'To delete a question or insight, open Other actions at the bottom of its details and select Delete question or insight. Its comments are also deleted; related Pufu, phases and stocks remain.',
   'ui.user_manual.develop_solutions_with_pufu': 'Develop solutions with Pufu',

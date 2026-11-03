@@ -54,7 +54,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
   }
 
-  it('既定値はオンで、作成・更新した設定を保存し、省略した更新ではオフを維持する', async () => {
+  it('作成時の既定値はオフで、既存の設定と明示したオン・オフを維持する', async () => {
     expect((await projects()).every((project) => project.auto_generate_questions === true)).toBe(
       true,
     );
@@ -73,6 +73,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
       auto_generate_questions: false,
     });
     expect((await update(true)).status).toBe(200);
+    expect((await update()).status).toBe(200);
     expect((await projects()).find((project) => project.id === 'alice-project')).toMatchObject({
       auto_generate_questions: true,
     });
@@ -83,6 +84,15 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     expect(defaultProject.status).toBe(201);
     const defaultId = ((await defaultProject.json()) as { id: string }).id;
     expect((await projects()).find((project) => project.id === defaultId)).toMatchObject({
+      auto_generate_questions: false,
+    });
+    const on = await app.request('/api/v1/projects', {
+      method: 'POST',
+      body: { name: '自動生成あり', auto_generate_questions: true },
+    });
+    expect(on.status).toBe(201);
+    const onId = ((await on.json()) as { id: string }).id;
+    expect((await projects()).find((project) => project.id === onId)).toMatchObject({
       auto_generate_questions: true,
     });
   });
@@ -131,9 +141,14 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
   it.each([
     { type: 'url', text: undefined, url: 'https://example.com/no-question' },
     { type: 'text', text: '自動で問いを作らないストック。' },
-  ])('オフでは$typeの保存時も要約完了時も問いを登録しない', async (input) => {
-    expect((await update(false)).status).toBe(200);
-    const id = await save(input);
+  ])('既定のオフでは$typeの保存時も要約完了時も問いを登録しない', async (input) => {
+    const created = await app.request('/api/v1/projects', {
+      method: 'POST',
+      body: { name: '既定で自動生成しない保存先' },
+    });
+    expect(created.status).toBe(201);
+    const projectId = ((await created.json()) as { id: string }).id;
+    const id = await save(input, projectId);
     expect(await questions(id)).toEqual([]);
     if (input.type === 'text') {
       await run('article', id);
