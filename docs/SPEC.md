@@ -256,7 +256,7 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 
 ### 外部AI用スキルの配布
 
-公開リポジトリの [`skills/`](../skills/README.md) に利用者向けAgent Skillsを置きます。開発用 `.agents/skills/` とは分離し、skills CLIの取得URLを `https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills` に限定します。最初のスキルは `deepen-questions`（1.0.0）です。新しいスキルは `skills/<name>/SKILL.md` と必要な参照資料・評価ケースを追加し、バージョンを管理します。
+公開リポジトリの [`skills/`](../skills/README.md) に利用者向けAgent Skillsを置きます。開発用 `.agents/skills/` とは分離し、skills CLIの取得URLを `https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills` に限定します。最初のスキルは `deepen-questions`（1.0.1）です。新しいスキルは `skills/<name>/SKILL.md` と必要な参照資料・評価ケースを追加し、バージョンを管理します。
 
 スキルは利用者のAIクライアント上で、複数ストック・既存の問い・本人のメモやコメントから問いを育てます。既存MCPで取得・登録し、新規のサーバーAI処理やAPI・DB項目は追加しません。キーワード検索と必要な詳細取得を標準とし、意味検索・要約やメモリの再生成は起動しません。登録依頼がある場合だけ `add_question` で保存します。保存元は既存の `user`、作成経緯は任意の非公開メモに残します。問い同士の関連付けは構造化せず参照IDで記録します。
 

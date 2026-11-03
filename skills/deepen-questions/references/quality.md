@@ -1,4 +1,4 @@
-# 問いの質と登録判断 / Question quality
+# 問いの質と登録判断
 
 ## 判定の軸
 
@@ -30,4 +30,4 @@
 
 登録する各問いについて、最も近い既存問いとの差分、参照元、公開してよい本文、保存先を確認する。検索が途中・取得に失敗・本文が切れている場合は、その制約を結果に記す。無関係なストックを多数紐付けて根拠を多く見せない。
 
-If the conversation is in English, apply the same criteria and explain the candidate, evidence, novelty, and next foothold in English. Preserve saved source titles and IDs as returned.
+会話が英語の場合も同じ基準を適用し、候補・根拠・新しさ・次の手がかりを英語で説明する。保存済みの参照元のタイトルとIDは、取得したとおりに保持する。
