@@ -136,6 +136,64 @@ async function navigate(hash: string) {
     window.dispatchEvent(new window.Event('hashchange'));
   });
 }
+it('プロジェクト取得中は public-main にレイアウト骨格を出し短い loading だけにしない', async () => {
+  let resolveProject!: (value: unknown) => void;
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation((url, options) => {
+    if (new URL(url, 'https://example.com').pathname === '/api/public/projects/project') {
+      return new Promise((resolve) => {
+        resolveProject = resolve;
+      });
+    }
+    return load(url, options);
+  });
+  await act(async () => {
+    root.render(createElement(PublicProjectPage, { publicId: 'project' }));
+  });
+  const main = document.querySelector('main.public-main');
+  expect(main?.querySelector('.public-page-skeleton')).not.toBeNull();
+  expect(main?.querySelector('.public-content-skeleton')).not.toBeNull();
+  expect(main?.querySelector('.public-message')).toBeNull();
+  await act(async () => {
+    resolveProject({
+      project: {
+        public_id: 'project',
+        name: '公開プロジェクト',
+        public_description: '',
+        stock_count: 1,
+        question_count: 2,
+        pufu_count: 1,
+      },
+    });
+  });
+  expect(document.querySelector('.public-page-skeleton')).toBeNull();
+  expect(document.querySelector('h1')?.textContent).toBe('公開プロジェクト');
+});
+
+it('一覧取得中はコンテンツ領域の骨格を保ち、読み込み文言だけで縮まない', async () => {
+  let resolveStocks!: (value: unknown) => void;
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation((url, options) => {
+    if (new URL(url, 'https://example.com').pathname.endsWith('/stocks')) {
+      return new Promise((resolve) => {
+        resolveStocks = resolve;
+      });
+    }
+    return load(url, options);
+  });
+  await act(async () => {
+    root.render(createElement(PublicProjectPage, { publicId: 'project' }));
+  });
+  expect(document.querySelector('h1')?.textContent).toBe('公開プロジェクト');
+  expect(document.querySelector('.public-content-skeleton')).not.toBeNull();
+  expect(document.querySelector('.public-message')).toBeNull();
+  await act(async () => {
+    resolveStocks({ items: [stock], total: 1, page: 1, has_more: false });
+  });
+  expect(document.querySelector('.public-content-skeleton')).toBeNull();
+  expect(document.querySelector('.public-stock-card')).not.toBeNull();
+});
+
 it('一覧のストックは詳細へのリンクで、要点は詳細で関連する問いとともに表示する', async () => {
   await render();
   const card = document.querySelector('.public-stock-card');

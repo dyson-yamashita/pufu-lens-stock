@@ -10,6 +10,8 @@ export default function YouTubePlayer({ url }: { url: string }) {
         className="youtube-player"
         src={src}
         title={t('ui.you_tube_player.youtube_video_player')}
+        width="560"
+        height="315"
         loading="lazy"
         referrerPolicy="strict-origin-when-cross-origin"
         allow="encrypted-media; picture-in-picture"

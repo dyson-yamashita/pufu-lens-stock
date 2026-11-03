@@ -22,7 +22,6 @@ import {
   Folder,
   Globe,
   Layers,
-  LoaderCircle,
   LockKeyhole,
   Network,
   Triangle,
@@ -82,6 +81,57 @@ function useResource<T>(path: string) {
   }, [path, retry]);
   return { ...(state.path === path ? state : { path }), reload: () => setRetry((v) => v + 1) };
 }
+function PublicContentSkeleton({ announce = true }: { announce?: boolean } = {}) {
+  useLanguage();
+  return (
+    <div
+      className="public-content-skeleton"
+      {...(announce
+        ? {
+            role: 'status' as const,
+            'aria-busy': true,
+            'aria-label': t('ui.public_projects.loading'),
+          }
+        : { 'aria-hidden': true })}
+    >
+      <div className="public-skeleton-card" />
+      <div className="public-skeleton-card" />
+      <div className="public-skeleton-card" />
+      <div className="public-skeleton-card" />
+    </div>
+  );
+}
+function PublicPageSkeleton() {
+  useLanguage();
+  return (
+    <div
+      className="public-page-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label={t('ui.public_projects.loading')}
+    >
+      <div className="public-skeleton-badge" />
+      <div className="public-skeleton-title" />
+      <div className="public-skeleton-tabs" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <PublicContentSkeleton announce={false} />
+    </div>
+  );
+}
+function PublicPufuScoreSkeleton() {
+  useLanguage();
+  return (
+    <div
+      className="public-pufu-score-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label={t('ui.public_projects.loading')}
+    />
+  );
+}
 function ResourceState({ error, retry }: { error?: string; retry: () => void }) {
   useLanguage();
   return error ? (
@@ -92,10 +142,7 @@ function ResourceState({ error, retry }: { error?: string; retry: () => void }) 
       </button>
     </div>
   ) : (
-    <p role="status" className="public-message">
-      <LoaderCircle className="spin" size={18} aria-hidden="true" />
-      {t('ui.public_projects.loading')}
-    </p>
+    <PublicContentSkeleton />
   );
 }
 function PublicBrand() {
@@ -1000,7 +1047,7 @@ function PublicPufuDetail({ root, id, fromList }: { root: string; id: string; fr
           )}
         </div>
       </div>
-      <Suspense fallback={<ResourceState retry={reload} />}>
+      <Suspense fallback={<PublicPufuScoreSkeleton />}>
         <PublicPufuScore key={`${id}-${phase}`} score={data.pufu.score} phase={phase} />
       </Suspense>
     </section>
@@ -1072,8 +1119,10 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
         </a>
       </header>
       <main className="public-main">
-        {!data ? (
+        {!data && error ? (
           <ResourceState error={error} retry={reload} />
+        ) : !data ? (
+          <PublicPageSkeleton />
         ) : (
           <>
             <span className="public-badge">
