@@ -7,15 +7,17 @@ import RelationPicker, { type RelationOption } from './RelationPicker';
 export default function QuestionForm({
   projects,
   projectId,
+  initialStock,
   onDone,
 }: {
   projects: Project[];
   projectId: string | null;
+  initialStock?: RelationOption;
   onDone: (projectId: string) => void;
 }) {
   useLanguage();
   const [project, setProject] = useState(projectId ?? projects[0]?.id ?? '');
-  const [stocks, setStocks] = useState<RelationOption[]>([]);
+  const [stocks, setStocks] = useState<RelationOption[]>(initialStock ? [initialStock] : []);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

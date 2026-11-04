@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Star,
 } from 'lucide-react';
-import type { Question } from '../shared/domain';
+import type { Project, Question } from '../shared/domain';
 import { api, send } from './api';
 import SearchField from './SearchField';
 import QuestionLabels from './QuestionLabels';
@@ -152,6 +152,8 @@ export function StockQuestion({
   );
 }
 export default function Questions({
+  projects,
+  onAdd,
   projectId,
   refresh,
   onScope,
@@ -159,6 +161,8 @@ export default function Questions({
   onQuestion,
   active = true,
 }: {
+  projects: Project[];
+  onAdd: () => void;
   projectId: string | null;
   refresh: number;
   onScope: (projectId: string | null) => void;
@@ -179,6 +183,11 @@ export default function Questions({
   const [opening, setOpening] = useState<string | null>(null);
   const [savingFavorites, setSavingFavorites] = useState<string[]>([]);
   const favoriteVersion = useRef(0);
+  const autoGenerateQuestions = projects.some(
+    (project) =>
+      (projectId ? project.id === projectId : project.show_in_all_lists !== false) &&
+      project.auto_generate_questions,
+  );
   useEffect(() => setPage(1), [projectId]);
   useEffect(() => {
     if (!active) return;
@@ -290,8 +299,18 @@ export default function Questions({
           <p>
             {search || filter !== 'all'
               ? t('ui.app.try_a_different_search_or_filter')
-              : t('ui.questions.use_add_question_or_insight_to_save_thoughts_from')}
+              : !projects.length
+                ? t('first_steps.project_intro')
+                : t('first_steps.question_intro')}
           </p>
+          {!error && !search && filter === 'all' && (
+            <>
+              {autoGenerateQuestions && <p>{t('first_steps.ai_questions')}</p>}
+              <button className="button primary" onClick={onAdd}>
+                {projects.length ? t('ui.app.add_question_or_insight') : t('ui.app.create_project')}
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="question-grid">

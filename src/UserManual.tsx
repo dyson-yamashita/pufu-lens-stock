@@ -10,6 +10,7 @@ const sections = (tr: typeof t) => [
     title: tr('ui.user_manual.save_articles_as_stocks'),
     content: (
       <>
+        <p>{tr('first_steps.manual')}</p>
         <ol>
           <li>{tr('ui.user_manual.open_save_article_and_choose_url_or_text')}</li>
           <li>{tr('ui.user_manual.choose_the_destination_project_enter_a_post_url_or')}</li>
@@ -36,6 +37,7 @@ const sections = (tr: typeof t) => [
       <>
         <p>{tr('ui.user_manual.use_questions_insights_or_all_questions_insights_to_view')}</p>
         <p>{tr('ui.user_manual.use_add_question_or_insight_to_save_your_own')}</p>
+        <p>{tr('first_steps.manual_question')}</p>
         <p>{tr('ui.user_manual.in_details_switch_between_content_pufu_comments_and_note')}</p>
         <p>{tr('ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and')}</p>
         <p>

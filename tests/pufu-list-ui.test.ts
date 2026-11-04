@@ -98,6 +98,7 @@ beforeEach(() => {
       count: 0,
       ready_count: 0,
       question_count: 1,
+      user_question_count: 1,
       pufu_count: 1,
       created_at: summary.created_at,
     },

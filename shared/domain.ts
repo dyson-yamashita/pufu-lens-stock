@@ -159,6 +159,7 @@ export type Project = {
   ready_count: number;
   created_at: string;
   question_count: number;
+  user_question_count: number;
   pufu_count: number;
 };
 export type Stock = {

@@ -127,6 +127,7 @@ describe('認証と保存API（実際のSQLite）', () => {
       count: 2,
       ready_count: 2,
       question_count: 3,
+      user_question_count: 1,
     });
     expect(projects.find((p) => p.id === 'alice-second')).toMatchObject({ question_count: 1 });
     expect(projects.find((p) => p.id === 'empty-project')).toMatchObject({ question_count: 0 });
@@ -134,7 +135,10 @@ describe('認証と保存API（実際のSQLite）', () => {
     const all = (await (await app.request('/api/v1/questions')).json()) as { total: number };
     expect(projects.reduce((sum, project) => sum + project.question_count, 0)).toBe(all.total);
     expect((await app.request('/api/v1/questions/q3', { method: 'DELETE' })).status).toBe(200);
-    expect((await list()).find((p) => p.id === 'alice-project')?.question_count).toBe(2);
+    expect((await list()).find((p) => p.id === 'alice-project')).toMatchObject({
+      question_count: 2,
+      user_question_count: 0,
+    });
   });
   it('問いの件数も本人とトークンのプロジェクト制限内だけを返す', async () => {
     await app.env.DB.prepare(
@@ -152,13 +156,13 @@ describe('認証と保存API（実際のSQLite）', () => {
       })
     ).json()) as { projects: Project[] };
     expect(result.projects).toEqual([
-      expect.objectContaining({ id: 'alice-second', question_count: 1 }),
+      expect.objectContaining({ id: 'alice-second', question_count: 1, user_question_count: 1 }),
     ]);
     const bob = (await (await app.request('/api/v1/projects', { user: 'bob' })).json()) as {
       projects: Project[];
     };
     expect(bob.projects).toEqual([
-      expect.objectContaining({ id: 'bob-project', question_count: 1 }),
+      expect.objectContaining({ id: 'bob-project', question_count: 1, user_question_count: 1 }),
     ]);
   });
   it.each(['PATCH', 'DELETE'])('他ユーザーのプロジェクトを%sで変更できない', async (method) => {
