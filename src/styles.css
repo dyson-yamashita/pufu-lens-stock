@@ -1420,6 +1420,54 @@ p {
 .empty-state .button {
   margin-top: 6px;
 }
+.first-steps {
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+.first-steps h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.first-steps > p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+}
+.first-steps ol {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0;
+  display: grid;
+  gap: 12px;
+}
+.first-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.first-step-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--wash);
+  color: var(--accent);
+}
+.first-step-done {
+  color: var(--muted);
+  font-size: 11px;
+}
+.toast {
+  flex-wrap: wrap;
+}
 .toast,
 .error-banner {
   border: 1px solid var(--border);

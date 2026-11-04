@@ -122,5 +122,22 @@
       "過去版表示中は再生成を無効化",
       "再読込後もR2の履歴を取得"
     ]
+  },
+  {
+    "id": "FIRST-001",
+    "title": "初回の進捗と記事からの問い追加",
+    "sources": [
+      "src/FirstSteps.tsx",
+      "src/QuestionForm.tsx",
+      "src/Questions.tsx",
+      "src/App.tsx",
+      "server/api.ts",
+      "shared/domain.ts"
+    ],
+    "aspects": [
+      "プロジェクト作成済みから記事保存・問い追加で3ステップを完了",
+      "保存先と記事を問いフォームへ引き継ぐ",
+      "再読込後も完了した案内は非表示"
+    ]
   }
 ]

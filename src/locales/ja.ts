@@ -1,4 +1,25 @@
 export const ja: Record<string, string> = {
+  'first_steps.title': 'はじめの3ステップ',
+  'first_steps.start_project': '最初のプロジェクトをつくりましょう',
+  'first_steps.project_intro':
+    'プロジェクトは、テーマごとに記事と問い・気づきをまとめる場所です。名前だけで始められ、あとから変えられます。',
+  'first_steps.intro':
+    '記事をストックして、気になったことを自分の問い・気づきとして残してみましょう。順番は自由です。',
+  'first_steps.project': 'プロジェクトをつくる',
+  'first_steps.stock': '最初の記事をストックする',
+  'first_steps.question': '自分の問い・気づきを1つ書く',
+  'first_steps.done': '済み',
+  'first_steps.project_examples':
+    '例：読書メモ、新規事業の調査、研究テーマ。迷ったら1つで十分です。名前だけで始められ、あとから変えられます。',
+  'first_steps.question_intro':
+    '日常や会話で生まれた問い・気づきや、記事を読んで気になったことを保存できます。',
+  'first_steps.ai_questions':
+    '自動生成がオンのプロジェクトでは、記事の要約後にAIの問い・気づきも生成されます。',
+  'first_steps.after_save': '気になった点を、問い・気づきとして書けます。',
+  'first_steps.manual':
+    '初めて使うときは、プロジェクトをつくり、記事をストックし、自分の問い・気づきを1つ書いてみましょう。ストック一覧の「はじめの3ステップ」から次の操作を開けます。順番は自由で、3つ揃うと案内は消えます。削除して未完了になると再び表示されます。',
+  'first_steps.manual_question':
+    '問い・気づきがないときは一覧中央のボタンからも追加できます。自分の問い・気づきがない間は、記事保存後の通知から追加すると、保存先と記事が選択された状態でフォームが開きます。',
   'skills.title': 'AIクライアント用スキル',
   'skills.deepen_questions': '問いを深める',
   'skills.manual_title': 'スキルで問いを深める',

@@ -40,6 +40,22 @@ describe('プロジェクトの全体一覧への表示設定', () => {
     return { hidden, visible };
   }
 
+  it('非表示も含む本人の各プロジェクトで、自動生成以外の問い件数を重複なく返す', async () => {
+    await seed();
+    await searchStock(app, 'another-hidden');
+    const result = await projects();
+    expect(result.find((project) => project.id === 'alice-project')).toMatchObject({
+      show_in_all_lists: false,
+      count: 2,
+      question_count: 2,
+      user_question_count: 1,
+    });
+    expect(result.find((project) => project.id === 'alice-second')).toMatchObject({
+      user_question_count: 1,
+    });
+    expect(result.some((project) => project.id === 'bob-project')).toBe(false);
+  });
+
   it('新規・既存はオンで、オフを保存し、省略した編集でも維持する', async () => {
     expect((await projects()).every((project) => project.show_in_all_lists === true)).toBe(true);
     for (const value of [undefined, false]) {

@@ -1,4 +1,25 @@
 export const en: Record<string, string> = {
+  'first_steps.title': 'Your first 3 steps',
+  'first_steps.start_project': 'Create your first project',
+  'first_steps.project_intro':
+    'A project keeps articles and questions or insights together around a theme. Start with just a name and change it later.',
+  'first_steps.intro':
+    'Save an article, then write down something you noticed as your own question or insight. You can do these steps in any order.',
+  'first_steps.project': 'Create a project',
+  'first_steps.stock': 'Save your first article',
+  'first_steps.question': 'Write your own question or insight',
+  'first_steps.done': 'Done',
+  'first_steps.project_examples':
+    'Examples: reading notes, business research, or a research topic. One project is enough to start. All you need is a name, which you can change later.',
+  'first_steps.question_intro':
+    'Save a question or insight from daily life, a conversation, or something you noticed while reading.',
+  'first_steps.ai_questions':
+    'In projects with automatic generation on, AI questions and insights are also generated after an article is summarized.',
+  'first_steps.after_save': 'You can write a question or insight about something you noticed.',
+  'first_steps.manual':
+    'To get started, create a project, save an article, and write your own question or insight. Use Your first 3 steps in the stock list to open the next action. You can follow any order. The guide disappears when all three steps are complete and returns if deleting content makes a step incomplete.',
+  'first_steps.manual_question':
+    'When there are no questions or insights, you can also add one using the button in the list. During your first steps, the notification after saving an article opens the form with that article and its project selected.',
   'skills.title': 'Skills for AI clients',
   'skills.deepen_questions': 'Deepen questions',
   'skills.manual_title': 'Deepen questions with a skill',

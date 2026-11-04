@@ -85,6 +85,7 @@ import MemoryHistory from './MemoryHistory';
 import ScrollHeader from './ScrollHeader';
 import LegalLinks from './LegalLinks';
 import { PublicProjectDirectory, ProjectPublicationSettings } from './PublicProjects';
+import FirstSteps from './FirstSteps';
 import shortcutSetupImage from './assets/shortcut-setup.png';
 type MemoryResponse = {
   memory: Memory | null;
@@ -157,6 +158,8 @@ type ModalState =
     }
   | {
       type: 'question';
+      projectId?: string;
+      stock?: { id: string; label: string };
     }
   | {
       type: 'pufu';
@@ -166,6 +169,7 @@ type ModalState =
       projectId: string | null;
     }
   | null;
+type SavedStock = { id: string; projectId: string; label: string };
 const statusLabels = () => ({
   queued: t('ui.app.queued'),
   extracting: t('ui.app.retrieving_article'),
@@ -518,7 +522,14 @@ export default function App() {
   const [questionCreation, setQuestionCreation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<{ message: string; stock?: SavedStock } | null>(null);
+  const firstStepsDone: [boolean, boolean, boolean] = [
+    projects.length > 0,
+    projects.some((project) => project.count > 0),
+    projects.some((project) => project.user_question_count > 0),
+  ];
+  const showFirstSteps =
+    !loading && !error && !search && stockSource === 'all' && firstStepsDone.some((done) => !done);
   const selected = projects.find((project) => project.id === route.projectId);
   const questionFlow =
     route.view === 'question' || route.view === 'resolve' || route.view === 'pufu';
@@ -753,12 +764,12 @@ export default function App() {
   ]);
   useEffect(() => {
     if (!notice) return;
-    const timeout = window.setTimeout(() => setNotice(''), 5000);
+    const timeout = window.setTimeout(() => setNotice(null), 5000);
     return () => window.clearTimeout(timeout);
   }, [notice]);
-  const completed = (message: string) => {
+  const completed = (message: string, stock?: SavedStock) => {
     setModal(null);
-    setNotice(message);
+    setNotice({ message, stock });
     reload();
   };
   const toggleStockFavorite = async (stock: Stock) => {
@@ -1203,9 +1214,14 @@ export default function App() {
                   </button>
                 )}
                 {route.view === 'questions' && (
-                  <button className="button primary" onClick={() => setModal({ type: 'question' })}>
+                  <button
+                    className="button primary"
+                    onClick={() => setModal({ type: projects.length ? 'question' : 'project' })}
+                  >
                     <Plus size={18} aria-hidden="true" />
-                    {t('ui.app.add_question_or_insight')}
+                    {projects.length
+                      ? t('ui.app.add_question_or_insight')
+                      : t('ui.app.create_project')}
                   </button>
                 )}
                 {route.view === 'pufus' && (
@@ -1277,7 +1293,25 @@ export default function App() {
           {notice && (
             <div className="toast" role="status">
               <Check size={18} aria-hidden="true" />
-              {notice}
+              <span>{notice.message}</span>
+              {notice.stock &&
+                projects.some((project) => project.id === notice.stock!.projectId) && (
+                  <>
+                    <span>{t('first_steps.after_save')}</span>
+                    <button
+                      className="button secondary"
+                      onClick={() =>
+                        setModal({
+                          type: 'question',
+                          projectId: notice.stock!.projectId,
+                          stock: { id: notice.stock!.id, label: notice.stock!.label },
+                        })
+                      }
+                    >
+                      {t('ui.app.add_question_or_insight')}
+                    </button>
+                  </>
+                )}
             </div>
           )}
           {error && (
@@ -1292,6 +1326,8 @@ export default function App() {
             (questionFlow && questionListContext.view === 'questions')) && (
             <div hidden={route.view !== 'questions'}>
               <Questions
+                projects={projects}
+                onAdd={() => setModal({ type: projects.length ? 'question' : 'project' })}
                 key={`${(questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}-${questionCreation}`}
                 active={route.view === 'questions'}
                 projectId={questionFlow ? questionListContext.scope : listProjectId}
@@ -1339,7 +1375,7 @@ export default function App() {
                 }}
                 onGuard={setNavigationGuard}
                 onDeleted={() => {
-                  setNotice(t('ui.pufu_page.pufu_deleted'));
+                  setNotice({ message: t('ui.pufu_page.pufu_deleted') });
                   reload();
                   if (pufuSource.questionId) navigateDetail('question', pufuSource.questionId);
                   else
@@ -1361,7 +1397,7 @@ export default function App() {
                 onResolve={() => navigateDetail('resolve', route.detailId!)}
                 onPufu={(id) => navigateDetail('pufu', id)}
                 onDeleted={() => {
-                  setNotice(t('ui.app.question_or_insight_deleted'));
+                  setNotice({ message: t('ui.app.question_or_insight_deleted') });
                   reload();
                   window.location.hash = questionListContext.hash;
                 }}
@@ -1400,7 +1436,7 @@ export default function App() {
               onSave={(savedUser) => {
                 applyAccountLanguage(savedUser);
                 setUser(savedUser);
-                setNotice(t('ui.app.profile_saved'));
+                setNotice({ message: t('ui.app.profile_saved') });
               }}
             />
           ) : route.view === 'mcp' ? (
@@ -1414,7 +1450,7 @@ export default function App() {
               onRevoke={async (id) => {
                 try {
                   await api(`/api/v1/tokens/${id}`, { method: 'DELETE' });
-                  setNotice(t('ui.app.token_revoked'));
+                  setNotice({ message: t('ui.app.token_revoked') });
                   reload();
                 } catch (e) {
                   setError(applicationError((e as Error).message));
@@ -1477,40 +1513,56 @@ export default function App() {
                   </div>
                   <span className="result-count">{t('count.items', { count: total })}</span>
                 </div>
+                {showFirstSteps && (
+                  <FirstSteps
+                    done={firstStepsDone}
+                    onProject={() => setModal({ type: 'project' })}
+                    onStock={() => setModal({ type: 'save' })}
+                    onQuestion={() =>
+                      setModal({
+                        type: 'question',
+                        projectId:
+                          listProjectId ?? projects.find((project) => project.count > 0)?.id,
+                      })
+                    }
+                  />
+                )}
                 {loading && !stocks.length ? (
                   <div className="empty-state">
                     <Spinner />
                     <p>{t('ui.app.loading_articles')}</p>
                   </div>
                 ) : !stocks.length ? (
-                  <div className="empty-state">
-                    <span className="empty-icon">
-                      <Bookmark size={28} aria-hidden="true" />
-                    </span>
-                    <h2>
-                      {search || stockSource !== 'all'
-                        ? t('ui.app.no_matching_articles')
-                        : t('ui.app.start_growing_your_knowledge_here')}
-                    </h2>
-                    <p>
-                      {search || stockSource !== 'all'
-                        ? t('ui.app.try_a_different_search_or_filter')
-                        : t('ui.app.save_a_url_or_text_summaries_and_memory_update')}
-                    </p>
-                    {!search && stockSource === 'all' && (
-                      <button
-                        className="button primary"
-                        onClick={() =>
-                          setModal(projects.length ? { type: 'save' } : { type: 'project' })
-                        }
-                      >
-                        <Plus size={17} aria-hidden="true" />
-                        {projects.length
-                          ? t('ui.app.save_your_first_article')
-                          : t('ui.app.create_project')}
-                      </button>
-                    )}
-                  </div>
+                  !showFirstSteps && (
+                    <div className="empty-state">
+                      <span className="empty-icon">
+                        <Bookmark size={28} aria-hidden="true" />
+                      </span>
+                      <h2>
+                        {search || stockSource !== 'all'
+                          ? t('ui.app.no_matching_articles')
+                          : t('ui.app.start_growing_your_knowledge_here')}
+                      </h2>
+                      <p>
+                        {search || stockSource !== 'all'
+                          ? t('ui.app.try_a_different_search_or_filter')
+                          : t('ui.app.save_a_url_or_text_summaries_and_memory_update')}
+                      </p>
+                      {!search && stockSource === 'all' && (
+                        <button
+                          className="button primary"
+                          onClick={() =>
+                            setModal(projects.length ? { type: 'save' } : { type: 'project' })
+                          }
+                        >
+                          <Plus size={17} aria-hidden="true" />
+                          {projects.length
+                            ? t('ui.app.save_your_first_article')
+                            : t('ui.app.create_project')}
+                        </button>
+                      )}
+                    </div>
+                  )
                 ) : (
                   <div className="article-grid">
                     {stocks.map((stock) => (
@@ -1595,13 +1647,14 @@ export default function App() {
           <SaveForm
             projects={projects}
             projectId={listProjectId}
-            onDone={(duplicate, youtube) =>
+            onDone={(duplicate, youtube, stock) =>
               completed(
                 youtube
                   ? t('ui.app.youtube_url_saved')
                   : duplicate
                     ? t('ui.app.this_article_is_already_saved')
                     : t('ui.app.article_saved_its_summary_will_be_generated_automatically'),
+                !duplicate && !firstStepsDone[2] ? stock : undefined,
               )
             }
           />
@@ -1611,7 +1664,8 @@ export default function App() {
         <Modal title={t('ui.app.add_question_or_insight')} onClose={() => setModal(null)}>
           <QuestionForm
             projects={projects}
-            projectId={listProjectId}
+            projectId={modal.projectId ?? listProjectId}
+            initialStock={modal.stock}
             onDone={(projectId) => {
               completed(t('ui.app.question_or_insight_added'));
               setQuestionCreation((value) => value + 1);
@@ -2015,7 +2069,7 @@ function ProjectForm({
         <p className="form-intro">
           {project
             ? t('ui.app.change_the_project_s_name_and_description_these_are')
-            : t('ui.app.name_the_theme_you_want_to_collect_the_purpose')}
+            : t('first_steps.project_examples')}
         </p>
         {project && (
           <>
@@ -2159,7 +2213,7 @@ function SaveForm({
 }: {
   projects: Project[];
   projectId: string | null;
-  onDone: (duplicate: boolean, youtube: boolean) => void;
+  onDone: (duplicate: boolean, youtube: boolean, stock: SavedStock) => void;
 }) {
   useLanguage();
   const [type, setType] = useState<'url' | 'text'>('url');
@@ -2198,13 +2252,18 @@ function SaveForm({
         setBusy(true);
         try {
           const result = await api<{
+            id: string;
             duplicate: boolean;
           }>('/api/v1/stocks', {
             method: 'POST',
             headers: { 'Idempotency-Key': key.current },
             body: JSON.stringify(parsed.data),
           });
-          onDone(result.duplicate, parsed.data.type === 'url' && isYouTubeUrl(parsed.data.url));
+          onDone(result.duplicate, parsed.data.type === 'url' && isYouTubeUrl(parsed.data.url), {
+            id: result.id,
+            projectId: target,
+            label: title.trim() || (type === 'url' ? url : text.slice(0, 80)),
+          });
         } catch (e) {
           setError(applicationError((e as Error).message));
           if ((e as ApiError).status === 409) key.current = createRequestId();
