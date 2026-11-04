@@ -2371,8 +2371,6 @@ p {
 }
 :root[data-theme='dark'] .login-page {
   --login-accent: #ffae8d;
-  --login-button: var(--login-accent);
-  --login-button-hover: #ffc5ab;
 }
 .login-page > header {
   display: flex;
