@@ -2364,7 +2364,7 @@ p {
   --login-accent: #c94b16;
   --login-button: #ff672a;
   --login-button-hover: #ff7d48;
-  --on-login-button: #351708;
+  --on-login-button: #fff;
   min-height: 100dvh;
   background: var(--page);
   overflow: hidden;
