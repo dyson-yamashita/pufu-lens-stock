@@ -65,6 +65,67 @@ describe('本文取得から要約とメモリまで', () => {
     await new MemoryWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
     return job!;
   }
+  it('途中ページの失敗でも本文を保存し、R2に一部取得の情報を残す', async () => {
+    await savedArticle();
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.hostname === 'cloudflare-dns.com')
+        return Response.json({
+          Status: 0,
+          Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '8.8.8.8' }] : [],
+        });
+      if (url.pathname.endsWith('/2')) return new Response(null, { status: 503 });
+      return new Response(
+        `<html><head><title>記事</title><link rel="next" href="/story/page/2"></head><body><article><h1>記事</h1><p>${'前半の本文を保持して根拠として保存します。'.repeat(20)}</p></article></body></html>`,
+        { headers: { 'Content-Type': 'text/html' } },
+      );
+    });
+    const job = await runArticle();
+    const article = await app.env.DB.prepare('SELECT status,content_key FROM articles WHERE id=?')
+      .bind(job.target_id)
+      .first<{ status: string; content_key: string }>();
+    expect(article?.status).toBe('ready');
+    const body = await app.env.CONTENT.get(article!.content_key);
+    expect(body?.customMetadata).toEqual({
+      pages: '["https://example.com/story"]',
+      complete: 'false',
+      pageCount: '1',
+    });
+    expect((await body!.text()).includes('前半の本文を保持')).toBe(true);
+  });
+
+  it('長いURLの複数ページでも取得本文とページ数を保存し、メタ情報を制限する', async () => {
+    const query = 'token=' + 'a'.repeat(2800);
+    await app.request('/api/v1/stocks', {
+      method: 'POST',
+      body: { project_id: 'alice-project', url: 'https://example.com/story?' + query },
+    });
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.hostname === 'cloudflare-dns.com')
+        return Response.json({
+          Status: 0,
+          Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '8.8.8.8' }] : [],
+        });
+      const page = Number(url.pathname.match(/page\/(\d+)/)?.[1] ?? 1);
+      return new Response(
+        `<html><head><title>記事</title>${page < 3 ? `<link rel="next" href="/story/page/${page + 1}?${query}">` : ''}</head><body><article><h1>記事</h1><p>${`ページ${page}の本文を保存します。`.repeat(20)}</p></article></body></html>`,
+        { headers: { 'Content-Type': 'text/html' } },
+      );
+    });
+    const job = await runArticle();
+    const row = await app.env.DB.prepare('SELECT status,content_key FROM articles WHERE id=?')
+      .bind(job.target_id)
+      .first<{ status: string; content_key: string }>();
+    expect(row?.status).toBe('ready');
+    const object = await app.env.CONTENT.get(row!.content_key);
+    expect(object?.customMetadata).toMatchObject({ complete: 'true', pageCount: '3' });
+    expect(
+      new TextEncoder().encode(JSON.stringify(object?.customMetadata)).length,
+    ).toBeLessThanOrEqual(4096);
+    expect((await object!.text()).includes('ページ3の本文')).toBe(true);
+  });
+
   it('記事の本文・要約・根拠付きプロジェクト／ユーザーメモリを生成する', async () => {
     const { id: stockId } = await savedArticle();
     const fetchMock = articleFetch();

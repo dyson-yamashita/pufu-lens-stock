@@ -91,7 +91,7 @@ describe('生成言語の選択', () => {
     );
     expect(score.gainingGoal.text).toBe('元の課題');
     expect(score.winCondition.text).toContain('evidence');
-    expect(score.elements.money.text).toContain('budget');
+    expect(score.elements.money.text).toBe('Unconfirmed');
   });
 });
 
@@ -214,18 +214,18 @@ describe('受け付けたジョブの生成言語', () => {
             purposes: [
               {
                 text: 'Check the assumptions.',
-                measures: [{ text: 'Run one test.', color: 'white' }],
+                measures: [],
               },
             ],
             elements: {
-              people: 'Unconfirmed.',
-              money: 'Budget unset.',
-              time: 'Unset.',
-              quality: 'Evidence.',
-              businessScheme: 'Use the results.',
-              environment: 'Unconfirmed.',
-              rival: 'Unconfirmed.',
-              foreignEnemy: 'Hypothesis: missing information.',
+              people: null,
+              money: null,
+              time: null,
+              quality: null,
+              businessScheme: null,
+              environment: null,
+              rival: null,
+              foreignEnemy: null,
             },
           },
         };

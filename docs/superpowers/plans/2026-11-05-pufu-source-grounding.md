@@ -1,6 +1,6 @@
 # プ譜の本文取得と根拠付き生成 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 記事全体を参照し、根拠のない施策・条件を追加しないプ譜を生成する。
 
@@ -33,9 +33,9 @@
 
 **Interfaces:** `fetchArticle` の title/text を保持し、複数ページ時のみ取得URLと完全性のメタデータを追加。R2 customMetadataに保持。
 
-- [ ] 次ページの本文連結・外部/内部リダイレクト拒否・ループ/ページ上限・途中失敗のテストを書き、既存実装で失敗を確認する。
-- [ ] rel=nextを優先し、同一originかつ同一記事のページ形式のみ取得する。最大5ページ、合計12万文字、ページ2MBの既存上限と取得時間上限を維持する。
-- [ ] 関連テストを実行し、本文とメタデータの保存まで検証・コミットする。
+- [x] 次ページの本文連結・外部/内部リダイレクト拒否・ループ/ページ上限・途中失敗のテストを書き、既存実装で失敗を確認する。
+- [x] rel=nextを優先し、同一originかつ同一記事のページ形式のみ取得する。最大5ページ、合計12万文字、ページ2MBの既存上限と取得時間上限を維持する。
+- [x] 関連テストを実行し、本文とメタデータの保存まで検証・コミットする。
 
 ### Task 2: 根拠付き生成と本文の予算配分
 
@@ -43,16 +43,25 @@
 
 **Interfaces:** 生成資料のIDと独立した本文抜粋を確定してから1回のAIに渡す。生成ドラフトの施策/八要素は `{sourceId,quote}`（施策はcolorも）を返し、サーバーが資料内一致を検証して本文・コメントを作る。
 
-- [ ] 根拠のない施策の除外・不正引用/IDの拒否・事例と入力条件の区別・長文末尾の保持・入力容量と1回呼出しのテストを先に追加し、失敗を確認する。
-- [ ] 本文全体から独立した抜粋を残し、目標・問い・補足を優先、重複要約を削減。メモリは背景としてのみ扱う。
-- [ ] ガイドラインの意味を生成ルールに反映し、未確認を許容する。根拠は既存コメントに保存し、出力JSON形式は互換にする。
-- [ ] 関連テストと全テストを実行し、コミットする。
+- [x] 根拠のない施策の除外・不正引用/IDの拒否・事例と入力条件の区別・長文末尾の保持・入力容量と1回呼出しのテストを先に追加し、失敗を確認する。
+- [x] 本文全体から独立した抜粋を残し、目標・問い・補足を優先、重複要約を削減。メモリは背景としてのみ扱う。
+- [x] ガイドラインの意味を生成ルールに反映し、未確認を許容する。根拠は既存コメントに保存し、出力JSON形式は互換にする。
+- [x] 関連テストと全テストを実行し、コミットする。
 
 ### Task 3: 利用者説明・E2E・レビューとPR
 
 **Files:** `src/UserManual.tsx`, `packages/e2e/scenarios.json`, 必要に応じ関連E2E
 
-- [ ] マニュアルへ本文の複数ページ取得・取得限界・施策の根拠と未設定の説明を反映する。E2E台帳の担当ソースと検証観点を更新する。
-- [ ] 型チェック・lint・format・全テスト・build・e2e:check・e2e:related --base origin/main を実行する。生成AIの意味判断そのものはモック検証で保証できないと明記する。
+- [x] マニュアルへ本文の複数ページ取得・取得限界・施策の根拠と未設定の説明を反映する。E2E台帳の担当ソースと検証観点を更新する。
+- [x] 型チェック・lint・format・全テスト・build・e2e:check・e2e:related --base origin/main を実行する。生成AIの意味判断そのものはモック検証で保証できないと明記する。
 - [ ] 差分全体のstandard scoped security-auditと独立した同モデルのコードレビューを実施し、必要な修正・再検証・再レビューを完了する。
 - [ ] 作業ブランチをpushし、mainベースのPRを作成する。
+
+## Verification record
+
+- Vitest: 100 files / 1,078 tests passed.
+- Typecheck / lint / format / build / e2e:check passed.
+- CI E2E: all seven IDs × desktop 1280×900 / phone 390×844, 14 passed; no skip/fallback/model tokens.
+- Independent same-model review: initial issues fixed and final re-review found no required changes.
+- Runtime model quality is not verified: AI responses are fixtures. An offline check of the supplied article's two extracted pages confirmed key second-page material in the bounded input.
+- Refinements after review: maximum-input body retention, bounded R2 URL metadata, clipped sentence-edge exclusion for articles and notes.

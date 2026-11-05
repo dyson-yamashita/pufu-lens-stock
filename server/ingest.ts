@@ -132,12 +132,14 @@ export async function fetchArticle(
   }
   if (!/text\/(html|plain)|application\/xhtml\+xml/i.test(contentType))
     throw new Error('現在はHTML・テキスト・PDFの記事に対応しています。');
-  const content = await limitedText(response);
+  let content = await limitedText(response);
   let result = contentType.includes('text/plain')
     ? { title: url.hostname, text: content.trim() }
     : extractHtml(content, url.href);
-  if (!result || result.text.length < 200)
-    result = extractHtml(await renderHtml(env, url.href), url.href);
+  if (!result || result.text.length < 200) {
+    content = await renderHtml(env, url.href);
+    result = extractHtml(content, url.href);
+  }
   if (result.text.length < 200)
     throw new Error(
       '記事本文を十分に取得できませんでした。ログインやアクセス制限が必要な可能性があります。',

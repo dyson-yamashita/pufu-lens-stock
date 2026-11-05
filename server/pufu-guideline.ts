@@ -256,3 +256,26 @@ export function getPufuGuideline({ section, detail }: Options, language: Languag
     ),
   };
 }
+
+// MCPと自動生成で語の意味を共有する。生成用には定義だけを短く渡す。
+export function pufuGenerationDefinitions(language: Language) {
+  const localized: typeof sections = language === 'en' ? pufuGuidelineEn : sections;
+  const entries = Object.values(localized).flatMap((section) => Object.entries(section));
+  return Object.fromEntries(
+    entries
+      .filter(([key]) => key !== 'principles' && key !== 'review')
+      .map(([key, value]) => [
+        key,
+        {
+          definition: value.definition,
+          ...(value.items
+            ? {
+                items: Object.fromEntries(
+                  Object.entries(value.items).map(([name, item]) => [name, item.definition]),
+                ),
+              }
+            : {}),
+        },
+      ]),
+  );
+}

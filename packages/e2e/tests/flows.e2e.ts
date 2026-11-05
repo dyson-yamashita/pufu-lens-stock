@@ -87,7 +87,18 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await app.open(`/#pufu/${inferred.id}`);
   await expect(browser.locator('.pufu-context-task')).toContainText(inferred.task);
   expect(await fixture.request(`/pufus/${inferred.id}`)).toMatchObject({
-    pufu: { task: inferred.task, score: { gainingGoal: { text: inferred.task } } },
+    pufu: {
+      task: inferred.task,
+      score: {
+        gainingGoal: { text: inferred.task, comment: { text: expect.stringContaining('仮説') } },
+        purposes: [{ measures: [] }],
+        elements: {
+          money: { text: '未確認' },
+          rival: { text: '未確認' },
+          foreignEnemy: { text: '未確認' },
+        },
+      },
+    },
   });
   await fixture.request(`/pufus/${inferred.id}`, 'DELETE');
   const { pufu } = (await fixture.request('/pufus', 'POST', {

@@ -11,6 +11,7 @@ const sections = (tr: typeof t) => [
     content: (
       <>
         <p>{tr('first_steps.manual')}</p>
+        <p>{tr('manual.article_pages')}</p>
         <ol>
           <li>{tr('ui.user_manual.open_save_article_and_choose_url_or_text')}</li>
           <li>{tr('ui.user_manual.choose_the_destination_project_enter_a_post_url_or')}</li>
@@ -56,6 +57,7 @@ const sections = (tr: typeof t) => [
       <>
         <p>{tr('ui.user_manual.use_all_pufu_in_the_side_menu_or_the')}</p>
         <p>{tr('manual.pufu_titles')}</p>
+        <p>{tr('manual.pufu_grounding')}</p>
         <p>{tr('ui.user_manual.use_the_star_button_in_a_list_or_details')}</p>
         <ol>
           <li>{tr('ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select')}</li>

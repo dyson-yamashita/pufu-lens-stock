@@ -26,4 +26,17 @@ export const generationJa = {
   'pufu.description.empty': '詳細は未設定。',
   'pufu.rival': '競合する取り組み・代替手段は未確認。比較する選択肢を整理する。',
   'pufu.foreignEnemy': '仮説：情報不足や検証条件の違いが判断を妨げる可能性がある。',
+  'pufu.hypothesis': '仮説：',
+  'pufu.unknown': '未確認',
+  'pufu.referenceText': '参考事例：{{text}}',
+  'pufu.measureSource':
+    '根拠：{{source}}。資料に記載された取り組みです。実行予定・自分への適用は未確認です。',
+  'pufu.conditionSource':
+    '根拠：{{source}}。資料の記述であり、自分の条件として適用できるか確認が必要です。',
+  'pufu.inputComment': 'ユーザー入力の獲得目標を保持しています。',
+  'pufu.inferredComment': '問い・ストックから推測した獲得目標の仮説です。',
+  'pufu.hypothesisComment': '入力と参照資料から整理した状態の仮説です。',
+  'pufu.unknownComment': '参照資料に採用できる根拠がありません。',
+  'pufu.incompleteContent': '参照本文は一部取得です。続きのページは確認できていません。',
+  'pufu.excerptedContent': '長い本文は先頭・中間・末尾から抜粋して参照しています。',
 } satisfies Record<string, string>;
