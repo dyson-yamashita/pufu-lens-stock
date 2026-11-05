@@ -5,6 +5,7 @@ import { elementKeys, type Pufu } from '../shared/pufu';
 import { promptStocks, snapshotStocks } from '../server/pufu-context';
 import { generatePufu } from '../server/pufu';
 import type { PufuContext } from '../shared/pufu';
+import savedScore from './fixtures/pufu-sparse.json';
 
 let app: Awaited<ReturnType<typeof testApp>>;
 const draft = {
@@ -49,6 +50,80 @@ const create = (
   body: Record<string, unknown>,
   path = '/api/v1/projects/alice-project/pufus/generate',
 ) => app.request(path, { method: 'POST', body: { request_id: crypto.randomUUID(), ...body } });
+it.each([{ question_ids: ['q1', 'q2'] }, { stock_ids: ['s1', 's2'] }])(
+  'プ譜作成は問い・ストックそれぞれ1件を超えた指定を拒否する: %j',
+  async (refs) => {
+    expect((await create({ task: '目標', ...refs })).status).toBe(400);
+    expect((await app.env.DB.prepare('SELECT id FROM pufu_scores').all()).results).toEqual([]);
+  },
+);
+it('選択したストック1件だけを参照し、問いの別の関連ストックを追加しない', async () => {
+  const response = await create({ question_ids: ['q1'], stock_ids: ['s2'] });
+  expect(response.status).toBe(202);
+  const { id } = (await response.json()) as { id: string };
+  expect(await get(id)).toMatchObject({
+    question_ids: ['q1'],
+    stock_ids: ['s2'],
+    context: { stocks: [{ id: 's2' }] },
+  });
+  expect((await get(id)).context.stocks).toHaveLength(1);
+});
+it('問いの関連ストックが複数なら、明示的な1件の選択を求める', async () => {
+  await app.env.DB.prepare(
+    "INSERT INTO question_stocks(question_id,stock_id) VALUES ('q1','s2')",
+  ).run();
+  expect((await create({ question_ids: ['q1'] })).status).toBe(400);
+  expect((await create({ question_ids: ['q1'], stock_ids: ['s2'] })).status).toBe(202);
+});
+it('問いの作成元と別の問いを同時指定して2件に増やせない', async () => {
+  expect((await create({ question_ids: ['q2'] }, '/api/v1/questions/q1/pufus')).status).toBe(400);
+});
+it('保存APIの旧question_id経由でも複数ストックを自動追加しない', async () => {
+  await app.env.DB.prepare(
+    "INSERT INTO question_stocks(question_id,stock_id) VALUES ('q1','s2')",
+  ).run();
+  const body = {
+    project_id: 'alice-project',
+    question_id: 'q1',
+    score: savedScore,
+    request_id: crypto.randomUUID(),
+  };
+  expect((await app.request('/api/v1/pufus', { method: 'POST', body })).status).toBe(400);
+  expect(
+    (await app.request('/api/v1/pufus', { method: 'POST', body: { ...body, stock_ids: ['s2'] } }))
+      .status,
+  ).toBe(201);
+});
+it.each(['question_ids', 'stock_ids'])(
+  '保存・編集・局面追加の%sも1件までに制限する',
+  async (field) => {
+    const refs = { [field]: field === 'question_ids' ? ['q1', 'q2'] : ['s1', 's2'] };
+    const body = {
+      project_id: 'alice-project',
+      score: savedScore,
+      request_id: crypto.randomUUID(),
+    };
+    expect(
+      (await app.request('/api/v1/pufus', { method: 'POST', body: { ...body, ...refs } })).status,
+    ).toBe(400);
+    const created = await app.request('/api/v1/pufus', { method: 'POST', body });
+    const { pufu } = (await created.json()) as { pufu: { id: string } };
+    for (const [path, method, input] of [
+      [
+        `/api/v1/pufus/${pufu.id}/relations`,
+        'PATCH',
+        { revision: 1, question_ids: [], stock_ids: [], ...refs },
+      ],
+      [`/api/v1/pufus/${pufu.id}`, 'PATCH', { revision: 1, score: savedScore, ...refs }],
+      [
+        `/api/v1/pufus/${pufu.id}/phases`,
+        'POST',
+        { revision: 1, phase: 1, score: savedScore, ...refs },
+      ],
+    ] as const)
+      expect((await app.request(path, { method, body: input })).status).toBe(400);
+  },
+);
 async function get(id: string) {
   return ((await (await app.request(`/api/v1/pufus/${id}`)).json()) as { pufu: Pufu }).pufu;
 }
@@ -56,9 +131,9 @@ async function run(id: string) {
   await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(`pufu-job-${id}-1`), mockStep(2 ** 20));
 }
 
-it('選択した複数の問いとストック本文を渡し、空欄の獲得目標を推測して一覧・局面へ保存する', async () => {
+it('選択した問い1件とストック本文1件を渡し、空欄の獲得目標を推測して保存する', async () => {
   const request_id = crypto.randomUUID();
-  const body = { request_id, question_ids: ['q2', 'q1'], stock_ids: ['s2', 's1'], task: '' };
+  const body = { request_id, question_ids: ['q1'], stock_ids: ['s1'], task: '' };
   const response = await create(body);
   expect(response.status).toBe(202);
   const { id } = (await response.json()) as { id: string };
@@ -69,20 +144,19 @@ it('選択した複数の問いとストック本文を渡し、空欄の獲得�
   expect(saved).toMatchObject({
     status: 'ready',
     task: draft.gainingGoal,
-    question_ids: ['q1', 'q2'],
-    stock_ids: ['s1', 's2'],
+    question_ids: ['q1'],
+    stock_ids: ['s1'],
     score: { gainingGoal: { text: draft.gainingGoal } },
     phases: [{ score: { gainingGoal: { text: draft.gainingGoal } } }],
   });
   const [, input] = ai.mock.calls[0] as unknown as [string, { messages: { content: string }[] }];
   const prompt = JSON.parse(input.messages[1].content);
-  expect(prompt.questions).toEqual(['問い合わせ対応をどう改善する？', '少人数で継続するには？']);
-  expect(prompt.stocks).toHaveLength(2);
+  expect(prompt.questions).toEqual(['問い合わせ対応をどう改善する？']);
+  expect(prompt.stocks).toHaveLength(1);
   expect(prompt.stocks[0][1]).toContain('来月末までに検証');
-  expect(prompt.stocks[1][1]).toContain('担当2名');
   expect(saved.context.stocks?.[0].content).toContain('既存の窓口');
-  expect((await create({ ...body, question_ids: ['q1', 'q2'] })).status).toBe(200);
-  expect((await create({ ...body, stock_ids: ['s1'] })).status).toBe(409);
+  expect((await create({ ...body, question_ids: ['q1'] })).status).toBe(200);
+  expect((await create({ ...body, stock_ids: ['s2'] })).status).toBe(409);
   expect(ai).toHaveBeenCalledTimes(1);
   expect(await (await app.request('/api/v1/pufus')).json()).toMatchObject({
     pufus: [{ id, task: draft.gainingGoal, first_phase_task: draft.gainingGoal }],
@@ -139,21 +213,6 @@ it('別プロジェクトのストックを拒否する', async () => {
   ).run();
   await app.env.DB.prepare("UPDATE stocks SET project_id='other' WHERE id='s2'").run();
   expect((await create({ task: '目標', stock_ids: ['s2'] })).status).toBe(404);
-});
-
-it('参照100件と最大長の獲得目標・補足をまとめて送信できる', async () => {
-  const ids = Array.from({ length: 100 }, (_, i) => `reference-${i}-${'x'.repeat(50)}`);
-  await app.env.DB.batch(
-    ids.map((id) =>
-      app.env.DB.prepare(
-        "INSERT INTO questions(id,project_id,source,text,status) VALUES (?,'alice-project','user','参照する問い','ready')",
-      ).bind(id),
-    ),
-  );
-  expect(
-    (await create({ question_ids: ids, task: '目'.repeat(1000), details: '補'.repeat(4000) }))
-      .status,
-  ).toBe(202);
 });
 
 it('長い本文100件でも全参照を残し、保存・AI入力の容量を制限する', () => {
@@ -259,7 +318,7 @@ it('本文取得中に参照が削除されたら受付を取り消し、利用�
   ).toEqual([]);
 });
 
-it('問いの関連を展開して100件を超えても、本文行は最大101件まで読み込んで拒否する', async () => {
+it('問いの関連ストックが大量にあっても2件だけ確認し、明示選択を求める', async () => {
   await app.env.DB.batch(
     Array.from({ length: 102 }, (_, i) => `extra-${i}`).flatMap((id) => [
       app.env.DB.prepare(
@@ -290,7 +349,7 @@ it('問いの関連を展開して100件を超えても、本文行は最大101�
       return typeof value === 'function' ? value.bind(target) : value;
     },
   });
-  expect((await create({ question_ids: ['q1'], stock_ids: ['s2'] })).status).toBe(400);
-  expect(bodyRows).toBeLessThanOrEqual(101);
+  expect((await create({ question_ids: ['q1'] })).status).toBe(400);
+  expect(bodyRows).toBe(2);
   expect(bodyRows).toBeGreaterThan(0);
 });

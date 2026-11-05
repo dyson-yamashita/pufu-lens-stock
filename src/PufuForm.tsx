@@ -126,6 +126,7 @@ export default function PufuForm({
           <RelationPicker
             key={`${project}-questions`}
             kind="questions"
+            single
             projectId={project}
             value={questions}
             onChange={setQuestions}
@@ -135,6 +136,7 @@ export default function PufuForm({
         <RelationPicker
           key={`${project}-stocks`}
           kind="stocks"
+          single
           projectId={project}
           value={stocks}
           onChange={setStocks}

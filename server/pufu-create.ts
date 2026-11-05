@@ -75,9 +75,11 @@ export async function createGeneratedPufu(
     throw new HTTPException(409, {
       message: '問い・気づきの生成が完了してから、プ譜を作成できます。',
     });
+  if (questionIds.length > 1)
+    throw new HTTPException(400, {
+      message: 'プ譜に紐付ける問い・気づきとストックは、それぞれ1件までです。',
+    });
   await validateRelations(env, project.id, questionIds, explicitStockIds);
-  if (questionIds.length > 100)
-    throw new HTTPException(400, { message: '参照する問い・気づきは100件以内にしてください。' });
   if (!data.task && !questionIds.length && !explicitStockIds.length)
     throw new HTTPException(400, {
       message: '獲得目標を入力するか、参照する問い・気づきまたはストックを選択してください。',
@@ -90,14 +92,15 @@ export async function createGeneratedPufu(
       `SELECT s.id,COALESCE(s.title,a.title) title,s.note,a.summary_json,a.content_key,a.input_text
        FROM stocks s JOIN articles a ON a.id=s.article_id
        WHERE s.user_id=? AND a.user_id=? AND s.project_id=? AND (
-         s.id IN (SELECT value FROM json_each(?)) OR s.id IN (
+         s.id IN (SELECT value FROM json_each(?)) OR (?=0 AND s.id IN (
            SELECT stock_id FROM question_stocks WHERE question_id IN (SELECT value FROM json_each(?))
-         )) ORDER BY s.id LIMIT 101`,
+         ))) ORDER BY s.id LIMIT 2`,
     ).bind(
       principal.user.id,
       principal.user.id,
       project.id,
       JSON.stringify(explicitStockIds),
+      explicitStockIds.length,
       JSON.stringify(questionIds),
     ),
     env.DB.prepare(
@@ -105,9 +108,9 @@ export async function createGeneratedPufu(
     ).bind(principal.user.id, project.id),
   ]);
   // 上限超過は、不足して見える明示選択の検証より先に判定する。
-  if (stockRows.results.length > 100)
+  if (stockRows.results.length > 1)
     throw new HTTPException(400, {
-      message: '参照するストックは関連分を含めて100件以内にしてください。',
+      message: '問いに複数のストックが紐付いています。参照するストックを1件選択してください。',
     });
   if (
     questionRows.results.length !== questionIds.length ||

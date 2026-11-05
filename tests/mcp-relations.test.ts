@@ -60,8 +60,8 @@ it('プ譜の書き込み許可だけのMCP応答には関連する問い本文�
   const token = await mcpToken(app, 'alice-project', ['pufus:write']);
   const args = {
     project_id: 'alice-project',
-    question_ids: ['q-one', 'q-two'],
-    stock_ids: ['one', 'two'],
+    question_ids: ['q-one'],
+    stock_ids: ['one'],
     projectScore: score,
     request_id: crypto.randomUUID(),
   };
@@ -80,7 +80,7 @@ it('プ譜の書き込み許可だけのMCP応答には関連する問い本文�
   expect(repeated.isError).not.toBe(true);
   expect(JSON.stringify(repeated)).not.toContain('SECRET_');
   expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
-    pufu: { question_ids: ['q-two'], stock_ids: ['one', 'two'] },
+    pufu: { question_ids: ['q-two'], stock_ids: ['one'] },
   });
 });
 it('問いの書き込み許可だけで関連ストック名や再送後の個人メモを読み出せない', async () => {

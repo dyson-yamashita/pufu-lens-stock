@@ -202,8 +202,9 @@ export const errorKeys: Record<string, string> = {
   '自己紹介は1,000文字以内で入力してください。': 'error.keep_the_bio_within_1_000_characters',
   '獲得目標を入力するか、参照する問い・気づきまたはストックを選択してください。':
     'ui.pufu_form.goal_or_references_required',
-  '参照するストックは関連分を含めて100件以内にしてください。': 'error.pufu_reference_limit',
-  '参照する問い・気づきは100件以内にしてください。': 'error.pufu_question_reference_limit',
+  'プ譜に紐付ける問い・気づきとストックは、それぞれ1件までです。': 'error.pufu_single_reference',
+  '問いに複数のストックが紐付いています。参照するストックを1件選択してください。':
+    'error.pufu_choose_one_stock',
   '課題を入力してください。': 'error.enter_a_task',
   '課題は1,000文字以内で入力してください。': 'error.keep_the_task_within_1_000_characters',
   '補足は4,000文字以内で入力してください。':

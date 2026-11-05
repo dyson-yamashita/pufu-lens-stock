@@ -709,14 +709,16 @@ export const en: Record<string, string> = {
   'ui.pufu_editor_load_error.your_pufu_is_saved_reload_the_page_and_try':
     'Your Pufu is saved. Reload the page and try again.',
   'ui.pufu_editor_load_error.reload_page': 'Reload page',
+  'error.pufu_single_reference':
+    'A Pufu can link to at most one question or insight and one stock.',
+  'error.pufu_choose_one_stock':
+    'Several stocks are linked to this question. Choose one stock to reference.',
+  'ui.relation_picker.optional_single_selection': 'Optional, up to one',
   'ui.pufu_form.reference_materials': 'Questions, insights and stocks to reference',
   'ui.pufu_form.reference_help':
-    'Select multiple sources in the same project. Stocks linked to the questions are included automatically. Available stock bodies are used along with summaries and notes. Long or numerous sources are excerpted.',
+    'Choose up to one question or insight and one stock in the same project. The selected stock takes priority. Otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Available bodies, summaries and notes are used; long sources are excerpted.',
   'ui.pufu_form.goal_or_references_required':
     'Enter a gaining goal or select a question, insight or stock to reference.',
-  'error.pufu_question_reference_limit': 'Select at most 100 questions and insights.',
-  'error.pufu_reference_limit':
-    'Select at most 100 stocks, including those linked to the questions.',
   'ui.pufu_form.select_a_project': 'Select a project.',
   'ui.pufu_form.create_a_pufu_to_work_toward_the_state_you':
     'Create a Pufu from your desired outcome, questions or stocks.',
@@ -773,7 +775,7 @@ export const en: Record<string, string> = {
   'ui.pufu_relations.edit_related_questions_insights_and_stocks':
     'Edit related questions, insights and stocks',
   'ui.pufu_relations.select_multiple_questions_insights_and_stocks_in_the_same':
-    'Select multiple questions, insights and stocks in the same project. Changing relations does not change saved Pufu or the information used for generation.',
+    'Choose up to one question or insight and one stock in the same project. Changing relations does not change saved Pufu or the information used for generation.',
   'ui.pufu_relations.save_and_close_the_pufu_editor_before_saving_relations':
     'Save and close the Pufu editor before saving relations.',
   'ui.pufu_relations.relations_saved_please_reload_the_pufu':
@@ -923,7 +925,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     'Choose Add Pufu in the Pufu list and select a destination project. To start from a question, open its Pufu tab and choose Explore this question or insight.',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    'Select questions, insights or stocks to reference. Stocks linked to the questions are included automatically, using their summaries, notes and available bodies (long or numerous sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one from the sources. Optionally describe the eight planning factors and planned measures. AI fills missing details from the sources, marking inferences as hypotheses and unsupported information as unconfirmed. Choose Create Pufu to generate a draft.',
+    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Missing information is inferred from the sources, marking hypotheses and unconfirmed details. Choose Create Pufu to generate a draft.',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'Press the Pufu image to enlarge it. Pinch or use + and − to zoom, and drag to move.',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':
@@ -935,7 +937,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.when_the_editor_is_narrow_tap_or_drag_its':
     'When the editor is narrow, tap or drag its overview map to move around.',
   'ui.user_manual.open_edit_related_questions_insights_and_stocks_on_a':
-    'Open Edit related questions, insights and stocks on a Pufu screen to select multiple questions and stocks in the same project, then choose Save relations. Uncheck items to unlink them. If editing the Pufu, save and close the editor before saving relations. Creating a new Pufu from a question initially links that one question.',
+    'Open Edit related questions, insights and stocks on a Pufu screen to select up to one question and one stock in the same project, then choose Save relations. Uncheck items to unlink them. If editing the Pufu, save and close the editor before saving relations. Creating a new Pufu from a question initially links that one question.',
   'ui.user_manual.record_your_thinking_with_comments': 'Record your thinking with comments',
   'ui.user_manual.use_the_comments_tab_in_stock_or_question_details':
     "Use the Comments tab in stock or question details to record decisions and insights. For Pufu, use the comments below the displayed phase. Switching phases shows that phase's history.",

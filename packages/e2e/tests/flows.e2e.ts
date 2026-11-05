@@ -50,12 +50,28 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     title: 'E2Eプ譜の関連するストック',
     text: 'プ譜の折りたたみ表示を確認するための本文です。',
   });
+  await fixture.request('/questions', 'POST', {
+    project_id: fixture.projectId,
+    text: 'E2E選び直す問い',
+  });
+  await fixture.request('/stocks', 'POST', {
+    project_id: fixture.projectId,
+    type: 'text',
+    title: 'E2E選び直すストック',
+    text: '選択を切り替えるための別のストックです。',
+  });
   await app.open('/#pufus');
   await screen.getByRole('button', 'プ譜を追加').click();
   await browser.locator('#pufu-project').selectOption({ value: fixture.projectId });
   await expect(screen.getByRole('button', 'プ譜を作成')).toBeDisabled();
   await screen.getByRole('checkbox', 'E2Eプ譜の関連する問い', { exact: true }).check();
   await screen.getByRole('checkbox', 'E2Eプ譜の関連するストック', { exact: true }).check();
+  await screen.getByRole('checkbox', 'E2E選び直す問い', { exact: true }).check();
+  await screen.getByRole('checkbox', 'E2E選び直すストック', { exact: true }).check();
+  await expect(browser.locator('.relation-picker input[type="checkbox"]:checked')).toHaveCount(2);
+  await screen.getByRole('checkbox', 'E2Eプ譜の関連する問い', { exact: true }).check();
+  await screen.getByRole('checkbox', 'E2Eプ譜の関連するストック', { exact: true }).check();
+  await expect(browser.locator('.relation-picker input[type="checkbox"]:checked')).toHaveCount(2);
   await expect(browser.locator('#pufu-task')).toHaveValue('');
   await expect(browser.locator('#pufu-details')).toHaveValue('');
   await screen.getByRole('button', 'プ譜を作成').click();

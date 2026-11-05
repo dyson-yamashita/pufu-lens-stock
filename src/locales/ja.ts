@@ -705,13 +705,15 @@ export const ja: Record<string, string> = {
   'ui.pufu_editor_load_error.your_pufu_is_saved_reload_the_page_and_try':
     '作成したプ譜は保存されています。画面を再読み込みして、もう一度お試しください。',
   'ui.pufu_editor_load_error.reload_page': '画面を再読み込み',
+  'error.pufu_single_reference': 'プ譜に紐付ける問い・気づきとストックは、それぞれ1件までです。',
+  'error.pufu_choose_one_stock':
+    '問いに複数のストックが紐付いています。参照するストックを1件選択してください。',
+  'ui.relation_picker.optional_single_selection': '任意・1件まで',
   'ui.pufu_form.reference_materials': '参照する問い・気づきとストック',
   'ui.pufu_form.reference_help':
-    '同じプロジェクトの資料を複数選択できます。問いに紐づくストックも自動で参照します。ストックは要約・メモに加えて取得済みの本文も使います。長い資料や資料が多い場合は、一部を参照します。',
+    '同じプロジェクトの問い・気づきとストックを、それぞれ1件まで選べます。選択したストックを優先し、未選択なら問いの関連ストック1件を自動参照します。関連ストックが複数ある場合は1件を選んでください。要約・メモに加え取得済み本文も使い、長い資料は一部を参照します。',
   'ui.pufu_form.goal_or_references_required':
     '獲得目標を入力するか、参照する問い・気づきまたはストックを選択してください。',
-  'error.pufu_question_reference_limit': '参照する問い・気づきは100件以内にしてください。',
-  'error.pufu_reference_limit': '参照するストックは関連分を含めて100件以内にしてください。',
   'ui.pufu_form.select_a_project': 'プロジェクトを選択してください。',
   'ui.pufu_form.create_a_pufu_to_work_toward_the_state_you':
     '実現したいことや、問い・ストックをもとにプ譜をつくります。',
@@ -766,7 +768,7 @@ export const ja: Record<string, string> = {
   'ui.pufu_relations.edit_related_questions_insights_and_stocks':
     '問い・気づきとストックの関連を編集',
   'ui.pufu_relations.select_multiple_questions_insights_and_stocks_in_the_same':
-    '同じプロジェクトの問い・気づきとストックを複数選べます。関連を変えても、保存済みのプ譜や生成時の参照内容は変わりません。',
+    '同じプロジェクトの問い・気づきとストックを、それぞれ1件まで選べます。関連を変更しても、保存済みのプ譜や生成時に参照した情報は変わりません。',
   'ui.pufu_relations.save_and_close_the_pufu_editor_before_saving_relations':
     'プ譜の編集を保存して閉じてから、関連を保存してください。',
   'ui.pufu_relations.relations_saved_please_reload_the_pufu':
@@ -909,7 +911,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     '「プ譜」一覧の「プ譜を追加」を押し、保存先のプロジェクトを選びます。問いから作る場合は、問いの詳細の「プ譜」タブで「問い・気づきから考える」を選びます。',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    '参照する問い・気づきやストックを選択します。問いに紐づくストックも自動で参照し、要約・メモと取得済みの本文を使います（長い資料や資料が多い場合は一部を参照）。獲得目標を入力するとそのまま使い、空欄なら参照資料からAIが推測します。「廟算八要素・取り組む予定の施策」も任意で入力できます。未入力の情報は資料から補い、推測は仮説、根拠がない情報は未確認とします。「プ譜を作成」で案を生成します。',
+    '参照する問い・気づきとストックは、それぞれ1件まで選べます。選択したストックを優先し、未選択なら問いの関連ストック1件を自動参照します。関連ストックが複数あれば1件を選択してください。要約・メモと取得済み本文を使います（長い資料は一部を参照）。獲得目標を入力するとそのまま使い、空欄なら参照資料からAIが推測します。「廟算八要素・取り組む予定の施策」も任意で入力できます。未入力部分は資料から補い、推測は仮説、根拠がない情報は未確認とします。「プ譜を作成」で案を生成します。',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'プ譜の画像を押すと、拡大表示できます。ピンチや＋・−で拡大縮小し、ドラッグで移動します。',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':
