@@ -3,27 +3,26 @@ import type { PufuContext } from '../shared/pufu';
 import { elementKeys } from '../shared/pufu';
 import { excerptParts } from './pufu-context';
 
-export const sourceQuote = z.strictObject({
-  sourceId: z.string().min(1).max(100),
-  quote: z.string().trim().min(1).max(1100),
-});
-const text = z.string().trim().min(1).max(1200);
-export const groundedDraftSchema = z.strictObject({
+// ノード本文は引用ではなく、資料を整理した短い文章を受け取る。
+const text = z.string().trim().min(1).max(240);
+export const pufuDraftSchema = z.strictObject({
   winCondition: text,
   purposes: z
     .array(
       z.strictObject({
         text,
         measures: z
-          .array(sourceQuote.extend({ color: z.enum(['white', 'blue', 'green', 'red', 'yellow']) }))
-          .max(4),
+          .array(
+            z.strictObject({ text, color: z.enum(['white', 'blue', 'green', 'red', 'yellow']) }),
+          )
+          .max(3),
       }),
     )
-    .max(5),
+    .max(4),
   elements: z.strictObject(
-    Object.fromEntries(elementKeys.map((key) => [key, sourceQuote.nullable()])) as Record<
+    Object.fromEntries(elementKeys.map((key) => [key, z.string().trim().max(240)])) as Record<
       (typeof elementKeys)[number],
-      z.ZodNullable<typeof sourceQuote>
+      z.ZodString
     >,
   ),
 });
@@ -112,41 +111,4 @@ export function generationInput(context: PufuContext, byteBudget: number) {
   if (stocks[0]?.content && !result.sources.some((source) => source.kind === 'article'))
     throw new Error('本文の参照に必要な入力枠がありません。補足を短くしてください。');
   return result;
-}
-export function resolveQuote(
-  value: z.infer<typeof sourceQuote> | null,
-  input: ReturnType<typeof generationInput>,
-): { text: string; kind: 'input' | 'question' | PufuSource['kind']; label: string } | null {
-  if (!value) return null;
-  const fixed = [
-    { id: 'task', text: input.task, kind: 'input' as const, label: '獲得目標の入力' },
-    { id: 'details', text: input.details, kind: 'input' as const, label: '補足の入力' },
-    { id: 'question', text: input.question?.text ?? '', kind: 'question' as const, label: '問い' },
-  ];
-  const source = [...fixed, ...input.sources].find((source) => source.id === value.sourceId);
-  // 抜粋は別々の資料。省略した区間をまたぐ「引用」は一致させない。
-  if (!source || source.kind === 'summary' || !source.text.includes(value.quote)) return null;
-  const sentences = Array.from(
-    new Intl.Segmenter(undefined, { granularity: 'sentence' }).segment(source.text),
-    (part) => part.segment.trim(),
-  );
-  const paragraphs = source.text
-    .split(/\n+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  // 切断された断片をSegmenterが一文と認定しても、原文の完全な文とは扱わない。
-  if ('clippedStart' in source && source.clippedStart) {
-    sentences.shift();
-    paragraphs.shift();
-  }
-  if ('clippedEnd' in source && source.clippedEnd) {
-    sentences.pop();
-    paragraphs.pop();
-  }
-  if (!sentences.includes(value.quote) && !paragraphs.includes(value.quote)) return null;
-  return {
-    text: value.quote,
-    kind: source.kind,
-    label: 'label' in source ? source.label : (input.stocks[0]?.title ?? 'ストック'),
-  };
 }

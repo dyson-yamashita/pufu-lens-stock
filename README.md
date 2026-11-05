@@ -28,6 +28,8 @@ pnpm run dev
 
 デモにはサンプル記事が含まれます。AI未接続時は本文の抜粋や定型の案を使い、保存からプ譜の編集までの流れを確認できます。本物のAI生成を試す場合は、[Workers AIの設定](docs/SPEC.md#ローカルでworkers-aiを使う)を参照してください。AIへ送った資料はCloudflareで処理され、利用量に応じて料金が発生します。
 
+プ譜生成のモデルは `AI_PUFU_MODEL` で指定します。既定は `@cf/zai-org/glm-5.3-flash`（Workers PaidまたはAI Gatewayの前払いクレジットが必要）で、未指定の場合は `AI_MODEL` を使います。プ譜は1回の呼び出し・入力最大40,000 UTF-8バイト（GLM以外へのフォールバック時は24,000バイト）・出力最大6,000トークンで生成します。GLM-5.3の思考量は通常 `low`、目標も問いも未入力で記事から構成する場合は方針を整合させるため `high` にします（同じ出力上限内でも使用量・待ち時間が増える場合があります）。単価は入力100万トークン当たり$0.15・出力$0.50で、旧Qwenの約2.9倍・約1.5倍です。モデルの料金と条件は [GLM-5.3-Flash](https://developers.cloudflare.com/workers-ai/models/glm-5.3-flash/) と [Qwen3-30B](https://developers.cloudflare.com/workers-ai/models/qwen3-30b-a3b-fp8/) の公式ページを確認してください。
+
 ## 基本の使い方
 
 1. プロジェクトを作り、「記事をストック」からURLまたはテキストを保存します。

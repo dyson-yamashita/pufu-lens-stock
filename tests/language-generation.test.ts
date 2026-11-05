@@ -91,7 +91,7 @@ describe('生成言語の選択', () => {
     );
     expect(score.gainingGoal.text).toBe('元の課題');
     expect(score.winCondition.text).toContain('evidence');
-    expect(score.elements.money.text).toBe('Unconfirmed');
+    expect(score.elements.money.text).toBe('');
   });
 });
 
@@ -218,14 +218,14 @@ describe('受け付けたジョブの生成言語', () => {
               },
             ],
             elements: {
-              people: null,
-              money: null,
-              time: null,
-              quality: null,
-              businessScheme: null,
-              environment: null,
-              rival: null,
-              foreignEnemy: null,
+              people: '',
+              money: '',
+              time: '',
+              quality: '',
+              businessScheme: '',
+              environment: '',
+              rival: '',
+              foreignEnemy: '',
             },
           },
         };

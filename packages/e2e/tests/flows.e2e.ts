@@ -40,6 +40,7 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
   );
   score.gainingGoal.text = 'E2Eプ譜の目標';
+  score.winCondition.comment.text = 'E2E利用者が書いたコメント';
   const { question } = (await fixture.request('/questions', 'POST', {
     project_id: fixture.projectId,
     text: 'E2Eプ譜の関連する問い',
@@ -90,12 +91,12 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     pufu: {
       task: inferred.task,
       score: {
-        gainingGoal: { text: inferred.task, comment: { text: expect.stringContaining('仮説') } },
+        gainingGoal: { text: inferred.task, comment: { text: '' } },
         purposes: [{ measures: [] }],
         elements: {
-          money: { text: '未確認' },
-          rival: { text: '未確認' },
-          foreignEnemy: { text: '未確認' },
+          money: { text: '' },
+          rival: { text: '' },
+          foreignEnemy: { text: '' },
         },
       },
     },
@@ -167,10 +168,17 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   const saved = (await fixture.request(`/pufus/${pufu.id}`)) as {
     pufu: {
       current_phase: number;
-      phases: { number: number; score: { gainingGoal: { text: string } } }[];
+      phases: {
+        number: number;
+        score: { gainingGoal: { text: string }; winCondition: { comment: { text: string } } };
+      }[];
     };
   };
   expect(saved.pufu.current_phase).toBe(2);
+  expect(saved.pufu.phases.map((phase) => phase.score.winCondition.comment.text)).toEqual([
+    'E2E利用者が書いたコメント',
+    'E2E利用者が書いたコメント',
+  ]);
   expect(saved.pufu.phases.map(({ score }) => score.gainingGoal.text)).toEqual([
     'E2Eプ譜の編集済み目標',
     'E2Eプ譜の次局面の目標',
