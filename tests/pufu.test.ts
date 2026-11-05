@@ -12,18 +12,20 @@ const draft = {
   purposes: [
     {
       text: '再試行時の挙動が検証されている。',
-      measures: [{ text: '失敗を再現して結果を記録する。', color: 'blue' }],
+      measures: [
+        { sourceId: 'task', quote: '要約を確実に完了できる状態をつくる。', color: 'blue' },
+      ],
     },
   ],
   elements: {
-    people: '担当者は未確認。',
-    money: '予算は未設定。',
-    time: '期限は未設定。',
-    quality: '根拠を確認できること。',
-    businessScheme: 'プロジェクトに検証結果を適用する。',
-    environment: '既存システムを参考にする。',
-    rival: '代替案は未確認。',
-    foreignEnemy: '仮説：情報不足。',
+    people: null,
+    money: null,
+    time: null,
+    quality: null,
+    businessScheme: null,
+    environment: null,
+    rival: null,
+    foreignEnemy: null,
   },
 };
 describe('問いからプ譜を生成・編集・保存する', () => {
@@ -196,7 +198,8 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     expect(generated.model).toBe('local-pufu-template');
     expect(pufuScoreSchema.safeParse(generated.score).success).toBe(true);
     expect(generated.context).toEqual(waiting.context);
-    expect(generated.score!.purposes[0].measures[1].text).toContain('プロジェクトの知識');
+    expect(generated.score!.purposes[0].measures).toEqual([]);
+    expect(generated.score!.elements.money.text).toBe('未確認');
     const details = (await (await app.request('/api/v1/questions/question')).json()) as {
       pufus: PufuSummary[];
     };
@@ -359,7 +362,13 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     const original = await get(id);
     const score = structuredClone(original.score!);
     score.gainingGoal.text = '編集後の獲得目標';
-    score.purposes[0].measures[0].progress = 35;
+    score.purposes[0].measures.push({
+      uuid: 'edited-measure',
+      text: '入力で追加した施策',
+      color: 'white',
+      comment: { color: 'blue', text: '' },
+      progress: 35,
+    });
     const body = { revision: original.revision, score };
     const results = await Promise.all([
       app.request(`/api/v1/pufus/${id}`, { method: 'PATCH', body }),
@@ -817,7 +826,13 @@ describe('問いからプ譜を生成・編集・保存する', () => {
         score.winCondition.uuid = score.gainingGoal.uuid;
       },
       (score: NonNullable<Pufu['score']>) => {
-        score.purposes[0].measures[0].progress = 101;
+        score.purposes[0].measures.push({
+          uuid: 'invalid-progress',
+          text: '入力で追加した施策',
+          color: 'white',
+          comment: { color: 'blue', text: '' },
+          progress: 101,
+        });
       },
     ]) {
       const score = structuredClone(pufu.score!);
@@ -922,7 +937,14 @@ describe('プ譜の生成結果の検証', () => {
     await expect(
       generatePufu(
         env as unknown as Parameters<typeof generatePufu>[0],
-        { task: '入力の課題' } as PufuContext,
+        {
+          task: '入力の課題',
+          project: { id: 'p', name: '計画', description: '' },
+          stock: null,
+          question: null,
+          userMemory: null,
+          projectMemory: null,
+        } as PufuContext,
       ),
     ).rejects.toThrow('出力形式');
   });

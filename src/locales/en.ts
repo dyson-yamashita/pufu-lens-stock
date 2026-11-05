@@ -69,6 +69,10 @@ export const en: Record<string, string> = {
   'pufu.title_too_long': 'Keep the title within 200 characters.',
   'pufu.title_hint':
     'Optionally enter a short title. Leave blank to show the gaining goal from phase 1.',
+  'manual.article_pages':
+    'Explicit next pages of the same article are collected as one stock, up to five pages. Site structure, retrieval failures or size limits may leave only part of the article available.',
+  'manual.pufu_grounding':
+    'Measures are selected from activities stated in your input or reference material; new activities are not inferred. Measures without evidence are left unset and unknown conditions are marked unconfirmed. Article examples are labeled as reference examples. Node comments identify sources, hypotheses and partially retrieved articles.',
   'manual.pufu_titles':
     'You can set an optional title when creating a Pufu. Use the pencil to the right of the title in the details to edit it. Clear it to show the gaining goal from phase 1.',
   'language.label': 'Language',
@@ -731,7 +735,7 @@ export const en: Record<string, string> = {
   'ui.pufu_form.eight_planning_factors_planned_measures':
     'Eight planning factors & planned measures',
   'ui.pufu_form.describe_people_money_time_quality_business_scheme_environment_rivals':
-    'Optionally describe people, money, time, quality, business scheme, environment, rivals, external threats and planned measures (up to 4,000 characters). AI fills missing details from the questions and stocks, marking inferences as hypotheses and unsupported details as unconfirmed.',
+    'Optionally describe people, money, time, quality, business scheme, environment, rivals, external threats and planned measures (up to 4,000 characters). Conditions are organized from the input and sources; unsupported conditions remain unconfirmed. New measures are not inferred.',
   'ui.pufu_form.example_two_people_a_budget_of_200_per_month':
     'Example: Two people, a budget of $200 per month, validation by the end of next month.\nStart with a small pilot and interviews with users.',
   'ui.pufu_form.questions_insights_related_stocks': 'Questions, insights, related stocks, ',
@@ -925,7 +929,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     'Choose Add Pufu in the Pufu list and select a destination project. To start from a question, open its Pufu tab and choose Explore this question or insight.',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Missing information is inferred from the sources, marking hypotheses and unconfirmed details. Choose Create Pufu to generate a draft.',
+    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Conditions are organized from the sources; unknown conditions remain unconfirmed and measures without evidence are left unset. New activities are not inferred. Choose Create Pufu to generate a draft.',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'Press the Pufu image to enlarge it. Pinch or use + and − to zoom, and drag to move.',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':

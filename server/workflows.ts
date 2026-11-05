@@ -170,8 +170,21 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         const content = article.input_text
           ? { title: article.title, text: article.input_text }
           : await fetchArticle(this.env, article.source_url, job.user_id);
+        const pagesJson = 'pages' in content ? JSON.stringify(content.pages ?? []) : null;
         await this.env.CONTENT.put(key, content.text, {
           httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+          ...(pagesJson !== null && 'pages' in content
+            ? {
+                customMetadata: {
+                  complete: String(content.complete),
+                  pageCount: String(content.pages?.length ?? 1),
+                  // 長いURLでも本文の保存を優先する。R2のメタ上限に余裕を残す。
+                  ...(new TextEncoder().encode(pagesJson).length <= 3500
+                    ? { pages: pagesJson }
+                    : {}),
+                },
+              }
+            : {}),
         });
         const statements = [
           this.env.DB.prepare(

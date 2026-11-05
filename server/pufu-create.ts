@@ -12,7 +12,7 @@ import {
 import type { Env, Principal } from './env';
 import { reserveOperation, assertOperation } from './usage';
 import { queuePufuJob } from './pufu';
-import { snapshotStocks } from './pufu-context';
+import { excerptParts, excerptSeparator, snapshotStocks } from './pufu-context';
 import { validateRelations } from './relations';
 
 export async function createGeneratedPufu(
@@ -120,7 +120,7 @@ export async function createGeneratedPufu(
   const stocks: NonNullable<PufuContext['stock']>[] = [];
   for (const row of stockRows.results) {
     const object = row.content_key
-      ? await env.CONTENT.get(String(row.content_key), { range: { offset: 0, length: 80000 } })
+      ? await env.CONTENT.get(String(row.content_key), { range: { offset: 0, length: 480000 } })
       : null;
     const content = object ? await object.text() : row.input_text ? String(row.input_text) : null;
     stocks.push({
@@ -128,7 +128,9 @@ export async function createGeneratedPufu(
       title: String(row.title),
       note: String(row.note),
       summary: row.summary_json ? JSON.parse(String(row.summary_json)) : null,
-      content: content?.slice(0, 20000) ?? null,
+      content: content ? excerptParts(content, 20000).join(excerptSeparator) : null,
+      contentIncomplete: object?.customMetadata?.complete === 'false',
+      contentExcerpted: (content?.length ?? 0) > 20000 || Boolean(object && object.size > 480000),
     });
   }
   const questions = questionRows.results as NonNullable<PufuContext['questions']>;

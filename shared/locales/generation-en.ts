@@ -33,4 +33,19 @@ export const generationEn = {
   'pufu.rival': 'Competing efforts and alternatives are unconfirmed. Identify options to compare.',
   'pufu.foreignEnemy':
     'Hypothesis: missing information or different test conditions may hinder judgment.',
+  'pufu.hypothesis': 'Hypothesis: ',
+  'pufu.unknown': 'Unconfirmed',
+  'pufu.referenceText': 'Reference example: {{text}}',
+  'pufu.measureSource':
+    'Source: {{source}}. An activity described in the source; execution plans and applicability are unconfirmed.',
+  'pufu.conditionSource':
+    'Source: {{source}}. Applicability to your own conditions needs confirmation.',
+  'pufu.inputComment': 'Preserves the gaining goal entered by the user.',
+  'pufu.inferredComment': 'A hypothetical gaining goal inferred from the question and stock.',
+  'pufu.hypothesisComment': 'A hypothetical state organized from the input and references.',
+  'pufu.unknownComment': 'No usable supporting evidence was found in the references.',
+  'pufu.incompleteContent':
+    'Only part of the article was retrieved. Subsequent pages have not been verified.',
+  'pufu.excerptedContent':
+    'Long articles are referenced through excerpts from the beginning, middle and end.',
 } satisfies Record<keyof typeof generationJa, string>;

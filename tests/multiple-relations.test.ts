@@ -410,8 +410,8 @@ it('関連ストック100件から1件を選び、永続ステップとAI入力�
   const { id } = (await response.json()) as { id: string };
   const draft = {
     winCondition: '達成を検証できる',
-    purposes: [{ text: '仮説がある', measures: [{ text: '検証する', color: 'blue' }] }],
-    elements: Object.fromEntries(elementKeys.map((key) => [key, '確認する'])),
+    purposes: [{ text: '仮説がある', measures: [] }],
+    elements: Object.fromEntries(elementKeys.map((key) => [key, null])),
   };
   const ai = vi.fn(async () => ({ response: JSON.stringify(draft) }));
   app.env.AI = { run: ai };

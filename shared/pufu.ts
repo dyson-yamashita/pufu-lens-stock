@@ -85,6 +85,8 @@ export type PufuContext = {
     summary: ArticleSummary | null;
     note: string;
     content?: string | null;
+    contentIncomplete?: boolean;
+    contentExcerpted?: boolean;
   } | null;
   stocks?: NonNullable<PufuContext['stock']>[];
   userMemory: MemorySnapshot | null;

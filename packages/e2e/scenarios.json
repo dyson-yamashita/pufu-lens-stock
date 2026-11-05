@@ -2,8 +2,17 @@
   {
     "id": "STOCK-001",
     "title": "テキストの保存と再表示",
-    "sources": ["src/App.tsx", "server/ingest.ts", "server/workflows.ts"],
-    "aspects": ["画面から本文を保存", "再読込後も本文・保存先が残る"]
+    "sources": [
+      "src/App.tsx",
+      "server/ingest.ts",
+      "server/workflows.ts",
+      "server/article-pages.ts"
+    ],
+    "aspects": [
+      "画面から本文を保存",
+      "再読込後も本文・保存先が残る",
+      "同じ記事の明示的な次ページを制限付きで取得（取得処理はVitestで検証）"
+    ]
   },
   {
     "id": "PUFU-001",
@@ -25,7 +34,9 @@
       "src/PufuImagePreview.tsx",
       "server/pufu.ts",
       "server/pufu-write.ts",
-      "server/pufu-phases.ts"
+      "server/pufu-phases.ts",
+      "server/pufu-grounding.ts",
+      "server/pufu-guideline.ts"
     ],
     "aspects": [
       "作成時に問い・ストックは各1件まで選択でき、選び直しは置換し、獲得目標と補足が空でも生成して再読込後に目標・関連を保持",
@@ -35,7 +46,8 @@
       "新局面の編集で過去局面が変わらない",
       "一覧へ戻る",
       "一覧はタイトル表示のみ、詳細のペンで編集・保存・再読込・解除と第一局面の獲得目標への復帰",
-      "その他の操作の開閉、削除確認のキャンセル、全局面の削除と再読込後の不在"
+      "その他の操作の開閉、削除確認のキャンセル、全局面の削除と再読込後の不在",
+      "生成した仮説・未確認の条件・根拠のない施策の未設定が再読込後も残る（引用照合はVitestで検証）"
     ]
   },
   {
