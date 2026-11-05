@@ -49,8 +49,29 @@ async function create(data = {}) {
   expect(response.status).toBe(201);
   return ((await response.json()) as { pufu: { id: string } }).pufu.id;
 }
-it('プ譜へ複数の問いとストックを保存し、第二の問いからも取得できる', async () => {
-  const id = await create({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
+async function createLegacy(data: { question_ids: string[]; stock_ids: string[] }) {
+  const id = await create();
+  await app.env.DB.batch([
+    app.env.DB.prepare('UPDATE pufu_scores SET question_id=? WHERE id=?').bind(
+      data.question_ids[0] ?? null,
+      id,
+    ),
+    ...data.question_ids
+      .slice(1)
+      .map((q) =>
+        app.env.DB.prepare('INSERT INTO pufu_questions(pufu_id,question_id) VALUES (?,?)').bind(
+          id,
+          q,
+        ),
+      ),
+    ...data.stock_ids.map((stock) =>
+      app.env.DB.prepare('INSERT INTO pufu_stocks(pufu_id,stock_id) VALUES (?,?)').bind(id, stock),
+    ),
+  ]);
+  return id;
+}
+it('保存済みの複数関連プ譜は第二の問いからも取得でき、各1件へ変更できる', async () => {
+  const id = await createLegacy({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
   expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
     pufu: {
       question_ids: ['q1', 'q2'],
@@ -129,7 +150,7 @@ it('問いへ複数ストックを保存し、第二のストックにも表示�
   ).toBe(404);
 });
 it('問いやストックを削除しても共有されたプ譜・局面は残す', async () => {
-  const id = await create({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
+  const id = await createLegacy({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
   await app.request('/api/v1/questions/q1', { method: 'DELETE' });
   await app.request('/api/v1/stocks/s1', { method: 'DELETE' });
   expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
@@ -181,7 +202,7 @@ it('移行は生成元の関連とプ譜の局面・コメントを引き継ぐ'
 it('公開ページも第二の関連をたどり、解除・非公開後には公開しない', async () => {
   await app.env.DB.prepare("UPDATE questions SET stock_id='s1' WHERE id='q1'").run();
   await app.request('/api/v1/questions/q1', { method: 'PATCH', body: { stock_ids: ['s1', 's2'] } });
-  const id = await create({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
+  const id = await createLegacy({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
   const response = await app.request('/api/v1/projects/alice-project/publication', {
     method: 'PATCH',
     body: { is_public: true, public_description: '' },
@@ -214,7 +235,7 @@ it('公開ページも第二の関連をたどり、解除・非公開後には�
   expect((await read('/stocks/s2')).status).toBe(404);
 });
 it('保存の競合・不正なIDでは関連も局面も変更せず、共有中のプロジェクト移動を拒否する', async () => {
-  const id = await create({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
+  const id = await createLegacy({ question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] });
   const edit = (revision: number, fields = {}) =>
     app.request(`/api/v1/pufus/${id}`, {
       method: 'PATCH',
@@ -247,21 +268,21 @@ it('保存の競合・不正なIDでは関連も局面も変更せず、共有�
     pufu: { revision: 2, question_ids: ['q2'], stock_ids: ['s2'] },
   });
 });
-it('配列の重複を除去して再送を同一視し、旧単一IDと配列の併用を拒否する', async () => {
+it('各1件の同じ関連の再送を同一視し、旧単一IDと配列の併用を拒否する', async () => {
   const request_id = crypto.randomUUID();
   const body = {
     project_id: 'alice-project',
     request_id,
     score,
-    question_ids: ['q2', 'q1', 'q2'],
-    stock_ids: ['s2', 's1'],
+    question_ids: ['q2'],
+    stock_ids: ['s2'],
   };
   expect((await app.request('/api/v1/pufus', { method: 'POST', body })).status).toBe(201);
   expect(
     (
       await app.request('/api/v1/pufus', {
         method: 'POST',
-        body: { ...body, question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] },
+        body: { ...body, question_ids: ['q2'], stock_ids: ['s2'] },
       })
     ).status,
   ).toBe(200);
@@ -306,7 +327,7 @@ it('関連AI問いの再生成中や失敗中も既存のプ譜を保存でき�
     (
       await app.request(`/api/v1/pufus/${id}/relations`, {
         method: 'PATCH',
-        body: { revision: 3, question_ids: ['q1', 'q2'], stock_ids: ['s1', 's2'] },
+        body: { revision: 3, question_ids: ['q1'], stock_ids: ['s1'] },
       })
     ).status,
   ).toBe(200);
@@ -335,7 +356,7 @@ it('問い作成の再送は元ストック削除後も同じ問いを返す', a
   expect(repeated.status).toBe(200);
   expect(await repeated.json()).toMatchObject({ question: { id: question.id, stock_ids: ['s2'] } });
 });
-it('問いからの作成は1問だけを設定し、複数ストックを関連・生成時の文脈へ引き継ぐ', async () => {
+it('問いからの作成は関連ストックから選択した1件だけを引き継ぐ', async () => {
   const response = await app.request('/api/v1/questions', {
     method: 'POST',
     body: { project_id: 'alice-project', stock_ids: ['s1', 's2'], text: '複数から考える' },
@@ -343,19 +364,19 @@ it('問いからの作成は1問だけを設定し、複数ストックを関連
   const { question } = (await response.json()) as { question: { id: string } };
   const created = await app.request(`/api/v1/questions/${question.id}/pufus`, {
     method: 'POST',
-    body: { task: '複数の根拠を活かす', request_id: crypto.randomUUID() },
+    body: { task: '根拠を活かす', stock_ids: ['s2'], request_id: crypto.randomUUID() },
   });
   expect(created.status).toBe(202);
   const { id } = (await created.json()) as { id: string };
   expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
     pufu: {
       question_ids: [question.id],
-      stock_ids: ['s1', 's2'],
-      context: { question: { id: question.id }, stocks: [{ id: 's1' }, { id: 's2' }] },
+      stock_ids: ['s2'],
+      context: { question: { id: question.id }, stocks: [{ id: 's2' }] },
     },
   });
 });
-it('長い要約100件の関連を保ち、生成時の永続ステップとAIへの参照入力を制限内に保つ', async () => {
+it('関連ストック100件から1件を選び、永続ステップとAI入力を制限内に保つ', async () => {
   const ids = Array.from({ length: 100 }, (_, index) => `large-${String(index).padStart(3, '0')}`);
   const summary = JSON.stringify({
     overview: '概'.repeat(1600),
@@ -379,7 +400,11 @@ it('長い要約100件の関連を保ち、生成時の永続ステップとAI�
   const { question } = (await q.json()) as { question: { id: string } };
   const response = await app.request(`/api/v1/questions/${question.id}/pufus`, {
     method: 'POST',
-    body: { task: '全資料を見て考える', request_id: crypto.randomUUID() },
+    body: {
+      task: '選択した資料を見て考える',
+      stock_ids: [ids[0]],
+      request_id: crypto.randomUUID(),
+    },
   });
   expect(response.status).toBe(202);
   const { id } = (await response.json()) as { id: string };
@@ -395,11 +420,11 @@ it('長い要約100件の関連を保ち、生成時の永続ステップとAI�
     pufu: { status: string; stock_ids: string[]; context: { stocks: { id: string }[] } };
   };
   expect(pufu.status).toBe('ready');
-  expect(pufu.stock_ids).toEqual(ids);
-  expect(pufu.context.stocks.map((stock) => stock.id)).toEqual(ids);
+  expect(pufu.stock_ids).toEqual([ids[0]]);
+  expect(pufu.context.stocks.map((stock) => stock.id)).toEqual([ids[0]]);
   const [, input] = ai.mock.calls[0] as unknown as [string, { messages: { content: string }[] }];
   const prompt = JSON.parse(input.messages[1].content) as { stocks: unknown[] };
-  expect(prompt.stocks).toHaveLength(100);
+  expect(prompt.stocks).toHaveLength(1);
   expect(JSON.stringify(prompt.stocks).length).toBeLessThanOrEqual(14000);
 });
 it('限定接続の読み取り途中に移動しても、移動先で追加された問いの本文を混ぜない', async () => {

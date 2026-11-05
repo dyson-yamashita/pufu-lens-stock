@@ -709,24 +709,34 @@ export const en: Record<string, string> = {
   'ui.pufu_editor_load_error.your_pufu_is_saved_reload_the_page_and_try':
     'Your Pufu is saved. Reload the page and try again.',
   'ui.pufu_editor_load_error.reload_page': 'Reload page',
+  'error.pufu_single_reference':
+    'A Pufu can link to at most one question or insight and one stock.',
+  'error.pufu_choose_one_stock':
+    'Several stocks are linked to this question. Choose one stock to reference.',
+  'ui.relation_picker.optional_single_selection': 'Optional, up to one',
+  'ui.pufu_form.reference_materials': 'Questions, insights and stocks to reference',
+  'ui.pufu_form.reference_help':
+    'Choose up to one question or insight and one stock in the same project. The selected stock takes priority. Otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Available bodies, summaries and notes are used; long sources are excerpted.',
+  'ui.pufu_form.goal_or_references_required':
+    'Enter a gaining goal or select a question, insight or stock to reference.',
   'ui.pufu_form.select_a_project': 'Select a project.',
   'ui.pufu_form.create_a_pufu_to_work_toward_the_state_you':
-    'Create a Pufu to work toward the state you want to achieve.',
+    'Create a Pufu from your desired outcome, questions or stocks.',
   'ui.pufu_form.task_inspired_by_this_question_or_insight':
     'Task inspired by this question or insight',
   'ui.pufu_form.what_state_do_you_want_to_achieve_your_text':
-    'What state do you want to achieve? Your text becomes the Pufu gaining goal as entered.',
+    'Your text is used as the gaining goal. Leave it blank to have AI infer a goal from the referenced questions and stocks.',
   'ui.pufu_form.example_build_a_system_that_reliably_completes_summaries_even':
     'Example: Build a system that reliably completes summaries even when article retrieval fails partway through.',
   'ui.pufu_form.eight_planning_factors_planned_measures':
     'Eight planning factors & planned measures',
   'ui.pufu_form.describe_people_money_time_quality_business_scheme_environment_rivals':
-    'Describe people, money, time, quality, business scheme, environment, rivals, external enemies, and any planned measures. This input is used to generate your Pufu (up to 4,000 characters).',
+    'Optionally describe people, money, time, quality, business scheme, environment, rivals, external threats and planned measures (up to 4,000 characters). AI fills missing details from the questions and stocks, marking inferences as hypotheses and unsupported details as unconfirmed.',
   'ui.pufu_form.example_two_people_a_budget_of_200_per_month':
     'Example: Two people, a budget of $200 per month, validation by the end of next month.\nStart with a small pilot and interviews with users.',
   'ui.pufu_form.questions_insights_related_stocks': 'Questions, insights, related stocks, ',
   'ui.pufu_form.the_project_description_and_your_and_the_project_s':
-    "the project description, and your and the project's memories also inform the generated win condition and measures.",
+    'References and your input, together with the project description and your personal and project memories, inform the win condition and measures.',
   'ui.pufu_form.submitting_creation_request': 'Submitting creation request…',
   'ui.pufu_image_modal.pufu_phase_value': 'Pufu phase {{value0}}',
   'ui.pufu_image_modal.zoom_out': 'Zoom out',
@@ -765,7 +775,7 @@ export const en: Record<string, string> = {
   'ui.pufu_relations.edit_related_questions_insights_and_stocks':
     'Edit related questions, insights and stocks',
   'ui.pufu_relations.select_multiple_questions_insights_and_stocks_in_the_same':
-    'Select multiple questions, insights and stocks in the same project. Changing relations does not change saved Pufu or the information used for generation.',
+    'Choose up to one question or insight and one stock in the same project. Changing relations does not change saved Pufu or the information used for generation.',
   'ui.pufu_relations.save_and_close_the_pufu_editor_before_saving_relations':
     'Save and close the Pufu editor before saving relations.',
   'ui.pufu_relations.relations_saved_please_reload_the_pufu':
@@ -785,7 +795,7 @@ export const en: Record<string, string> = {
   'ui.pufus.use_the_star_button_on_a_pufu_to_add':
     'Use the star button on a Pufu to add it to favorites.',
   'ui.pufus.choose_add_pufu_and_enter_a_gaining_goal_to':
-    'Choose Add Pufu and enter a gaining goal to create one. You can also create one from a question or insight.',
+    'Choose Add Pufu and enter a gaining goal or select questions and stocks to reference. You can also start from a question or insight.',
   'ui.pufus.question_or_insight': 'Question or insight: ',
   'ui.pufus.value_more': ' ({{value0}} more)',
   'ui.pufus.stock': 'Stock: ',
@@ -915,7 +925,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     'Choose Add Pufu in the Pufu list and select a destination project. To start from a question, open its Pufu tab and choose Explore this question or insight.',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    'Write your desired state as the gaining goal. Optionally describe staffing, budget, time and planned actions in Eight planning factors & planned measures. Choose Create Pufu to generate a proposal using this information.',
+    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Missing information is inferred from the sources, marking hypotheses and unconfirmed details. Choose Create Pufu to generate a draft.',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'Press the Pufu image to enlarge it. Pinch or use + and − to zoom, and drag to move.',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':
@@ -927,7 +937,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.when_the_editor_is_narrow_tap_or_drag_its':
     'When the editor is narrow, tap or drag its overview map to move around.',
   'ui.user_manual.open_edit_related_questions_insights_and_stocks_on_a':
-    'Open Edit related questions, insights and stocks on a Pufu screen to select multiple questions and stocks in the same project, then choose Save relations. Uncheck items to unlink them. If editing the Pufu, save and close the editor before saving relations. Creating a new Pufu from a question initially links that one question.',
+    'Open Edit related questions, insights and stocks on a Pufu screen to select up to one question and one stock in the same project, then choose Save relations. Uncheck items to unlink them. If editing the Pufu, save and close the editor before saving relations. Creating a new Pufu from a question initially links that one question.',
   'ui.user_manual.record_your_thinking_with_comments': 'Record your thinking with comments',
   'ui.user_manual.use_the_comments_tab_in_stock_or_question_details':
     "Use the Comments tab in stock or question details to record decisions and insights. For Pufu, use the comments below the displayed phase. Switching phases shows that phase's history.",

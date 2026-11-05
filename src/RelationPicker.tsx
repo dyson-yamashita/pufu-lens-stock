@@ -12,12 +12,14 @@ export default function RelationPicker({
   value,
   onChange,
   disabled = false,
+  single = false,
 }: {
   kind: 'stocks' | 'questions';
   projectId: string;
   value: RelationOption[];
   onChange: (value: RelationOption[]) => void;
   disabled?: boolean;
+  single?: boolean;
 }) {
   useLanguage();
   const id = useId();
@@ -83,7 +85,13 @@ export default function RelationPicker({
         checked={checked}
         disabled={disabled}
         onChange={() =>
-          onChange(checked ? value.filter((entry) => entry.id !== item.id) : [...value, item])
+          onChange(
+            checked
+              ? value.filter((entry) => entry.id !== item.id)
+              : single
+                ? [item]
+                : [...value, item],
+          )
         }
       />
       <span>{item.label}</span>
@@ -94,7 +102,11 @@ export default function RelationPicker({
       <legend>
         {t('relation.related', { label })}
         <span className="optional">
-          {t('ui.relation_picker.optional_multiple_selections_allowed')}
+          {t(
+            single
+              ? 'ui.relation_picker.optional_single_selection'
+              : 'ui.relation_picker.optional_multiple_selections_allowed',
+          )}
         </span>
       </legend>
       <div className="relation-selected">

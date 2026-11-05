@@ -7,6 +7,7 @@ export const generationJa = {
   'question.template':
     '「{{point}}」を「{{project}}」に取り入れるなら、{{note}}どのような条件や検証が必要だろう？',
   'question.note': '保存時のメモを踏まえ、',
+  'pufu.inferredGoal': '仮説：「{{reference}}」を踏まえた課題を解決できる仕組みをつくる。',
   'pufu.knowledge': '根拠を集めて仮説を確かめる。',
   'pufu.winCondition': '「{{task}}」の達成を、元の問いに対する説明と検証結果によって確認できる。',
   'pufu.purpose.examine': '問いの前提と、確認が必要な点が整理されている。',

@@ -247,7 +247,7 @@ it('問いの保存先は関連解除を保存してから変更できる', asyn
   expect(document.querySelector('select')!.disabled).toBe(false);
 });
 
-it('プ譜の関連保存で複数の問いとストックを送り、新revisionで再表示する', async () => {
+it('プ譜の関連を選び直すと各1件に置き換えて送り、新revisionで再表示する', async () => {
   await act(async () =>
     root.render(
       createElement(PufuPage, {
@@ -268,8 +268,8 @@ it('プ譜の関連保存で複数の問いとストックを送り、新revisio
     '/api/v1/pufus/pufu/relations',
     {
       revision: 1,
-      question_ids: ['question', 'question-b'],
-      stock_ids: ['stock-a', 'stock-b'],
+      question_ids: ['question-b'],
+      stock_ids: ['stock-b'],
     },
     'PATCH',
   );

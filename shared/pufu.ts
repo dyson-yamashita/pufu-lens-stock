@@ -10,6 +10,9 @@ export const pufuTitleSchema = z
   .string()
   .trim()
   .max(200, 'タイトルは200文字以内で入力してください。');
+const pufuRelationIdsSchema = relationIdsSchema.in
+  .max(1, 'プ譜に紐付ける問い・気づきとストックは、それぞれ1件までです。')
+  .pipe(relationIdsSchema);
 export function pufuDisplayTitle(pufu: {
   title?: string | null;
   first_phase_task?: string;
@@ -19,23 +22,21 @@ export function pufuDisplayTitle(pufu: {
 }
 export const createPufuSchema = z.strictObject({
   title: pufuTitleSchema.optional(),
-  task: z
-    .string()
-    .trim()
-    .min(1, '課題を入力してください。')
-    .max(1000, '課題は1,000文字以内で入力してください。'),
+  task: z.string().trim().max(1000, '課題は1,000文字以内で入力してください。').default(''),
+  question_ids: pufuRelationIdsSchema.optional(),
+  stock_ids: pufuRelationIdsSchema.optional(),
   details: z.string().trim().max(4000, '補足は4,000文字以内で入力してください。').optional(),
   request_id: z.uuid(),
 });
 const pufuRelationFields = {
   question_id: z.string().min(1).max(100).nullable().optional(),
-  question_ids: relationIdsSchema.optional(),
-  stock_ids: relationIdsSchema.optional(),
+  question_ids: pufuRelationIdsSchema.optional(),
+  stock_ids: pufuRelationIdsSchema.optional(),
 };
 export const pufuRelationsSchema = z.strictObject({
   revision: z.number().int().positive(),
-  question_ids: relationIdsSchema,
-  stock_ids: relationIdsSchema,
+  question_ids: pufuRelationIdsSchema,
+  stock_ids: pufuRelationIdsSchema,
 });
 export const savePufuSchema = z.strictObject({
   revision: z.number().int().positive(),
@@ -75,9 +76,16 @@ export type PufuContext = {
   title?: string;
   details?: string;
   question: { id: string; text: string; source: 'ai' | 'user' } | null;
+  questions?: NonNullable<PufuContext['question']>[];
   task: string;
   project: { id: string; name: string; description: string };
-  stock: { id: string; title: string; summary: ArticleSummary | null; note: string } | null;
+  stock: {
+    id: string;
+    title: string;
+    summary: ArticleSummary | null;
+    note: string;
+    content?: string | null;
+  } | null;
   stocks?: NonNullable<PufuContext['stock']>[];
   userMemory: MemorySnapshot | null;
   projectMemory: MemorySnapshot | null;

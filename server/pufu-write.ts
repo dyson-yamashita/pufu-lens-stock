@@ -61,6 +61,18 @@ export async function createSavedPufu(
   const previous = await load();
   if (previous) return response(previous, false);
   await validateRelations(env, project.id, questionIds, stockIds);
+  const inheritStock = data.question_ids === undefined && data.stock_ids === undefined;
+  if (inheritStock && questionId) {
+    const related = await env.DB.prepare(
+      'SELECT COUNT(*) n FROM question_stocks WHERE question_id=?',
+    )
+      .bind(questionId)
+      .first<{ n: number }>();
+    if (related && related.n > 1)
+      throw new HTTPException(400, {
+        message: '問いに複数のストックが紐付いています。参照するストックを1件選択してください。',
+      });
+  }
   const question =
     questionId === null
       ? null
@@ -88,7 +100,8 @@ export async function createSavedPufu(
       (id,user_id,project_id,question_id,title,task,input_json,score_json,editor_version,status,request_json,created_at,updated_at)
       SELECT ?,user_id,id,?,?,?,?,?,?,'ready',?,?,? FROM projects
       WHERE id=? AND user_id=? AND (? IS NULL OR id IN (SELECT value FROM json_each(?)))
-      AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=projects.id AND status='ready'))`,
+      AND (? IS NULL OR EXISTS (SELECT 1 FROM questions WHERE id=? AND project_id=projects.id AND status='ready'))
+      AND (?=0 OR (SELECT COUNT(*) FROM question_stocks WHERE question_id=?)<=1)`,
     ).bind(
       id,
       questionId,
@@ -105,6 +118,8 @@ export async function createSavedPufu(
       projectScopeJson(principal),
       projectScopeJson(principal),
       questionId,
+      questionId,
+      inheritStock ? 1 : 0,
       questionId,
     ),
     env.DB.prepare(

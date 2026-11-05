@@ -89,6 +89,7 @@ export default function PufuRelations({
         </p>
         <RelationPicker
           kind="questions"
+          single
           projectId={pufu.project_id}
           value={questions}
           onChange={(value) => {
@@ -99,6 +100,7 @@ export default function PufuRelations({
         />
         <RelationPicker
           kind="stocks"
+          single
           projectId={pufu.project_id}
           value={stocks}
           onChange={(value) => {
