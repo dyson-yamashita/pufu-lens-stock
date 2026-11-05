@@ -75,6 +75,8 @@ export const en: Record<string, string> = {
     'AI organizes the input and article body into concise goals, intermediate states, actions and eight planning factors. It does not add activities absent from the sources. Missing conditions stay blank. It adds no comments or reference notes. When both the goal and question are blank, it organizes the project described in the article. Personal and project memories are not used for Pufu generation.',
   'manual.pufu_titles':
     'You can set an optional title when creating a Pufu. Use the pencil to the right of the title in the details to edit it. Clear it to show the gaining goal from phase 1.',
+  'manual.pufu_limit':
+    'By default, each user can request up to 10 Pufu generations in a rolling 24-hour period, including explicit retries. When you reach the limit, an estimated retry time is shown.',
   'language.label': 'Language',
   'language.hint':
     'Applies to future summaries, questions, memories and Pufu. Saved content stays as it is.',

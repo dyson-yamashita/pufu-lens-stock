@@ -58,6 +58,7 @@ const sections = (tr: typeof t) => [
         <p>{tr('ui.user_manual.use_all_pufu_in_the_side_menu_or_the')}</p>
         <p>{tr('manual.pufu_titles')}</p>
         <p>{tr('manual.pufu_grounding')}</p>
+        <p className="manual-note">{tr('manual.pufu_limit')}</p>
         <p>{tr('ui.user_manual.use_the_star_button_in_a_list_or_details')}</p>
         <ol>
           <li>{tr('ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select')}</li>
