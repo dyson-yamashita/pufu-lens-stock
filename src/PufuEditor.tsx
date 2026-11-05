@@ -330,20 +330,22 @@ export default function PufuEditor({
           </div>
         </PufuModal>
       )}
-      <p className="pufu-memory-caption">
-        {t('ui.pufu_editor.memory_used_for_generation_you')}{' '}
-        {pufu.context.userMemory
-          ? t('ui.pufu_editor.as_of_value', {
-              value0: memoryDate(pufu.context.userMemory.updated_at),
-            })
-          : t('ui.pufu_editor.not_created')}{' '}
-        {t('ui.pufu_editor.project')}{' '}
-        {pufu.context.projectMemory
-          ? t('ui.pufu_editor.as_of_value', {
-              value0: memoryDate(pufu.context.projectMemory.updated_at),
-            })
-          : t('ui.pufu_editor.not_created')}
-      </p>
+      {(pufu.context.userMemory || pufu.context.projectMemory) && (
+        <p className="pufu-memory-caption">
+          {t('ui.pufu_editor.memory_used_for_generation_you')}{' '}
+          {pufu.context.userMemory
+            ? t('ui.pufu_editor.as_of_value', {
+                value0: memoryDate(pufu.context.userMemory.updated_at),
+              })
+            : t('ui.pufu_editor.not_created')}{' '}
+          {t('ui.pufu_editor.project')}{' '}
+          {pufu.context.projectMemory
+            ? t('ui.pufu_editor.as_of_value', {
+                value0: memoryDate(pufu.context.projectMemory.updated_at),
+              })
+            : t('ui.pufu_editor.not_created')}
+        </p>
+      )}
       <p className="pufu-credit">
         <a href="https://github.com/goto-lab/pufu-editor" target="_blank" rel="noreferrer">
           {t('ui.public_pufu_score.pufu_editor')}

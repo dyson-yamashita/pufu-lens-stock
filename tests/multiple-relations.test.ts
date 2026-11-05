@@ -1,3 +1,4 @@
+import { mockPufuAi } from './pufu-ai-fixture';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { testApp, applyMigration, mockEvent, mockStep } from './helpers';
@@ -411,9 +412,9 @@ it('関連ストック100件から1件を選び、永続ステップとAI入力�
   const draft = {
     winCondition: '達成を検証できる',
     purposes: [{ text: '仮説がある', measures: [] }],
-    elements: Object.fromEntries(elementKeys.map((key) => [key, null])),
+    elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
   };
-  const ai = vi.fn(async () => ({ response: JSON.stringify(draft) }));
+  const ai = mockPufuAi(draft);
   app.env.AI = { run: ai };
   await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(`pufu-job-${id}-1`), mockStep(2 ** 20));
   const { pufu } = (await (await app.request(`/api/v1/pufus/${id}`)).json()) as {
