@@ -3,7 +3,7 @@ import { generatePufu } from '../server/pufu';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 import type { Env } from '../server/env';
 
-const subject = '天使のたまご';
+const subject = 'サンプル作品';
 const context: PufuContext = {
   task: '',
   question: null,
@@ -12,11 +12,11 @@ const context: PufuContext = {
   project: { id: 'p', name: 'サンプル', description: '' },
   stock: {
     id: 's',
-    title: '「天使のたまご」で学ぶリマスター技術',
+    title: '「サンプル作品」で学ぶリマスター技術',
     note: '',
     summary: null,
     content:
-      '作品側と方針を相談する。音声のノイズを除去する。データを納品する。天使のたまごは35ミリ撮影。天使のたまごではグラデーションが減る可能性を説明し、フィルムらしさを残した。天使のたまごはセリフを分離してサラウンド化した。',
+      '作品側と方針を相談する。音声のノイズを除去する。データを納品する。サンプル作品は35ミリ撮影。サンプル作品ではグラデーションが減る可能性を説明し、フィルムらしさを残した。サンプル作品はセリフを分離してサラウンド化した。',
   },
 };
 const fact = (text: string) => ({ evidence: 'E0', scope: 'project', text });
@@ -146,7 +146,7 @@ it('独自の目標や問いがある場合、記事の事例を利用者の施�
   ]) {
     const { env } = setup();
     const score = await generatePufu(env, { ...context, ...explicit });
-    expect(JSON.stringify(score)).not.toMatch(/35ミリ|サラウンド|天使のたまご/);
+    expect(JSON.stringify(score)).not.toMatch(/35ミリ|サラウンド|サンプル作品/);
     if ('task' in explicit) expect(score.gainingGoal.text).toBe(explicit.task);
   }
 });
@@ -156,7 +156,7 @@ it.each(['option', 'capability', 'possibility', 'background'])(
   async (kind) => {
     const { env } = setup(cases.map((c) => ({ ...c, kind })));
     const score = await generatePufu(env, context);
-    expect(JSON.stringify(score)).not.toMatch(/35ミリ|サラウンド|天使のたまご/);
+    expect(JSON.stringify(score)).not.toMatch(/35ミリ|サラウンド|サンプル作品/);
   },
 );
 
@@ -202,26 +202,26 @@ it('事例と一般条件が長い場合も条件文を切らず上限内で保�
 
 it('根拠に存在する版の限定は対象名の正規化でも維持する', async () => {
   const { env } = setup([
-    { ...cases[0], subject: '「天使のたまご」のDVD版', text: 'SD素材だった。' },
+    { ...cases[0], subject: '「サンプル作品」のDVD版', text: 'SD素材だった。' },
   ]);
   const score = await generatePufu(env, {
     ...context,
     stock: {
       ...context.stock!,
-      content: context.stock!.content + '\n「天使のたまご」のDVD版は35ミリではなくSD素材だった。',
+      content: context.stock!.content + '\n「サンプル作品」のDVD版は35ミリではなくSD素材だった。',
     },
   });
-  expect(score.elements.environment.text).toContain('「天使のたまご」のDVD版では、SD素材だった。');
+  expect(score.elements.environment.text).toContain('「サンプル作品」のDVD版では、SD素材だった。');
 });
 
 it('原文にない見出しは実在する引用符内の名称へ戻し、未知の版限定は捨てて広げない', async () => {
-  const named = setup([{ ...cases[0], subject: '「天使のたまご」のフィルム素材' }]);
+  const named = setup([{ ...cases[0], subject: '「サンプル作品」のフィルム素材' }]);
   expect((await generatePufu(named.env, context)).elements.environment.text).toContain(
-    '「天使のたまご」では、35ミリ',
+    '「サンプル作品」では、35ミリ',
   );
-  const invalid = setup([{ ...cases[0], subject: '「天使のたまご」の未確認版' }]);
+  const invalid = setup([{ ...cases[0], subject: '「サンプル作品」の未確認版' }]);
   await expect(generatePufu(invalid.env, context)).rejects.toThrow('主要事例');
-  const prefixed = setup([{ ...cases[0], subject: 'DVD版「天使のたまご」の素材条件' }]);
+  const prefixed = setup([{ ...cases[0], subject: 'DVD版「サンプル作品」の素材条件' }]);
   await expect(generatePufu(prefixed.env, context)).rejects.toThrow('主要事例');
 });
 
