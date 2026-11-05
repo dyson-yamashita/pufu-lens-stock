@@ -172,6 +172,14 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
           : await fetchArticle(this.env, article.source_url, job.user_id);
         await this.env.CONTENT.put(key, content.text, {
           httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+          ...('pages' in content
+            ? {
+                customMetadata: {
+                  pages: JSON.stringify(content.pages),
+                  complete: String(content.complete),
+                },
+              }
+            : {}),
         });
         const statements = [
           this.env.DB.prepare(

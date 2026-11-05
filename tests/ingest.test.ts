@@ -65,6 +65,86 @@ describe('公開記事の取得', () => {
     expect(requests).toEqual(['https://example.com/folder/start', 'https://example.com/article']);
   });
 
+  const htmlPage = (body: string, next = '') =>
+    new Response(
+      `<html><head><title>同じ記事</title>${next ? `<link rel="next" href="${next}">` : ''}</head><body><article><h1>同じ記事</h1><p>${body}</p></article></body></html>`,
+      { headers: { 'Content-Type': 'text/html' } },
+    );
+  it('同じ記事の次ページを取得し、後半の本文と取得情報を返す', async () => {
+    const last = '後半でのみ説明する条件：星や雨の表現を保ち、監督と確認する。'.repeat(10);
+    const requests = mockNetwork((url) =>
+      url.pathname.endsWith('/2') ? htmlPage(last) : htmlPage(articleText, '/story/42/page/2'),
+    );
+    const result = await fetchArticle(env, 'https://example.com/story/42');
+    expect(result.text).toContain(articleText);
+    expect(result.text).toContain(last);
+    expect(result.pages).toEqual([
+      'https://example.com/story/42',
+      'https://example.com/story/42/page/2',
+    ]);
+    expect(result.complete).toBe(true);
+    expect(requests).toHaveLength(2);
+  });
+  it.each(['https://elsewhere.example/story/42/page/2', '/story/99', 'http://127.0.0.1/private'])(
+    '記事以外の次リンクには接続せず、一部取得を返す: %s',
+    async (next) => {
+      const requests = mockNetwork(() => htmlPage(articleText, next));
+      const result = await fetchArticle(env, 'https://example.com/story/42');
+      expect(requests).toEqual(['https://example.com/story/42']);
+      expect(result.text).toContain(articleText);
+      expect(result.complete).toBe(false);
+    },
+  );
+  it('次ページが別originや内部IPへリダイレクトしても接続しない', async () => {
+    for (const destination of [
+      'https://elsewhere.example/story/42/page/2',
+      'http://127.0.0.1/private',
+    ]) {
+      const requests = mockNetwork((url) =>
+        url.pathname.endsWith('/2')
+          ? new Response(null, { status: 302, headers: { Location: destination } })
+          : htmlPage(articleText, '/story/42/page/2'),
+      );
+      const result = await fetchArticle(env, 'https://example.com/story/42');
+      expect(requests).toEqual([
+        'https://example.com/story/42',
+        'https://example.com/story/42/page/2',
+      ]);
+      expect(result.complete).toBe(false);
+    }
+  });
+  it('続きの取得失敗でも先に取得した本文を保持する', async () => {
+    mockNetwork((url) =>
+      url.pathname.endsWith('/2')
+        ? new Response(null, { status: 503 })
+        : htmlPage(articleText, '/story/42/page/2'),
+    );
+    const result = await fetchArticle(env, 'https://example.com/story/42');
+    expect(result.text).toContain(articleText);
+    expect(result.pages).toEqual(['https://example.com/story/42']);
+    expect(result.complete).toBe(false);
+  });
+  it('5ページで停止し、続きがあることを記録する', async () => {
+    const requests = mockNetwork((url) => {
+      const n = Number(url.pathname.match(/page\/(\d+)/)?.[1] ?? 1);
+      return htmlPage(`ページ${n}。${articleText}`, `/story/42/page/${n + 1}`);
+    });
+    const result = await fetchArticle(env, 'https://example.com/story/42');
+    expect(requests).toHaveLength(5);
+    expect(result.pages).toHaveLength(5);
+    expect(result.complete).toBe(false);
+  });
+  it('次リンクの循環を検出し、同じページを再取得しない', async () => {
+    const requests = mockNetwork((url) =>
+      htmlPage(
+        articleText + url.pathname,
+        url.pathname.endsWith('/2') ? '/story/42' : '/story/42/page/2',
+      ),
+    );
+    expect((await fetchArticle(env, 'https://example.com/story/42')).complete).toBe(false);
+    expect(requests).toHaveLength(2);
+  });
+
   it.each(['http://127.0.0.1/private', 'https://internal.example.com/private'])(
     'リダイレクト先が内部ネットワークなら接続せず拒否する: %s',
     async (destination) => {

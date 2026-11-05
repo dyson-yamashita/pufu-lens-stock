@@ -1,3 +1,4 @@
+import { isArticlePage, nextArticlePage } from './article-pages';
 import { limitedBytes } from './limited-bytes';
 import { parsePdf } from './pdf-client';
 import { Readability } from '@mozilla/readability';
@@ -77,9 +78,15 @@ async function renderHtml(env: Env, url: string): Promise<string> {
     await browser.close();
   }
 }
-export async function fetchPublic(value: string): Promise<{ response: Response; url: URL }> {
+export async function fetchPublic(
+  value: string,
+  guard?: (url: URL) => void,
+  deadline = Date.now() + 120000,
+): Promise<{ response: Response; url: URL }> {
   let url = validateUrl(value);
   for (let redirects = 0; redirects <= 5; redirects++) {
+    guard?.(url);
+    if (Date.now() >= deadline) throw new Error('記事取得の時間上限を超えました。');
     if (isYouTubeUrl(url.href)) throw new Error(youtubeUnavailableMessage);
     await assertPublicDestination(url);
     // アプリのCookieやBearerトークンは取得先に一切渡さない。
@@ -89,7 +96,7 @@ export async function fetchPublic(value: string): Promise<{ response: Response; 
         'User-Agent': 'PufuLens/0.1 (personal article bookmarks)',
         Accept: 'text/html,application/pdf,text/plain;q=0.8,application/octet-stream;q=0.5',
       },
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(Math.min(20000, Math.max(1, deadline - Date.now()))),
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('Location');
@@ -107,13 +114,14 @@ export async function fetchArticle(
   env: Env,
   value: string,
   userId?: string,
-): Promise<{ title: string; text: string }> {
+): Promise<{ title: string; text: string; pages?: string[]; complete?: boolean }> {
+  const deadline = Date.now() + 60000;
   const postId = xPostId(validateUrl(value).href);
   if (postId) {
     if (!userId) throw new Error('Xの取得にはユーザー認証が必要です。');
     return fetchXPost(env, userId, postId);
   }
-  const { response, url } = await fetchPublic(value);
+  const { response, url } = await fetchPublic(value, undefined, deadline);
   if (!response.ok)
     throw new Error(
       `本文を取得できませんでした（HTTP ${response.status}）。ログインやアクセス制限が必要なページは保存URLのみ保持します。`,
@@ -136,5 +144,34 @@ export async function fetchArticle(
     );
   if (result.text.length > 120000)
     throw new Error('本文が長すぎます（上限12万文字）。URLは保存されています。');
-  return result;
+  if (!/html/i.test(contentType)) return result;
+  let next = nextArticlePage(content, url);
+  if (!next) return result;
+  const pages = [url.href];
+  const seen = new Set(pages);
+  let complete = true;
+  while (next) {
+    try {
+      if (pages.length >= 5) throw new Error('ページ数上限');
+      const guard = (candidate: URL) => {
+        if (!isArticlePage(candidate, url) || seen.has(candidate.href))
+          throw new Error('同一記事の未取得ページではありません。');
+      };
+      const page = await fetchPublic(next, guard, deadline);
+      if (!page.response.ok || !/html/i.test(page.response.headers.get('Content-Type') ?? ''))
+        throw new Error('続きの本文を取得できませんでした。');
+      const html = await limitedText(page.response);
+      const extracted = extractHtml(html, page.url.href);
+      if (extracted.text.length < 200 || result.text.length + extracted.text.length + 2 > 120000)
+        throw new Error('続きの本文の長さが取得条件を満たしません。');
+      pages.push(page.url.href);
+      seen.add(page.url.href);
+      result = { ...result, text: `${result.text}\n\n${extracted.text}` };
+      next = nextArticlePage(html, page.url);
+    } catch {
+      complete = false;
+      break;
+    }
+  }
+  return { ...result, pages, complete };
 }
