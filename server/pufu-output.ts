@@ -48,6 +48,81 @@ const sameLanguage = (text: string, language: Language) => {
   return language === 'en' ? !japanese : japanese || !/[a-z]/i.test(text);
 };
 
+const permission =
+  /許可|承認|認可|\b(?:approv(?:e|es|ed|al|ing)|authori[sz](?:e|es|ed|ation|ing)|permit(?:s|ted|ting)?|permission|clearance|cleared for (?:shift use|use|operation))\b/iu;
+const defectFree =
+  /(?:欠け|欠落|誤り|不具合|破損|傷)(?:の|が)な(?:い|く)|\b(?:(?:defect|damage|error)[ -]free|no (?:defects|damage|errors|missing (?:parts|pages))|without (?:any )?(?:defects|damage|errors|missing (?:parts|pages)))\b/iu;
+const usability = /(?:利用|使用)できる|使える状態|\b(?:usable|ready for use|available for use)\b/iu;
+const uncertainSupport =
+  /未確認|未検証|保証(?:しない|できない)|とは限らない|わけではない|確認できない|\b(?:not guaranteed|not verified|not established|cannot guarantee|does not guarantee|not (?:yet )?(?:usable|ready for use|available for use)|not (?:be )?(?:approv(?:e|es|ed|ing)|clear(?:s|ed)?|authori[sz](?:e|es|ed|ing)|permit(?:s|ted|ting)?)|no (?:formal |mandatory )?(?:approval|permission)|(?:approval|permission) is not required)\b/iu;
+
+function assertionClauses(text: string) {
+  const separated = text.replace(
+    /(する|ある|いる|なる|できる|れる|です|ます|した|ない|だ)が、/gu,
+    '$1。',
+  );
+  return sentences(separated)
+    .flatMap((sentence) =>
+      /\bnot only\b/iu.test(sentence)
+        ? [sentence]
+        : sentence.split(/[;；]|\b(?:but|however|whereas)\b|しかし|ただし|けれども/iu),
+    )
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+// 検査・判断という行動だけを、合格・利用可・許可・無欠の保証へ変えない。
+function limitUnsupportedOutcomes(
+  score: PufuScore,
+  supportEvidence: string[],
+  context: PufuContext,
+  language: Language,
+) {
+  const support = [context.task, ...supportEvidence]
+    .flatMap(assertionClauses)
+    .filter((text) => !uncertainSupport.test(text))
+    .join('\n');
+  const check = (text: string) =>
+    /確認|点検|検査|試験|目視|リハーサル|\b(?:check(?:s|ed|ing)?|inspect(?:ion|s|ed|ing)?|test(?:s|ed|ing)?|rehearsal)\b/iu.test(
+      text,
+    );
+  const hasDecision =
+    /判断|決定|可否|\b(?:decid(?:e|es|ed)|decision|judg(?:e|es|ment|ement)|go\/no-go)\b/iu.test(
+      [
+        score.elements.businessScheme.text,
+        ...score.purposes.flatMap((p) => p.measures.map((m) => m.text)),
+      ].join('\n'),
+    );
+  const fallback = (actions: string) =>
+    language === 'ja'
+      ? check(actions)
+        ? hasDecision
+          ? '確認結果を判断に利用できる状態になっている。'
+          : '確認結果が得られている。'
+        : '作業結果が得られている。'
+      : check(actions)
+        ? hasDecision
+          ? 'Check results are available for the decision.'
+          : 'Check results are available.'
+        : 'The work results are available.';
+  const unsupported = (text: string) =>
+    assertionClauses(text).some(
+      (part) =>
+        !uncertainSupport.test(part) &&
+        ((permission.test(part) && !permission.test(support)) ||
+          (defectFree.test(part) && !defectFree.test(support)) ||
+          (usability.test(part) && !usability.test(support))),
+    );
+  if (unsupported(score.winCondition.text))
+    score.winCondition.text = fallback(
+      score.purposes.flatMap((p) => p.measures.map((m) => m.text)).join('\n'),
+    );
+  for (const purpose of score.purposes)
+    if (unsupported(purpose.text))
+      purpose.text = fallback(purpose.measures.map((m) => m.text).join('\n'));
+  if (unsupported(score.elements.quality.text)) score.elements.quality.text = '';
+}
+
 // 未保存の自動生成結果だけを整形。ユーザーの編集・保存経路には適用しない。
 export function normalizeGeneratedScore(
   input: PufuScore,
@@ -79,7 +154,22 @@ export function normalizeGeneratedScore(
         sameLanguage(text, language) &&
         !unknownStatement(text),
     );
-  if (money.length && money.join(' ').length <= 240) score.elements.money.text = money.join(' ');
+  if (money.length && money.join(' ').length <= 240) {
+    // 金銭の文だけを置換し、同じ要素に併記された設備などの条件は保持する。
+    const otherConditions = sentences(score.elements.money.text)
+      .flatMap((text) =>
+        text
+          .split(/[;；]/)
+          .map((part) => part.trim())
+          .filter(Boolean),
+      )
+      .filter((text) => !explicitMoneyCondition(text));
+    // 再適用時も句の境界を残す。小文字で続く英文はSegmenterが1文とみなすため。
+    const combined = otherConditions.length
+      ? [...money.map((text) => text.replace(/[。.]+$/, '')), ...otherConditions].join('; ')
+      : money.join(' ');
+    score.elements.money.text = combined.length <= 240 ? combined : money.join(' ');
+  }
 
   const stocks = (context.stocks ?? (context.stock ? [context.stock] : [])).slice(0, 1);
   const evidence = sentences(
@@ -112,6 +202,20 @@ export function normalizeGeneratedScore(
       ? policy
       : translatedPolicy;
   }
+  const completeEvidence = sentences(
+    [
+      context.details,
+      context.project.description,
+      context.questions?.[0]?.text ?? context.question?.text,
+      ...stocks.flatMap((s) => [
+        s.note,
+        !s.contentIncomplete && !s.contentExcerpted ? s.content : null,
+      ]),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  );
+  limitUnsupportedOutcomes(score, completeEvidence, context, language);
   if (
     (!context.task && (!score.gainingGoal.text || score.gainingGoal.text.length > 200)) ||
     generatedNodes.some((node) => node.text.length > 240)

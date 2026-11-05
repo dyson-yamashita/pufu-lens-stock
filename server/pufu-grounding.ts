@@ -1,31 +1,6 @@
-import { z } from 'zod';
 import type { PufuContext } from '../shared/pufu';
-import { elementKeys } from '../shared/pufu';
 import { excerptParts } from './pufu-context';
 
-// ノード本文は引用ではなく、資料を整理した短い文章を受け取る。
-const text = z.string().trim().min(1).max(240);
-export const pufuDraftSchema = z.strictObject({
-  winCondition: text,
-  purposes: z
-    .array(
-      z.strictObject({
-        text,
-        measures: z
-          .array(
-            z.strictObject({ text, color: z.enum(['white', 'blue', 'green', 'red', 'yellow']) }),
-          )
-          .max(3),
-      }),
-    )
-    .max(4),
-  elements: z.strictObject(
-    Object.fromEntries(elementKeys.map((key) => [key, z.string().trim().max(240)])) as Record<
-      (typeof elementKeys)[number],
-      z.ZodString
-    >,
-  ),
-});
 export type PufuSource = {
   id: string;
   kind: 'article' | 'note' | 'summary';
@@ -36,23 +11,6 @@ export type PufuSource = {
 export function generationInput(context: PufuContext, byteBudget: number) {
   const stocks = (context.stocks ?? (context.stock ? [context.stock] : [])).slice(0, 1);
   const question = context.questions?.[0] ?? context.question;
-  const memory = (value: PufuContext['userMemory'], limit: number) =>
-    value && limit > 0
-      ? {
-          revision: value.revision,
-          data: {
-            interests: value.data.interests
-              .slice(0, 2)
-              .map((text) => text.slice(0, Math.min(100, limit))),
-            knowledge: value.data.knowledge
-              .slice(0, 2)
-              .map(({ text }) => ({ text: text.slice(0, Math.min(300, limit)) })),
-            questions: value.data.questions
-              .slice(0, 2)
-              .map((text) => text.slice(0, Math.min(100, limit))),
-          },
-        }
-      : null;
   const make = (limit: number) => ({
     task: context.task,
     details: context.details ?? '',
@@ -94,8 +52,8 @@ export function generationInput(context: PufuContext, byteBudget: number) {
           ]
         : []),
     ]),
-    userMemory: memory(context.userMemory, Math.floor(limit / 10)),
-    projectMemory: memory(context.projectMemory, Math.floor(limit / 10)),
+    userMemory: null,
+    projectMemory: null,
   });
   const size = (value: ReturnType<typeof make>) =>
     new TextEncoder().encode(JSON.stringify(value)).length;

@@ -1,3 +1,4 @@
+import { mockPufuAi } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import type { Env } from '../server/env';
@@ -50,7 +51,7 @@ const nodes = (score: PufuScore) => [
 ];
 
 it('記事の言い換えを短い施策・八要素として保存し、自動コメントや参考注記を付けない', async () => {
-  const run = vi.fn(async () => ({ response: JSON.stringify(draft) }));
+  const run = mockPufuAi(draft);
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, context);
   expect(score.gainingGoal.text).toBe(context.task);
   expect(score.purposes[0].measures[0].text).toBe(
@@ -62,13 +63,269 @@ it('記事の言い換えを短い施策・八要素として保存し、自動�
   expect(Object.values(score.elements).filter((node) => node.text).length).toBe(6);
   expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
   expect(nodes(score).every((node) => !/^参考|^出典|^仮説/.test(node.text))).toBe(true);
-  expect(run).toHaveBeenCalledTimes(1);
+  expect(run).toHaveBeenCalledTimes(2);
 });
 
+it('点検結果を使用許可が得られた条件へ強めない', async () => {
+  const run = mockPufuAi({
+    ...draft,
+    winCondition: 'Equipment is inspected and cleared for shift use.',
+    purposes: [
+      {
+        text: 'Inspection results are available.',
+        measures: [{ text: 'Inspect equipment.', color: 'white' }],
+      },
+    ],
+    elements: { businessScheme: 'The supervisor decides whether equipment can be used.' },
+  });
+  const score = await generatePufu(
+    { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
+    {
+      ...context,
+      task: 'Equipment inspection checklist',
+      stock: {
+        ...context.stock!,
+        content: 'An operator inspects equipment. The supervisor decides whether it can be used.',
+      },
+    },
+    'en',
+  );
+  expect(score.winCondition.text).toBe('Check results are available for the decision.');
+});
+
+it('欠けの確認だけから欠けなしの要求を追加しない', async () => {
+  const run = mockPufuAi({
+    ...draft,
+    winCondition: '欠けのない画像が揃っている。',
+    purposes: [
+      {
+        text: '欠けのない画像が用意されている。',
+        measures: [{ text: '画像の欠けを確認する。', color: 'white' }],
+      },
+    ],
+    elements: { quality: '欠けのない画像。' },
+  });
+  const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+    ...context,
+    stock: { ...context.stock!, content: '画像の欠けを目視で確認する。' },
+  });
+  expect(score.winCondition.text).toBe('確認結果が得られている。');
+  expect(score.purposes[0].text).toBe('確認結果が得られている。');
+  expect(score.purposes[0].measures[0].text).toBe('画像の欠けを確認する。');
+  expect(score.elements.quality.text).toBe('');
+  expect(score.gainingGoal.text).toBe(context.task);
+});
+
+it.each([
+  {
+    language: 'ja' as const,
+    text: '画像を利用できる状態になっている。',
+    fallback: '確認結果が得られている。',
+  },
+  {
+    language: 'en' as const,
+    text: 'The images are ready for use.',
+    fallback: 'Check results are available.',
+  },
+])(
+  '確認・登録だけから利用可能という結果を追加しない: $language',
+  async ({ language, text, fallback }) => {
+    const action =
+      language === 'ja' ? '画像の欠けを確認して登録する。' : 'Check images and register them.';
+    const run = mockPufuAi({
+      ...draft,
+      winCondition: text,
+      purposes: [{ text, measures: [{ text: action, color: 'white' }] }],
+      elements: { quality: text },
+    });
+    const score = await generatePufu(
+      { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
+      { ...context, stock: { ...context.stock!, content: action } },
+      language,
+    );
+    expect(score.winCondition.text).toBe(fallback);
+    expect(score.purposes[0].text).toBe(fallback);
+    expect(score.elements.quality.text).toBe('');
+  },
+);
+
+it.each([
+  {
+    language: 'ja' as const,
+    condition: '利用できる状態の画像を納品する。',
+    text: '画像を利用できる状態になっている。',
+  },
+  {
+    language: 'en' as const,
+    condition: 'The images must be ready for use.',
+    text: 'The images are ready for use.',
+  },
+])('明示された利用可能という条件を保持する: $language', async ({ language, condition, text }) => {
+  const run = mockPufuAi({ ...draft, winCondition: text, elements: { quality: text } });
+  const score = await generatePufu(
+    { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
+    { ...context, details: condition },
+    language,
+  );
+  expect(score.winCondition.text).toBe(text);
+  expect(score.elements.quality.text).toBe(text);
+});
+
+it.each([
+  {
+    language: 'ja' as const,
+    condition: '画像は利用できるとは限らない。',
+    text: '画像を利用できる状態になっている。',
+  },
+  {
+    language: 'en' as const,
+    condition: 'The images are not ready for use.',
+    text: 'The images are ready for use.',
+  },
+])(
+  '利用不可・未確定を利用可能の裏付けにしない: $language',
+  async ({ language, condition, text }) => {
+    const run = mockPufuAi({ ...draft, winCondition: text, elements: {} });
+    const score = await generatePufu(
+      { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
+      { ...context, details: condition },
+      language,
+    );
+    expect(score.winCondition.text).not.toBe(text);
+  },
+);
+
+it('点検のない施策群へ別の群の点検結果を補わない', async () => {
+  const run = mockPufuAi({
+    ...draft,
+    purposes: [
+      {
+        text: '欠けのない画像が作成されている。',
+        measures: [{ text: '原稿をスキャンする。', color: 'white' }],
+      },
+      {
+        text: '確認結果が得られている。',
+        measures: [{ text: '画像の欠けを確認する。', color: 'white' }],
+      },
+    ],
+    elements: {},
+  });
+  const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+    ...context,
+    stock: { ...context.stock!, content: '原稿をスキャンし、画像の欠けを確認する。' },
+  });
+  expect(score.purposes[0].text).toBe('作業結果が得られている。');
+});
+
+it.each([true, false])('抜粋された本文を許可条件の裏付けにしない: %s', async (excerpted) => {
+  const winCondition = '監督者の使用許可が得られている。';
+  const run = mockPufuAi({
+    ...draft,
+    winCondition,
+    purposes: [
+      {
+        text: '確認結果が得られている。',
+        measures: [{ text: '記録を確認する。', color: 'white' }],
+      },
+    ],
+    elements: {},
+  });
+  const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+    ...context,
+    details: '記録を確認する。',
+    stock: {
+      ...context.stock!,
+      content: '監督者の使用許可を得てから使う。',
+      contentExcerpted: excerpted,
+    },
+  });
+  expect(score.winCondition.text).toBe(excerpted ? '確認結果が得られている。' : winCondition);
+});
+
+it.each(['画像は欠けのない状態とする。', '監督者の使用許可を得てから使う。'])(
+  '明示された品質条件や許可条件は保持する: %s',
+  async (condition) => {
+    const text = condition.includes('欠け')
+      ? '欠けのない画像が揃っている。'
+      : '監督者の使用許可が得られている。';
+    const run = mockPufuAi({ ...draft, winCondition: text });
+    const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+      ...context,
+      details: condition,
+    });
+    expect(score.winCondition.text).toBe(text);
+  },
+);
+
+it.each([
+  'The supervisor must approve equipment before use.',
+  'The supervisor authorizes equipment for use after inspection.',
+])('承認の動詞形でも明示条件を保持する: %s', async (condition) => {
+  const run = mockPufuAi({
+    ...draft,
+    winCondition: 'Equipment is approved for use.',
+    elements: { quality: 'Supervisor approval is required before use.' },
+  });
+  const score = await generatePufu(
+    { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
+    { ...context, details: condition },
+    'en',
+  );
+  expect(score.winCondition.text).toBe('Equipment is approved for use.');
+  expect(score.elements.quality.text).toBe('Supervisor approval is required before use.');
+});
+
+it.each([
+  {
+    condition: 'No approval is required, but the images must have no missing pages.',
+    outcome: 'Images have no missing pages.',
+  },
+  {
+    condition: '欠けのない画像を納品するが、色の再現性は保証できない。',
+    outcome: '欠けのない画像が揃っている。',
+  },
+])('別条件の否定で明示品質を消さない: $condition', async ({ condition, outcome }) => {
+  const run = mockPufuAi({ ...draft, winCondition: outcome, elements: { quality: outcome } });
+  const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+    ...context,
+    details: condition,
+  });
+  expect(score.winCondition.text).toBe(outcome);
+  expect(score.elements.quality.text).toBe(outcome);
+});
+
+it('主語と述語の間の読点で保証不可を切り離さない', async () => {
+  const run = mockPufuAi({ ...draft, winCondition: '欠けのない画像が揃っている。' });
+  const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+    ...context,
+    details: '欠けのない画像は、保証できない。',
+  });
+  expect(score.winCondition.text).toBe('確認結果が得られている。');
+});
+
+it('保証できないという記述を品質保証の裏付けとして使わない', async () => {
+  const run = mockPufuAi({ ...draft, winCondition: '欠けのない画像が揃っている。' });
+  const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+    ...context,
+    stock: { ...context.stock!, content: '画像の欠けを確認するが、欠けのない画像を保証できない。' },
+  });
+  expect(score.winCondition.text).toBe('確認結果が得られている。');
+});
+
+it.each(['欠けのない画像は保証できない。', 'Approval is not required.'])(
+  '保証や承認を否定する正しい条件は肯定の保証と誤認しない: %s',
+  async (condition) => {
+    const run = mockPufuAi({ ...draft, winCondition: condition });
+    const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
+      ...context,
+      details: condition,
+    });
+    expect(score.winCondition.text).toBe(condition);
+  },
+);
+
 it('空欄の目標は成果物を推測し、仮説等の接頭辞やコメントを追加しない', async () => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({ ...draft, gainingGoal: '作品本来の表現を保ったリマスター版' }),
-  }));
+  const run = mockPufuAi({ ...draft, gainingGoal: '作品本来の表現を保ったリマスター版' });
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
     ...context,
     task: '',
@@ -78,26 +335,24 @@ it('空欄の目標は成果物を推測し、仮説等の接頭辞やコメン�
 });
 
 it('分からない八要素は空欄で保存し、未確認という文章で全欄を埋めない', async () => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      elements: {
-        people: '',
-        money: '',
-        time: '',
-        quality: '傷を増やさず修復する必要がある。',
-        businessScheme: '',
-        environment: '',
-        rival: '',
-        foreignEnemy: '',
-      },
-      purposes: [{ text: '修復方針が整理されている。', measures: [] }],
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    elements: {
+      people: '',
+      money: '',
+      time: '',
+      quality: '傷を増やさず修復する必要がある。',
+      businessScheme: '',
+      environment: '',
+      rival: '',
+      foreignEnemy: '',
+    },
+    purposes: [{ text: '修復方針が整理されている。', measures: [] }],
+  });
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, context);
   expect(score.elements.money.text).toBe('');
   expect(score.elements.quality.text).toBe('傷を増やさず修復する必要がある。');
-  expect(score.purposes[0].measures).toEqual([]);
+  expect(score.purposes).toEqual([]);
   expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
 });
 
@@ -129,148 +384,43 @@ it.each([
   if (task) expect(score.gainingGoal.text).toBe(task);
 });
 
-it('プ譜専用モデルのchoices応答から最終回答だけを保存する', async () => {
-  const run = vi.fn(async (_model: string, _input: unknown) => ({
-    choices: [
-      {
-        message: {
-          role: 'assistant',
-          content: JSON.stringify(draft),
-          reasoning_content: '内部検討は保存しない。',
-        },
-      },
-    ],
-  }));
-  const score = await generatePufu(
-    {
-      AI: { run },
-      AI_MODEL: 'default-model',
-      AI_PUFU_MODEL: '@cf/zai-org/glm-4.7-flash',
-    } as unknown as Env,
-    context,
-  );
-  expect(run.mock.calls[0]?.[0]).toBe('@cf/zai-org/glm-4.7-flash');
-  expect(score.winCondition.text).toBe(draft.winCondition);
-  expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
-});
-
-it('GLM-5.3では思考量をlowに制限し、対応するJSON Schema形式で1回だけ生成する', async () => {
-  const response = {
-    ...draft,
-    purposes: [],
-    elements: Object.fromEntries(
-      Object.keys(elements).map((key) => [key, { evidence: '', text: '' }]),
-    ),
-  };
-  const run = vi.fn(async (_model: string, _input: unknown) => ({
-    choices: [{ message: { content: JSON.stringify(response), reasoning_content: '保存しない' } }],
-  }));
-  const score = await generatePufu(
-    {
-      AI: { run },
-      AI_MODEL: 'default-model',
-      AI_PUFU_MODEL: '@cf/zai-org/glm-5.3-flash',
-    } as unknown as Env,
-    context,
-  );
-  expect(run).toHaveBeenCalledTimes(1);
-  expect(run.mock.calls[0]?.[0]).toBe('@cf/zai-org/glm-5.3-flash');
-  const input = run.mock.calls[0]?.[1] as Record<string, unknown>;
-  expect(input).toMatchObject({
-    reasoning_effort: 'low',
-    max_tokens: 6000,
-    response_format: { type: 'json_schema', json_schema: { name: 'pufu', strict: true } },
-  });
-  expect(input).not.toHaveProperty('chat_template_kwargs');
-  expect(JSON.stringify(score)).not.toContain('保存しない');
-});
-
-it('目標も問いもない記事の構成では、同じ呼出し・出力上限の中で方針の整合性を考慮する', async () => {
-  const response = {
-    gainingGoal: '依頼者と合意した方針を満たすリマスター映像',
-    winCondition: draft.winCondition,
-    purposes: [],
-    elements: Object.fromEntries(
-      Object.keys(elements).map((key) => [key, { evidence: '', text: '' }]),
-    ),
-  };
-  const run = vi.fn(async (_model: string, _input: unknown) => ({
-    choices: [{ message: { content: JSON.stringify(response) } }],
-  }));
-  await generatePufu(
-    { AI: { run }, AI_MODEL: 'test', AI_PUFU_MODEL: '@cf/zai-org/glm-5.3-flash' } as unknown as Env,
-    { ...context, task: '' },
-  );
-  expect(run).toHaveBeenCalledTimes(1);
-  expect(run.mock.calls[0]?.[1]).toMatchObject({ reasoning_effort: 'high', max_tokens: 6000 });
-});
-
-it('根拠箇所は内部で照合し、プ譜には言い換えた短文だけを保存する', async () => {
-  const evidence = 'E1';
-  const response = {
-    winCondition: draft.winCondition,
-    purposes: [
-      {
-        text: '修復方針が合意されている。',
-        measures: [
-          {
-            evidence,
-            text: '修復サンプルを提出して方針を確認する。',
-            color: 'white',
-          },
+it.each(['@cf/zai-org/glm-4.7-flash', '@cf/zai-org/glm-5.3-flash'])(
+  'プ譜専用モデル%sで各段階の上限を守り、choicesの最終回答だけを保存する',
+  async (model) => {
+    const run = mockPufuAi(draft);
+    const original = run.getMockImplementation()!;
+    run.mockImplementation(async (...args) => {
+      const answer = (await original(...args)) as { response: string };
+      return {
+        choices: [
+          { message: { content: answer.response, reasoning_content: '内部検討は保存しない。' } },
         ],
-      },
-    ],
-    elements: Object.fromEntries(
-      Object.keys(elements).map((key) => [
-        key,
-        key === 'people'
-          ? { evidence, text: '依頼者・監督と修復会社が方針を確認する体制。' }
-          : { evidence: '', text: '' },
-      ]),
-    ),
-  };
-  const run = vi.fn(async () => ({
-    choices: [{ message: { content: JSON.stringify(response) } }],
-  }));
-  const score = await generatePufu(
-    { AI: { run }, AI_MODEL: 'test', AI_PUFU_MODEL: '@cf/zai-org/glm-5.3-flash' } as unknown as Env,
-    context,
-  );
-  expect(score.purposes[0].measures[0].text).toBe('修復サンプルを提出して方針を確認する。');
-  expect(score.elements.people.text).toBe('依頼者・監督と修復会社が方針を確認する体制。');
-  expect(JSON.stringify(score)).not.toContain('evidence');
-  expect(JSON.stringify(score)).not.toContain(evidence);
-  expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
-});
-
-it('本文にも明示入力にもない根拠文は、空欄へ黙って落とさず再試行可能なエラーにする', async () => {
-  const response = {
-    winCondition: draft.winCondition,
-    purposes: [
-      {
-        text: '状態が整っている。',
-        measures: [{ evidence: 'E999', text: '研修を開催する。', color: 'white' }],
-      },
-    ],
-    elements: Object.fromEntries(
-      Object.keys(elements).map((key) => [key, { evidence: '', text: '' }]),
-    ),
-  };
-  const run = vi.fn(async () => ({
-    choices: [{ message: { content: JSON.stringify(response) } }],
-  }));
-  await expect(
-    generatePufu(
-      {
-        AI: { run },
-        AI_MODEL: 'test',
-        AI_PUFU_MODEL: '@cf/zai-org/glm-5.3-flash',
-      } as unknown as Env,
+      };
+    });
+    const score = await generatePufu(
+      { AI: { run }, AI_MODEL: 'default-model', AI_PUFU_MODEL: model } as unknown as Env,
       context,
-    ),
-  ).rejects.toThrow('根拠');
-});
+    );
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run.mock.calls.map(([name]) => name)).toEqual([model, model]);
+    expect(run.mock.calls.map(([, input]) => input.max_tokens)).toEqual([6000, 2000]);
+    for (const [, input] of run.mock.calls) {
+      expect(input.response_format).toMatchObject({
+        type: 'json_schema',
+        json_schema: { name: 'pufu', strict: true },
+      });
+      if (model.includes('5.3'))
+        expect(input).toMatchObject({
+          reasoning_effort: input.max_tokens === 6000 ? 'low' : 'high',
+        });
+      else expect(input).toMatchObject({ chat_template_kwargs: { enable_thinking: false } });
+      expect(input.messages[0].content).not.toContain('/no_think');
+    }
+    expect(score.winCondition.text).toBe(draft.winCondition);
+    expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
+    expect(JSON.stringify(score)).not.toContain('内部検討');
+  },
+);
 
 it('choices応答の最終回答がなければ思考過程を回答として保存しない', async () => {
   const run = vi.fn(async (_model: string, _input: unknown) => ({
@@ -291,17 +441,15 @@ it('choices応答の最終回答がなければ思考過程を回答として保
 });
 
 it('八要素の定型的な未定語だけを空欄にし、具体的な制約は保持する', async () => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      elements: {
-        ...elements,
-        money: '素材の選定や補修に伴うコストが発生する。',
-        time: '未定',
-        environment: '追加購入は行わない。',
-      },
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    elements: {
+      ...elements,
+      money: '素材の選定や補修に伴うコストが発生する。',
+      time: '未定',
+      environment: '追加購入は行わない。',
+    },
+  });
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, context);
   expect(score.elements.money.text).toBe('素材の選定や補修に伴うコストが発生する。');
   expect(score.elements.time.text).toBe('');
@@ -311,30 +459,26 @@ it('八要素の定型的な未定語だけを空欄にし、具体的な制約�
 it.each(['利用者に必要な情報が届く。', '受付の待ち時間が減る。', '受付の流れが整う。'])(
   '既に状態を表す中間目的を機械的に能力表現へ変えない: %s',
   async (text) => {
-    const run = vi.fn(async () => ({
-      response: JSON.stringify({
-        ...draft,
-        purposes: [{ text, measures: [] }],
-      }),
-    }));
+    const run = mockPufuAi({
+      ...draft,
+      purposes: [{ text, measures: [{ text: '受付の状況を記録する。', color: 'white' }] }],
+    });
     const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, context);
     expect(score.purposes[0].text).toBe(text);
   },
 );
 
 it('未定と不採用しかない資料から施策や担当関係を創作せず、明示された禁止条件を残す', async () => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      purposes: [
-        {
-          text: '実施計画がまとまっている。',
-          measures: [{ text: '実施計画を策定する。', color: 'white' }],
-        },
-      ],
-      elements: { ...elements, people: '未定', businessScheme: '依頼者と実行側が協力する。' },
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    purposes: [
+      {
+        text: '実施計画がまとまっている。',
+        measures: [{ text: '実施計画を策定する。', color: 'white' }],
+      },
+    ],
+    elements: { ...elements, people: '未定', businessScheme: '依頼者と実行側が協力する。' },
+  });
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
     ...context,
     task: '検証方針を整理した文書',
@@ -351,12 +495,10 @@ it('未定と不採用しかない資料から施策や担当関係を創作せ�
 });
 
 it('異言語の未定資料でも翻訳された禁止条件を原文に戻さない', async () => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      elements: { ...elements, environment: 'Events are not held.' },
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    elements: { ...elements, environment: 'Events are not held.' },
+  });
   const score = await generatePufu(
     { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
     {
@@ -373,12 +515,10 @@ it('異言語の未定資料でも翻訳された禁止条件を原文に戻さ�
 });
 
 it('ユーザーが明示した費用・購入の制約を言い換えで弱めない', async () => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      elements: { ...elements, money: 'No additional purchases required.' },
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    elements: { ...elements, money: 'No additional purchases required.' },
+  });
   const score = await generatePufu(
     { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
     {
@@ -390,18 +530,33 @@ it('ユーザーが明示した費用・購入の制約を言い換えで弱め�
   expect(score.elements.money.text).toBe('No additional purchases.');
 });
 
+it('購入制約を原文に戻すときも、同じ事実にある既存の道具の条件を消さない', async () => {
+  const run = mockPufuAi({
+    ...draft,
+    elements: { ...elements, money: 'No additional purchases; use existing tools.' },
+  });
+  const score = await generatePufu(
+    { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
+    {
+      ...context,
+      details: 'One technician. Use existing tools. No additional purchases.',
+    },
+    'en',
+  );
+  expect(score.elements.money.text).toContain('No additional purchases');
+  expect(score.elements.money.text).toContain('use existing tools.');
+});
+
 it.each([
   '既存窓口で試験運用を行うが、イベントは開催しない。',
   '既存窓口で試験運用を行いイベントは開催しない。',
   '既存窓口で試験運用を行うが予算は未定。',
 ])('肯定と否定が混在する文から根拠ある施策を消さない: %s', async (content) => {
   const measures = [{ text: '既存窓口で試験運用を行う。', color: 'white' }];
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      purposes: [{ text: '窓口の運用を確認できる。', measures }],
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    purposes: [{ text: '窓口の運用を確認できる。', measures }],
+  });
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
     ...context,
     stock: { ...context.stock!, content },
@@ -418,12 +573,10 @@ it.each([
   },
   { language: 'ja' as const, details: 'No additional purchases.', money: '追加購入は行わない。' },
 ])('予算の原文保持で生成言語を上書きしない: $language', async ({ language, details, money }) => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      elements: { ...elements, money },
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    elements: { ...elements, money },
+  });
   const score = await generatePufu(
     { AI: { run }, AI_MODEL: 'test' } as unknown as Env,
     {
@@ -438,12 +591,10 @@ it.each([
 it.each(['購入者へヒアリングする。', 'Interview customers about their purchase experience.'])(
   '購入に言及した一般の施策を予算条件に変えない: %s',
   async (details) => {
-    const run = vi.fn(async () => ({
-      response: JSON.stringify({
-        ...draft,
-        elements: { ...elements, money: '' },
-      }),
-    }));
+    const run = mockPufuAi({
+      ...draft,
+      elements: { ...elements, money: '' },
+    });
     const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
       ...context,
       details,
@@ -456,12 +607,10 @@ it.each([
   '現行の手順書には品質基準が記載されていない。',
   '品質基準は記載されていないが、担当者が個別に判断する。',
 ])('プロジェクト内の情報欠如という実際の条件を消さない: %s', async (condition) => {
-  const run = vi.fn(async () => ({
-    response: JSON.stringify({
-      ...draft,
-      elements: { ...elements, quality: condition },
-    }),
-  }));
+  const run = mockPufuAi({
+    ...draft,
+    elements: { ...elements, quality: condition },
+  });
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, {
     ...context,
     stock: { ...context.stock!, content: `${condition}担当者ごとに判断が異なる。` },

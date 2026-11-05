@@ -1,0 +1,205 @@
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { testApp, mockStep } from './helpers';
+import { mockPufuAi } from './pufu-ai-fixture';
+import { runPufu } from '../server/pufu';
+import type { Job } from '../server/env';
+import type { Pufu } from '../shared/pufu';
+
+let app: Awaited<ReturnType<typeof testApp>>;
+beforeEach(async () => {
+  app = await testApp();
+});
+afterEach(async () => {
+  await app.dispose();
+});
+const draft = {
+  winCondition: '窓口の担当者が結果を説明できる。',
+  purposes: [
+    {
+      text: '試験運用の結果が得られている。',
+      measures: [{ text: '既存の窓口で試験運用する。', color: 'white' }],
+    },
+  ],
+  elements: {
+    people: '担当は2名。',
+    money: '',
+    time: '',
+    quality: '',
+    businessScheme: '',
+    environment: '',
+    rival: '',
+    foreignEnemy: '',
+  },
+};
+async function create(details = '担当は2名。既存の窓口で試験運用する。') {
+  const response = await app.request('/api/v1/projects/alice-project/pufus/generate', {
+    method: 'POST',
+    body: {
+      task: '窓口の手順書',
+      details,
+      request_id: crypto.randomUUID(),
+    },
+  });
+  expect(response.status).toBe(202);
+  const { id } = (await response.json()) as { id: string };
+  return (await app.env.DB.prepare(
+    "SELECT * FROM processing_jobs WHERE kind='pufu' AND target_id=?",
+  )
+    .bind(id)
+    .first<Job>())!;
+}
+const get = async (id: string) =>
+  ((await (await app.request(`/api/v1/pufus/${id}`)).json()) as { pufu: Pufu }).pufu;
+
+it('抽出と構成を別々に計数し、完成したプ譜だけを保存する', async () => {
+  const ai = mockPufuAi(draft);
+  app.env.AI = { run: ai };
+  const job = await create();
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(2);
+  expect(
+    (await app.env.DB.prepare('SELECT id,status,attempts FROM ai_calls ORDER BY id').all()).results,
+  ).toEqual([
+    { id: `${job.id}:arrange-pufu-v1`, status: 'done', attempts: 1 },
+    { id: `${job.id}:extract-pufu-facts-v1`, status: 'done', attempts: 1 },
+  ]);
+  expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
+    n: 2,
+  });
+  expect((await get(job.target_id)).status).toBe('ready');
+});
+
+it('本文抽出と短い構成に別モデルを使い、両モデルを保存する', async () => {
+  const ai = mockPufuAi(draft);
+  app.env.AI = { run: ai };
+  app.env.AI_PUFU_MODEL = '@cf/zai-org/glm-5.3-flash';
+  app.env.AI_PUFU_PLAN_MODEL = '@cf/moonshotai/kimi-k2.6';
+  const job = await create();
+  await runPufu(app.env, job, mockStep());
+  expect(ai.mock.calls.map(([model]) => model)).toEqual([
+    '@cf/zai-org/glm-5.3-flash',
+    '@cf/moonshotai/kimi-k2.6',
+  ]);
+  expect(ai.mock.calls[1][1]).toMatchObject({
+    max_tokens: 2000,
+    reasoning_effort: 'none',
+    chat_template_kwargs: { enable_thinking: false },
+    response_format: { json_schema: { name: 'pufu', strict: true } },
+  });
+  expect((await get(job.target_id)).model).toBe(
+    '@cf/zai-org/glm-5.3-flash + @cf/moonshotai/kimi-k2.6',
+  );
+});
+
+it('保存前の再整形でも、購入制約に併記された既存道具の条件を保持する', async () => {
+  await app.request('/api/v1/me', {
+    method: 'PATCH',
+    body: { name: 'Alice', bio: '', language: 'en' },
+  });
+  app.env.AI = {
+    run: mockPufuAi({
+      ...draft,
+      winCondition: 'The team can use the inspection results.',
+      purposes: [
+        {
+          text: 'Inspection results are available.',
+          measures: [{ text: 'Inspect the equipment.', color: 'white' }],
+        },
+      ],
+      elements: {
+        ...draft.elements,
+        people: 'One technician.',
+        money: 'No additional purchases; use existing tools.',
+      },
+    }),
+  };
+  const job = await create('One technician. Use existing tools. No additional purchases.');
+  await runPufu(app.env, job, mockStep());
+  const saved = (await get(job.target_id)).score!;
+  expect(saved.elements.money.text).toContain('No additional purchases');
+  expect(saved.elements.money.text).toContain('use existing tools');
+});
+
+it('2段階目で利用上限に達したら未完成を保存せず、抽出を再送しないで再開する', async () => {
+  const ai = mockPufuAi(draft);
+  app.env.AI = { run: ai };
+  app.env.AI_CALL_DAILY_LIMIT = '1';
+  const job = await create();
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(1);
+  expect(await get(job.target_id)).toMatchObject({ status: 'queued', score: null });
+  expect(
+    (
+      await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?')
+        .bind(job.target_id)
+        .all()
+    ).results,
+  ).toEqual([]);
+  app.env.AI_CALL_DAILY_LIMIT = '2';
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(2);
+  expect(await get(job.target_id)).toMatchObject({
+    status: 'ready',
+    score: { elements: { people: { text: '担当は2名。' } } },
+  });
+});
+
+it('構成が不正なら抽出のキャッシュから再開し、二重送信しない', async () => {
+  const ai = mockPufuAi(draft);
+  const valid = ai.getMockImplementation()!;
+  let calls = 0;
+  ai.mockImplementation(async (...args) => (++calls === 2 ? { response: '{}' } : valid(...args)));
+  app.env.AI = { run: ai };
+  const job = await create();
+  await expect(runPufu(app.env, job, mockStep())).rejects.toThrow('出力形式');
+  await app.env.DB.prepare("UPDATE pufu_scores SET status='queued' WHERE id=?")
+    .bind(job.target_id)
+    .run();
+  await app.env.DB.prepare("UPDATE processing_jobs SET status='pending' WHERE id=?")
+    .bind(job.id)
+    .run();
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(3);
+  expect((await get(job.target_id)).status).toBe('ready');
+  expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
+    n: 3,
+  });
+});
+
+it.each(['delete', 'generation', 'privacy'] as const)(
+  '抽出後の%s変更があれば構成AIを呼ばず保存しない',
+  async (change) => {
+    const ai = mockPufuAi(draft);
+    app.env.AI = { run: ai };
+    const job = await create();
+    const step = mockStep();
+    const original = step.do.bind(step);
+    step.do = (async (name: string, ...args: unknown[]) => {
+      const result = await (original as (...args: unknown[]) => Promise<unknown>)(name, ...args);
+      if (name === 'extract-pufu-facts-v1') {
+        if (change === 'delete')
+          expect(
+            (await app.request(`/api/v1/pufus/${job.target_id}`, { method: 'DELETE' })).status,
+          ).toBe(200);
+        else if (change === 'generation')
+          await app.env.DB.prepare('UPDATE pufu_scores SET generation=generation+1 WHERE id=?')
+            .bind(job.target_id)
+            .run();
+        else
+          await app.env.DB.prepare("INSERT INTO privacy_cleanup_jobs(id,kind) VALUES (?,'pufu')")
+            .bind(job.id)
+            .run();
+      }
+      return result;
+    }) as typeof step.do;
+    await runPufu(app.env, job, step);
+    expect(ai).toHaveBeenCalledTimes(1);
+    expect(
+      (
+        await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?')
+          .bind(job.target_id)
+          .all()
+      ).results,
+    ).toEqual([]);
+  },
+);

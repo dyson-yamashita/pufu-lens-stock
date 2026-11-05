@@ -72,7 +72,7 @@ export const en: Record<string, string> = {
   'manual.article_pages':
     'Explicit next pages of the same article are collected as one stock, up to five pages. Site structure, retrieval failures or size limits may leave only part of the article available.',
   'manual.pufu_grounding':
-    'AI organizes the input and article body into concise goals, intermediate states, actions and eight planning factors. It does not add activities absent from the sources. Missing conditions stay blank. It adds no comments or reference notes. When both the goal and question are blank, it organizes the project described in the article.',
+    'AI organizes the input and article body into concise goals, intermediate states, actions and eight planning factors. It does not add activities absent from the sources. Missing conditions stay blank. It adds no comments or reference notes. When both the goal and question are blank, it organizes the project described in the article. Personal and project memories are not used for Pufu generation.',
   'manual.pufu_titles':
     'You can set an optional title when creating a Pufu. Use the pencil to the right of the title in the details to edit it. Clear it to show the gaining goal from phase 1.',
   'language.label': 'Language',
@@ -740,7 +740,7 @@ export const en: Record<string, string> = {
     'Example: Two people, a budget of $200 per month, validation by the end of next month.\nStart with a small pilot and interviews with users.',
   'ui.pufu_form.questions_insights_related_stocks': 'Questions, insights, related stocks, ',
   'ui.pufu_form.the_project_description_and_your_and_the_project_s':
-    'References and your input, together with the project description and your personal and project memories, inform the win condition and measures.',
+    'The selected question and stock, your input and the project description inform the win condition and measures.',
   'ui.pufu_form.submitting_creation_request': 'Submitting creation request…',
   'ui.pufu_image_modal.pufu_phase_value': 'Pufu phase {{value0}}',
   'ui.pufu_image_modal.zoom_out': 'Zoom out',

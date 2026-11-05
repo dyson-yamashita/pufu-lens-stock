@@ -1,3 +1,4 @@
+import { mockPufuAi } from './pufu-ai-fixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildMemory,
@@ -200,42 +201,41 @@ describe('受け付けたジョブの生成言語', () => {
     await profile('en');
     const response = await app.request('/api/v1/projects/alice-project/pufus/generate', {
       method: 'POST',
-      body: { task: '元の課題', request_id: crypto.randomUUID() },
+      body: {
+        task: '元の課題',
+        details: 'The operator checks the assumptions.',
+        request_id: crypto.randomUUID(),
+      },
     });
     expect(response.status).toBe(202);
     await profile('ja');
-    const systems: string[] = [];
-    app.env.AI = {
-      run: async (_model, input) => {
-        systems.push(input.messages[0].content);
-        return {
-          response: {
-            winCondition: 'Confirm the result with evidence.',
-            purposes: [
-              {
-                text: 'Check the assumptions.',
-                measures: [],
-              },
-            ],
-            elements: {
-              people: '',
-              money: '',
-              time: '',
-              quality: '',
-              businessScheme: '',
-              environment: '',
-              rival: '',
-              foreignEnemy: '',
-            },
-          },
-        };
+    const ai = mockPufuAi({
+      winCondition: 'Confirm the result with evidence.',
+      purposes: [
+        {
+          text: 'The assumptions are understood.',
+          measures: [{ text: 'Check the assumptions.', color: 'white' }],
+        },
+      ],
+      elements: {
+        people: '',
+        money: '',
+        time: '',
+        quality: '',
+        businessScheme: '',
+        environment: '',
+        rival: '',
+        foreignEnemy: '',
       },
-    };
+    });
+    app.env.AI = { run: ai };
     const job = (await latest('pufu'))!;
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job.id), mockStep());
-    expect(systems).toHaveLength(1);
-    expect(systems[0]).toContain('English');
-    expect(systems[0]).not.toContain('必ず日本語');
+    expect(ai).toHaveBeenCalledTimes(2);
+    for (const [, input] of ai.mock.calls) {
+      expect(input.messages[0].content).toContain('English');
+      expect(input.messages[0].content).not.toContain('必ず日本語');
+    }
     const saved = await app.env.DB.prepare('SELECT score_json FROM pufu_scores WHERE id=?')
       .bind(job.target_id)
       .first<{ score_json: string }>();

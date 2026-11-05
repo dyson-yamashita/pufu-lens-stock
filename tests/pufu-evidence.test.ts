@@ -29,6 +29,25 @@ it('切断区間は文単位で除き、同じ段落の完全な文は根拠に�
   expect(prepared.input.sources[0].text).toContain('終端の断片');
 });
 
+it('長い段落も文ごとに分け、別の対象の条件を一つの根拠へ混在させない', () => {
+  const input = generationInput(
+    {
+      ...context,
+      stock: {
+        ...context.stock!,
+        content: '映像には手を加えない。音声は方針に応じてサラウンド化する。',
+      },
+    },
+    30000,
+  );
+  const prepared = prepareEvidenceInput(input);
+  expect([...prepared.sources.values()]).toEqual([
+    '成果物',
+    '映像には手を加えない。',
+    '音声は方針に応じてサラウンド化する。',
+  ]);
+});
+
 it('多数の短い行でも本文を保持し、ラベルの追加は1KiB以内に収める', () => {
   const body = '条件。\n'.repeat(3000);
   const input = generationInput({ ...context, stock: { ...context.stock!, content: body } }, 40000);
@@ -39,6 +58,27 @@ it('多数の短い行でも本文を保持し、ラベルの追加は1KiB以内
   const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
   expect(bytes(prepared.input) - bytes(input)).toBeLessThanOrEqual(1024);
   expect(prepared.sources.size).toBeLessThanOrEqual(85);
+});
+
+it('改行のない多数の短文でも、文間へ改行を増殖させず入力枠を保持する', () => {
+  const input = generationInput(
+    { ...context, stock: { ...context.stock!, content: '条件。'.repeat(6000) } },
+    33000,
+  );
+  const prepared = prepareEvidenceInput(input);
+  const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
+  expect(bytes(prepared.input) - bytes(input)).toBeLessThanOrEqual(1024);
+  expect(
+    prepared.input.sources
+      .map((source) => source.text)
+      .join('')
+      .replace(/\[E\d+\]\n|\[partial\]\n|\s/g, ''),
+  ).toBe(
+    input.sources
+      .map((source) => source.text)
+      .join('')
+      .replace(/\s/g, ''),
+  );
 });
 
 it('切り詰めたプロジェクト説明は根拠IDを付けず背景として保持する', () => {

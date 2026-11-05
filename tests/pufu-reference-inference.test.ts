@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { mockPufuAi } from './pufu-ai-fixture';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 import { testApp, mockEvent, mockStep } from './helpers';
 import { ArticleWorkflow } from '../server/workflows';
 import { elementKeys, type Pufu } from '../shared/pufu';
@@ -134,7 +135,7 @@ it('選択した問い1件とストック本文1件を渡し、空欄の獲得�
   const response = await create(body);
   expect(response.status).toBe(202);
   const { id } = (await response.json()) as { id: string };
-  const ai = vi.fn(async () => ({ response: JSON.stringify(draft) }));
+  const ai = mockPufuAi(draft);
   app.env.AI = { run: ai };
   await run(id);
   const saved = await get(id);
@@ -148,7 +149,7 @@ it('選択した問い1件とストック本文1件を渡し、空欄の獲得�
   });
   const [, input] = ai.mock.calls[0] as unknown as [string, { messages: { content: string }[] }];
   const prompt = JSON.parse(input.messages[1].content);
-  expect(prompt.question.text).toBe('問い合わせ対応をどう改善する？');
+  expect(prompt.question.text.replace(/^\[E\d+\]\n/, '')).toBe('問い合わせ対応をどう改善する？');
   expect(prompt.stocks).toHaveLength(1);
   expect(
     prompt.sources.some((source: { text: string }) => source.text.includes('来月末までに検証')),
@@ -156,7 +157,7 @@ it('選択した問い1件とストック本文1件を渡し、空欄の獲得�
   expect(saved.context.stocks?.[0].content).toContain('既存の窓口');
   expect((await create({ ...body, question_ids: ['q1'] })).status).toBe(200);
   expect((await create({ ...body, stock_ids: ['s2'] })).status).toBe(409);
-  expect(ai).toHaveBeenCalledTimes(1);
+  expect(ai).toHaveBeenCalledTimes(2);
   expect(await (await app.request('/api/v1/pufus')).json()).toMatchObject({
     pufus: [{ id, task: draft.gainingGoal, first_phase_task: draft.gainingGoal }],
   });
@@ -171,7 +172,7 @@ it('問いだけの選択で関連ストック本文も自動参照し、入力�
     purposes: draft.purposes,
     elements: draft.elements,
   };
-  app.env.AI = { run: vi.fn(async () => ({ response: JSON.stringify(manualDraft) })) };
+  app.env.AI = { run: mockPufuAi(manualDraft) };
   await run(id);
   expect(await get(id)).toMatchObject({
     task: '入力した目標',
@@ -233,7 +234,11 @@ it.each([
   { task: '', label: '推測' },
   { task: '目'.repeat(1000), label: '入力済み' },
 ])('$label の目標と長い参照でもAI入力上限を守り明示条件を保持する', async ({ task }) => {
-  const ai = vi.fn(async () => ({ response: JSON.stringify(draft) }));
+  const ai = mockPufuAi(
+    task
+      ? { winCondition: draft.winCondition, purposes: draft.purposes, elements: draft.elements }
+      : draft,
+  );
   app.env.AI = { run: ai };
   const memory = {
     id: 'memory',
@@ -270,14 +275,6 @@ it.each([
     userMemory: memory,
     projectMemory: memory,
   };
-  if (task)
-    ai.mockResolvedValue({
-      response: JSON.stringify({
-        winCondition: draft.winCondition,
-        purposes: draft.purposes,
-        elements: draft.elements,
-      }),
-    });
   await generatePufu(app.env, context);
   const [, input] = ai.mock.calls[0] as unknown as [string, { messages: { content: string }[] }];
   expect(
@@ -287,9 +284,9 @@ it.each([
     ),
   ).toBeLessThanOrEqual(24000);
   const prompt = JSON.parse(input.messages[1].content);
-  expect(prompt.task).toBe(task);
-  expect(prompt.details).toBe(context.details);
-  expect(prompt.question.text).toBe('問'.repeat(500));
+  expect(prompt.task.replace(/^\[E\d+\]\n/, '')).toBe(task);
+  expect(prompt.details.replace(/^\[E\d+\]\n/, '')).toBe(context.details);
+  expect(prompt.question.text.replace(/^\[E\d+\]\n/, '')).toBe('問'.repeat(500));
   expect(prompt.stocks).toHaveLength(1);
   expect(
     prompt.sources.some(
@@ -356,15 +353,13 @@ it('問いの関連ストックが大量にあっても2件だけ確認し、明
   expect(bodyRows).toBeGreaterThan(0);
 });
 
-it('目標だけの入力でも施策を補完せず、空の施策を保存できる', async () => {
-  const ai = vi.fn(async () => ({
-    response: JSON.stringify({
-      gainingGoal: '判断基準を整理する資料',
-      winCondition: '判断の理由を説明できる。',
-      purposes: [{ text: '必要な条件が分かる。', measures: [] }],
-      elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
-    }),
-  }));
+it('目標だけの入力から勝利条件・中間目的・施策を創作しない', async () => {
+  const ai = mockPufuAi({
+    gainingGoal: '判断基準を整理する資料',
+    winCondition: '判断の理由を説明できる。',
+    purposes: [{ text: '必要な条件が分かる。', measures: [] }],
+    elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
+  });
   app.env.AI = { run: ai };
   const result = await generatePufu(app.env, {
     task: '',
@@ -375,7 +370,8 @@ it('目標だけの入力でも施策を補完せず、空の施策を保存で�
     projectMemory: null,
   });
   expect(result.gainingGoal.text).toBe('判断基準を整理する資料');
-  expect(result.purposes[0].measures).toEqual([]);
+  expect(result.purposes).toEqual([]);
+  expect(result.winCondition.text).toBe('');
   expect(result.winCondition.comment.text).toBe('');
 });
 
@@ -395,14 +391,12 @@ it('長い本文の中間・末尾と取得不足を保持し、AI入力は上�
   expect(saved.context.stocks?.[0].content).toContain('中間だけの条件');
   expect(saved.context.stocks?.[0].content).toContain('末尾だけの品質条件');
   expect(saved.context.stocks?.[0].contentIncomplete).toBe(true);
-  const ai = vi.fn(async () => ({
-    response: JSON.stringify({
-      gainingGoal: '資料',
-      winCondition: '判断できる',
-      purposes: [{ text: '必要な条件が整理されている。', measures: [] }],
-      elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
-    }),
-  }));
+  const ai = mockPufuAi({
+    gainingGoal: '資料',
+    winCondition: '判断できる',
+    purposes: [{ text: '必要な条件が整理されている。', measures: [] }],
+    elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
+  });
   app.env.AI = { run: ai };
   const score = await generatePufu(app.env, saved.context);
   const input = ai.mock.calls[0] as unknown as [string, { messages: { content: string }[] }];
@@ -425,13 +419,11 @@ it('各入力が上限でも本文の参照枠を確保し、先頭・中間・�
   const stocks = snapshotStocks([
     { id: 's', title: '題'.repeat(200), note: 'メ'.repeat(2000), summary: null, content: body },
   ]);
-  const ai = vi.fn(async () => ({
-    response: JSON.stringify({
-      winCondition: '状況が分かる',
-      purposes: [{ text: '必要な条件が整理されている。', measures: [] }],
-      elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
-    }),
-  }));
+  const ai = mockPufuAi({
+    winCondition: '状況が分かる',
+    purposes: [{ text: '必要な条件が整理されている。', measures: [] }],
+    elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
+  });
   app.env.AI = { run: ai };
   const score = await generatePufu(app.env, {
     task: '目'.repeat(1000),
@@ -469,13 +461,11 @@ it('プ譜専用モデルでは単独記事の本文全体を4万バイトの枠
     '品質は元の表現を残す。' +
     'え'.repeat(2000) +
     '末尾。';
-  const ai = vi.fn(async () => ({
-    response: JSON.stringify({
-      winCondition: '条件が整理されている。',
-      purposes: [{ text: '方針が合意されている。', measures: [] }],
-      elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
-    }),
-  }));
+  const ai = mockPufuAi({
+    winCondition: '条件が整理されている。',
+    purposes: [{ text: '方針が合意されている。', measures: [] }],
+    elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
+  });
   app.env.AI = { run: ai };
   app.env.AI_PUFU_MODEL = '@cf/zai-org/glm-4.7-flash';
   await generatePufu(app.env, {
@@ -491,7 +481,7 @@ it('プ譜専用モデルでは単独記事の本文全体を4万バイトの枠
     .sources.filter((s: { kind: string }) => s.kind === 'article')
     .map((s: { text: string }) => s.text)
     .join('');
-  expect(text === body).toBe(true);
+  expect(text.replace(/\[E\d+\]\n/g, '').replace(/\s/g, '')).toBe(body.replace(/\s/g, ''));
   expect(
     input.messages.reduce((n, m) => n + new TextEncoder().encode(m.content).length, 0),
   ).toBeLessThanOrEqual(40000);

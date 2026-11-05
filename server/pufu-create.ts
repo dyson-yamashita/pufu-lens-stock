@@ -5,7 +5,6 @@ import type { Question } from '../shared/domain';
 import {
   createPufuSchema,
   pufuEditorVersion,
-  type MemorySnapshot,
   type PufuContext,
   type PufuSummary,
 } from '../shared/pufu';
@@ -84,7 +83,7 @@ export async function createGeneratedPufu(
     throw new HTTPException(400, {
       message: '獲得目標を入力するか、参照する問い・気づきまたはストックを選択してください。',
     });
-  const [questionRows, stockRows, memoryRows] = await env.DB.batch<Record<string, unknown>>([
+  const [questionRows, stockRows] = await env.DB.batch<Record<string, unknown>>([
     env.DB.prepare(
       "SELECT id,text,source FROM questions WHERE project_id=? AND status='ready' AND id IN (SELECT value FROM json_each(?)) ORDER BY id",
     ).bind(project.id, JSON.stringify(questionIds)),
@@ -103,9 +102,6 @@ export async function createGeneratedPufu(
       explicitStockIds.length,
       JSON.stringify(questionIds),
     ),
-    env.DB.prepare(
-      'SELECT id,project_id,revision,text,data_json,updated_at FROM memories WHERE user_id = ? AND (project_id IS NULL OR project_id = ?)',
-    ).bind(principal.user.id, project.id),
   ]);
   // 上限超過は、不足して見える明示選択の検証より先に判定する。
   if (stockRows.results.length > 1)
@@ -141,18 +137,6 @@ export async function createGeneratedPufu(
     question_ids: questionIds,
     stock_ids: stockIds,
   });
-  const snapshot = (memoryProjectId: string | null): MemorySnapshot | null => {
-    const row = memoryRows.results.find((item) => item.project_id === memoryProjectId);
-    return row
-      ? {
-          id: String(row.id),
-          revision: Number(row.revision),
-          text: String(row.text),
-          data: JSON.parse(String(row.data_json)),
-          updated_at: String(row.updated_at),
-        }
-      : null;
-  };
   const context: PufuContext = {
     question: questions[0] ?? null,
     questions,
@@ -162,8 +146,8 @@ export async function createGeneratedPufu(
     project,
     stock: stocks[0] ? snapshotStocks([stocks[0]])[0] : null,
     stocks: snapshotStocks(stocks),
-    userMemory: snapshot(null),
-    projectMemory: snapshot(project.id),
+    userMemory: null,
+    projectMemory: null,
   };
   const jobId = `pufu-job-${id}-1`;
   const guard = {

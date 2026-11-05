@@ -125,8 +125,8 @@ describe('プロジェクトに所属する独立した問い', () => {
     const { pufu } = (await (await app.request(`/api/v1/pufus/${id}`)).json()) as { pufu: Pufu };
     expect(pufu.status).toBe('ready');
     expect(pufu.context.stock).toBeNull();
-    expect(pufu.context.userMemory).toMatchObject({ revision: 3, text: 'ユーザーの知識' });
-    expect(pufu.context.projectMemory).toMatchObject({ revision: 3, text: 'プロジェクトの知識' });
+    expect(pufu.context.userMemory).toBeNull();
+    expect(pufu.context.projectMemory).toBeNull();
     expect(pufu.score?.gainingGoal.text).toBe('問いを検証する');
     expect((await app.request('/api/v1/projects/alice-project', { method: 'DELETE' })).status).toBe(
       200,

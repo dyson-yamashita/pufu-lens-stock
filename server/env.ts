@@ -26,7 +26,7 @@ export interface Env {
         max_tokens: number;
         temperature: number;
         chat_template_kwargs?: { enable_thinking: boolean };
-        reasoning_effort?: 'low' | 'high';
+        reasoning_effort?: 'low' | 'high' | 'none';
         response_format?: { type: 'json_schema'; json_schema: unknown };
       },
     ): Promise<unknown>;
@@ -41,6 +41,7 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   AI_MODEL: string;
   AI_PUFU_MODEL?: string;
+  AI_PUFU_PLAN_MODEL?: string;
   AI_PUFU_DAILY_LIMIT?: string;
   AI_MEMORY_DAILY_LIMIT?: string;
   AI_ARTICLE_DAILY_LIMIT?: string;
