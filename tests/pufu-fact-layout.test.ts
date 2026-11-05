@@ -60,7 +60,7 @@ it('事実の要約と構成を分け、施策と八要素には抽出した文�
   expect(score.elements.environment.text).toBe('既存の環境を利用する。');
   const layoutInput = run.mock.calls[1][1].messages[1].content;
   expect(layoutInput).toContain(decision);
-  expect(layoutInput).not.toContain('リハーサルを用いて確認する。');
+  expect(JSON.parse(layoutInput).qualityConditions).toEqual(['リハーサルを用いて確認する。']);
   expect(JSON.stringify(score)).not.toMatch(/必須|上位規格|他社|evidence|factId/);
   expect(score.winCondition.comment.text).toBe('');
 });
@@ -285,7 +285,7 @@ it('本文は抽出段階で参照し、構成段階へは抽出した短文だ�
   expect(first.messages[1].content).toContain('再取り込み');
   expect(second.messages[1].content).not.toContain('再取り込み');
   expect(second.messages[1].content).not.toContain('他社');
-  expect(second.messages[1].content).not.toContain(title);
+  expect(JSON.parse(second.messages[1].content).sourceTitle).toBe(title);
   expect(second.messages[1].content).toContain('段階的デプロイをリハーサルで確認する。');
   expect(
     new TextEncoder().encode(first.messages.map((m) => m.content).join('')).length,
