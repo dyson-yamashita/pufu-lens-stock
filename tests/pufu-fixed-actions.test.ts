@@ -37,12 +37,37 @@ const env = (run: NonNullable<Env['AI']>['run']) =>
 it('抽出された全施策を抽出順に固定し、構成AIに省略や取り違えを許さない', async () => {
   const run = provider(plan);
   const score = await generatePufu(env(run), context);
+  expect(score.winCondition.text).toBe(plan.winCondition);
   expect(score.purposes.map((purpose) => purpose.measures.map((measure) => measure.text))).toEqual(
     actions.map((text) => [text]),
   );
   expect(JSON.parse(run.mock.calls[1][1].messages[1].content).actionGroups).toEqual(
     actions.map((text, index) => ({ purpose: index + 1, actions: [text] })),
   );
+});
+
+it.each([
+  [
+    'ja',
+    '作品側と合意した方針に基づき、素材選定・補修・クリーニング・スキャン・ゴミ除去・音声処理・グレーディング・巻つなぎを経て、用途別のデータが作成されている。',
+  ],
+  [
+    'en',
+    'The team has prepared the materials, checked each intermediate result, reviewed the findings with the project owner and delivered the completed guide for its intended use.',
+  ],
+  ['ja', '成果物が納品されている。検証結果も確認できる。'],
+  ['en', 'The guide is delivered. The check results are available.'],
+  ['en', 'Dr. Smith has the check results. The guide is delivered.'],
+] as const)('長すぎる勝利条件や複数文を受理しない: %s %s', async (language, winCondition) => {
+  await expect(
+    generatePufu(env(provider({ ...plan, winCondition })), context, language),
+  ).rejects.toThrow('出力形式');
+});
+
+it('英語の役職略語にあるピリオドを文末とみなさない', async () => {
+  const winCondition = "The results are ready for Dr. Smith's decision.";
+  const score = await generatePufu(env(provider({ ...plan, winCondition })), context, 'en');
+  expect(score.winCondition.text).toBe(winCondition);
 });
 
 it('構成モデルが目的のまとまりを減らして最終成果物の施策を落とそうとしても受理しない', async () => {
