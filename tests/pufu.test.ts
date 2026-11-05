@@ -104,19 +104,46 @@ describe('問いからプ譜を生成・編集・保存する', () => {
     return job!;
   }
 
-  it('異なるrequest_idを25件送ってもAI生成はユーザー日次上限20件まで', async () => {
+  it('異なるrequest_idを15件送ってもAI生成はユーザー日次上限10件まで', async () => {
     const ai = mockPufuAi(draft);
     app.env.AI = { run: ai };
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 15; i++) {
       const response = await create();
-      expect(response.status).toBe(i < 20 ? 202 : 429);
-      if (i < 20) {
+      expect(response.status).toBe(i < 10 ? 202 : 429);
+      if (i < 10) {
         const { id } = (await response.json()) as { id: string };
         await run(id);
       }
     }
-    expect(ai).toHaveBeenCalledTimes(40);
+    expect(ai).toHaveBeenCalledTimes(20);
   }, 20000);
+  it('プ譜の明示再試行も10件の枠を消費し、上限時は世代を進めない', async () => {
+    const id = await make();
+    await app.env.DB.batch([
+      app.env.DB.prepare("UPDATE pufu_scores SET status='failed' WHERE id=?").bind(id),
+      app.env.DB.prepare("UPDATE processing_jobs SET status='failed' WHERE target_id=?").bind(id),
+      app.env.DB.prepare(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<8) INSERT INTO ai_operations(id,user_id,kind) SELECT 'used-pufu-'||i,'alice','pufu' FROM n",
+      ),
+    ]);
+    const retry = () => app.request(`/api/v1/pufus/${id}/retry`, { method: 'POST' });
+    expect((await retry()).status).toBe(202);
+    expect((await get(id)).generation).toBe(2);
+    expect((await create()).status).toBe(429);
+    await app.env.DB.batch([
+      app.env.DB.prepare("UPDATE pufu_scores SET status='failed' WHERE id=?").bind(id),
+      app.env.DB.prepare("UPDATE processing_jobs SET status='failed' WHERE target_id=?").bind(id),
+    ]);
+    const blocked = await retry();
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get('Retry-After')).toBeTruthy();
+    expect((await get(id)).generation).toBe(2);
+    expect(
+      await app.env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM ai_operations WHERE user_id='alice' AND kind='pufu'",
+      ).first(),
+    ).toEqual({ n: 10 });
+  });
   it('生成済みのプ譜の有無を返し、複数作成しても問いの一覧と件数が重複しない', async () => {
     const list = async () => {
       const response = await app.request('/api/v1/questions');

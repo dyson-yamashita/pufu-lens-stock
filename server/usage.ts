@@ -8,7 +8,7 @@ const setting = (value: string | undefined, fallback: number) =>
     ? Number(value)
     : fallback;
 export const limits = (env: Env) => ({
-  pufu: setting(env.AI_PUFU_DAILY_LIMIT, 20),
+  pufu: setting(env.AI_PUFU_DAILY_LIMIT, 10),
   memory: setting(env.AI_MEMORY_DAILY_LIMIT, 48),
   article: setting(env.AI_ARTICLE_DAILY_LIMIT, 200),
   question: setting(env.AI_QUESTION_DAILY_LIMIT, 200),
