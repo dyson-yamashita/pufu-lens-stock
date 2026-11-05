@@ -48,12 +48,19 @@ const env = (run: NonNullable<Env['AI']>['run']) =>
   ({ AI: { run }, AI_MODEL: 'test' }) as unknown as Env;
 
 it('事実の要約と構成を分け、施策と八要素には抽出した文をそのまま使う', async () => {
-  const run = provider();
+  const decision = '運用担当者が実施可否を決める。';
+  const run = provider({
+    ...facts,
+    elements: { ...facts.elements, businessScheme: [sourced(decision)] },
+  });
   const score = await generatePufu(env(run), context);
   expect(score.gainingGoal.text).toBe('運用チェックリスト');
   expect(score.purposes[0].measures[0].text).toBe('段階的デプロイをリハーサルで確認する。');
   expect(score.elements.quality.text).toBe('リハーサルを用いて確認する。');
   expect(score.elements.environment.text).toBe('既存の環境を利用する。');
+  const layoutInput = run.mock.calls[1][1].messages[1].content;
+  expect(layoutInput).toContain(decision);
+  expect(layoutInput).not.toContain('リハーサルを用いて確認する。');
   expect(JSON.stringify(score)).not.toMatch(/必須|上位規格|他社|evidence|factId/);
   expect(score.winCondition.comment.text).toBe('');
 });
