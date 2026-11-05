@@ -156,7 +156,11 @@ export function createApp(trustedPrincipal?: Principal) {
                 (c.req.path === '/api/v1/stocks' ||
                   /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
               ? 163840
-              : 16384,
+              : c.req.method === 'POST' &&
+                  (/^\/api\/v1\/projects\/[^/]+\/pufus\/generate$/.test(c.req.path) ||
+                    /^\/api\/v1\/questions\/[^/]+\/pufus$/.test(c.req.path))
+                ? 65536
+                : 16384,
         onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
       })(c, next),
   );

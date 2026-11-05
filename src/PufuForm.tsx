@@ -4,6 +4,7 @@ import { LoaderCircle, Plus } from 'lucide-react';
 import type { Project } from '../shared/domain';
 import { createPufuSchema } from '../shared/pufu';
 import { createRequestId, send } from './api';
+import RelationPicker, { type RelationOption } from './RelationPicker';
 export default function PufuForm({
   projects,
   projectId,
@@ -24,6 +25,8 @@ export default function PufuForm({
   const [title, setTitle] = useState('');
   const [task, setTask] = useState('');
   const [details, setDetails] = useState('');
+  const [questions, setQuestions] = useState<RelationOption[]>([]);
+  const [stocks, setStocks] = useState<RelationOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const request = useRef<{
@@ -35,12 +38,28 @@ export default function PufuForm({
     if (busy || disabled) return;
     const text = task.trim();
     const extra = details.trim();
-    const key = JSON.stringify([project, questionId, title.trim(), text, extra]);
+    if (!text && !questionId && !questions.length && !stocks.length) {
+      setError(t('ui.pufu_form.goal_or_references_required'));
+      return;
+    }
+    const questionIds = questions.map((item) => item.id).sort();
+    const stockIds = stocks.map((item) => item.id).sort();
+    const key = JSON.stringify([
+      project,
+      questionId,
+      questionIds,
+      stockIds,
+      title.trim(),
+      text,
+      extra,
+    ]);
     if (request.current?.input !== key) request.current = { input: key, id: createRequestId() };
     const input = createPufuSchema.safeParse({
       title: title.trim(),
       task: text,
       details: extra,
+      question_ids: questionIds,
+      stock_ids: stockIds,
       request_id: request.current.id,
     });
     if (!input.success) {
@@ -82,7 +101,12 @@ export default function PufuForm({
           <select
             id="pufu-project"
             value={project}
-            onChange={(event) => setProject(event.target.value)}
+            onChange={(event) => {
+              setProject(event.target.value);
+              setQuestions([]);
+              setStocks([]);
+              setError('');
+            }}
             disabled={busy || !projects.length}
             required
           >
@@ -95,6 +119,28 @@ export default function PufuForm({
           </select>
         </>
       )}
+      <details className="pufu-relations" open>
+        <summary>{t('ui.pufu_form.reference_materials')}</summary>
+        <p className="field-hint">{t('ui.pufu_form.reference_help')}</p>
+        {!questionId && (
+          <RelationPicker
+            key={`${project}-questions`}
+            kind="questions"
+            projectId={project}
+            value={questions}
+            onChange={setQuestions}
+            disabled={busy || disabled}
+          />
+        )}
+        <RelationPicker
+          key={`${project}-stocks`}
+          kind="stocks"
+          projectId={project}
+          value={stocks}
+          onChange={setStocks}
+          disabled={busy || disabled}
+        />
+      </details>
       <label htmlFor="pufu-title">
         {t('ui.app.title_2')}
         <span className="optional">{t('ui.app.optional')}</span>
@@ -115,6 +161,7 @@ export default function PufuForm({
           ? t('ui.pufu_form.task_inspired_by_this_question_or_insight')
           : t('ui.public_projects.task')}
         <span className="task-caption">{t('ui.public_pufu_score.gaining_goal')}</span>
+        <span className="optional">{t('ui.app.optional')}</span>
       </label>
       <p className="field-hint" id="pufu-task-help">
         {t('ui.pufu_form.what_state_do_you_want_to_achieve_your_text')}
@@ -126,7 +173,6 @@ export default function PufuForm({
         onInput={(event) => setTask(event.currentTarget.value)}
         rows={5}
         maxLength={1000}
-        required
         disabled={busy}
         placeholder={t(
           'ui.pufu_form.example_build_a_system_that_reliably_completes_summaries_even',
@@ -150,7 +196,6 @@ export default function PufuForm({
         placeholder={t('ui.pufu_form.example_two_people_a_budget_of_200_per_month')}
       />
       <p className="field-hint">
-        {questionId ? t('ui.pufu_form.questions_insights_related_stocks') : ''}
         {t('ui.pufu_form.the_project_description_and_your_and_the_project_s')}
       </p>
       {error && (
@@ -159,7 +204,15 @@ export default function PufuForm({
         </p>
       )}
       <div className="form-actions">
-        <button className="button primary" disabled={busy || disabled || !project || !task.trim()}>
+        <button
+          className="button primary"
+          disabled={
+            busy ||
+            disabled ||
+            !project ||
+            (!task.trim() && !questionId && !questions.length && !stocks.length)
+          }
+        >
           {busy ? (
             <LoaderCircle className="spin" size={18} aria-hidden="true" />
           ) : (

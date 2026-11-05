@@ -14,6 +14,10 @@
       "src/PufuForm.tsx",
       "server/pufu-title.ts",
       "server/pufu-create.ts",
+      "server/pufu-context.ts",
+      "shared/pufu.ts",
+      "shared/locales/generation-ja.ts",
+      "shared/locales/generation-en.ts",
       "src/PufuEditor.tsx",
       "src/Pufus.tsx",
       "src/PufuImagePreview.tsx",
@@ -22,6 +26,7 @@
       "server/pufu-phases.ts"
     ],
     "aspects": [
+      "作成時に問い・ストックを選択し、獲得目標と補足が空でも生成して再読込後に目標・関連を保持",
       "関連するストックと問い・気づきは初期状態で閉じ、個別に開閉できる",
       "実Editorで編集保存",
       "再読込後も編集内容が残る",

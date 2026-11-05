@@ -17,7 +17,12 @@ export const limits = (env: Env) => ({
   concurrentCalls: setting(env.AI_CONCURRENT_CALLS, 5),
 });
 const category = (kind: Job['kind']) => (kind.endsWith('_memory') ? 'memory' : kind);
-export function reserveOperation(env: Env, job: Pick<Job, 'id' | 'user_id' | 'kind'>) {
+type OperationGuard = { sql: string; params: (string | number | null)[] };
+export function reserveOperation(
+  env: Env,
+  job: Pick<Job, 'id' | 'user_id' | 'kind'>,
+  guard?: OperationGuard,
+) {
   const kind = category(job.kind);
   const config = limits(env);
   const maximum = config[kind as 'pufu' | 'memory' | 'article' | 'question'];
@@ -29,7 +34,8 @@ export function reserveOperation(env: Env, job: Pick<Job, 'id' | 'user_id' | 'ki
       WHERE o.user_id=? AND j.status NOT IN ('done','failed')
       AND NOT (j.kind='question' AND j.status='pending')) < ?
     AND (SELECT COUNT(*) FROM ai_attempts WHERE user_id=? AND created_at>?) < ?
-    AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running') < ?`,
+    AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running') < ?
+    AND (${guard?.sql ?? '1'})`,
   ).bind(
     job.id,
     job.user_id,
@@ -45,12 +51,13 @@ export function reserveOperation(env: Env, job: Pick<Job, 'id' | 'user_id' | 'ki
     config.calls,
     job.user_id,
     config.concurrentCalls,
+    ...(guard?.params ?? []),
   );
 }
-export function assertOperation(env: Env, id: string) {
+export function assertOperation(env: Env, id: string, guard?: OperationGuard) {
   return env.DB.prepare(
-    'INSERT INTO quota_assertions (ok) SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM ai_operations WHERE id=?)',
-  ).bind(id);
+    `INSERT INTO quota_assertions (ok) SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM ai_operations WHERE id=?) AND (${guard?.sql ?? '1'})`,
+  ).bind(id, ...(guard?.params ?? []));
 }
 class AiInvocationError extends Error {}
 export async function invokeAi(

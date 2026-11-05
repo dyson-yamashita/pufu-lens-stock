@@ -50,6 +50,30 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     title: 'E2Eプ譜の関連するストック',
     text: 'プ譜の折りたたみ表示を確認するための本文です。',
   });
+  await app.open('/#pufus');
+  await screen.getByRole('button', 'プ譜を追加').click();
+  await browser.locator('#pufu-project').selectOption({ value: fixture.projectId });
+  await expect(screen.getByRole('button', 'プ譜を作成')).toBeDisabled();
+  await screen.getByRole('checkbox', 'E2Eプ譜の関連する問い', { exact: true }).check();
+  await screen.getByRole('checkbox', 'E2Eプ譜の関連するストック', { exact: true }).check();
+  await expect(browser.locator('#pufu-task')).toHaveValue('');
+  await expect(browser.locator('#pufu-details')).toHaveValue('');
+  await screen.getByRole('button', 'プ譜を作成').click();
+  await expect(screen.getByRole('button', '編集する')).toBeVisible();
+  const generated = (await fixture.request('/pufus')) as {
+    pufus: { id: string; task: string; question_ids: string[]; stock_ids: string[] }[];
+  };
+  expect(generated.pufus).toHaveLength(1);
+  const inferred = generated.pufus[0];
+  expect(inferred.task.length).toBeGreaterThan(0);
+  expect(inferred.question_ids).toEqual([question.id]);
+  expect(inferred.stock_ids).toEqual([stock.id]);
+  await app.open(`/#pufu/${inferred.id}`);
+  await expect(browser.locator('.pufu-context-task')).toContainText(inferred.task);
+  expect(await fixture.request(`/pufus/${inferred.id}`)).toMatchObject({
+    pufu: { task: inferred.task, score: { gainingGoal: { text: inferred.task } } },
+  });
+  await fixture.request(`/pufus/${inferred.id}`, 'DELETE');
   const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,
     request_id: requestId(),

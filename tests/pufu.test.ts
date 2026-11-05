@@ -795,8 +795,7 @@ describe('問いからプ譜を生成・編集・保存する', () => {
   });
 
   it('入力上限・不正なID・未完成の問い・不正なプ譜を拒否する', async () => {
-    for (const task of ['', '  ', '課'.repeat(1001)])
-      expect((await create('question', task)).status).toBe(400);
+    expect((await create('question', '課'.repeat(1001))).status).toBe(400);
     expect((await create('pending')).status).toBe(409);
     expect((await create('missing')).status).toBe(404);
     expect(

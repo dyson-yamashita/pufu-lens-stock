@@ -9,6 +9,7 @@ export const generationEn = {
   'question.template':
     'What conditions or tests would be needed to apply “{{point}}” to “{{project}}”{{note}}?',
   'question.note': ', considering the saved note',
+  'pufu.inferredGoal': 'Hypothesis: build a way to address the issue suggested by “{{reference}}”.',
   'pufu.knowledge': 'Gather evidence and test the hypothesis.',
   'pufu.winCondition':
     'Achievement of “{{task}}” can be confirmed through evidence and test results addressing the original question.',

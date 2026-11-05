@@ -705,22 +705,29 @@ export const ja: Record<string, string> = {
   'ui.pufu_editor_load_error.your_pufu_is_saved_reload_the_page_and_try':
     '作成したプ譜は保存されています。画面を再読み込みして、もう一度お試しください。',
   'ui.pufu_editor_load_error.reload_page': '画面を再読み込み',
+  'ui.pufu_form.reference_materials': '参照する問い・気づきとストック',
+  'ui.pufu_form.reference_help':
+    '同じプロジェクトの資料を複数選択できます。問いに紐づくストックも自動で参照します。ストックは要約・メモに加えて取得済みの本文も使います。長い資料や資料が多い場合は、一部を参照します。',
+  'ui.pufu_form.goal_or_references_required':
+    '獲得目標を入力するか、参照する問い・気づきまたはストックを選択してください。',
+  'error.pufu_question_reference_limit': '参照する問い・気づきは100件以内にしてください。',
+  'error.pufu_reference_limit': '参照するストックは関連分を含めて100件以内にしてください。',
   'ui.pufu_form.select_a_project': 'プロジェクトを選択してください。',
   'ui.pufu_form.create_a_pufu_to_work_toward_the_state_you':
-    '実現したいことから、解決に向けたプ譜をつくります。',
+    '実現したいことや、問い・ストックをもとにプ譜をつくります。',
   'ui.pufu_form.task_inspired_by_this_question_or_insight': '問い・気づきから考える課題',
   'ui.pufu_form.what_state_do_you_want_to_achieve_your_text':
-    'どんな状態を実現したいですか？ 入力した内容を、そのままプ譜の獲得目標にします。',
+    '入力した内容を、そのまま獲得目標にします。空欄の場合は、参照する問い・ストックからAIが推測します。',
   'ui.pufu_form.example_build_a_system_that_reliably_completes_summaries_even':
     '例：記事の取得が途中で失敗しても、要約まで確実に完了できる仕組みをつくる。',
   'ui.pufu_form.eight_planning_factors_planned_measures': '廟算八要素・取り組む予定の施策',
   'ui.pufu_form.describe_people_money_time_quality_business_scheme_environment_rivals':
-    '人員・予算・時間・品質・ビジネススキーム・環境・競合・外敵の状況や、取り組む予定の施策を自由に書けます。入力した内容をプ譜の生成に使います（4,000文字まで）。',
+    '人員・予算・時間・品質・ビジネススキーム・環境・競合・外敵の状況や、予定の施策を自由に書けます（4,000文字まで）。未入力の情報は問い・ストックからAIが補い、推測は仮説、根拠がない情報は未確認とします。',
   'ui.pufu_form.example_two_people_a_budget_of_200_per_month':
     '例：担当は2名、予算は月3万円、来月末までに検証する。\nまず小規模な試験運用を行い、利用者へのヒアリングを予定している。',
   'ui.pufu_form.questions_insights_related_stocks': '問い・気づき・関連するストック・',
   'ui.pufu_form.the_project_description_and_your_and_the_project_s':
-    'プロジェクトの説明・あなたとプロジェクトのメモリも参考に、勝利条件や施策を生成します。',
+    '参照資料と入力内容に、プロジェクトの説明・あなたとプロジェクトのメモリも合わせて、勝利条件や施策を生成します。',
   'ui.pufu_form.submitting_creation_request': '作成を受け付けています…',
   'ui.pufu_image_modal.pufu_phase_value': '第{{value0}}局面のプ譜',
   'ui.pufu_image_modal.zoom_out': '縮小',
@@ -778,7 +785,7 @@ export const ja: Record<string, string> = {
   'ui.pufus.no_pufu_yet': 'プ譜はまだありません',
   'ui.pufus.use_the_star_button_on_a_pufu_to_add': 'プ譜の星ボタンからお気に入りに追加できます。',
   'ui.pufus.choose_add_pufu_and_enter_a_gaining_goal_to':
-    '「プ譜を追加」から獲得目標を入力して作成できます。問い・気づきからも作成できます。',
+    '「プ譜を追加」から獲得目標を入力するか、参照する問い・ストックを選んで作成できます。問い・気づきからも作成できます。',
   'ui.pufus.question_or_insight': '問い・気づき：',
   'ui.pufus.value_more': ' (他{{value0}}件)',
   'ui.pufus.stock': 'ストック：',
@@ -902,7 +909,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     '「プ譜」一覧の「プ譜を追加」を押し、保存先のプロジェクトを選びます。問いから作る場合は、問いの詳細の「プ譜」タブで「問い・気づきから考える」を選びます。',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    '実現したい状態を獲得目標として書きます。「廟算八要素・取り組む予定の施策」には、人員・予算・時間などの状況や予定している施策を任意で入力できます。「プ譜を作成」を押すと、これらを参考に案を生成します。',
+    '参照する問い・気づきやストックを選択します。問いに紐づくストックも自動で参照し、要約・メモと取得済みの本文を使います（長い資料や資料が多い場合は一部を参照）。獲得目標を入力するとそのまま使い、空欄なら参照資料からAIが推測します。「廟算八要素・取り組む予定の施策」も任意で入力できます。未入力の情報は資料から補い、推測は仮説、根拠がない情報は未確認とします。「プ譜を作成」で案を生成します。',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'プ譜の画像を押すと、拡大表示できます。ピンチや＋・−で拡大縮小し、ドラッグで移動します。',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':
