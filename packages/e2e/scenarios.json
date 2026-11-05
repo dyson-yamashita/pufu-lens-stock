@@ -42,10 +42,12 @@
       "server/pufu-evidence.ts",
       "server/pufu-ai.ts",
       "server/pufu-source-facts.ts",
-      "server/pufu-plan.ts"
+      "server/pufu-plan.ts",
+      "server/pufu-cases.ts"
     ],
     "aspects": [
       "作成時に問い・ストックは各1件まで選択でき、選び直しは置換し、獲得目標と補足が空でも生成して再読込後に目標・関連を保持",
+      "記事整理時の主要事例を対象付きで保持し、独自の目標や問いへ事例の素材条件・処理を転用しない（意味の評価は実モデル、根拠・配置・上限はVitest）",
       "生成と明示再試行の既定上限は1人あたり直近24時間で10件。11件目の429・再試行時の世代不変はVitestで検証",
       "関連するストックと問い・気づきは初期状態で閉じ、個別に開閉できる",
       "実Editorで編集保存",
