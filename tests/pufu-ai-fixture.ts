@@ -10,7 +10,7 @@ type Draft = {
 };
 
 // API/保存のテスト用。文章の意味の正しさは実モデルによる記事との比較で検証する。
-export function mockPufuAi(draft: Draft) {
+export function mockPufuAi(draft: Draft, reviewIssues: string[] = []) {
   const actions = draft.purposes.flatMap((purpose) => purpose.measures);
   return vi.fn<NonNullable<Env['AI']>['run']>(async (_model, input) => {
     const jsonSchema = input.response_format?.json_schema as Record<string, unknown>;
@@ -36,6 +36,7 @@ export function mockPufuAi(draft: Draft) {
       };
     }
     const raw = JSON.parse(input.messages[1].content);
+    if ('winCondition' in raw) return { response: JSON.stringify(reviewDraft(raw, reviewIssues)) };
     if (!('actionGroups' in raw))
       return { response: JSON.stringify(integrationDraft(draft.winCondition, raw)) };
     const data = raw as {
@@ -80,6 +81,15 @@ export function integrationDraft(
     winCondition,
   };
 }
+export function reviewDraft(data: { purposes: { purpose: number }[] }, issues: string[] = []) {
+  return {
+    purposeChecks: data.purposes.map((p) => ({ purpose: p.purpose, integrated: !issues.length })),
+    elementChecks: Object.fromEntries(elementKeys.map((key) => [key, true])),
+    grounded: !issues.length,
+    wholeSituation: !issues.length,
+    issues,
+  };
+}
 export function mockPufuStages(facts: unknown, plan: unknown) {
   return vi.fn<NonNullable<Env['AI']>['run']>().mockImplementation(async (_model, input) => {
     const data = JSON.parse(input.messages[1].content);
@@ -88,7 +98,9 @@ export function mockPufuStages(facts: unknown, plan: unknown) {
         ? facts
         : 'actionGroups' in data
           ? purposeDraft(plan)
-          : integrationDraft((plan as { winCondition?: unknown })?.winCondition, data);
+          : 'winCondition' in data
+            ? reviewDraft(data)
+            : integrationDraft((plan as { winCondition?: unknown })?.winCondition, data);
     return { response: JSON.stringify(value) };
   });
 }

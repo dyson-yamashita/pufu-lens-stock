@@ -6,6 +6,21 @@ import type { PufuFacts } from './pufu-source-facts';
 import { callPufuModel, pufuPlanModel } from './pufu-ai';
 import { pufuGenerationDefinitions } from './pufu-guideline';
 import { cleanGeneratedText, normalizeGeneratedScore } from './pufu-output';
+import { articleReconstruction } from './pufu-cases';
+
+export function pufuWinInput(context: PufuContext, facts: PufuFacts, score: PufuScore) {
+  return {
+    goal: score.gainingGoal.text,
+    question: context.questions?.[0]?.text ?? context.question?.text ?? '',
+    scope: articleReconstruction(context) ? 'article' : 'project',
+    purposes: score.purposes.map((purpose, index) => ({ purpose: index + 1, text: purpose.text })),
+    elements: Object.fromEntries(
+      elementKeys.map((key) => [key, score.elements[key].text ? [score.elements[key].text] : []]),
+    ) as Record<(typeof elementKeys)[number], string[]>,
+    // 対象と時制を残す。独自計画では背景であり、利用者の資源・実施予定ではない。
+    centralCases: facts.cases ?? [],
+  };
+}
 
 // 中間目的を確定してから全体の状況を考える。工程の断片から直接組み立てない。
 export async function integratePufuWin(
@@ -14,6 +29,7 @@ export async function integratePufuWin(
   facts: PufuFacts,
   score: PufuScore,
   language: Language,
+  revision?: { winCondition: string; issues: string[] },
 ): Promise<PufuScore> {
   const count = score.purposes.length;
   if (!count) return { ...score, winCondition: { ...score.winCondition, text: '' } };
@@ -64,17 +80,14 @@ Definition: ${JSON.stringify(definition)}
 Purposes are final. contributions contains one item per purpose in numeric order, summarizing in at most 100 characters the resulting state it contributes to overall success, not a copied action. Add no uses, activities or benefits absent from the purpose. Do not change the purposes or actions.
 Review every element. For each elementConsiderations entry, set role to constraint, support, background (does not limit success), or unknown (no information), and list the input element keys supporting it in sourceElements. Misclassified facts in another element may support it. Never cite an empty input element. Without support use unknown with an empty sourceElements array. Elements inform feasibility and scope; they are not mandatory words in the final sentence. Do not copy staffing counts, durations, amounts or equipment names unless the goal/source explicitly makes them criteria of success. Illustrative durations are not the user's deadlines; never invent budget compliance, deadlines, competitive superiority or mandatory methods from another case.
 Then write winCondition as ONE sentence of at most 140 characters describing what is true for whom when all purpose results work together, not chained actions such as classify, record and store. Never center only the final purpose or select just the first and last. Check whether the sentence would still hold unchanged if any purpose were missing. Avoid artifact-name-plus-completion, sequential action lists or a collage of conditions. Do not mechanically repeat every purpose's words. Preserve scope, conditions, timing and decision ownership; invent no uses, benefits, mandatory passing, safety, approval or guarantees. If a responsible person decides whether full operation may proceed, stop at the materials enabling THAT person to decide; a trial or shared documents do not establish full operation or continued operational improvement. Express success specific to these purposes instead of fitting a template.`;
-  const input = {
-    goal: score.gainingGoal.text,
-    purposes: score.purposes.map((purpose, index) => ({ purpose: index + 1, text: purpose.text })),
-    elements: {
-      ...facts.elements,
-      money: score.elements.money.text ? [score.elements.money.text] : facts.elements.money,
-    },
-  };
+  const scopedGuidance =
+    language === 'ja'
+      ? '\ncentralCasesは対象付きの過去の事実です。scope=articleでは記事の事例として条件判断へ反映し、全作品共通の要件へ広げません。scope=projectでは背景に限り、利用者の素材・方針・実施予定へ転用しません。revisionがある場合は前案と独立検証の指摘です。指摘を資料の範囲で修正し、前案の定型文を引き継がず全目的から再統合します。'
+      : "\ncentralCases are historical facts about named subjects. In article scope, consider them as scoped examples, never universal requirements. In project scope they are background, never the user's materials, policy or commitments. revision contains the prior candidate and independent review issues: address them using the supplied facts and integrate all purposes again instead of repeating a generic fallback.";
+  const input = { ...pufuWinInput(context, facts, score), ...(revision ? { revision } : {}) };
   const draft = await callPufuModel(
     { ...env, AI_PUFU_MODEL: pufuPlanModel(env) },
-    system,
+    system + scopedGuidance,
     input,
     schema,
     2000,

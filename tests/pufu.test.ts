@@ -115,7 +115,7 @@ describe('問いからプ譜を生成・編集・保存する', () => {
         await run(id);
       }
     }
-    expect(ai).toHaveBeenCalledTimes(30);
+    expect(ai).toHaveBeenCalledTimes(40);
   }, 20000);
   it('プ譜の明示再試行も10件の枠を消費し、上限時は世代を進めない', async () => {
     const id = await make();

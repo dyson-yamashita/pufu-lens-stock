@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { testApp, mockStep } from './helpers';
-import { mockPufuAi } from './pufu-ai-fixture';
+import { mockPufuAi, reviewDraft } from './pufu-ai-fixture';
 import { runPufu } from '../server/pufu';
 import type { Job } from '../server/env';
 import type { Pufu } from '../shared/pufu';
@@ -56,16 +56,17 @@ it('抽出と構成を別々に計数し、完成したプ譜だけを保存す�
   app.env.AI = { run: ai };
   const job = await create();
   await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(3);
+  expect(ai).toHaveBeenCalledTimes(4);
   expect(
     (await app.env.DB.prepare('SELECT id,status,attempts FROM ai_calls ORDER BY id').all()).results,
   ).toEqual([
     { id: `${job.id}:arrange-pufu-v2`, status: 'done', attempts: 1 },
     { id: `${job.id}:extract-pufu-facts-v1`, status: 'done', attempts: 1 },
-    { id: `${job.id}:integrate-pufu-win-v1`, status: 'done', attempts: 1 },
+    { id: `${job.id}:integrate-pufu-win-v2`, status: 'done', attempts: 1 },
+    { id: `${job.id}:review-pufu-win-v1`, status: 'done', attempts: 1 },
   ]);
   expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
-    n: 3,
+    n: 4,
   });
   expect((await get(job.target_id)).status).toBe('ready');
 });
@@ -79,6 +80,7 @@ it('本文抽出と短い構成に別モデルを使い、両モデルを保存�
   await runPufu(app.env, job, mockStep());
   expect(ai.mock.calls.map(([model]) => model)).toEqual([
     '@cf/zai-org/glm-5.3-flash',
+    '@cf/moonshotai/kimi-k2.6',
     '@cf/moonshotai/kimi-k2.6',
     '@cf/moonshotai/kimi-k2.6',
   ]);
@@ -122,7 +124,7 @@ it('保存前の再整形でも、購入制約に併記された既存道具の�
   expect(saved.elements.money.text).toContain('use existing tools');
 });
 
-it.each([1, 2])(
+it.each([1, 2, 3])(
   '利用上限%d回で未完成を保存せず、成功した段階を再送せずに再開する',
   async (limit) => {
     const ai = mockPufuAi(draft);
@@ -139,9 +141,9 @@ it.each([1, 2])(
           .all()
       ).results,
     ).toEqual([]);
-    app.env.AI_CALL_DAILY_LIMIT = '3';
+    app.env.AI_CALL_DAILY_LIMIT = '4';
     await runPufu(app.env, job, mockStep());
-    expect(ai).toHaveBeenCalledTimes(3);
+    expect(ai).toHaveBeenCalledTimes(4);
     expect(await get(job.target_id)).toMatchObject({
       status: 'ready',
       score: { elements: { people: { text: '担当は2名。' } } },
@@ -164,10 +166,10 @@ it('構成が不正なら抽出のキャッシュから再開し、二重送信�
     .bind(job.id)
     .run();
   await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(4);
+  expect(ai).toHaveBeenCalledTimes(5);
   expect((await get(job.target_id)).status).toBe('ready');
   expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
-    n: 4,
+    n: 5,
   });
 });
 
@@ -225,9 +227,67 @@ it('勝利条件の統合が不正なら中間目的のキャッシュから再�
     .bind(job.id)
     .run();
   await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(4);
+  expect(ai).toHaveBeenCalledTimes(5);
   expect((await get(job.target_id)).status).toBe('ready');
   const prompts = ai.mock.calls.map(([, input]) => JSON.parse(input.messages[1].content));
   expect(prompts.filter((p) => 'sources' in p)).toHaveLength(1);
   expect(prompts.filter((p) => 'actionGroups' in p)).toHaveLength(1);
+});
+
+it.each([4, 5])('意味の修正中に上限%d回へ達しても、完了段階を再送しない', async (limit) => {
+  const ai = mockPufuAi(draft);
+  const base = ai.getMockImplementation()!;
+  let reviews = 0;
+  ai.mockImplementation(async (model, input) => {
+    const data = JSON.parse(input.messages[1].content);
+    if ('winCondition' in data && reviews++ === 0)
+      return { response: JSON.stringify(reviewDraft(data, ['全目的の成果を結び付ける。'])) };
+    return base(model, input);
+  });
+  app.env.AI = { run: ai };
+  app.env.AI_CALL_DAILY_LIMIT = String(limit);
+  const job = await create();
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(limit);
+  expect(await get(job.target_id)).toMatchObject({ status: 'queued', score: null });
+  app.env.AI_CALL_DAILY_LIMIT = '6';
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(6);
+  expect((await get(job.target_id)).status).toBe('ready');
+});
+
+it('意味の再検証も不合格なら未完成を保存せず、同じ世代で生成を増やさない', async () => {
+  const ai = mockPufuAi(draft, ['全体の成就を表していない。']);
+  app.env.AI = { run: ai };
+  const job = await create();
+  await expect(runPufu(app.env, job, mockStep())).rejects.toThrow('勝利条件');
+  expect(await get(job.target_id)).toMatchObject({ status: 'failed', score: null });
+  expect(
+    (
+      await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?')
+        .bind(job.target_id)
+        .all()
+    ).results,
+  ).toEqual([]);
+  await app.env.DB.prepare("UPDATE pufu_scores SET status='queued' WHERE id=?")
+    .bind(job.target_id)
+    .run();
+  await expect(runPufu(app.env, job, mockStep())).rejects.toThrow('勝利条件');
+  expect(ai).toHaveBeenCalledTimes(6);
+});
+
+it('別の文を検証したキャッシュで保存しない', async () => {
+  app.env.AI = { run: mockPufuAi(draft) };
+  const job = await create();
+  const step = mockStep();
+  const base = step.do.bind(step);
+  step.do = (async (name: string, ...args: unknown[]) =>
+    name === 'review-pufu-win-v1'
+      ? {
+          retryAt: null,
+          json: JSON.stringify({ value: { winCondition: '別の勝利条件。', issues: [] } }),
+        }
+      : (base as (...args: unknown[]) => Promise<unknown>)(name, ...args)) as typeof step.do;
+  await expect(runPufu(app.env, job, step)).rejects.toThrow('検証');
+  expect((await get(job.target_id)).score).toBeNull();
 });
