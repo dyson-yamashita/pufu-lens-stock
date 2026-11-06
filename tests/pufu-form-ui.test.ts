@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PufuForm from '../src/PufuForm';
 import { send } from '../src/api';
+import score from './fixtures/pufu-sparse.json';
 
 vi.mock('../src/api', () => ({ send: vi.fn(), createRequestId: () => crypto.randomUUID() }));
 vi.mock('../src/RelationPicker', () => ({
@@ -105,4 +106,37 @@ it('問いからの作成は目標が空でも送信できる', async () => {
     '/api/v1/questions/question/pufus',
     expect.objectContaining({ task: '' }),
   );
+});
+
+it('JSONからの作成はAI生成せず、選んだ保存先・タイトル・関連とスコアを保存する', async () => {
+  await render('question');
+  const mode = document.querySelector('#pufu-source')!;
+  expect(mode).not.toBeNull();
+  Object.defineProperty(mode, 'value', { configurable: true, value: 'json' });
+  await act(async () => mode.dispatchEvent(new window.Event('change', { bubbles: true })));
+  expect(submitButton().disabled).toBe(true);
+  const title = document.querySelector<HTMLInputElement>('#pufu-title')!;
+  title.value = '取込タイトル';
+  await act(async () => title.dispatchEvent(new window.Event('input', { bubbles: true })));
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  Object.defineProperty(input, 'files', {
+    configurable: true,
+    value: [new File([JSON.stringify(score)], 'pufu.json', { type: 'application/json' })],
+  });
+  await act(async () => input.dispatchEvent(new window.Event('change', { bubbles: true })));
+  expect(document.querySelector('[role="status"]')!.textContent).toContain(score.gainingGoal.text);
+  expect(send).not.toHaveBeenCalled();
+  vi.mocked(send).mockResolvedValue({ pufu: { id: 'imported' } });
+  await submit();
+  expect(send).toHaveBeenCalledWith(
+    '/api/v1/pufus',
+    expect.objectContaining({
+      title: '取込タイトル',
+      project_id: 'project',
+      question_ids: ['question'],
+      stock_ids: [],
+      score,
+    }),
+  );
+  expect(onDone).toHaveBeenCalledWith('imported');
 });

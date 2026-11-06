@@ -8,6 +8,7 @@ import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 import { testApp } from './helpers';
 import * as api from '../src/api';
 import { createPufuPng } from '../src/pufu-download';
+import { readPufuJson } from '../src/pufu-import';
 
 vi.mock('../src/pufu-download', () => ({ createPufuPng: vi.fn() }));
 
@@ -567,6 +568,7 @@ it('読み取り専用の取得結果はEditorのJSON出力と一致し、その
       ),
     );
     const exported = getScoreJson(key)!;
+    expect(await readPufuJson(new File([exported], 'exported.json'))).toEqual(input);
     const created = await app.request('/api/v1/questions', {
       method: 'POST',
       body: { project_id: 'alice-project', text: 'Editorとの互換性' },
@@ -590,4 +592,60 @@ it('読み取り専用の取得結果はEditorのJSON出力と一致し、その
   } finally {
     await app.dispose();
   }
+});
+
+it('JSON取込は未保存内容を確認して置き換え、不正なJSONとキャンセルでは編集を保持する', async () => {
+  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { setScore, getScoreJson } = require(
+    join(editorRoot, 'components/ProjectScore.js'),
+  ) as typeof import('@goto-lab/pufu-editor');
+  const confirm = vi.fn().mockReturnValue(false);
+  Object.defineProperty(window, 'confirm', { configurable: true, value: confirm });
+  const send = vi.spyOn(api, 'send').mockResolvedValue({
+    revision: 2,
+    current_phase: 1,
+    updated_at: '2026-11-06T00:00:00.000Z',
+  });
+  const guard = vi.fn();
+  await act(async () =>
+    root.render(createElement(PufuEditor, { pufu: structuredClone(pufu), onGuard: guard })),
+  );
+  await click('編集する');
+  const key = `${pufu.id}-phase-1`;
+  const edited = structuredClone(score);
+  edited.gainingGoal.text = '手動で編集中';
+  await act(async () => setScore(key, JSON.stringify(edited)));
+  async function upload(text: string) {
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File([text], 'score.json')],
+    });
+    await act(async () => input.dispatchEvent(new window.Event('change', { bubbles: true })));
+  }
+  await upload('{}');
+  expect(document.querySelector('dialog [role="alert"]')).not.toBeNull();
+  expect(JSON.parse(getScoreJson(key)!)).toEqual(edited);
+  expect(confirm).not.toHaveBeenCalled();
+  const imported = structuredClone(score);
+  imported.gainingGoal.text = 'JSONからの目標';
+  imported.winCondition.comment.text = '取込コメント';
+  await upload(JSON.stringify(imported));
+  expect(confirm).toHaveBeenCalledOnce();
+  expect(JSON.parse(getScoreJson(key)!)).toEqual(edited);
+  confirm.mockReturnValue(true);
+  await upload(JSON.stringify(imported));
+  expect(JSON.parse(getScoreJson(key)!)).toEqual(imported);
+  expect(document.querySelector('dialog')!.textContent).toContain('JSONからの目標');
+  expect(send).not.toHaveBeenCalled();
+  confirm.mockReturnValue(false);
+  expect(guard.mock.lastCall?.[0]()).toBe(false);
+  await click('保存');
+  expect(send).toHaveBeenLastCalledWith(
+    `/api/v1/pufus/${pufu.id}`,
+    { revision: 1, phase: 1, score: imported },
+    'PATCH',
+  );
+  expect(guard.mock.lastCall?.[0]()).toBe(true);
+  expect(document.querySelector('.pufu-image-preview')!.textContent).toContain('JSONからの目標');
 });

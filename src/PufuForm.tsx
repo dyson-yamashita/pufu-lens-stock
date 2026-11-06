@@ -2,8 +2,9 @@ import { applicationError, t, useLanguage } from './i18n';
 import { useRef, useState, type FormEvent } from 'react';
 import { LoaderCircle, Plus } from 'lucide-react';
 import type { Project } from '../shared/domain';
-import { createPufuSchema } from '../shared/pufu';
+import { createPufuSchema, createSavedPufuSchema, type PufuScore } from '../shared/pufu';
 import { createRequestId, send } from './api';
+import PufuJsonImport from './PufuJsonImport';
 import RelationPicker, { type RelationOption } from './RelationPicker';
 export default function PufuForm({
   projects,
@@ -27,22 +28,29 @@ export default function PufuForm({
   const [details, setDetails] = useState('');
   const [questions, setQuestions] = useState<RelationOption[]>([]);
   const [stocks, setStocks] = useState<RelationOption[]>([]);
+  const [source, setSource] = useState('ai');
+  const [imported, setImported] = useState<{ score: PufuScore; filename: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const request = useRef<{
     input: string;
     id: string;
   } | null>(null);
+  function changeBusy(value: boolean) {
+    setBusy(value);
+    onBusyChange?.(value);
+  }
   async function generate(event: FormEvent) {
     event.preventDefault();
     if (busy || disabled) return;
     const text = task.trim();
     const extra = details.trim();
-    if (!text && !questionId && !questions.length && !stocks.length) {
+    if (source === 'ai' && !text && !questionId && !questions.length && !stocks.length) {
       setError(t('ui.pufu_form.goal_or_references_required'));
       return;
     }
-    const questionIds = questions.map((item) => item.id).sort();
+    if (source === 'json' && !imported) return;
+    const questionIds = questionId ? [questionId] : questions.map((item) => item.id).sort();
     const stockIds = stocks.map((item) => item.id).sort();
     const key = JSON.stringify([
       project,
@@ -52,16 +60,28 @@ export default function PufuForm({
       title.trim(),
       text,
       extra,
+      source,
+      source === 'json' ? imported?.score : null,
     ]);
     if (request.current?.input !== key) request.current = { input: key, id: createRequestId() };
-    const input = createPufuSchema.safeParse({
-      title: title.trim(),
-      task: text,
-      details: extra,
-      question_ids: questionIds,
-      stock_ids: stockIds,
-      request_id: request.current.id,
-    });
+    const input =
+      source === 'json'
+        ? createSavedPufuSchema.safeParse({
+            title: title.trim(),
+            project_id: project,
+            question_ids: questionIds,
+            stock_ids: stockIds,
+            score: imported?.score,
+            request_id: request.current.id,
+          })
+        : createPufuSchema.safeParse({
+            title: title.trim(),
+            task: text,
+            details: extra,
+            question_ids: questionIds,
+            stock_ids: stockIds,
+            request_id: request.current.id,
+          });
     if (!input.success) {
       setError(applicationError(input.error.issues[0].message));
       return;
@@ -70,10 +90,14 @@ export default function PufuForm({
       setError(t('ui.pufu_form.select_a_project'));
       return;
     }
-    setBusy(true);
-    onBusyChange?.(true);
+    changeBusy(true);
     setError('');
     try {
+      if (source === 'json') {
+        const result = await send<{ pufu: { id: string } }>('/api/v1/pufus', input.data);
+        onDone(result.pufu.id);
+        return;
+      }
       const result = await send<{
         id: string;
       }>(
@@ -86,8 +110,7 @@ export default function PufuForm({
     } catch (e) {
       setError(applicationError((e as Error).message));
     } finally {
-      setBusy(false);
-      onBusyChange?.(false);
+      changeBusy(false);
     }
   }
   return (
@@ -119,6 +142,19 @@ export default function PufuForm({
           </select>
         </>
       )}
+      <label htmlFor="pufu-source">{t('pufu.creation_method')}</label>
+      <select
+        id="pufu-source"
+        value={source}
+        disabled={busy || disabled}
+        onChange={(event) => {
+          setSource(event.target.value);
+          setError('');
+        }}
+      >
+        <option value="ai">{t('pufu.create_with_ai')}</option>
+        <option value="json">{t('pufu.create_from_json')}</option>
+      </select>
       <details className="pufu-relations" open>
         <summary>{t('ui.pufu_form.reference_materials')}</summary>
         <p className="field-hint">{t('ui.pufu_form.reference_help')}</p>
@@ -158,48 +194,72 @@ export default function PufuForm({
       <p className="field-hint" id="pufu-title-help">
         {t('pufu.title_hint')}
       </p>
-      <label htmlFor="pufu-task">
-        {questionId
-          ? t('ui.pufu_form.task_inspired_by_this_question_or_insight')
-          : t('ui.public_projects.task')}
-        <span className="task-caption">{t('ui.public_pufu_score.gaining_goal')}</span>
-        <span className="optional">{t('ui.app.optional')}</span>
-      </label>
-      <p className="field-hint" id="pufu-task-help">
-        {t('ui.pufu_form.what_state_do_you_want_to_achieve_your_text')}
-      </p>
-      <textarea
-        id="pufu-task"
-        aria-describedby="pufu-task-help"
-        value={task}
-        onInput={(event) => setTask(event.currentTarget.value)}
-        rows={5}
-        maxLength={1000}
-        disabled={busy}
-        placeholder={t(
-          'ui.pufu_form.example_build_a_system_that_reliably_completes_summaries_even',
-        )}
-      />
-      <label htmlFor="pufu-details">
-        {t('ui.pufu_form.eight_planning_factors_planned_measures')}
-        <span className="optional">{t('ui.app.optional')}</span>
-      </label>
-      <p className="field-hint" id="pufu-details-help">
-        {t('ui.pufu_form.describe_people_money_time_quality_business_scheme_environment_rivals')}
-      </p>
-      <textarea
-        id="pufu-details"
-        aria-describedby="pufu-details-help"
-        value={details}
-        onInput={(event) => setDetails(event.currentTarget.value)}
-        rows={6}
-        maxLength={4000}
-        disabled={busy}
-        placeholder={t('ui.pufu_form.example_two_people_a_budget_of_200_per_month')}
-      />
-      <p className="field-hint">
-        {t('ui.pufu_form.the_project_description_and_your_and_the_project_s')}
-      </p>
+      {source === 'json' ? (
+        <div>
+          <p className="field-hint">{t('pufu.import_create_help')}</p>
+          <PufuJsonImport
+            disabled={busy || disabled}
+            onBusyChange={changeBusy}
+            onError={setError}
+            onImport={(score, filename) => setImported({ score, filename })}
+          />
+          {imported && (
+            <p role="status">
+              {t('pufu.import_selected', {
+                filename: imported.filename,
+                goal: imported.score.gainingGoal.text,
+              })}
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <label htmlFor="pufu-task">
+            {questionId
+              ? t('ui.pufu_form.task_inspired_by_this_question_or_insight')
+              : t('ui.public_projects.task')}
+            <span className="task-caption">{t('ui.public_pufu_score.gaining_goal')}</span>
+            <span className="optional">{t('ui.app.optional')}</span>
+          </label>
+          <p className="field-hint" id="pufu-task-help">
+            {t('ui.pufu_form.what_state_do_you_want_to_achieve_your_text')}
+          </p>
+          <textarea
+            id="pufu-task"
+            aria-describedby="pufu-task-help"
+            value={task}
+            onInput={(event) => setTask(event.currentTarget.value)}
+            rows={5}
+            maxLength={1000}
+            disabled={busy}
+            placeholder={t(
+              'ui.pufu_form.example_build_a_system_that_reliably_completes_summaries_even',
+            )}
+          />
+          <label htmlFor="pufu-details">
+            {t('ui.pufu_form.eight_planning_factors_planned_measures')}
+            <span className="optional">{t('ui.app.optional')}</span>
+          </label>
+          <p className="field-hint" id="pufu-details-help">
+            {t(
+              'ui.pufu_form.describe_people_money_time_quality_business_scheme_environment_rivals',
+            )}
+          </p>
+          <textarea
+            id="pufu-details"
+            aria-describedby="pufu-details-help"
+            value={details}
+            onInput={(event) => setDetails(event.currentTarget.value)}
+            rows={6}
+            maxLength={4000}
+            disabled={busy}
+            placeholder={t('ui.pufu_form.example_two_people_a_budget_of_200_per_month')}
+          />
+          <p className="field-hint">
+            {t('ui.pufu_form.the_project_description_and_your_and_the_project_s')}
+          </p>
+        </>
+      )}
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -212,7 +272,9 @@ export default function PufuForm({
             busy ||
             disabled ||
             !project ||
-            (!task.trim() && !questionId && !questions.length && !stocks.length)
+            (source === 'json'
+              ? !imported
+              : !task.trim() && !questionId && !questions.length && !stocks.length)
           }
         >
           {busy ? (

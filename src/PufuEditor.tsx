@@ -3,12 +3,13 @@ import { languages } from '../shared/locale';
 import { useEffect, useRef, useState } from 'react';
 import { getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
-import { pufuScoreSchema, type Pufu, type PufuPhase } from '../shared/pufu';
+import { pufuScoreSchema, type Pufu, type PufuPhase, type PufuScore } from '../shared/pufu';
 import { send } from './api';
 import { useTheme } from './theme';
 // 開いたままの詳細画面から旧デプロイのダウンロード用JSを要求しないよう、詳細と一緒に読み込む。
 import { createPufuPng } from './pufu-download';
 import PufuImagePreview from './PufuImagePreview';
+import PufuJsonImport from './PufuJsonImport';
 import PufuModal from './PufuModal';
 import ResponsivePufuScore from './ResponsivePufuScore';
 import Comments from './Comments';
@@ -37,6 +38,7 @@ export default function PufuEditor({
   const [phases, setPhases] = useState(pufu.phases);
   // エディターは入力オブジェクトを直接変更するため、保存済みの局面とは参照を分ける。
   const [editor, setEditor] = useState(() => structuredClone(pufu.phases.at(-1)!));
+  const [importVersion, setImportVersion] = useState(0);
   const editorKey = `${pufu.id}-phase-${editor.number}`;
   const currentPhase = phases.at(-1)!.number;
   const isLatest = editor.number === currentPhase;
@@ -90,6 +92,14 @@ export default function PufuEditor({
     setError('');
     setNotice('');
     setEditing(true);
+  }
+  function importScore(score: PufuScore) {
+    if (hasChanges() && !window.confirm(t('pufu.import_replace_confirm'))) return;
+    setEditor((current) => ({ ...current, score }));
+    // エディター内部の入力状態もリセットし、取込前の内容が残らないようにする。
+    setImportVersion((current) => current + 1);
+    setDirty(canonical(JSON.stringify(score)) !== baseline.current);
+    setNotice(t('pufu.import_edit_notice'));
   }
   function closeEditor() {
     if (busy) return;
@@ -298,14 +308,25 @@ export default function PufuEditor({
             <span className="field-hint" role="status">
               {dirty ? t('ui.pufu_editor.unsaved_changes') : t('ui.pufu_editor.saved')}
             </span>
-            <button className="button primary" disabled={busy} onClick={() => save()}>
-              {busy ? (
-                <LoaderCircle className="spin" size={17} aria-hidden="true" />
-              ) : (
-                <Save size={17} aria-hidden="true" />
-              )}
-              {busy ? t('ui.app.saving') : t('ui.app.save')}
-            </button>
+            <div>
+              <PufuJsonImport
+                disabled={busy}
+                onBusyChange={setBusy}
+                onError={(message) => {
+                  setError(message);
+                  setNotice('');
+                }}
+                onImport={importScore}
+              />
+              <button className="button primary" disabled={busy} onClick={() => save()}>
+                {busy ? (
+                  <LoaderCircle className="spin" size={17} aria-hidden="true" />
+                ) : (
+                  <Save size={17} aria-hidden="true" />
+                )}
+                {busy ? t('ui.app.saving') : t('ui.app.save')}
+              </button>
+            </div>
           </div>
           {error && (
             <p className="form-error" role="alert">
@@ -320,7 +341,7 @@ export default function PufuEditor({
           )}
           <div className="pufu-editor-shell" inert={busy} aria-busy={busy}>
             <ResponsivePufuScore
-              key={editorKey}
+              key={`${editorKey}-${importVersion}`}
               uniqueKey={editorKey}
               initScore={editor.score}
               lang={languages[language].editorLanguage}

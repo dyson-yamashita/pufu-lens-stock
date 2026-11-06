@@ -69,6 +69,22 @@
     ]
   },
   {
+    "id": "PUFU-002",
+    "title": "JSON取込によるプ譜の作成・編集",
+    "sources": [
+      "src/PufuForm.tsx",
+      "src/PufuEditor.tsx",
+      "src/PufuJsonImport.tsx",
+      "src/pufu-import.ts"
+    ],
+    "aspects": [
+      "pufu editor形式のJSONからAI生成せず新規作成し、タイトル・内容を保存",
+      "不正なJSONの拒否と編集中の内容の保持、未保存内容の置き換えキャンセル",
+      "選択局面への取込後、明示的な保存と再読込で反映、他局面の不変性",
+      "コメント・施策色・進捗を含むJSONのダウンロードとの往復"
+    ]
+  },
+  {
     "id": "PUBLIC-001",
     "title": "公開の確認と非公開化",
     "sources": [

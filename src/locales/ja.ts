@@ -1,4 +1,21 @@
 export const ja: Record<string, string> = {
+  'pufu.creation_method': '作成方法',
+  'pufu.create_with_ai': 'AIで作成',
+  'pufu.create_from_json': 'JSONから作成',
+  'pufu.import_json': 'JSONをインポート',
+  'pufu.import_create_help':
+    'pufu editorでエクスポートしたJSONを選び、「プ譜を作成」で保存します。AI生成は行いません。',
+  'pufu.import_selected': '選択したファイル：{{filename}}／獲得目標：{{goal}}',
+  'pufu.import_too_large': 'JSONファイルは256KiB以内で選択してください。',
+  'pufu.import_read_failed': 'ファイルを読み込めませんでした。もう一度選択してください。',
+  'pufu.import_invalid_json':
+    'JSONとして読み込めません。pufu editorでエクスポートしたJSONファイルを選択してください。',
+  'pufu.import_invalid_score':
+    'プ譜の形式が正しくないか、保存上限を超えています。本文は各1,200文字、コメントは各600文字、中間目的・各施策は12件以内にし、要素のIDが重複していないか確認してください。',
+  'pufu.import_replace_confirm': '編集中の未保存の内容を、JSONの内容に置き換えますか？',
+  'pufu.import_edit_notice': 'JSONを読み込みました。「保存」でこの局面に反映します。',
+  'manual.pufu_import':
+    'JSONから作成するには、作成画面の「作成方法」で「JSONから作成」を選び、pufu editorのJSONをインポートして「プ譜を作成」を押します。編集時は、対象の局面で「編集する」→「JSONをインポート」→「保存」の順に操作します。選択中の局面全体が置き換わり、他の局面は変わりません。ファイルは256KiB以内で、本文は各1,200文字、コメントは各600文字、中間目的・各施策は12件以内です。',
   'first_steps.title': 'はじめの3ステップ',
   'first_steps.start_project': '最初のプロジェクトをつくりましょう',
   'first_steps.project_intro':
