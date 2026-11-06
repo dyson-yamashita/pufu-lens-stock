@@ -68,7 +68,7 @@ import {
   type PufuScore,
   type PufuPhase,
 } from '../shared/pufu';
-import { queuePufuJob, initialPufuPhase } from './pufu';
+import { queuePufuJob, initialPufuPhase, pufuProgressQuery } from './pufu';
 import { createSavedPufu } from './pufu-write';
 import { pufuRelationsSchema } from '../shared/pufu';
 import {
@@ -820,8 +820,8 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/pufus/:id', async (c) => {
     const id = c.req.param('id');
     const userId = c.get('principal').user.id;
-    // 本体の更新番号と局面一覧を、同じトランザクションの状態として読み取る。
-    const [, rows, phases] = await c.env.DB.batch([
+    // 本体・局面一覧・進捗を同じトランザクションの状態として読み取る。
+    const [, rows, phases, progress] = await c.env.DB.batch([
       initialPufuPhase(c.env, id, userId),
       c.env.DB.prepare(
         `SELECT ${pufuColumns},${firstPhaseTaskColumn('pufu_scores')},score_json,input_json FROM pufu_scores WHERE id = ? AND user_id = ?`,
@@ -829,6 +829,7 @@ export function createApp(trustedPrincipal?: Principal) {
       c.env.DB.prepare(
         'SELECT number,score_json,created_at,updated_at FROM pufu_phases WHERE pufu_id = ? AND EXISTS (SELECT 1 FROM pufu_scores WHERE id = pufu_id AND user_id = ?) ORDER BY number',
       ).bind(id, userId),
+      pufuProgressQuery(c.env, id, userId),
     ]);
     const row = rows.results[0] as
       (PufuSummary & { score_json: string | null; input_json: string }) | undefined;
@@ -839,6 +840,7 @@ export function createApp(trustedPrincipal?: Principal) {
     return c.json({
       pufu: {
         ...pufu,
+        generation_progress: progress.results[0] ?? null,
         ...(await pufuRelations(c.env, id)),
         score: score_json ? (JSON.parse(score_json) as PufuScore) : null,
         phases: phaseRows.map(({ score_json, ...phase }) => ({

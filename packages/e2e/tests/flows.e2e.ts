@@ -101,6 +101,42 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
       },
     },
   });
+  // デモ生成は即時に終わるため、詳細レスポンスだけ差し替えてポーリング中の表示を確認する。
+  const detail = (await fixture.request(`/pufus/${inferred.id}`)).pufu as Record<string, unknown>;
+  let state: 'queued' | 'retry' | 'review' | 'ready' = 'queued';
+  await browser.route(`**/api/v1/pufus/${inferred.id}`, async (route) => {
+    if (state === 'ready') return route.continue();
+    const progress =
+      state === 'retry'
+        ? { stage: 'extract', attempt: 2, status: 'running' }
+        : state === 'review'
+          ? { stage: 'review', attempt: 1, status: 'running' }
+          : null;
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pufu: {
+          ...detail,
+          status: state === 'queued' ? 'queued' : 'generating',
+          generation_progress: progress,
+          phases: [],
+          score: null,
+        },
+      }),
+    });
+  });
+  await browser.reload();
+  const progress = browser.locator('.pufu-page').getByRole('status');
+  await expect(progress).toContainText('生成待ち');
+  state = 'retry';
+  await expect(progress).toContainText('資料から事実を抽出');
+  await expect(progress).toContainText('自動で再試行しています（2回目）');
+  await browser.reload();
+  await expect(progress).toContainText('自動で再試行しています（2回目）');
+  state = 'review';
+  await expect(progress).toContainText('勝利条件を検証');
+  state = 'ready';
+  await expect(screen.getByRole('button', '編集する')).toBeVisible();
   await fixture.request(`/pufus/${inferred.id}`, 'DELETE');
   const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,

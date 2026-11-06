@@ -63,6 +63,7 @@ const sections = (tr: typeof t) => [
         <ol>
           <li>{tr('ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select')}</li>
           <li>{tr('ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally')}</li>
+          <li>{tr('manual.pufu_progress')}</li>
           <li>{tr('ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or')}</li>
           <li>{tr('ui.user_manual.press_edit_at_the_image_s_lower_right_change')}</li>
           <li>{tr('ui.user_manual.use_add_phase_to_move_to_the_next_stage')}</li>

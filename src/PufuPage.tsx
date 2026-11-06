@@ -3,7 +3,7 @@ import { applicationError, t, useLanguage } from './i18n';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, LoaderCircle, RefreshCw } from 'lucide-react';
 import type { Pufu, PufuPhase } from '../shared/pufu';
-import { api, send } from './api';
+import { api, ApiError, send } from './api';
 import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
 import PufuRelations from './PufuRelations';
 import PufuFavoriteButton from './PufuFavoriteButton';
@@ -43,6 +43,7 @@ export default function PufuPage({
   const [editorBlocked, setEditorBlocked] = useState(false);
   const [relationsBusy, setRelationsBusy] = useState(false);
   const [editorVersion, setEditorVersion] = useState(0);
+  const progress = pufu?.status === 'generating' ? pufu.generation_progress : null;
   const questions =
     pufu?.questions ??
     (pufu?.question_id
@@ -77,7 +78,8 @@ export default function PufuPage({
   useEffect(() => {
     const controller = new AbortController();
     let complete = false,
-      inFlight = false;
+      inFlight = false,
+      processing = false;
     const load = async () => {
       if (complete || inFlight) return;
       inFlight = true;
@@ -90,6 +92,7 @@ export default function PufuPage({
         });
         if (!controller.signal.aborted) {
           complete = result.pufu.status === 'ready' || result.pufu.status === 'failed';
+          processing = !complete;
           setPufu((current) =>
             current?.id === result.pufu.id && version !== favoriteVersion.current
               ? { ...result.pufu, is_favorite: current.is_favorite, title: current.title }
@@ -100,7 +103,8 @@ export default function PufuPage({
       } catch (e) {
         if (!controller.signal.aborted) {
           setError(applicationError((e as Error).message));
-          complete = true;
+          // 生成中の一時的な通信障害では、次のポーリングで状態を取り直す。
+          complete = !processing || (e instanceof ApiError && e.status >= 400 && e.status < 500);
         }
       } finally {
         inFlight = false;
@@ -259,10 +263,31 @@ export default function PufuPage({
         !error && (
           <div className="empty-state" role="status">
             <LoaderCircle className="spin" size={25} aria-hidden="true" />
-            <h2>{pufu ? t('ui.pufu_page.generating_pufu') : t('ui.pufu_page.loading_pufu')}</h2>
+            <h2>
+              {pufu?.status === 'queued'
+                ? t('ui.pufus.queued')
+                : pufu
+                  ? t('ui.pufu_page.generating_pufu')
+                  : t('ui.pufu_page.loading_pufu')}
+            </h2>
+            {progress && (
+              <>
+                <p>
+                  <strong>{t(`ui.pufu_progress.stage.${progress.stage}`)}</strong>
+                </p>
+                {progress.status === 'failed' ? (
+                  <p>{t('ui.pufu_progress.attempt_failed', { attempt: progress.attempt })}</p>
+                ) : progress.status === 'done' ? (
+                  <p>{t('ui.pufu_progress.step_done')}</p>
+                ) : progress.attempt > 1 ? (
+                  <p>{t('ui.pufu_progress.retrying', { attempt: progress.attempt })}</p>
+                ) : null}
+              </>
+            )}
+            {pufu?.status === 'queued' && <p>{t('ui.pufu_progress.waiting')}</p>}
             <p>
               {pufu
-                ? t('ui.pufu_page.organizing_win_conditions_and_actions_from_the_question_insight')
+                ? t('ui.pufu_progress.continues_in_background')
                 : t('ui.pufu_page.retrieving_saved_content')}
             </p>
           </div>

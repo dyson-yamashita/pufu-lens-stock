@@ -8,7 +8,13 @@ import type { Env, Job } from './env';
 import { isDemo } from './env';
 import { now, jobFailureStatements } from './db';
 import { aiStep, deferLimitedJob } from './usage';
-import { elementKeys, pufuScoreSchema, type PufuContext, type PufuScore } from '../shared/pufu';
+import {
+  elementKeys,
+  pufuScoreSchema,
+  type PufuContext,
+  type PufuGenerationProgress,
+  type PufuScore,
+} from '../shared/pufu';
 import type { WorkflowStep } from 'cloudflare:workers';
 import { defaultLanguage, resolveLanguage, translate, type Language } from '../shared/locale';
 
@@ -18,6 +24,28 @@ export type PufuStageRunner = <T extends object>(
 ) => Promise<T>;
 class PufuSuperseded extends Error {}
 
+// 順番は詳細画面が現在の工程を選ぶ際にも使う。Workflowの永続化キーは変更しない。
+const stages = {
+  extract: 'extract-pufu-facts-v1',
+  arrange: 'arrange-pufu-v2',
+  integrate: 'integrate-pufu-win-v2',
+  review: 'review-pufu-win-v1',
+  repair: 'repair-pufu-win-v1',
+  review_repaired: 'review-repaired-pufu-win-v1',
+} satisfies Record<PufuGenerationProgress['stage'], string>;
+
+export function pufuProgressQuery(env: Env, id: string, userId: string): D1PreparedStatement {
+  // 固定の工程キーを先に展開し、ai_callsは工程ごとに主キーで検索する。
+  return env.DB.prepare(
+    `SELECT json_extract(step.value, '$[0]') AS stage, c.attempts AS attempt, c.status
+     FROM pufu_scores p JOIN json_each(?) step
+     CROSS JOIN ai_calls c ON c.id = 'pufu-job-' || p.id || '-' || p.generation || ':' || json_extract(step.value, '$[1]')
+       AND c.user_id = p.user_id
+     WHERE p.id = ? AND p.user_id = ? AND p.status = 'generating'
+     ORDER BY step.key DESC LIMIT 1`,
+  ).bind(JSON.stringify(Object.entries(stages)), id, userId);
+}
+
 export async function generatePufu(
   env: Env,
   context: PufuContext,
@@ -25,7 +53,7 @@ export async function generatePufu(
   stage: PufuStageRunner = (_name, operation) => operation(context),
 ): Promise<PufuScore> {
   if (isDemo(env) && !env.AI)
-    return stage('arrange-pufu-v2', async (fresh) => {
+    return stage(stages.arrange, async (fresh) => {
       const reference = (
         fresh.question?.text ||
         fresh.stocks?.[0]?.title ||
@@ -54,25 +82,22 @@ export async function generatePufu(
         language,
       );
     });
-  const facts = await stage('extract-pufu-facts-v1', (fresh) =>
-    extractPufuFacts(env, fresh, language),
-  );
-  const score = await stage('arrange-pufu-v2', (fresh) => arrangePufu(env, fresh, facts, language));
+  const facts = await stage(stages.extract, (fresh) => extractPufuFacts(env, fresh, language));
+  const score = await stage(stages.arrange, (fresh) => arrangePufu(env, fresh, facts, language));
   if (!score.purposes.length) return score;
-  let candidate = await stage('integrate-pufu-win-v2', (fresh) =>
+  let candidate = await stage(stages.integrate, (fresh) =>
     integratePufuWin(env, fresh, facts, score, language),
   );
   for (let attempt = 0; attempt < 2; attempt++) {
     candidate = normalizeGeneratedScore(candidate, context, language);
-    const review = await stage(
-      attempt ? 'review-repaired-pufu-win-v1' : 'review-pufu-win-v1',
-      (fresh) => reviewPufuWin(env, fresh, facts, candidate, language),
+    const review = await stage(attempt ? stages.review_repaired : stages.review, (fresh) =>
+      reviewPufuWin(env, fresh, facts, candidate, language),
     );
     if (review.winCondition !== candidate.winCondition.text)
       throw new Error('勝利条件と検証対象が一致しません。再試行してください。');
     if (!review.issues.length) return candidate;
     if (!attempt)
-      candidate = await stage('repair-pufu-win-v1', (fresh) =>
+      candidate = await stage(stages.repair, (fresh) =>
         integratePufuWin(env, fresh, facts, score, language, {
           winCondition: candidate.winCondition.text,
           issues: review.issues,
