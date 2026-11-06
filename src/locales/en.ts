@@ -76,7 +76,7 @@ export const en: Record<string, string> = {
   'manual.pufu_titles':
     'You can set an optional title when creating a Pufu. Use the pencil to the right of the title in the details to edit it. Clear it to show the gaining goal from phase 1.',
   'manual.pufu_progress':
-    'While generation is running, open the Pufu details to see the current step and any automatic retries. You can return to the details from the Pufu list.',
+    'While generation is running, open the Pufu details to see the current step, the total number of steps, and any automatic retries. You can return to the details from the Pufu list.',
   'manual.pufu_limit':
     'By default, each user can request up to 10 Pufu generations in a rolling 24-hour period, including explicit retries. When you reach the limit, an estimated retry time is shown.',
   'language.label': 'Language',
@@ -783,6 +783,8 @@ export const en: Record<string, string> = {
   'ui.pufu_progress.stage.review': 'Verify the win condition',
   'ui.pufu_progress.stage.repair': 'Revise the win condition',
   'ui.pufu_progress.stage.review_repaired': 'Verify the revised win condition',
+  'ui.pufu_progress.standard_step': 'Step {{step}} of {{total}} in the usual flow',
+  'ui.pufu_progress.extended_step': 'Step {{step}} of {{total}}',
   'ui.pufu_progress.attempt_failed': 'The previous attempt did not complete (attempt {{attempt}}).',
   'ui.pufu_progress.retrying': 'Retrying automatically (attempt {{attempt}}).',
   'ui.pufu_progress.step_done': 'This step is complete. Moving to the next operation.',
