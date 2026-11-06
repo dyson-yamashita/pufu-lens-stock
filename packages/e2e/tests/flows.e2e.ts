@@ -51,11 +51,11 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
     title: 'E2Eプ譜の関連するストック',
     text: 'プ譜の折りたたみ表示を確認するための本文です。',
   });
-  await fixture.request('/questions', 'POST', {
+  const { question: secondQuestion } = (await fixture.request('/questions', 'POST', {
     project_id: fixture.projectId,
     text: 'E2E選び直す問い',
-  });
-  await fixture.request('/stocks', 'POST', {
+  })) as { question: { id: string } };
+  const secondStock = await fixture.request('/stocks', 'POST', {
     project_id: fixture.projectId,
     type: 'text',
     title: 'E2E選び直すストック',
@@ -167,12 +167,14 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,
     request_id: requestId(),
+    question_ids: [question.id, secondQuestion.id],
+    stock_ids: [stock.id, secondStock.id],
     score,
   })) as { pufu: { id: string } };
   await fixture.request(`/pufus/${pufu.id}/relations`, 'PATCH', {
     revision: 1,
-    question_ids: [question.id],
-    stock_ids: [stock.id],
+    question_ids: [question.id, secondQuestion.id],
+    stock_ids: [stock.id, secondStock.id],
   });
   await app.open('/#pufus');
   await screen.getByRole('button', /E2Eプ譜の目標/).click();
@@ -188,9 +190,13 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await stocksToggle.click();
   await expect(stockList).toBeVisible();
   await expect(stockList).toContainText('E2Eプ譜の関連するストック');
+  await expect(stockList).toContainText('E2E選び直すストック');
   await expect(questionLink).toBeHidden();
   await questionsToggle.click();
   await expect(questionLink).toBeVisible();
+  await expect(
+    browser.locator('.pufu-related-questions').getByRole('button', 'E2E選び直す問い'),
+  ).toBeVisible();
   await stocksToggle.click();
   await expect(stockList).toBeHidden();
   await expect(questionLink).toBeVisible();
@@ -225,6 +231,11 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await expect(browser.locator('.pufu-context-task')).toContainText('E2Eプ譜の次局面の目標');
   await app.open(`/#pufu/${pufu.id}`);
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
+  const savedRelations = (await fixture.request(`/pufus/${pufu.id}`)) as {
+    pufu: { question_ids: string[]; stock_ids: string[] };
+  };
+  expect(savedRelations.pufu.question_ids).toHaveLength(2);
+  expect(savedRelations.pufu.stock_ids).toHaveLength(2);
   await screen.getByRole('button', '前の局面へ').click();
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第1局面');
   // 詳細を開いた後のデプロイで、この画面が参照する古いJSが配信されなくなる状況を再現する。

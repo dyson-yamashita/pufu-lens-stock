@@ -45,6 +45,7 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await app.open('/#mcp');
   const integration = browser.locator('section[aria-labelledby="mcp-integration-heading"]');
   await expect(integration.getByRole('heading', '接続中のサービス')).toBeVisible();
+  await expect(screen.getByRole('heading', '対話でプ譜づくりを支援する')).toBeVisible();
   const skillLinks = browser.locator('.skill-links li');
   await expect(skillLinks).toHaveCount(2);
   await expect(skillLinks.first().getByRole('link', 'スキルのインストール方法')).toHaveAttribute(
@@ -121,8 +122,18 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await expect(browser.locator('#skills pre').first()).toContainText(
     'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill deepen-questions -g',
   );
+  await expect(browser.locator('#skills pre').nth(1)).toContainText(
+    'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill support-pufu -g',
+  );
   await expect(browser.locator('#skills a')).toHaveAttribute(
     'href',
     'https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills',
   );
+  expect(
+    await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+  ).toBe(true);
+  await app.screenshot('skills-manual-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await app.screenshot('skills-manual-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
 });

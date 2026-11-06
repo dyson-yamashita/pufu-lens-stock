@@ -522,7 +522,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜作成',
       description:
-        '事前にget_pufu_guidelineで記述方針を確認してください。ProjectScoreModel形式のprojectScoreをプロジェクトへ保存し、完成済みの第1局面を作成します。AI生成は行いません。question_idsとstock_idsで同じプロジェクトの問い・ストックをそれぞれ1件まで関連付けできます。旧question_idも任意で利用できますがquestion_idsとの併用はできません。各要素のuuidは重複しないID、commentはcolorとtextを含めます。request_idは新規操作ごとのUUID、再送時は同じ内容とUUIDを使ってください。異なる内容の再使用は409、上限は256KiBです。作成・編集にはpufus:writeの追加許可が必要です。',
+        '事前にget_pufu_guidelineで記述方針を確認してください。ProjectScoreModel形式のprojectScoreをプロジェクトへ保存し、完成済みの第1局面を作成します。AI生成は行いません。question_idsとstock_idsで同じプロジェクトの問い・ストックをそれぞれ100件まで関連付けできます。画面のAI自動生成の各1件制限とは別です。旧question_idも任意で利用できますがquestion_idsとの併用はできません。各要素のuuidは重複しないID、commentはcolorとtextを含めます。request_idは新規操作ごとのUUID、再送時は同じ内容とUUIDを使ってください。異なる内容の再使用は409、上限は256KiBです。作成・編集にはpufus:writeの追加許可が必要です。',
       inputSchema: createSavedPufuSchema
         .omit({ score: true })
         .extend({ projectScore: pufuScoreSchema }),
@@ -537,7 +537,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'プ譜編集',
       description:
-        '事前にget_pufu_guidelineで変更に関係する記述方針を確認してください。保存済みプ譜の指定局面をprojectScoreで置き換えます。事前にget_pufuで最新の内容とrevisionを取得し、変更しない要素も保持してください。revisionは必須で、競合時は409です。phase省略時は最新局面を編集します。question_idsとstock_idsでそれぞれ1件までの関連を変更し、空配列で解除、省略で維持します。同じプロジェクト内のみ指定できます。旧question_idも利用できますがquestion_idsとの併用はできません。更新対象の局面の内容を変更し、局面の追加は行いません。上限は256KiBです。',
+        '事前にget_pufu_guidelineで変更に関係する記述方針を確認してください。保存済みプ譜の指定局面をprojectScoreで置き換えます。事前にget_pufuで最新の内容とrevisionを取得し、変更しない要素も保持してください。revisionは必須で、競合時は409です。phase省略時は最新局面を編集します。question_idsとstock_idsでそれぞれ100件までの関連を変更し、空配列で解除、省略で維持します。同じプロジェクト内のみ指定できます。旧question_idも利用できますがquestion_idsとの併用はできません。更新対象の局面の内容を変更し、局面の追加は行いません。上限は256KiBです。',
       inputSchema: savePufuSchema
         .omit({ score: true })
         .extend({ pufu_id: id, projectScore: pufuScoreSchema }),

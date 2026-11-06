@@ -308,6 +308,34 @@ it('各1件の同じ関連の再送を同一視し、旧単一IDと配列の併�
     ).status,
   ).toBe(400);
 });
+it('作成済みプ譜の登録で旧question_idから複数ストックを引き継ぎ、画面の自動生成では複数指定を拒否する', async () => {
+  await app.request('/api/v1/questions/q1', {
+    method: 'PATCH',
+    body: { stock_ids: ['s1', 's2'] },
+  });
+  const id = await create({ question_id: 'q1' });
+  expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
+    pufu: { question_ids: ['q1'], stock_ids: ['s1', 's2'] },
+  });
+  expect(
+    (
+      await app.request(`/api/v1/pufus/${id}/relations`, {
+        method: 'PATCH',
+        body: { revision: 1, question_ids: ['q1'], stock_ids: ['s1', 's2'] },
+      })
+    ).status,
+  ).toBe(200);
+  for (const fields of [
+    { question_ids: ['q1', 'q2'], stock_ids: ['s1'] },
+    { question_ids: ['q1'], stock_ids: ['s1', 's2'] },
+  ]) {
+    const response = await app.request('/api/v1/projects/alice-project/pufus/generate', {
+      method: 'POST',
+      body: { ...fields, task: '自動生成の課題', request_id: crypto.randomUUID() },
+    });
+    expect(response.status).toBe(400);
+  }
+});
 it('関連AI問いの再生成中や失敗中も既存のプ譜を保存でき、新しい未完成の問いは紐づけない', async () => {
   const id = await create({ question_ids: ['q1'], stock_ids: ['s1'] });
   for (const [revision, status] of [

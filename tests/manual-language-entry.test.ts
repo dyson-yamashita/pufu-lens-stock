@@ -87,6 +87,9 @@ it.each([
     expect(skills?.querySelector('pre code')?.textContent).toBe(
       'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill deepen-questions -g',
     );
+    expect(skills?.querySelectorAll('pre code')[1]?.textContent).toBe(
+      'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill support-pufu -g',
+    );
     expect(
       skills?.querySelector(
         'a[href="https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills"]',

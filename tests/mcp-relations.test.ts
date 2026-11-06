@@ -56,12 +56,13 @@ async function call(token: string, name: string, args: unknown) {
     content?: unknown;
   };
 }
-it('プ譜の書き込み許可だけのMCP応答には関連する問い本文・ストック名を返さない', async () => {
+it('書き込み許可だけのMCP応答には関連本文や再送後の私的なタイトルを返さない', async () => {
   const token = await mcpToken(app, 'alice-project', ['pufus:write']);
   const args = {
     project_id: 'alice-project',
-    question_ids: ['q-one'],
-    stock_ids: ['one'],
+    title: '送信したタイトル',
+    question_ids: ['q-one', 'q-two'],
+    stock_ids: ['one', 'two'],
     projectScore: score,
     request_id: crypto.randomUUID(),
   };
@@ -76,12 +77,91 @@ it('プ譜の書き込み許可だけのMCP応答には関連する問い本文�
     method: 'PATCH',
     body: { revision: 1, score: changed, question_id: 'q-two' },
   });
+  await app.request(`/api/v1/pufus/${id}/title`, {
+    method: 'PATCH',
+    body: { title: 'SECRET_EDITED_TITLE' },
+  });
   const repeated = await call(token, 'create_pufu', args);
   expect(repeated.isError).not.toBe(true);
   expect(JSON.stringify(repeated)).not.toContain('SECRET_');
+  expect(repeated.structuredContent).toMatchObject({ pufu: { title: args.title } });
   expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
-    pufu: { question_ids: ['q-two'], stock_ids: ['one'] },
+    pufu: { question_ids: ['q-two'], stock_ids: ['one', 'two'] },
   });
+});
+it('MCPで複数の問い・ストックを紐付けて登録し、再送・編集・局面追加後も取得できる', async () => {
+  const token = await mcpToken(app, 'alice-project', ['pufus:write', 'questions:read']);
+  const args = {
+    project_id: 'alice-project',
+    question_ids: ['q-two', 'q-one', 'q-two'],
+    stock_ids: ['two', 'one', 'two'],
+    projectScore: score,
+    request_id: crypto.randomUUID(),
+  };
+  const created = await call(token, 'create_pufu', args);
+  expect(created.isError).not.toBe(true);
+  const id = created.structuredContent.pufu.id;
+  const repeated = await call(token, 'create_pufu', {
+    ...args,
+    question_ids: ['q-one', 'q-two'],
+    stock_ids: ['one', 'two'],
+  });
+  expect(repeated.isError).not.toBe(true);
+  expect(repeated.structuredContent.pufu.id).toBe(id);
+  const read = () => call(token, 'get_pufu', { pufu_id: id, question_id: 'q-two' });
+  expect((await read()).structuredContent).toMatchObject({
+    pufu_id: id,
+    revision: 1,
+    question_ids: ['q-one', 'q-two'],
+    stock_ids: ['one', 'two'],
+    projectScore: score,
+  });
+  expect((await call(token, 'create_pufu', { ...args, stock_ids: ['one'] })).isError).toBe(true);
+  const edited = await call(token, 'update_pufu', {
+    pufu_id: id,
+    revision: 1,
+    projectScore: score,
+    question_ids: ['q-one', 'q-two'],
+    stock_ids: ['one', 'two'],
+  });
+  expect(edited.isError).not.toBe(true);
+  const phase = await call(token, 'add_pufu_phase', {
+    pufu_id: id,
+    revision: 2,
+    request_id: crypto.randomUUID(),
+  });
+  expect(phase.isError).not.toBe(true);
+  expect((await read()).structuredContent).toMatchObject({
+    revision: 3,
+    phase: 2,
+    question_ids: ['q-one', 'q-two'],
+    stock_ids: ['one', 'two'],
+    projectScore: score,
+  });
+});
+it('MCPの複数関連の途中に別プロジェクト・未存在のIDがあれば保存しない', async () => {
+  const token = await mcpToken(app, 'alice-project', ['pufus:write']);
+  await app.env.DB.prepare(
+    "INSERT INTO questions(id,project_id,source,text,status) VALUES ('other-question','alice-second','user','別プロジェクト','ready')",
+  ).run();
+  await app.env.DB.prepare(
+    "INSERT INTO stocks(id,user_id,project_id,article_id) VALUES ('other-stock','alice','alice-second','two')",
+  ).run();
+  for (const fields of [
+    { question_ids: ['q-one', 'other-question'], stock_ids: ['one', 'two'] },
+    { question_ids: ['q-one', 'q-two'], stock_ids: ['one', 'other-stock'] },
+    { question_ids: ['q-one', 'q-two'], stock_ids: ['one', 'missing-stock'] },
+    { question_ids: Array(101).fill('q-one'), stock_ids: [] },
+  ]) {
+    const result = await call(token, 'create_pufu', {
+      project_id: 'alice-project',
+      ...fields,
+      projectScore: score,
+      request_id: crypto.randomUUID(),
+    });
+    expect(result.isError).toBe(true);
+  }
+  expect(await app.env.DB.prepare('SELECT COUNT(*) n FROM pufu_scores').first()).toEqual({ n: 0 });
 });
 it('問いの書き込み許可だけで関連ストック名や再送後の個人メモを読み出せない', async () => {
   const token = await mcpToken(app, 'alice-project', ['questions:write']);
