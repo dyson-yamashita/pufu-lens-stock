@@ -66,6 +66,7 @@ function prepareDocument(
     jsonLd: unknown;
     body: string;
     keepModule?: boolean;
+    homeSocial?: boolean;
   },
 ) {
   const { document } = parseHTML(template);
@@ -74,6 +75,41 @@ function prepareDocument(
   document.documentElement.dir = 'ltr';
   document.querySelector('meta[name="description"]')?.setAttribute('content', options.description);
   ensureCanonical(document, options.path);
+  if (options.homeSocial) {
+    const image = absoluteUrl('/pufu-lens-logo.png', origin());
+    const locale = options.language === 'en' ? 'en_US' : 'ja_JP';
+    for (const [property, content] of Object.entries({
+      'og:type': 'website',
+      'og:site_name': 'Pufu Lens',
+      'og:title': options.title,
+      'og:description': options.description,
+      'og:url': absoluteUrl(options.path, origin()),
+      'og:image': image,
+      'og:image:type': 'image/png',
+      'og:image:width': '1254',
+      'og:image:height': '1254',
+      'og:image:alt': 'Pufu Lens',
+      'og:locale': locale,
+      'og:locale:alternate': options.language === 'en' ? 'ja_JP' : 'en_US',
+    })) {
+      const meta = document.createElement('meta');
+      meta.setAttribute('property', property);
+      meta.setAttribute('content', content);
+      document.head.appendChild(meta);
+    }
+    for (const [name, content] of Object.entries({
+      'twitter:card': 'summary',
+      'twitter:title': options.title,
+      'twitter:description': options.description,
+      'twitter:image': image,
+      'twitter:image:alt': 'Pufu Lens',
+    })) {
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', name);
+      meta.setAttribute('content', content);
+      document.head.appendChild(meta);
+    }
+  }
   appendHeadHtml(document, `${options.hreflang}${jsonLdScript(options.jsonLd)}`);
   // Keep the public-page SSR markers: Japanese home becomes ASSETS `/` and
   // server/public-pages.ts replaces only the marked region.
@@ -107,6 +143,7 @@ export function legalPagesPlugin(): Plugin {
           jsonLd: homeJsonLd(language, site),
           body: homeBody,
           keepModule: true,
+          homeSocial: true,
         });
         if (language === 'ja') {
           index.source = homeHtml;
