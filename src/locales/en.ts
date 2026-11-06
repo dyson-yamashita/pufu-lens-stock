@@ -31,7 +31,7 @@ export const en: Record<string, string> = {
   'skills.compose_summary':
     'Use multiple questions, stocks and your own views to organize evidence and develop a gaining goal, win condition, purposes and measures.',
   'skills.compose_use_step':
-    'Ask: “Use compose-pufu to draft a pufu from multiple questions and stocks in project X.” Include any sources or gaining goal you have in mind. Review the evidence, proposals and unknowns, then give feedback. You can also ask to save it. Multiple sources can inform the draft, but the saved pufu can link to only one question and one stock; the skill explains the primary links and other references.',
+    'Ask: “Use compose-pufu to draft a pufu from multiple questions and stocks in project X.” Include any sources or gaining goal you have in mind. Review the evidence, proposals and unknowns, then give feedback. You can also ask to save it. When saving through MCP, link up to 100 relevant questions and 100 stocks from the same project. AI generation in the app still uses at most one question and one stock.',
   'skills.client_requirement':
     'Use a skill-compatible AI client such as Codex CLI or Claude Code. Set up the MCP connection separately.',
   'skills.cost':
@@ -1010,7 +1010,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.create_and_edit_pufu_in_chatgpt_and_other_apps':
     'Create and edit Pufu in ChatGPT and other apps: ',
   'ui.user_manual.allow_create_edit_pufu_in_your_mcp_connection_to':
-    "Allow Create/edit Pufu in your MCP connection to save ideas from conversations to a project and edit saved content. Reconnect existing integrations to grant the additional operations. Linking a question is optional; you can later link or unlink questions in the same project. Pufu created without a question can also be opened from the Pufu list. Public pages show Pufu linked to questions. Ask to save as the next phase to append a phase without changing the previous one. Optionally record what prompted the change in the new phase's comments. Ask the connected AI for the writing guidelines to learn the meanings of gaining goals, win conditions and other elements. Retrieving guidelines does not change saved Pufu.",
+    "Allow Create/edit Pufu in your MCP connection to save ideas from conversations to a project and edit saved content. Reconnect existing integrations to grant the additional operations. MCP can link up to 100 questions and 100 stocks in the same project. Linking a question is optional; you can later link or unlink questions in the same project. Pufu created without a question can also be opened from the Pufu list. Public pages show Pufu linked to questions. Ask to save as the next phase to append a phase without changing the previous one. Optionally record what prompted the change in the new phase's comments. Ask the connected AI for the writing guidelines to learn the meanings of gaining goals, win conditions and other elements. Retrieving guidelines does not change saved Pufu.",
   'ui.user_manual.find_related_stocks_with_mcp': 'Find related stocks with MCP: ',
   'ui.user_manual.search_uses_keywords_by_default_to_also_find_similar':
     'Search uses keywords by default. To also find similar meanings, ask the destination app to use hybrid search. This requires administrator search configuration and a ready index. It falls back to keyword search while preparing, at usage limits or during connection failures; check which mode was actually used. Article bodies are not searched.',

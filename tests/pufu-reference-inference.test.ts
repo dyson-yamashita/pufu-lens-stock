@@ -76,7 +76,7 @@ it('問いの関連ストックが複数なら、明示的な1件の選択を求
 it('問いの作成元と別の問いを同時指定して2件に増やせない', async () => {
   expect((await create({ question_ids: ['q2'] }, '/api/v1/questions/q1/pufus')).status).toBe(400);
 });
-it('保存APIの旧question_id経由でも複数ストックを自動追加しない', async () => {
+it('完成JSONの保存APIは旧question_idの複数ストックを引き継ぎ、明示指定なら指定分だけ保存する', async () => {
   await app.env.DB.prepare(
     "INSERT INTO question_stocks(question_id,stock_id) VALUES ('q1','s2')",
   ).run();
@@ -86,14 +86,20 @@ it('保存APIの旧question_id経由でも複数ストックを自動追加し�
     score: savedScore,
     request_id: crypto.randomUUID(),
   };
-  expect((await app.request('/api/v1/pufus', { method: 'POST', body })).status).toBe(400);
-  expect(
-    (await app.request('/api/v1/pufus', { method: 'POST', body: { ...body, stock_ids: ['s2'] } }))
-      .status,
-  ).toBe(201);
+  const inherited = await app.request('/api/v1/pufus', { method: 'POST', body });
+  expect(inherited.status).toBe(201);
+  const { pufu } = (await inherited.json()) as { pufu: { id: string } };
+  expect((await get(pufu.id)).stock_ids).toEqual(['s1', 's2']);
+  const explicit = await app.request('/api/v1/pufus', {
+    method: 'POST',
+    body: { ...body, request_id: crypto.randomUUID(), stock_ids: ['s2'] },
+  });
+  expect(explicit.status).toBe(201);
+  const { pufu: selected } = (await explicit.json()) as { pufu: { id: string } };
+  expect((await get(selected.id)).stock_ids).toEqual(['s2']);
 });
 it.each(['question_ids', 'stock_ids'])(
-  '保存・編集・局面追加の%sも1件までに制限する',
+  '完成JSONの保存・編集・局面追加は%sを複数保持し、100件を超える入力は拒否する',
   async (field) => {
     const refs = { [field]: field === 'question_ids' ? ['q1', 'q2'] : ['s1', 's2'] };
     const body = {
@@ -101,25 +107,39 @@ it.each(['question_ids', 'stock_ids'])(
       score: savedScore,
       request_id: crypto.randomUUID(),
     };
-    expect(
-      (await app.request('/api/v1/pufus', { method: 'POST', body: { ...body, ...refs } })).status,
-    ).toBe(400);
-    const created = await app.request('/api/v1/pufus', { method: 'POST', body });
+    const created = await app.request('/api/v1/pufus', {
+      method: 'POST',
+      body: { ...body, ...refs },
+    });
+    expect(created.status).toBe(201);
     const { pufu } = (await created.json()) as { pufu: { id: string } };
+    expect((await get(pufu.id))[field as 'question_ids' | 'stock_ids']).toEqual(refs[field]);
     for (const [path, method, input] of [
       [
         `/api/v1/pufus/${pufu.id}/relations`,
         'PATCH',
         { revision: 1, question_ids: [], stock_ids: [], ...refs },
       ],
-      [`/api/v1/pufus/${pufu.id}`, 'PATCH', { revision: 1, score: savedScore, ...refs }],
+      [`/api/v1/pufus/${pufu.id}`, 'PATCH', { revision: 2, score: savedScore, ...refs }],
       [
         `/api/v1/pufus/${pufu.id}/phases`,
         'POST',
-        { revision: 1, phase: 1, score: savedScore, ...refs },
+        { revision: 3, phase: 1, score: savedScore, ...refs },
       ],
-    ] as const)
-      expect((await app.request(path, { method, body: input })).status).toBe(400);
+    ] as const) {
+      expect(
+        (
+          await app.request(path, {
+            method,
+            body: { ...input, [field]: Array(101).fill(refs[field][0]) },
+          })
+        ).status,
+      ).toBe(400);
+      expect((await app.request(path, { method, body: input })).status).toBe(
+        method === 'POST' ? 201 : 200,
+      );
+      expect((await get(pufu.id))[field as 'question_ids' | 'stock_ids']).toEqual(refs[field]);
+    }
   },
 );
 async function get(id: string) {
