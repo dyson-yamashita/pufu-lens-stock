@@ -77,4 +77,18 @@ it('ビルド済みホームHTMLをテンプレートにしても公開ページ
     '実践の問い？',
   );
   expect(html).not.toContain('SoftwareApplication');
+  for (const [property, content] of Object.entries({
+    'og:type': 'article',
+    'og:title': '実践の問い？ | Alice project | Pufu Lens',
+    'og:description': '実践の問い？',
+    'og:url': canonical,
+    'og:image': `${app.env.APP_URL}/pufu-lens-logo.png`,
+  })) {
+    const tags = document.querySelectorAll(`meta[property="${property}"]`);
+    expect(tags).toHaveLength(1);
+    expect(tags[0]!.getAttribute('content')).toBe(content);
+  }
+  expect(
+    document.querySelectorAll('meta[property="og:locale"], meta[name^="twitter:"]'),
+  ).toHaveLength(0);
 });

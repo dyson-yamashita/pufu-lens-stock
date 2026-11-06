@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { build, type Rollup } from 'vite';
 import { parseHTML } from 'linkedom';
 import { legalPagesPlugin } from '../scripts/legal-pages-plugin';
@@ -10,6 +10,7 @@ let root: string;
 let assets: Map<string, string>;
 
 beforeAll(async () => {
+  vi.stubEnv('APP_URL', 'https://ogp.example.test');
   root = await realpath(await mkdtemp(join(tmpdir(), 'pufu-legal-build-')));
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   await writeFile(join(root, 'index.html'), html.replace('/src/main.tsx', '/entry.js'));
@@ -63,6 +64,7 @@ it('HTMLの表記にかかわらずmodule scriptを除去し、通常のスク�
 });
 
 afterAll(async () => {
+  vi.unstubAllEnvs();
   if (root) await rm(root, { recursive: true, force: true });
 });
 
@@ -113,6 +115,58 @@ it('トップと英語トップにクロール可能な本文・hreflang・JSON-
         .join('\n'),
     ).toContain('SoftwareApplication');
     expect(document.querySelector('script[type="module"]')).not.toBeNull();
+  }
+});
+
+it.each([
+  ['index.html', '/', 'ja_JP', 'en_US', 'Pufu Lens — 記事と知識のストック'],
+  ['en/index.html', '/en', 'en_US', 'ja_JP', 'Pufu Lens — Connect knowledge into memory.'],
+])('%s の初期HTMLに言語別のOGPとXカードを含める', (file, path, locale, alternate, title) => {
+  const { document } = parseHTML(assets.get(file)!);
+  const description = document.querySelector('meta[name="description"]')!.getAttribute('content');
+  const image = 'https://ogp.example.test/pufu-lens-logo.png';
+  for (const [property, content] of Object.entries({
+    'og:type': 'website',
+    'og:site_name': 'Pufu Lens',
+    'og:title': title,
+    'og:description': description,
+    'og:url': `https://ogp.example.test${path}`,
+    'og:image': image,
+    'og:image:type': 'image/png',
+    'og:image:width': '1254',
+    'og:image:height': '1254',
+    'og:image:alt': 'Pufu Lens',
+    'og:locale': locale,
+    'og:locale:alternate': alternate,
+  })) {
+    const tags = document.querySelectorAll(`meta[property="${property}"]`);
+    expect(tags).toHaveLength(1);
+    expect(tags[0]!.getAttribute('content')).toBe(content);
+  }
+  for (const [name, content] of Object.entries({
+    'twitter:card': 'summary',
+    'twitter:title': title,
+    'twitter:description': description,
+    'twitter:image': image,
+    'twitter:image:alt': 'Pufu Lens',
+  })) {
+    expect(document.querySelector(`meta[name="${name}"]`)?.getAttribute('content')).toBe(content);
+  }
+});
+
+it('トップページの共有メタ情報をマニュアルや規約ページへ流用しない', () => {
+  for (const file of [
+    'manual/index.html',
+    'en/manual/index.html',
+    'privacy/index.html',
+    'en/privacy/index.html',
+    'terms/index.html',
+    'en/terms/index.html',
+  ]) {
+    const { document } = parseHTML(assets.get(file)!);
+    expect(document.querySelectorAll('meta[property^="og:"], meta[name^="twitter:"]')).toHaveLength(
+      0,
+    );
   }
 });
 

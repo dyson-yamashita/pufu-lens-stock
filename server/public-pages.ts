@@ -123,7 +123,7 @@ function assemblePublicDocument(
   }
   const { document } = parseHTML(template);
   for (const el of document.querySelectorAll(
-    'link[rel="canonical"], link[hreflang], script[type="application/ld+json"]',
+    'link[rel="canonical"], link[hreflang], script[type="application/ld+json"], meta[property^="og:"], meta[name^="twitter:"]',
   )) {
     el.remove();
   }
