@@ -54,7 +54,12 @@ export async function createSavedPufu(
     if (row.project_id !== project.id || request_json !== requestJson)
       throw new HTTPException(409, { message: '同じリクエストIDで異なるプ譜が送信されました。' });
     return {
-      pufu: { ...pufu, task: data.score.gainingGoal.text, question_id: questionId },
+      pufu: {
+        ...pufu,
+        title: data.title || null,
+        task: data.score.gainingGoal.text,
+        question_id: questionId,
+      },
       created,
     };
   };

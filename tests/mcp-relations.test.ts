@@ -56,10 +56,11 @@ async function call(token: string, name: string, args: unknown) {
     content?: unknown;
   };
 }
-it('プ譜の書き込み許可だけのMCP応答には関連する問い本文・ストック名を返さない', async () => {
+it('書き込み許可だけのMCP応答には関連本文や再送後の私的なタイトルを返さない', async () => {
   const token = await mcpToken(app, 'alice-project', ['pufus:write']);
   const args = {
     project_id: 'alice-project',
+    title: '送信したタイトル',
     question_ids: ['q-one', 'q-two'],
     stock_ids: ['one', 'two'],
     projectScore: score,
@@ -76,9 +77,14 @@ it('プ譜の書き込み許可だけのMCP応答には関連する問い本文�
     method: 'PATCH',
     body: { revision: 1, score: changed, question_id: 'q-two' },
   });
+  await app.request(`/api/v1/pufus/${id}/title`, {
+    method: 'PATCH',
+    body: { title: 'SECRET_EDITED_TITLE' },
+  });
   const repeated = await call(token, 'create_pufu', args);
   expect(repeated.isError).not.toBe(true);
   expect(JSON.stringify(repeated)).not.toContain('SECRET_');
+  expect(repeated.structuredContent).toMatchObject({ pufu: { title: args.title } });
   expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
     pufu: { question_ids: ['q-two'], stock_ids: ['one', 'two'] },
   });
