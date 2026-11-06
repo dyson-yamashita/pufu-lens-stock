@@ -45,7 +45,7 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await app.open('/#mcp');
   const integration = browser.locator('section[aria-labelledby="mcp-integration-heading"]');
   await expect(integration.getByRole('heading', '接続中のサービス')).toBeVisible();
-  await expect(screen.getByRole('heading', '複数の材料からプ譜を作る')).toBeVisible();
+  await expect(screen.getByRole('heading', '対話でプ譜づくりを支援する')).toBeVisible();
   const skillLinks = browser.locator('.skill-links li');
   await expect(skillLinks).toHaveCount(2);
   await expect(skillLinks.first().getByRole('link', 'スキルのインストール方法')).toHaveAttribute(
@@ -123,7 +123,7 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
     'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill deepen-questions -g',
   );
   await expect(browser.locator('#skills pre').nth(1)).toContainText(
-    'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill compose-pufu -g',
+    'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill support-pufu -g',
   );
   await expect(browser.locator('#skills a')).toHaveAttribute(
     'href',

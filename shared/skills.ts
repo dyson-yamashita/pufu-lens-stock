@@ -2,4 +2,4 @@
 export const skillsSourceUrl =
   'https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills';
 export const deepenQuestionsInstallCommand = `npx skills add ${skillsSourceUrl} --skill deepen-questions -g`;
-export const composePufuInstallCommand = `npx skills add ${skillsSourceUrl} --skill compose-pufu -g`;
+export const supportPufuInstallCommand = `npx skills add ${skillsSourceUrl} --skill support-pufu -g`;

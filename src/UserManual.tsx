@@ -4,7 +4,7 @@ import { ArrowUp, BookOpen } from 'lucide-react';
 import type { Language } from '../shared/locale';
 import LegalLinks from './LegalLinks';
 import {
-  composePufuInstallCommand,
+  supportPufuInstallCommand,
   deepenQuestionsInstallCommand,
   skillsSourceUrl,
 } from '../shared/skills';
@@ -191,14 +191,14 @@ const sections = (tr: typeof t) => [
             <pre className="skill-command">
               <code>{deepenQuestionsInstallCommand}</code>
             </pre>
-            <p>{tr('skills.compose_pufu')}</p>
+            <p>{tr('skills.support_pufu')}</p>
             <pre className="skill-command">
-              <code>{composePufuInstallCommand}</code>
+              <code>{supportPufuInstallCommand}</code>
             </pre>
           </li>
           <li>{tr('skills.connect_step')}</li>
           <li>{tr('skills.use_step')}</li>
-          <li>{tr('skills.compose_use_step')}</li>
+          <li>{tr('skills.support_use_step')}</li>
         </ol>
         <p>{tr('skills.cost')}</p>
         <p className="manual-note">{tr('skills.privacy')}</p>
@@ -207,7 +207,7 @@ const sections = (tr: typeof t) => [
           <code>npx skills update deepen-questions</code>
         </pre>
         <pre className="skill-command">
-          <code>npx skills update compose-pufu</code>
+          <code>npx skills update support-pufu</code>
         </pre>
         <p>
           <a href={skillsSourceUrl} target="_blank" rel="noreferrer">

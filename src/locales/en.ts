@@ -22,16 +22,16 @@ export const en: Record<string, string> = {
     'When there are no questions or insights, you can also add one using the button in the list. During your first steps, the notification after saving an article opens the form with that article and its project selected.',
   'skills.title': 'Skills for AI clients',
   'skills.deepen_questions': 'Deepen questions',
-  'skills.manual_title': 'Deepen questions and compose pufus with skills',
+  'skills.manual_title': 'Deepen questions and develop pufus with skills',
   'skills.summary':
     'Explore hypotheses and questions using your stocks, questions and notes. Refine them in conversation and save them to Pufu Lens.',
   'skills.description':
-    'Two skills are available: Deepen questions and Compose a pufu from multiple sources. Deepen questions uses stocks, existing questions, notes and comments to form hypotheses, then suggests questions, judgment criteria and ways to check them. Refine the candidates with your feedback and ask to save the questions with their hypotheses and verification notes in Pufu Lens.',
-  'skills.compose_pufu': 'Compose a pufu from multiple sources',
-  'skills.compose_summary':
-    'Use multiple questions, stocks and your own views to organize evidence and develop a gaining goal, win condition, purposes and measures.',
-  'skills.compose_use_step':
-    'Ask: “Use compose-pufu to draft a pufu from multiple questions and stocks in project X.” Include any sources or gaining goal you have in mind. Review the evidence, proposals and unknowns, then give feedback. You can also ask to save it. When saving through MCP, link up to 100 relevant questions and 100 stocks from the same project. AI generation in the app still uses at most one question and one stock.',
+    'Two skills are available: Deepen questions and Get help developing a pufu. Deepen questions uses stocks, existing questions, notes and comments to form hypotheses, then suggests questions, judgment criteria and ways to check them. Refine the candidates with your feedback and ask to save the questions with their hypotheses and verification notes in Pufu Lens.',
+  'skills.support_pufu': 'Get help developing a pufu',
+  'skills.support_summary':
+    'Talk through your situation and what you want. Explore questions and stocks when helpful, and gradually develop a pufu together.',
+  'skills.support_use_step':
+    'Ask: “Use support-pufu to help me develop a pufu by talking through my situation.” You can start before your ideas are clear. The AI asks about concrete situations one question at a time, explores questions and stocks when helpful, and reflects its understanding with partial drafts. Refine your goals and approach together, then ask to save the result. MCP can link up to 100 relevant questions and 100 stocks from the same project. AI generation in the app still uses at most one question and one stock.',
   'skills.client_requirement':
     'Use a skill-compatible AI client such as Codex CLI or Claude Code. Set up the MCP connection separately.',
   'skills.cost':
