@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { parseHTML } from 'linkedom';
+import { parseHTML } from 'linkedom/worker';
 import type { AppEnv } from './env';
 import { documentSecureHeaders } from './document-headers';
 import { publicProjectsApp, publicPufuWhere, publicQuestionWhere } from './public-projects';

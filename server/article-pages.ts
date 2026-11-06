@@ -1,4 +1,4 @@
-import { parseHTML } from 'linkedom';
+import { parseHTML } from 'linkedom/worker';
 
 // 明示された次ページだけを扱う。同じサイトの関連記事やコメント欄へは進まない。
 export function nextArticlePage(html: string, current: URL): string | null {
