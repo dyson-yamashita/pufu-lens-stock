@@ -2,7 +2,7 @@ import { isArticlePage, nextArticlePage } from './article-pages';
 import { limitedBytes } from './limited-bytes';
 import { parsePdf } from './pdf-client';
 import { Readability } from '@mozilla/readability';
-import { parseHTML } from 'linkedom';
+import { parseHTML } from 'linkedom/worker';
 import { fetchXPost, xPostId } from './x';
 import { isYouTubeUrl, youtubeUnavailableMessage } from '../shared/youtube';
 import type { Env } from './env';
