@@ -1430,6 +1430,7 @@ p {
 }
 .pufu-progress-steps span {
   width: 28px;
+  height: 100%;
   border: 1px solid var(--muted);
   border-radius: 999px;
 }
@@ -1437,7 +1438,6 @@ p {
   border: 4px solid var(--accent);
 }
 .pufu-progress-steps [data-state='current'] {
-  height: 8px;
   border: 2px solid var(--accent);
 }
 .first-steps {

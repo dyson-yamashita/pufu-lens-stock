@@ -139,6 +139,14 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await expect(progress).toContainText('自動で再試行しています（2回目）');
   await expect(currentSegments).toHaveCount(1);
   await expect(pendingSegments).toHaveCount(3);
+  const segmentHeights = await browser.evaluate(() =>
+    Array.from(
+      document.querySelectorAll('.pufu-progress-steps span'),
+      (segment) => segment.getBoundingClientRect().height,
+    ),
+  );
+  expect(segmentHeights[0]).toBeGreaterThan(0);
+  expect(new Set(segmentHeights).size).toBe(1);
   await browser.reload();
   await expect(progress).toContainText('自動で再試行しています（2回目）');
   await expect(progress).toContainText('通常4ステップのうち1ステップ目');
