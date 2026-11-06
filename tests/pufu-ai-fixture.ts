@@ -35,13 +35,15 @@ export function mockPufuAi(draft: Draft) {
         }),
       };
     }
-    const data = JSON.parse(input.messages[1].content) as {
+    const raw = JSON.parse(input.messages[1].content);
+    if (!('actionGroups' in raw))
+      return { response: JSON.stringify(integrationDraft(draft.winCondition, raw)) };
+    const data = raw as {
       actionGroups: { purpose: number; actions: string[] }[];
     };
     return {
       response: JSON.stringify({
         ...(draft.gainingGoal ? { gainingGoal: draft.gainingGoal } : {}),
-        winCondition: draft.winCondition,
         purposes: data.actionGroups.length
           ? data.actionGroups.map((_, index) => ({
               text:
@@ -51,5 +53,42 @@ export function mockPufuAi(draft: Draft) {
           : draft.purposes.map(({ text }) => ({ text })),
       }),
     };
+  });
+}
+
+export function purposeDraft(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const { winCondition: _win, ...rest } = value as Record<string, unknown>;
+  void _win;
+  return rest;
+}
+export function integrationDraft(
+  winCondition: unknown,
+  data: { purposes: { purpose: number; text: string }[]; elements: Record<string, string[]> },
+) {
+  return {
+    contributions: data.purposes.map((p) => ({ purpose: p.purpose, text: p.text.slice(0, 100) })),
+    elementConsiderations: Object.fromEntries(
+      elementKeys.map((key) => [
+        key,
+        {
+          role: data.elements[key]?.length ? 'background' : 'unknown',
+          sourceElements: data.elements[key]?.length ? [key] : [],
+        },
+      ]),
+    ),
+    winCondition,
+  };
+}
+export function mockPufuStages(facts: unknown, plan: unknown) {
+  return vi.fn<NonNullable<Env['AI']>['run']>().mockImplementation(async (_model, input) => {
+    const data = JSON.parse(input.messages[1].content);
+    const value =
+      'sources' in data
+        ? facts
+        : 'actionGroups' in data
+          ? purposeDraft(plan)
+          : integrationDraft((plan as { winCondition?: unknown })?.winCondition, data);
+    return { response: JSON.stringify(value) };
   });
 }

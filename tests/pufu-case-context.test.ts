@@ -1,3 +1,4 @@
+import { integrationDraft } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import { elementKeys, type PufuContext } from '../shared/pufu';
@@ -108,10 +109,15 @@ function setup(
         }),
       };
     }
+    if (!('actionGroups' in data))
+      return {
+        response: JSON.stringify(
+          integrationDraft('合意した方針に沿う映像が用途別に整っている。', data),
+        ),
+      };
     return {
       response: JSON.stringify({
         ...(!data.task ? { gainingGoal: 'リマスター映像' } : {}),
-        winCondition: '合意した方針に沿う映像が用途別に整っている。',
         purposes: data.actionGroups.map(() => ({ text: '工程の結果が得られている。' })),
       }),
     };
@@ -136,7 +142,7 @@ it('主要事例の素材・判断理由・具体的処理を対象付きで保�
   expect(JSON.stringify(second.centralCases)).toContain('フィルムらしさ');
   expect(JSON.stringify(second.actionGroups)).not.toContain('サラウンド');
   expect(JSON.stringify(second.qualityConditions)).not.toContain('フィルムらしさ');
-  expect(run).toHaveBeenCalledTimes(2);
+  expect(run).toHaveBeenCalledTimes(3);
 });
 
 it('独自の目標や問いがある場合、記事の事例を利用者の施策・素材条件に転用しない', async () => {

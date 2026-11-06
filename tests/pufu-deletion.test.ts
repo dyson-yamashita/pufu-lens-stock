@@ -102,7 +102,7 @@ it.each(['queued', 'generating', 'failed'])(
           name,
           ...args,
         );
-        if (status === 'generating' && name === 'arrange-pufu-v1') {
+        if (status === 'generating' && name === 'arrange-pufu-v2') {
           expect((await remove(id)).status).toBe(200);
           deleted = true;
         }
