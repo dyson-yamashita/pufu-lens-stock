@@ -75,6 +75,8 @@ export const en: Record<string, string> = {
     'AI organizes the input and article body into concise goals, intermediate states, actions and eight planning factors. It does not add activities absent from the sources. Missing conditions stay blank. It adds no comments or reference notes. When both the goal and question are blank, it organizes the project described in the article. Personal and project memories are not used for Pufu generation.',
   'manual.pufu_titles':
     'You can set an optional title when creating a Pufu. Use the pencil to the right of the title in the details to edit it. Clear it to show the gaining goal from phase 1.',
+  'manual.pufu_progress':
+    'While generation is running, open the Pufu details to see the current step and any automatic retries. You can return to the details from the Pufu list.',
   'manual.pufu_limit':
     'By default, each user can request up to 10 Pufu generations in a rolling 24-hour period, including explicit retries. When you reach the limit, an estimated retry time is shown.',
   'language.label': 'Language',
@@ -775,8 +777,17 @@ export const en: Record<string, string> = {
   'ui.pufu_page.retry': 'Retry',
   'ui.pufu_page.generating_pufu': 'Generating Pufu',
   'ui.pufu_page.loading_pufu': 'Loading Pufu',
-  'ui.pufu_page.organizing_win_conditions_and_actions_from_the_question_insight':
-    'Organizing win conditions and actions from the question, insight, task and memory. Generation continues if you close this screen.',
+  'ui.pufu_progress.stage.extract': 'Extract facts from the source material',
+  'ui.pufu_progress.stage.arrange': 'Organize intermediate goals and actions',
+  'ui.pufu_progress.stage.integrate': 'Write the win condition',
+  'ui.pufu_progress.stage.review': 'Verify the win condition',
+  'ui.pufu_progress.stage.repair': 'Revise the win condition',
+  'ui.pufu_progress.stage.review_repaired': 'Verify the revised win condition',
+  'ui.pufu_progress.attempt_failed': 'The previous attempt did not complete (attempt {{attempt}}).',
+  'ui.pufu_progress.retrying': 'Retrying automatically (attempt {{attempt}}).',
+  'ui.pufu_progress.step_done': 'This step is complete. Moving to the next operation.',
+  'ui.pufu_progress.waiting': 'Waiting for generation to start or resume.',
+  'ui.pufu_progress.continues_in_background': 'Generation continues if you close this screen.',
   'ui.pufu_page.retrieving_saved_content': 'Retrieving saved content.',
   'ui.pufu_relations.edit_related_questions_insights_and_stocks':
     'Edit related questions, insights and stocks',

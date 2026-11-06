@@ -110,7 +110,13 @@ export type PufuSummary = PufuRelations & {
   created_at: string;
   updated_at: string;
 };
+export type PufuGenerationProgress = {
+  stage: 'extract' | 'arrange' | 'integrate' | 'review' | 'repair' | 'review_repaired';
+  attempt: number;
+  status: 'running' | 'done' | 'failed';
+};
 export type Pufu = PufuSummary & {
+  generation_progress?: PufuGenerationProgress | null;
   score: PufuScore | null;
   phases: PufuPhase[];
   context: PufuContext;

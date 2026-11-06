@@ -51,6 +51,58 @@ async function create(details = '担当は2名。既存の窓口で試験運用�
 const get = async (id: string) =>
   ((await (await app.request(`/api/v1/pufus/${id}`)).json()) as { pufu: Pufu }).pufu;
 
+it('詳細APIは現在の世代の処理段階と再試行を返し、完了後は進捗を返さない', async () => {
+  const ai = mockPufuAi(draft);
+  const valid = ai.getMockImplementation()!;
+  const job = await create();
+  expect(await get(job.target_id)).toMatchObject({ status: 'queued', generation_progress: null });
+  const stages = ['extract', 'extract', 'arrange', 'integrate', 'review'];
+  let call = 0;
+  ai.mockImplementation(async (...args) => {
+    const index = call++;
+    expect(await get(job.target_id)).toMatchObject({
+      status: 'generating',
+      generation_progress: {
+        stage: stages[index],
+        attempt: index === 1 ? 2 : 1,
+        status: 'running',
+      },
+    });
+    return index === 0 ? { response: '{}' } : valid(...args);
+  });
+  app.env.AI = { run: ai };
+  // Workflowの自動再試行を1回だけ再現し、試行の合間もAPIから観測する。
+  const step = mockStep();
+  const run = step.do.bind(step);
+  step.do = (async (
+    name: string,
+    configOrOperation: unknown,
+    operation?: () => Promise<unknown>,
+  ) => {
+    if (name !== 'extract-pufu-facts-v1')
+      return (run as (...args: unknown[]) => Promise<unknown>)(name, configOrOperation, operation);
+    await expect(operation!()).rejects.toThrow('出力形式');
+    expect(await get(job.target_id)).toMatchObject({
+      status: 'generating',
+      generation_progress: { stage: 'extract', attempt: 1, status: 'failed' },
+    });
+    return operation!();
+  }) as typeof step.do;
+  await runPufu(app.env, job, step);
+  expect(call).toBe(5);
+  expect(await get(job.target_id)).toMatchObject({ status: 'ready', generation_progress: null });
+  // 生成のやり直しで、前の世代のAI呼び出しを現在の進捗に使わない。
+  await app.env.DB.prepare(
+    "UPDATE pufu_scores SET generation=generation+1,status='generating' WHERE id=?",
+  )
+    .bind(job.target_id)
+    .run();
+  expect(await get(job.target_id)).toMatchObject({
+    status: 'generating',
+    generation_progress: null,
+  });
+});
+
 it('抽出と構成を別々に計数し、完成したプ譜だけを保存する', async () => {
   const ai = mockPufuAi(draft);
   app.env.AI = { run: ai };
