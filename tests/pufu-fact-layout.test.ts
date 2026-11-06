@@ -269,7 +269,9 @@ it('長い作業の列挙を中間目的の本文として受理しない', asyn
 
 it('存在しない根拠を持つ事実から構成へ進まない', async () => {
   const run = provider({ ...facts, actions: [{ ...facts.actions[0], evidence: 'E999' }] });
-  await expect(generatePufu(env(run), context)).rejects.toThrow('根拠');
+  await expect(generatePufu(env(run), context)).rejects.toMatchObject({
+    diagnostic: { reason: 'evidence_not_found', path: 'actions[0]', evidence: 'E999' },
+  });
   expect(run).toHaveBeenCalledTimes(1);
 });
 

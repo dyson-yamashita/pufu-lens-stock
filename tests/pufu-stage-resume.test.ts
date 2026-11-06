@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { testApp, mockStep } from './helpers';
 import { mockPufuAi, reviewDraft } from './pufu-ai-fixture';
 import { runPufu } from '../server/pufu';
@@ -11,6 +11,7 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   await app.dispose();
+  vi.restoreAllMocks();
 });
 const draft = {
   winCondition: '窓口の担当者が結果を説明できる。',
@@ -50,6 +51,78 @@ async function create(details = '担当は2名。既存の窓口で試験運用�
 }
 const get = async (id: string) =>
   ((await (await app.request(`/api/v1/pufus/${id}`)).json()) as { pufu: Pufu }).pufu;
+
+it('検証失敗を試行ごとに記録し、内容を漏らさず再試行後に完了する', async () => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const ai = mockPufuAi(draft);
+  const valid = ai.getMockImplementation()!;
+  let extraction = 0;
+  ai.mockImplementation(async (...args) => {
+    const response = await valid(...args);
+    const value = JSON.parse((response as { response: string }).response);
+    if ('actions' in value && ++extraction <= 2) {
+      value.cases = {
+        materials: [
+          {
+            evidence: extraction === 1 ? 'E999' : 'E1',
+            subject: '非公開の対象名',
+            text: 'AIが返した非公開の説明文',
+            kind: 'actual',
+          },
+        ],
+        decisions: [],
+        processing: [],
+      };
+      return { response: JSON.stringify(value) };
+    }
+    return response;
+  });
+  const job = await create('非公開の資料本文。担当は2名。既存の窓口で試験運用する。');
+  app.env.AI = { run: ai };
+  const step = mockStep();
+  const run = step.do.bind(step);
+  step.do = (async (name: string, config: unknown, operation?: () => Promise<unknown>) => {
+    if (name !== 'extract-pufu-facts-v1')
+      return (run as (...args: unknown[]) => Promise<unknown>)(name, config, operation);
+    await expect(operation!()).rejects.toThrow('evidence_not_found');
+    await expect(operation!()).rejects.toThrow('subject_not_in_evidence');
+    return operation!();
+  }) as typeof step.do;
+  await runPufu(app.env, job, step);
+  expect(log.mock.calls).toEqual([
+    [
+      'pufu_fact_validation_failed',
+      {
+        jobId: job.id,
+        stage: 'extract-pufu-facts-v1',
+        attempt: 1,
+        maxAttempts: 10,
+        reason: 'evidence_not_found',
+        path: 'cases.materials[0]',
+        evidence: 'E999',
+      },
+    ],
+    [
+      'pufu_fact_validation_failed',
+      {
+        jobId: job.id,
+        stage: 'extract-pufu-facts-v1',
+        attempt: 2,
+        maxAttempts: 10,
+        reason: 'subject_not_in_evidence',
+        path: 'cases.materials[0]',
+        evidence: 'E1',
+      },
+    ],
+  ]);
+  expect(JSON.stringify(log.mock.calls)).not.toMatch(/非公開|AIが返した/);
+  expect(await get(job.target_id)).toMatchObject({ status: 'ready', generation_progress: null });
+  expect(
+    await app.env.DB.prepare('SELECT status,attempts FROM ai_calls WHERE id=?')
+      .bind(`${job.id}:extract-pufu-facts-v1`)
+      .first(),
+  ).toMatchObject({ status: 'done', attempts: 3 });
+});
 
 it('詳細APIは現在の世代の処理段階と再試行を返し、完了後は進捗を返さない', async () => {
   const ai = mockPufuAi(draft);

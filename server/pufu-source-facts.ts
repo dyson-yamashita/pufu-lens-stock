@@ -6,6 +6,7 @@ import { generationInput } from './pufu-grounding';
 import { prepareEvidenceInput } from './pufu-evidence';
 import { callPufuModel, inputBytes, pufuInputLimit } from './pufu-ai';
 import { pufuCasesSchema, caseActionIndex, type PufuCase } from './pufu-cases';
+import { PufuFactValidationError } from './pufu-fact-validation';
 
 const fact = z.strictObject({
   evidence: z.string().regex(/^E\d+$/),
@@ -106,10 +107,14 @@ cases: three slots, at most ONE fact each. materials=actual materials/equipment;
     limit,
     'low',
   );
-  const eligible = (values: z.infer<typeof fact>[]) =>
-    values.filter((value) => {
+  const eligible = (values: z.infer<typeof fact>[], path: string) =>
+    values.filter((value, index) => {
       if (!evidence.sources.has(value.evidence))
-        throw new Error('生成文の根拠を確認できません。再試行してください。');
+        throw new PufuFactValidationError('生成文の根拠を確認できません。再試行してください。', {
+          reason: 'evidence_not_found',
+          path: `${path}[${index}]`,
+          evidence: value.evidence,
+        });
       return value.scope === 'project';
     });
   const allActions = [...extracted.actions, ...extracted.completionActions];
@@ -117,36 +122,63 @@ cases: three slots, at most ONE fact each. materials=actual materials/equipment;
   allActions.forEach((value, index) => {
     if (value.scope === 'project') actionIndices.set(index, actionIndices.size);
   });
-  const candidates: PufuCase[] = [
-    ...extracted.cases.materials.map((value) => ({ ...value, placement: 'environment' })),
-    ...extracted.cases.decisions.map((value) => ({ ...value, placement: 'quality' })),
-    ...extracted.cases.processing.map(({ actionIndex, ...value }) => ({
-      ...value,
-      placement: `action:${actionIndex}`,
+  const candidates: { value: PufuCase; path: string }[] = [
+    ...extracted.cases.materials.map((value, index) => ({
+      value: { ...value, placement: 'environment' },
+      path: `cases.materials[${index}]`,
+    })),
+    ...extracted.cases.decisions.map((value, index) => ({
+      value: { ...value, placement: 'quality' },
+      path: `cases.decisions[${index}]`,
+    })),
+    ...extracted.cases.processing.map(({ actionIndex, ...value }, index) => ({
+      value: { ...value, placement: `action:${actionIndex}` },
+      path: `cases.processing[${index}]`,
     })),
   ];
   const cases = candidates
-    .filter((value) => value.kind === 'actual')
-    .map((value) => {
+    .filter(({ value }) => value.kind === 'actual')
+    .map(({ value, path }) => {
       // モデルが「作品名」の素材条件などの見出しを返した場合も、
       // 引用符内の原文に実在する名称だけへ戻す。新しい対象は推測しない。
       const source = evidence.sources.get(value.evidence);
       const quoted = value.subject.match(/[「『"“]([^」』"”]+)[」』"”]/u)?.[1];
-      if (source?.includes(value.subject)) return value;
+      if (source?.includes(value.subject)) return { value, path };
       const heading =
         /^[「『"“][^」』"”]+[」』"”](?:の)?(?:フィルム素材|素材条件|質感判断|音声処理)$/u.test(
           value.subject,
         );
-      return heading && quoted && source?.includes(quoted) ? { ...value, subject: quoted } : value;
+      return {
+        value:
+          heading && quoted && source?.includes(quoted) ? { ...value, subject: quoted } : value,
+        path,
+      };
     })
-    .filter((value) => {
+    .filter(({ value, path }) => {
       const source = evidence.sources.get(value.evidence);
       const action = caseActionIndex(value);
-      if (!source?.includes(value.subject) || (action !== null && action >= allActions.length))
-        throw new Error('主要事例の根拠・対象・配置先を確認できません。再試行してください。');
+      const reason = !source
+        ? 'evidence_not_found'
+        : !source.includes(value.subject)
+          ? 'subject_not_in_evidence'
+          : action !== null && action >= allActions.length
+            ? 'action_index_out_of_range'
+            : null;
+      if (reason)
+        throw new PufuFactValidationError(
+          '主要事例の根拠・対象・配置先を確認できません。再試行してください。',
+          {
+            reason,
+            path,
+            evidence: value.evidence,
+            ...(reason === 'action_index_out_of_range'
+              ? { actionIndex: action!, actionCount: allActions.length }
+              : {}),
+          },
+        );
       return action === null || actionIndices.has(action);
     })
-    .map((value) => {
+    .map(({ value }) => {
       const action = caseActionIndex(value);
       return action === null
         ? value
@@ -154,11 +186,14 @@ cases: three slots, at most ONE fact each. materials=actual materials/equipment;
     });
   return {
     cases,
-    actions: eligible(allActions).map(({ text }) => text),
+    actions: [
+      ...eligible(extracted.actions, 'actions'),
+      ...eligible(extracted.completionActions, 'completionActions'),
+    ].map(({ text }) => text),
     elements: Object.fromEntries(
       elementKeys.map((key) => [
         key,
-        eligible(extracted.elements[key])
+        eligible(extracted.elements[key], `elements.${key}`)
           .filter(
             ({ evidence: id, text }) =>
               key !== 'environment' ||

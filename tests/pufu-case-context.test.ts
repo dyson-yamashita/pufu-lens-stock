@@ -175,12 +175,36 @@ it.each(['option', 'capability', 'possibility', 'background'])(
 );
 
 it.each([
-  { ...cases[0], evidence: 'E99' },
-  { ...cases[0], subject: '存在しない作品' },
-  { ...cases[2], placement: 'action:9' },
-])('根拠・対象・配置先を確認できない事例を拒否する: %j', async (invalid) => {
+  {
+    invalid: { ...cases[0], evidence: 'E99' },
+    diagnostic: { reason: 'evidence_not_found', path: 'cases.materials[0]', evidence: 'E99' },
+  },
+  {
+    invalid: { ...cases[1], subject: '存在しない作品' },
+    diagnostic: { reason: 'subject_not_in_evidence', path: 'cases.decisions[0]', evidence: 'E4' },
+  },
+  {
+    invalid: { ...cases[2], placement: 'action:9' },
+    diagnostic: {
+      reason: 'action_index_out_of_range',
+      path: 'cases.processing[0]',
+      evidence: 'E5',
+      actionIndex: 9,
+      actionCount: 3,
+    },
+  },
+])('事例の検証失敗を理由と項目で区別する: $diagnostic.reason', async ({ invalid, diagnostic }) => {
   const { env } = setup([invalid]);
-  await expect(generatePufu(env, context)).rejects.toThrow();
+  const failed = generatePufu(env, context);
+  await expect(failed).rejects.toMatchObject({
+    name: 'PufuFactValidationError',
+    diagnostic,
+    message: expect.stringContaining(diagnostic.reason),
+  });
+  for (const [key, value] of Object.entries(diagnostic))
+    await expect(failed).rejects.toThrow(`"${key}":${JSON.stringify(value)}`);
+  await expect(failed).rejects.not.toThrow(invalid.subject);
+  await expect(failed).rejects.not.toThrow(invalid.text);
 });
 
 it('採用されなかった前工程があっても事例の対応工程番号を保つ', async () => {

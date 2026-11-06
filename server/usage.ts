@@ -1,6 +1,7 @@
 import type { Env, Job } from './env';
 import type { WorkflowStep } from 'cloudflare:workers';
 import { MAX_ATTEMPTS, deferJob } from './job-retries';
+import { PufuFactValidationError } from './pufu-fact-validation';
 
 const windowStart = () => new Date(Date.now() - 86400000).toISOString();
 const setting = (value: string | undefined, fallback: number) =>
@@ -195,6 +196,14 @@ export async function aiStep<T extends object>(
       try {
         result = await operation();
       } catch (error) {
+        if (error instanceof PufuFactValidationError)
+          console.error('pufu_fact_validation_failed', {
+            jobId: job.id,
+            stage: name,
+            attempt: (previous?.attempts ?? 0) + 1,
+            maxAttempts: MAX_ATTEMPTS,
+            ...error.diagnostic,
+          });
         await env.DB.prepare(
           "UPDATE ai_calls SET status='failed',retry_blocked=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
         )
