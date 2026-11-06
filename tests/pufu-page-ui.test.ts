@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PufuPage from '../src/PufuPage';
 import { api, send } from '../src/api';
+import { setLanguage } from '../src/i18n';
 import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 
 vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
@@ -153,6 +154,26 @@ it('生成中の詳細でも古いポーリングが登録済みの星を上書�
   await act(async () => resolve({ pufu: generating }));
   expect(star.getAttribute('aria-pressed')).toBe('true');
   expect(document.body.textContent).toContain('作成した課題');
+});
+
+it('修正した勝利条件の再検証を英語で全6ステップの最後と表示する', async () => {
+  setLanguage('en');
+  vi.mocked(api).mockResolvedValue({
+    pufu: {
+      ...pufu,
+      status: 'generating',
+      score: null,
+      generation_progress: { stage: 'review_repaired', attempt: 1, status: 'running' },
+    },
+  });
+  await render();
+  const progress = document.querySelector('[role="status"]')?.textContent;
+  expect(progress).toContain('Step 6 of 6');
+  expect(progress).toContain('Verify the revised win condition');
+  const segments = document.querySelector('.pufu-progress-steps[aria-hidden="true"]');
+  expect(
+    Array.from(segments?.children ?? [], (segment) => segment.getAttribute('data-state')),
+  ).toEqual(['complete', 'complete', 'complete', 'complete', 'complete', 'current']);
 });
 
 it('エディター取得失敗でも画面と保存済みの文脈を残し、自動再読み込みは1回だけ行う', async () => {

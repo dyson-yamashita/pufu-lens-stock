@@ -76,7 +76,7 @@ export const ja: Record<string, string> = {
   'manual.pufu_titles':
     '作成時にタイトルを任意で設定できます。詳細画面のタイトル右側のペンマークで編集し、空欄に戻すと第一局面の獲得目標を表示します。',
   'manual.pufu_progress':
-    '生成中はプ譜の詳細で、資料からの事実抽出や勝利条件の検証など、いまの工程と自動再試行を確認できます。画面を閉じた後も、一覧から開き直せます。',
+    '生成中はプ譜の詳細で、いまの工程が全体の何ステップ目かと、自動再試行の状況を確認できます。画面を閉じた後も、一覧から開き直せます。',
   'manual.pufu_limit':
     '標準設定では、プ譜生成は明示的な再試行も含め、1人あたり直近24時間で10件までです。上限に達すると、再試行できる時刻の目安を表示します。',
   'language.label': '言語',
@@ -776,6 +776,8 @@ export const ja: Record<string, string> = {
   'ui.pufu_progress.stage.review': '勝利条件を検証',
   'ui.pufu_progress.stage.repair': '勝利条件を修正',
   'ui.pufu_progress.stage.review_repaired': '修正した勝利条件を再検証',
+  'ui.pufu_progress.standard_step': '通常{{total}}ステップのうち{{step}}ステップ目',
+  'ui.pufu_progress.extended_step': '全{{total}}ステップのうち{{step}}ステップ目',
   'ui.pufu_progress.attempt_failed': '直前の試行で処理が完了しませんでした（{{attempt}}回目）。',
   'ui.pufu_progress.retrying': '自動で再試行しています（{{attempt}}回目）。',
   'ui.pufu_progress.step_done': 'この工程が完了し、次の処理へ進んでいます。',

@@ -2,12 +2,22 @@ import PufuTitle from './PufuTitle';
 import { applicationError, t, useLanguage } from './i18n';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, LoaderCircle, RefreshCw } from 'lucide-react';
-import type { Pufu, PufuPhase } from '../shared/pufu';
+import type { Pufu, PufuGenerationProgress, PufuPhase } from '../shared/pufu';
 import { api, ApiError, send } from './api';
 import PufuEditorLoadError, { clearPufuEditorLoadRetry } from './PufuEditorLoadError';
 import PufuRelations from './PufuRelations';
 import PufuFavoriteButton from './PufuFavoriteButton';
 import DeleteAction from './DeleteAction';
+
+const stepNumbers = {
+  extract: 1,
+  arrange: 2,
+  integrate: 3,
+  review: 4,
+  repair: 5,
+  review_repaired: 6,
+} satisfies Record<PufuGenerationProgress['stage'], number>;
+
 const PufuEditor = lazy(async () => {
   try {
     const editor = await import('./PufuEditor');
@@ -44,6 +54,10 @@ export default function PufuPage({
   const [relationsBusy, setRelationsBusy] = useState(false);
   const [editorVersion, setEditorVersion] = useState(0);
   const progress = pufu?.status === 'generating' ? pufu.generation_progress : null;
+  const step = progress ? stepNumbers[progress.stage] : 0;
+  const standardSteps = step <= stepNumbers.review;
+  const total = standardSteps ? stepNumbers.review : stepNumbers.review_repaired;
+  const completedSteps = progress?.status === 'done' ? step : step - 1;
   const questions =
     pufu?.questions ??
     (pufu?.question_id
@@ -270,11 +284,29 @@ export default function PufuPage({
                   ? t('ui.pufu_page.generating_pufu')
                   : t('ui.pufu_page.loading_pufu')}
             </h2>
-            {progress && (
+            {progress && step && (
               <>
                 <p>
                   <strong>{t(`ui.pufu_progress.stage.${progress.stage}`)}</strong>
                 </p>
+                <p>
+                  {t(
+                    standardSteps
+                      ? 'ui.pufu_progress.standard_step'
+                      : 'ui.pufu_progress.extended_step',
+                    { step, total },
+                  )}
+                </p>
+                <div className="pufu-progress-steps" aria-hidden="true">
+                  {Array.from({ length: total }, (_, index) => (
+                    <span
+                      key={index}
+                      data-state={
+                        index < completedSteps ? 'complete' : index < step ? 'current' : 'pending'
+                      }
+                    />
+                  ))}
+                </div>
                 {progress.status === 'failed' ? (
                   <p>{t('ui.pufu_progress.attempt_failed', { attempt: progress.attempt })}</p>
                 ) : progress.status === 'done' ? (
