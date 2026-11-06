@@ -6,6 +6,8 @@ import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-reac
 import { pufuScoreSchema, type Pufu, type PufuPhase } from '../shared/pufu';
 import { send } from './api';
 import { useTheme } from './theme';
+// 開いたままの詳細画面から旧デプロイのダウンロード用JSを要求しないよう、詳細と一緒に読み込む。
+import { createPufuPng } from './pufu-download';
 import PufuImagePreview from './PufuImagePreview';
 import PufuModal from './PufuModal';
 import ResponsivePufuScore from './ResponsivePufuScore';
@@ -165,9 +167,7 @@ export default function PufuEditor({
       const blob =
         format === 'json'
           ? new Blob([JSON.stringify(savedPhase.score)], { type: 'application/json' })
-          : await (
-              await import('./pufu-download')
-            ).createPufuPng(savedPhase.score, theme, language);
+          : await createPufuPng(savedPhase.score, theme, language);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

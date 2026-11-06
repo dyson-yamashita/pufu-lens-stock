@@ -165,6 +165,19 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
   await screen.getByRole('button', '前の局面へ').click();
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第1局面');
+  // 詳細を開いた後のデプロイで、この画面が参照する古いJSが配信されなくなる状況を再現する。
+  const scripts = /\/assets\/[^/?]+\.js(?:\?|$)/;
+  await browser.route(scripts, (route) => route.fulfill({ status: 404 }));
+  await screen.getByRole('button', 'ダウンロード', { exact: true }).click();
+  const png = await browser.waitForDownload(
+    () => screen.getByRole('button', '画像（PNG）').click(),
+    { timeout: 10000 },
+  );
+  expect(png.suggestedFilename).toBe(`${pufu.id}-phase-1.png`);
+  expect((await readFile(png.absolutePath)).subarray(0, 8).toString('hex')).toBe(
+    '89504e470d0a1a0a',
+  );
+  await browser.unroute(scripts);
   const saved = (await fixture.request(`/pufus/${pufu.id}`)) as {
     pufu: {
       current_phase: number;
