@@ -113,10 +113,7 @@ function limitUnsupportedOutcomes(
           (defectFree.test(part) && !defectFree.test(support)) ||
           (usability.test(part) && !usability.test(support))),
     );
-  if (unsupported(score.winCondition.text))
-    score.winCondition.text = fallback(
-      score.purposes.flatMap((p) => p.measures.map((m) => m.text)).join('\n'),
-    );
+  // 勝利条件は統合後の独立検証で確認する。語句だけで全文を汎用文へ置換しない。
   for (const purpose of score.purposes)
     if (unsupported(purpose.text))
       purpose.text = fallback(purpose.measures.map((m) => m.text).join('\n'));

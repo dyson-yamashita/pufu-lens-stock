@@ -277,7 +277,7 @@ it('本文は抽出段階で参照し、構成段階へは抽出した短文だ�
   const run = provider();
   const title = 'タイトルだけにある将来の規格対応保証';
   await generatePufu(env(run), { ...context, stock: { ...context.stock!, title } });
-  expect(run).toHaveBeenCalledTimes(3);
+  expect(run).toHaveBeenCalledTimes(4);
   const first = run.mock.calls[0][1];
   const second = run.mock.calls[1][1];
   expect(first.messages[1].content).toContain('再取り込み');

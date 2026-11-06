@@ -1,4 +1,4 @@
-import { integrationDraft } from './pufu-ai-fixture';
+import { integrationDraft, reviewDraft } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import { elementKeys, type PufuContext } from '../shared/pufu';
@@ -109,6 +109,7 @@ function setup(
         }),
       };
     }
+    if ('winCondition' in data) return { response: JSON.stringify(reviewDraft(data)) };
     if (!('actionGroups' in data))
       return {
         response: JSON.stringify(
@@ -142,7 +143,14 @@ it('主要事例の素材・判断理由・具体的処理を対象付きで保�
   expect(JSON.stringify(second.centralCases)).toContain('フィルムらしさ');
   expect(JSON.stringify(second.actionGroups)).not.toContain('サラウンド');
   expect(JSON.stringify(second.qualityConditions)).not.toContain('フィルムらしさ');
-  expect(run).toHaveBeenCalledTimes(3);
+  for (const index of [2, 3]) {
+    const finalInput = JSON.parse(run.mock.calls[index][1].messages[1].content);
+    expect(finalInput.elements.quality).toEqual([score.elements.quality.text]);
+    expect(finalInput.elements.environment).toEqual([score.elements.environment.text]);
+    expect(JSON.stringify(finalInput.centralCases)).toContain('フィルムらしさ');
+    expect(JSON.stringify(finalInput.centralCases)).toContain('サラウンド化した');
+  }
+  expect(run).toHaveBeenCalledTimes(4);
 });
 
 it('独自の目標や問いがある場合、記事の事例を利用者の施策・素材条件に転用しない', async () => {

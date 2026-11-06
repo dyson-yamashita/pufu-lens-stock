@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 import type { Env } from '../server/env';
+import { reviewDraft } from './pufu-ai-fixture';
 
 const context: PufuContext = {
   task: 'サンプル作品の修復映像',
@@ -56,6 +57,7 @@ function provider(
       };
     if ('actionGroups' in data)
       return { response: JSON.stringify({ purposes: purposes.map((text) => ({ text })) }) };
+    if ('winCondition' in data) return { response: JSON.stringify(reviewDraft(data)) };
     return {
       response: JSON.stringify({
         contributions: (options.links ?? [1, 2, 3]).map((purpose) => ({
@@ -82,7 +84,7 @@ function provider(
 it('全中間目的を確定してから八要素全項目とともに勝利条件へ統合する', async () => {
   const run = provider();
   const score = await generatePufu({ AI: { run }, AI_MODEL: 'test' } as unknown as Env, context);
-  expect(run).toHaveBeenCalledTimes(3);
+  expect(run).toHaveBeenCalledTimes(4);
   expect(JSON.parse(run.mock.calls[1][1].messages[1].content).elements).toEqual(elements);
   const finalInput = JSON.parse(run.mock.calls[2][1].messages[1].content);
   expect(finalInput.purposes.map((p: { text: string }) => p.text)).toEqual(purposes);

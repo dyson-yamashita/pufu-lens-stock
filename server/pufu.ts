@@ -2,6 +2,7 @@ import { normalizeGeneratedScore } from './pufu-output';
 import { extractPufuFacts } from './pufu-source-facts';
 import { arrangePufu } from './pufu-plan';
 import { integratePufuWin } from './pufu-win';
+import { reviewPufuWin } from './pufu-win-review';
 import { pufuModelLabel } from './pufu-ai';
 import type { Env, Job } from './env';
 import { isDemo } from './env';
@@ -58,9 +59,27 @@ export async function generatePufu(
   );
   const score = await stage('arrange-pufu-v2', (fresh) => arrangePufu(env, fresh, facts, language));
   if (!score.purposes.length) return score;
-  return stage('integrate-pufu-win-v1', (fresh) =>
+  let candidate = await stage('integrate-pufu-win-v2', (fresh) =>
     integratePufuWin(env, fresh, facts, score, language),
   );
+  for (let attempt = 0; attempt < 2; attempt++) {
+    candidate = normalizeGeneratedScore(candidate, context, language);
+    const review = await stage(
+      attempt ? 'review-repaired-pufu-win-v1' : 'review-pufu-win-v1',
+      (fresh) => reviewPufuWin(env, fresh, facts, candidate, language),
+    );
+    if (review.winCondition !== candidate.winCondition.text)
+      throw new Error('勝利条件と検証対象が一致しません。再試行してください。');
+    if (!review.issues.length) return candidate;
+    if (!attempt)
+      candidate = await stage('repair-pufu-win-v1', (fresh) =>
+        integratePufuWin(env, fresh, facts, score, language, {
+          winCondition: candidate.winCondition.text,
+          issues: review.issues,
+        }),
+      );
+  }
+  throw new Error('中間目的と条件を統合した勝利条件を確認できませんでした。再試行してください。');
 }
 
 export function queuePufuJob(env: Env, id: string): D1PreparedStatement {
@@ -122,6 +141,8 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
       const score = await generatePufu(env, context, resolveLanguage(job.language), stage);
       await step.do('save-pufu', async () => {
         const normalized = normalizeGeneratedScore(score, context, resolveLanguage(job.language));
+        if (normalized.winCondition.text !== score.winCondition.text)
+          throw new Error('検証後の勝利条件が変化しました。再試行してください。');
         const json = JSON.stringify(normalized);
         await env.DB.batch([
           env.DB.prepare(
