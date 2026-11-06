@@ -2106,6 +2106,15 @@ p {
 .integration-heading:first-child {
   margin-top: 0;
 }
+.mcp-integration {
+  margin-top: 32px;
+}
+.skill-links {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding-left: 1.5em;
+}
 .skill-command {
   max-width: 100%;
   padding: 12px;

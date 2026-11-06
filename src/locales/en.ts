@@ -23,10 +23,12 @@ export const en: Record<string, string> = {
   'skills.title': 'Skills for AI clients',
   'skills.deepen_questions': 'Deepen questions',
   'skills.manual_title': 'Deepen questions with a skill',
+  'skills.summary':
+    'Explore hypotheses and questions using your stocks, questions and notes. Refine them in conversation and save them to Pufu Lens.',
   'skills.description':
     'The Deepen questions skill uses stocks, existing questions, notes and comments to form hypotheses, then suggests questions, judgment criteria and ways to check them. Refine the candidates with your feedback and ask to save the questions with their hypotheses and verification notes in Pufu Lens.',
   'skills.client_requirement':
-    'Use an AI client that supports local skills, such as Codex CLI or Claude Code. Installing the skill and authorizing the MCP connection on this page are separate steps.',
+    'Use a skill-compatible AI client such as Codex CLI or Claude Code. Set up the MCP connection separately.',
   'skills.cost':
     'Reasoning about hypotheses and questions uses your AI client’s subscription or usage allowance. To find related stocks, the skill normally makes up to three searches combining keywords and meaning per investigation, using Pufu Lens’s search AI allowance. You can request keyword-only search. It does not regenerate summaries or memories.',
   'skills.installation_link': 'How to install skills',
