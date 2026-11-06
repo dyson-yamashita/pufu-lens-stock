@@ -54,7 +54,10 @@ export default function PufuPage({
   const [relationsBusy, setRelationsBusy] = useState(false);
   const [editorVersion, setEditorVersion] = useState(0);
   const progress = pufu?.status === 'generating' ? pufu.generation_progress : null;
-  const step = progress && stepNumbers[progress.stage];
+  const step = progress ? stepNumbers[progress.stage] : 0;
+  const standardSteps = step <= stepNumbers.review;
+  const total = standardSteps ? stepNumbers.review : stepNumbers.review_repaired;
+  const completedSteps = progress?.status === 'done' ? step : step - 1;
   const questions =
     pufu?.questions ??
     (pufu?.question_id
@@ -287,13 +290,23 @@ export default function PufuPage({
                   <strong>{t(`ui.pufu_progress.stage.${progress.stage}`)}</strong>
                 </p>
                 <p>
-                  {step <= stepNumbers.review
-                    ? t('ui.pufu_progress.standard_step', { step, total: stepNumbers.review })
-                    : t('ui.pufu_progress.extended_step', {
-                        step,
-                        total: stepNumbers.review_repaired,
-                      })}
+                  {t(
+                    standardSteps
+                      ? 'ui.pufu_progress.standard_step'
+                      : 'ui.pufu_progress.extended_step',
+                    { step, total },
+                  )}
                 </p>
+                <div className="pufu-progress-steps" aria-hidden="true">
+                  {Array.from({ length: total }, (_, index) => (
+                    <span
+                      key={index}
+                      data-state={
+                        index < completedSteps ? 'complete' : index < step ? 'current' : 'pending'
+                      }
+                    />
+                  ))}
+                </div>
                 {progress.status === 'failed' ? (
                   <p>{t('ui.pufu_progress.attempt_failed', { attempt: progress.attempt })}</p>
                 ) : progress.status === 'done' ? (

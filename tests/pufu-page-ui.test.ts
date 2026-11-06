@@ -170,6 +170,10 @@ it('修正した勝利条件の再検証を英語で全6ステップの最後と
   const progress = document.querySelector('[role="status"]')?.textContent;
   expect(progress).toContain('Step 6 of 6');
   expect(progress).toContain('Verify the revised win condition');
+  const segments = document.querySelector('.pufu-progress-steps[aria-hidden="true"]');
+  expect(
+    Array.from(segments?.children ?? [], (segment) => segment.getAttribute('data-state')),
+  ).toEqual(['complete', 'complete', 'complete', 'complete', 'complete', 'current']);
 });
 
 it('エディター取得失敗でも画面と保存済みの文脈を残し、自動再読み込みは1回だけ行う', async () => {

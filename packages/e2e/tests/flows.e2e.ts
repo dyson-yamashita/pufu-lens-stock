@@ -106,7 +106,7 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   const progressStates = {
     queued: null,
     retry: { stage: 'extract', attempt: 2, status: 'running' },
-    review: { stage: 'review', attempt: 1, status: 'running' },
+    review: { stage: 'review', attempt: 1, status: 'done' },
     repair: { stage: 'repair', attempt: 1, status: 'running' },
   };
   let state: keyof typeof progressStates | 'ready' = 'queued';
@@ -127,20 +127,32 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   });
   await browser.reload();
   const progress = browser.locator('.pufu-page').getByRole('status');
+  const segments = browser.locator('.pufu-progress-steps span');
+  const completedSegments = browser.locator('.pufu-progress-steps [data-state="complete"]');
+  const currentSegments = browser.locator('.pufu-progress-steps [data-state="current"]');
+  const pendingSegments = browser.locator('.pufu-progress-steps [data-state="pending"]');
   await expect(progress).toContainText('生成待ち');
+  await expect(segments).toHaveCount(0);
   state = 'retry';
   await expect(progress).toContainText('資料から事実を抽出');
   await expect(progress).toContainText('通常4ステップのうち1ステップ目');
   await expect(progress).toContainText('自動で再試行しています（2回目）');
+  await expect(currentSegments).toHaveCount(1);
+  await expect(pendingSegments).toHaveCount(3);
   await browser.reload();
   await expect(progress).toContainText('自動で再試行しています（2回目）');
   await expect(progress).toContainText('通常4ステップのうち1ステップ目');
   state = 'review';
   await expect(progress).toContainText('勝利条件を検証');
   await expect(progress).toContainText('通常4ステップのうち4ステップ目');
+  await expect(completedSegments).toHaveCount(4);
   state = 'repair';
   await expect(progress).toContainText('勝利条件を修正');
   await expect(progress).toContainText('全6ステップのうち5ステップ目');
+  await expect(segments).toHaveCount(6);
+  await expect(completedSegments).toHaveCount(4);
+  await expect(currentSegments).toHaveCount(1);
+  await expect(pendingSegments).toHaveCount(1);
   state = 'ready';
   await expect(screen.getByRole('button', '編集する')).toBeVisible();
   await fixture.request(`/pufus/${inferred.id}`, 'DELETE');

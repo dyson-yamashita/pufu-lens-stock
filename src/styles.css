@@ -1420,6 +1420,26 @@ p {
 .empty-state .button {
   margin-top: 6px;
 }
+.pufu-progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 8px;
+}
+.pufu-progress-steps span {
+  width: 28px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+}
+.pufu-progress-steps [data-state='complete'] {
+  border: 4px solid var(--accent);
+}
+.pufu-progress-steps [data-state='current'] {
+  height: 8px;
+  border: 2px solid var(--accent);
+}
 .first-steps {
   padding: 24px;
   margin-bottom: 20px;
