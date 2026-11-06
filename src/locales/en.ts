@@ -1,4 +1,21 @@
 export const en: Record<string, string> = {
+  'pufu.creation_method': 'Creation method',
+  'pufu.create_with_ai': 'Create with AI',
+  'pufu.create_from_json': 'Create from JSON',
+  'pufu.import_json': 'Import JSON',
+  'pufu.import_create_help':
+    'Select JSON exported from pufu editor, then choose “Create Pufu” to save it. No AI generation is used.',
+  'pufu.import_selected': 'Selected file: {{filename}} / Gaining goal: {{goal}}',
+  'pufu.import_too_large': 'Choose a JSON file no larger than 256 KiB.',
+  'pufu.import_read_failed': 'Could not read the file. Please select it again.',
+  'pufu.import_invalid_json':
+    'Could not read this as JSON. Choose a JSON file exported from pufu editor.',
+  'pufu.import_invalid_score':
+    'The Pufu format is invalid or exceeds the storage limits. Keep each text within 1,200 characters, each comment within 600 characters, and each list of purposes or measures within 12 items. Check that element IDs are unique.',
+  'pufu.import_replace_confirm': 'Replace your unsaved edits with the JSON content?',
+  'pufu.import_edit_notice': 'JSON loaded. Choose “Save” to apply it to this phase.',
+  'manual.pufu_import':
+    'To create from JSON, select “Create from JSON” under “Creation method”, import JSON exported from pufu editor, and choose “Create Pufu”. To edit, open the phase and choose “Edit” → “Import JSON” → “Save”. This replaces the entire selected phase and leaves other phases unchanged. Files must be within 256 KiB, each text within 1,200 characters, each comment within 600 characters, and each list of purposes or measures within 12 items.',
   'first_steps.title': 'Your first 3 steps',
   'first_steps.start_project': 'Create your first project',
   'first_steps.project_intro':
