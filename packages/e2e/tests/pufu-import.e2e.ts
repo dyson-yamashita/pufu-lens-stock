@@ -50,16 +50,26 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
     await screen.getByRole('button', '局面を追加').click();
     await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
     await screen.getByRole('button', '編集する').click();
+    const gainingGoal = browser.locator('.pufu-editor-root textarea[role="gaining-goal"]');
     await browser.locator('input[type="file"]').setInputFiles(replacement);
-    await expect(browser.locator('.pufu-editor-root')).toContainText(changed.gainingGoal.text);
+    await expect(gainingGoal).toHaveValue(changed.gainingGoal.text);
     // インポートだけではサーバーに保存しない。
     expect(await fixture.request(`/pufus/${id}`)).toMatchObject({ pufu: { score } });
     await browser.locator('input[type="file"]').setInputFiles(invalid);
     await expect(screen.getByRole('alert')).toContainText('プ譜の形式が正しくない');
-    await expect(browser.locator('.pufu-editor-root')).toContainText(changed.gainingGoal.text);
-    const dismiss = await browser.onDialog('dismiss');
+    await expect(gainingGoal).toHaveValue(changed.gainingGoal.text);
+    let markDismissed!: () => void;
+    const dismissed = new Promise<void>((resolve) => {
+      markDismissed = resolve;
+    });
+    const dismiss = await browser.onDialog(async (dialog) => {
+      expect(dialog.type).toBe('confirm');
+      await dialog.dismiss();
+      markDismissed();
+    });
     await browser.locator('input[type="file"]').setInputFiles(original);
-    await expect(browser.locator('.pufu-editor-root')).toContainText(changed.gainingGoal.text);
+    await dismissed;
+    await expect(gainingGoal).toHaveValue(changed.gainingGoal.text);
     await dismiss();
     await screen.getByRole('button', '保存', { exact: true }).click();
     await expect(
