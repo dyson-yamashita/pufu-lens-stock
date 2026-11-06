@@ -1,52 +1,52 @@
-# 対話とプ譜の品質
+# Conversation and pufu quality
 
-## 判定の軸
+## Review criteria
 
-| 軸           | 確認すること                                                                                                   |
-| ------------ | -------------------------------------------------------------------------------------------------------------- |
-| 対話         | 具体的な場面を聞き、理解を短く返し、次の一問と途中案を行き来している。既知のことを聞き直していない             |
-| 当事者の意志 | 本人の言葉と作成目的を保ち、記事の目標やAIの一般論に置き換えていない                                           |
-| 複数参照     | 各材料のID・採否・取り込んだ要素が分かり、問いの羅列や一記事の要約だけになっていない                           |
-| 根拠         | 現状、資料の主張、本人の認識、提案、未確認事項を区別している                                                   |
-| つながり     | 施策→中間目的→勝利条件の寄与を説明でき、獲得目標と勝利条件を区別している                                       |
-| 簡潔さ       | 中間目的は標準2〜3個、施策は各1〜3件を目安とし、根拠がなければ少なくする                                       |
-| 不確実性     | 廟算八要素は現在の条件。不明な予算・期限・競合などを創作しない                                                 |
-| 保存         | 同じプロジェクト内の採用した問い・ストックを複数紐付け、参照のみの材料と区別し、公開され得る内容を確認している |
+| Criterion        | What to check                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conversation     | Ask about concrete situations, briefly reflect understanding, and move between one next question and partial drafts. Do not ask again about known information. |
+| User intent      | Preserve the user's words and purpose rather than substituting an article's goal or generic AI advice.                                                         |
+| Multiple sources | Identify source IDs, adoption decisions, and the elements they support; do more than list questions or summarize one article.                                  |
+| Evidence         | Separate current circumstances, source claims, the user's understanding, proposals, and unknowns.                                                              |
+| Connections      | Explain how measures may support intermediate purposes and the win condition. Distinguish the gaining goal from the win condition.                             |
+| Brevity          | Usually start with two or three purposes and one to three measures each; use fewer when evidence is insufficient.                                              |
+| Uncertainty      | The eight planning factors describe current conditions. Do not invent budgets, deadlines, competitors, or other unknowns.                                      |
+| Saving           | Link adopted questions and stocks from the same project, distinguish material merely consulted, and review content that may become public.                     |
 
-件数の目安は必須制約ではない。全てを実験・KPI・作業手順へ変換せず、本人が何を得てどんな状況を迎えたいのかを先に整理する。
+Suggested counts are not requirements. Do not turn everything into experiments, KPIs, or procedures. First understand what the user wants to obtain and what situation they hope to reach.
 
-## 話を聞きながら案を変える例
+## Example: revise a draft while listening
 
-- **本人**：「受け入れについてプ譜づくりを手伝って。まだ考えがまとまっていません」
-- **支援**：「いま、いちばん整理したいのはどんな場面ですか」
-- **本人**：「私は現場の受け入れ担当です。初日に仕事が進まず、何度も説明することになります」
-- **支援**：「初日に仕事が止まり、説明する側にも負担がかかっているのですね。最近、どんなところで止まりましたか」
-- **本人**：「アカウントの権限がなく、誰に頼むのか分からず待ちました」
-- **支援**：ここで初日や権限に関する問い・ストックを必要な範囲で調べる。s2にも権限エラーの報告があると分かった場合、「s2にも同じ報告があります。ただ、頻度は未確認です。『必要な権限と相談先が分かる』状態が、途中の目的になりそうです」と途中案を返し、次に本人が分かる範囲で実際の相談先を聞く。
-- **本人**：「権限の決定は別部署で、私には決められません。まず相談先を整理したいです」
-- **支援**：「必要な権限と相談先を整理した案内」が獲得目標の案になりそうだと示し、本人の役割と意志に合わせて修正する。権限を自分で変更する施策を確定しない。
+- **User**: Help me develop a pufu about onboarding. My thoughts are not clear yet.
+- **Assistant**: What situation would you most like to make sense of right now?
+- **User**: I handle onboarding on the team. Work does not get started on day one, and I keep explaining things.
+- **Assistant**: Work stalls on day one, and explaining things is a burden for you too. Where did work get stuck recently?
+- **User**: Someone lacked account permissions and waited because they did not know whom to ask.
+- **Assistant**: Consult questions or stocks about day one and permissions only as needed. If s2 confirms a report of permission errors, offer a partial draft: s2 reports the same problem, though its frequency is unknown. Knowing the necessary permissions and contact person may be an intermediate purpose. Then ask one question about the actual contact, within what the user knows.
+- **User**: Another department decides permissions; I cannot change them. First I want to organize whom to contact.
+- **Assistant**: Suggest a guide to necessary permissions and contacts as a possible gaining goal, adapting it to the user's role and intentions. Do not commit them to changing permissions themselves.
 
-初回から完成したプ譜一式や参照表を出し、本人に賛否だけを求める進め方は避ける。本人が訂正したら、当初の仮案に固執せず更新する。記事の成功例を先に解決策へ採用せず、本人の状況と比べて役立つ点を考える。
+Do not open with a complete pufu or source table and leave the user only to accept or reject it. Update the initial draft when corrected. Compare an article's success story with the user's situation before adopting its solution.
 
-## 状況が分かった後に構成する例
+## Example: connect the elements after understanding the situation
 
-架空の同一プロジェクトに次の材料がある。
+Suppose one project contains this fictional material:
 
-- q1「初回利用で何が作業を妨げるか？」。本人コメントc1「作業を止めずに使い始めてほしい」。
-- q2「操作案内は初回利用に役立つか？」。AIコメントc2「案内を増やせば解決するはず」。
-- s1：他社では利用案内の追加後に完了率が上がったという記事。
-- s2：本人のメモ「初回に権限エラーになる利用者がいる。頻度はまだ分からない」。
+- q1: What prevents users from completing their first task? User comment c1: I want them to get started without their work stopping.
+- q2: Does an operating guide help first-time users? AI comment c2: More guidance should solve it.
+- s1: An article reports a higher completion rate after another company added a guide.
+- s2: The user's note reports permission errors on first use; frequency is unknown.
 
-本人から初回のつまずきへの対処を望むことが分かった後なら、次のようにつなぐ。下記は会話前に自動確定する案ではない。
+After hearing that the user wants to address initial obstacles, you could connect the elements as follows. This is not a plan to establish automatically before that conversation.
 
-- **獲得目標（案）**：初回のつまずきに対処できる利用開始の仕組み。
-- **勝利条件（仮置き）**：利用者が権限や操作で立ち止まらず、最初の作業を終えて使い始められている。
-- **中間目的1（必要な状態の案）**：初回に止まる原因を把握できている。**施策案**：権限エラーと操作上の迷いを分けて確認する。
-- **中間目的2（必要な状態の案）**：権限や操作で困ったときに先へ進める。**施策案**：権限エラーへの対処を検討し、操作案内の試行で役立つ場面を確かめる。
-- **八要素**：環境に「初回に権限エラーの報告あり、頻度未確認（s2）」を置く。予算・期限・競合などは情報がないため空欄。
+- **Gaining goal proposal**: A way to start using the service that addresses initial obstacles.
+- **Tentative win condition**: Users finish their first task and start using the service without being stopped by permissions or unclear operations.
+- **Purpose 1, a proposed necessary state**: The reasons first-time users get stuck are understood. **Proposed measure**: Examine permission errors separately from operational confusion.
+- **Purpose 2, a proposed necessary state**: Users can move forward when permissions or operations cause difficulty. **Proposed measures**: Consider responses to permission errors and try guidance to learn where it helps.
+- **Planning factors**: Record the reported first-use permission errors and unknown frequency under `environment`, citing s2. Leave budget, deadlines, competitors, and other unsupported fields blank.
 
-参照表ではq1・c1を本人の意志、q2を案内の検討課題、s2を現状の報告、s1を施策案の参考事例として示す。c2は未検証であり、案内だけで解決する根拠として採用しない。s1の完了率や成功を本人の実績へ移さない。原因確認・対処・試行はいずれも今後の提案であり、実施済みと書かない。記事自体を整理する依頼なら、記事の活動だけを扱い、この新しい本人向け施策案を混ぜない。
+Map q1 and c1 to the user's intention, q2 to the guidance question, s2 to the current report, and s1 to a reference for a proposed measure. Do not adopt c2 as evidence that guidance alone solves the problem. Do not transfer s1's completion rate or success into the user's achievements. Investigation, responses, and trials are future proposals, not completed actions. If the request is to organize the article itself, preserve its activities and do not mix in these new measures for the user.
 
-保存の関連には、採用したq1・q2とs1・s2を指定できる。各IDが同一プロジェクトに属することを詳細で確認し、実際の登録内容を報告する。たとえば施策のコメントには「提案。q2・s1は案内の検討材料で、当プロジェクトでの効果は未確認」のように短く残せる。非公開コメントに機微情報があれば、保存するプ譜の本文・コメント・タイトルへ転載せず抽象化する。
+You can link adopted q1, q2, s1, and s2 after verifying their project membership. Report what was actually registered. A measure comment might briefly say: Proposal; q2 and s1 inform the guidance option, but its effect in this project is unverified. Abstract sensitive private information rather than copying it into titles, body text, or node comments.
 
-「案内を追加する」を中間目的、「導入数20%増」を根拠なしに既知の勝利条件、「他社と同じ予算・日程」を本人の八要素へ入れるのは避ける。数値案を本人から求められた場合も、AIの提案であることと未確認の前提を残す。意志を変える必要があるなら、変更点を示して対話する。
+Do not use add a guide as an intermediate purpose, assume a 20% increase in adoption as an established win condition without evidence, or copy another company's budget and schedule into the user's factors. If the user asks for numerical suggestions, mark them as AI proposals and preserve unknown assumptions. Explain and discuss changes that would alter the user's intention.
