@@ -22,29 +22,34 @@ export const en: Record<string, string> = {
     'When there are no questions or insights, you can also add one using the button in the list. During your first steps, the notification after saving an article opens the form with that article and its project selected.',
   'skills.title': 'Skills for AI clients',
   'skills.deepen_questions': 'Deepen questions',
-  'skills.manual_title': 'Deepen questions with a skill',
+  'skills.manual_title': 'Deepen questions and compose pufus with skills',
   'skills.summary':
     'Explore hypotheses and questions using your stocks, questions and notes. Refine them in conversation and save them to Pufu Lens.',
   'skills.description':
-    'The Deepen questions skill uses stocks, existing questions, notes and comments to form hypotheses, then suggests questions, judgment criteria and ways to check them. Refine the candidates with your feedback and ask to save the questions with their hypotheses and verification notes in Pufu Lens.',
+    'Two skills are available: Deepen questions and Compose a pufu from multiple sources. Deepen questions uses stocks, existing questions, notes and comments to form hypotheses, then suggests questions, judgment criteria and ways to check them. Refine the candidates with your feedback and ask to save the questions with their hypotheses and verification notes in Pufu Lens.',
+  'skills.compose_pufu': 'Compose a pufu from multiple sources',
+  'skills.compose_summary':
+    'Use multiple questions, stocks and your own views to organize evidence and develop a gaining goal, win condition, purposes and measures.',
+  'skills.compose_use_step':
+    'Ask: “Use compose-pufu to draft a pufu from multiple questions and stocks in project X.” Include any sources or gaining goal you have in mind. Review the evidence, proposals and unknowns, then give feedback. You can also ask to save it. Multiple sources can inform the draft, but the saved pufu can link to only one question and one stock; the skill explains the primary links and other references.',
   'skills.client_requirement':
     'Use a skill-compatible AI client such as Codex CLI or Claude Code. Set up the MCP connection separately.',
   'skills.cost':
-    'Reasoning about hypotheses and questions uses your AI client’s subscription or usage allowance. To find related stocks, the skill normally makes up to three searches combining keywords and meaning per investigation, using Pufu Lens’s search AI allowance. You can request keyword-only search. It does not regenerate summaries or memories.',
+    'Reasoning about hypotheses, questions and pufus uses your AI client’s subscription or usage allowance. To find related stocks, the skill normally makes up to three searches combining keywords and meaning per investigation, using Pufu Lens’s search AI allowance. You can request keyword-only search. The skills do not regenerate summaries or memories, or use Pufu Lens’s AI to generate pufus.',
   'skills.installation_link': 'How to install skills',
   'skills.source_link': 'Available skills (GitHub)',
   'skills.prerequisites':
     'Prepare an AI client with local skill and MCP support, such as Codex CLI or Claude Code, Node.js 22.20 or later, and Git.',
   'skills.install_step':
-    'Run this command in your terminal and select your AI client. The -g option makes the skill available across projects. Restart your client if the skill does not appear.',
+    'Run the command for the skill you want in your terminal and select your AI client. The -g option makes the skill available across projects. Restart your client if the skill does not appear.',
   'skills.connect_step':
-    'Register the MCP server URL shown under Pufu Lens Integrations in your AI client and authorize it. Allow listing projects and searching and reading stocks and questions/insights. To save, also allow “Add questions and insights, and comments on questions, insights and pufus”. Limit access to the projects you need.',
+    'Register the MCP server URL shown under Pufu Lens Integrations in your AI client and authorize it. Allow listing projects and searching and reading stocks and questions/insights. To save questions, also allow “Add questions and insights, and comments on questions, insights and pufus”; to save pufus, allow “Create and edit pufus”. Limit access to the projects you need.',
   'skills.use_step':
     'Ask your AI client: “Use deepen-questions to form hypotheses and questions to check them from the material in project X.” Include any hypothesis you already want to examine. Review the evidence, hypothesis, conditions for support or revision, and next check; give feedback and ask to register the questions you want to keep. Hypotheses and verification notes are saved in each question’s private note. Continue an existing question when there is no new angle.',
   'skills.privacy':
-    'Retrieved material is processed by your AI service. Notes and comments are private, but question text based on them becomes public if you publish the project. Check for personal or private information before saving.',
+    'Retrieved material is processed by your AI service. Notes and comments are private, but question text and pufu titles and content based on them may become public when the project is published now or in the future. Check for personal or private information before saving.',
   'skills.update':
-    'Run the following command to update the installed skill. You can install additional skills separately from the available skills list.',
+    'Run the matching command to update an installed skill. You can install additional skills separately from the available skills list.',
   'error.memory_history_revision': 'Enter a valid memory history revision.',
   'error.memory_history_not_found': 'Memory history was not found.',
   'error.memory_history_unavailable': 'Could not load memory history. Please try again later.',

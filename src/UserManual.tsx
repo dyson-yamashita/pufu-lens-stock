@@ -3,7 +3,11 @@ import { useEffect } from 'react';
 import { ArrowUp, BookOpen } from 'lucide-react';
 import type { Language } from '../shared/locale';
 import LegalLinks from './LegalLinks';
-import { deepenQuestionsInstallCommand, skillsSourceUrl } from '../shared/skills';
+import {
+  composePufuInstallCommand,
+  deepenQuestionsInstallCommand,
+  skillsSourceUrl,
+} from '../shared/skills';
 const sections = (tr: typeof t) => [
   {
     id: 'stocks',
@@ -183,18 +187,27 @@ const sections = (tr: typeof t) => [
           <li>{tr('skills.prerequisites')}</li>
           <li>
             {tr('skills.install_step')}
+            <p>{tr('skills.deepen_questions')}</p>
             <pre className="skill-command">
               <code>{deepenQuestionsInstallCommand}</code>
+            </pre>
+            <p>{tr('skills.compose_pufu')}</p>
+            <pre className="skill-command">
+              <code>{composePufuInstallCommand}</code>
             </pre>
           </li>
           <li>{tr('skills.connect_step')}</li>
           <li>{tr('skills.use_step')}</li>
+          <li>{tr('skills.compose_use_step')}</li>
         </ol>
         <p>{tr('skills.cost')}</p>
         <p className="manual-note">{tr('skills.privacy')}</p>
         <p>{tr('skills.update')}</p>
         <pre className="skill-command">
           <code>npx skills update deepen-questions</code>
+        </pre>
+        <pre className="skill-command">
+          <code>npx skills update compose-pufu</code>
         </pre>
         <p>
           <a href={skillsSourceUrl} target="_blank" rel="noreferrer">

@@ -224,6 +224,8 @@ export default function McpConnections() {
       <section className="connect-guide" aria-label={t('skills.title')}>
         <h3>{t('skills.deepen_questions')}</h3>
         <p>{t('skills.summary')}</p>
+        <h3>{t('skills.compose_pufu')}</h3>
+        <p>{t('skills.compose_summary')}</p>
         <p>{t('skills.client_requirement')}</p>
         <ul className="skill-links">
           <li>
