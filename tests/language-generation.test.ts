@@ -231,7 +231,7 @@ describe('受け付けたジョブの生成言語', () => {
     app.env.AI = { run: ai };
     const job = (await latest('pufu'))!;
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job.id), mockStep());
-    expect(ai).toHaveBeenCalledTimes(2);
+    expect(ai).toHaveBeenCalledTimes(3);
     for (const [, input] of ai.mock.calls) {
       expect(input.messages[0].content).toContain('English');
       expect(input.messages[0].content).not.toContain('必ず日本語');

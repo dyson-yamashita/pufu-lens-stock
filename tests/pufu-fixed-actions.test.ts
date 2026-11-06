@@ -1,4 +1,5 @@
-import { expect, it, vi } from 'vitest';
+import { mockPufuStages } from './pufu-ai-fixture';
+import { expect, it } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 import type { Env } from '../server/env';
@@ -26,11 +27,7 @@ const plan = {
     { text: '成果物が納品されている。' },
   ],
 };
-const provider = (result: unknown) =>
-  vi
-    .fn<NonNullable<Env['AI']>['run']>()
-    .mockResolvedValueOnce({ response: JSON.stringify(facts) })
-    .mockResolvedValueOnce({ response: JSON.stringify(result) });
+const provider = (result: unknown) => mockPufuStages(facts, result);
 const env = (run: NonNullable<Env['AI']>['run']) =>
   ({ AI: { run }, AI_MODEL: 'test' }) as unknown as Env;
 
@@ -86,16 +83,10 @@ it('構成モデルが施策の指定を追加しても、サーバーが固定�
 });
 
 it('前半の工程とは別に抽出した完了工程も、最後の群へ必ず配置する', async () => {
-  const run = vi
-    .fn<NonNullable<Env['AI']>['run']>()
-    .mockResolvedValueOnce({
-      response: JSON.stringify({
-        ...facts,
-        actions: facts.actions.slice(0, 2),
-        completionActions: facts.actions.slice(2),
-      }),
-    })
-    .mockResolvedValueOnce({ response: JSON.stringify(plan) });
+  const run = mockPufuStages(
+    { ...facts, actions: facts.actions.slice(0, 2), completionActions: facts.actions.slice(2) },
+    plan,
+  );
   const score = await generatePufu(env(run), context);
   expect(score.purposes.flatMap((p) => p.measures.map((m) => m.text))).toEqual(actions);
   expect(score.purposes.at(-1)!.measures.at(-1)!.text).toBe('成果物を納品する。');

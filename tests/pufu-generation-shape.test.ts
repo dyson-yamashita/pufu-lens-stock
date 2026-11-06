@@ -63,7 +63,7 @@ it('記事の言い換えを短い施策・八要素として保存し、自動�
   expect(Object.values(score.elements).filter((node) => node.text).length).toBe(6);
   expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
   expect(nodes(score).every((node) => !/^参考|^出典|^仮説/.test(node.text))).toBe(true);
-  expect(run).toHaveBeenCalledTimes(2);
+  expect(run).toHaveBeenCalledTimes(3);
 });
 
 it('点検結果を使用許可が得られた条件へ強めない', async () => {
@@ -401,9 +401,9 @@ it.each(['@cf/zai-org/glm-4.7-flash', '@cf/zai-org/glm-5.3-flash'])(
       { AI: { run }, AI_MODEL: 'default-model', AI_PUFU_MODEL: model } as unknown as Env,
       context,
     );
-    expect(run).toHaveBeenCalledTimes(2);
-    expect(run.mock.calls.map(([name]) => name)).toEqual([model, model]);
-    expect(run.mock.calls.map(([, input]) => input.max_tokens)).toEqual([6000, 2000]);
+    expect(run).toHaveBeenCalledTimes(3);
+    expect(run.mock.calls.map(([name]) => name)).toEqual([model, model, model]);
+    expect(run.mock.calls.map(([, input]) => input.max_tokens)).toEqual([6000, 2000, 2000]);
     for (const [, input] of run.mock.calls) {
       expect(input.response_format).toMatchObject({
         type: 'json_schema',

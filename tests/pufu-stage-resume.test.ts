@@ -56,15 +56,16 @@ it('抽出と構成を別々に計数し、完成したプ譜だけを保存す�
   app.env.AI = { run: ai };
   const job = await create();
   await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(2);
+  expect(ai).toHaveBeenCalledTimes(3);
   expect(
     (await app.env.DB.prepare('SELECT id,status,attempts FROM ai_calls ORDER BY id').all()).results,
   ).toEqual([
-    { id: `${job.id}:arrange-pufu-v1`, status: 'done', attempts: 1 },
+    { id: `${job.id}:arrange-pufu-v2`, status: 'done', attempts: 1 },
     { id: `${job.id}:extract-pufu-facts-v1`, status: 'done', attempts: 1 },
+    { id: `${job.id}:integrate-pufu-win-v1`, status: 'done', attempts: 1 },
   ]);
   expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
-    n: 2,
+    n: 3,
   });
   expect((await get(job.target_id)).status).toBe('ready');
 });
@@ -78,6 +79,7 @@ it('本文抽出と短い構成に別モデルを使い、両モデルを保存�
   await runPufu(app.env, job, mockStep());
   expect(ai.mock.calls.map(([model]) => model)).toEqual([
     '@cf/zai-org/glm-5.3-flash',
+    '@cf/moonshotai/kimi-k2.6',
     '@cf/moonshotai/kimi-k2.6',
   ]);
   expect(ai.mock.calls[1][1]).toMatchObject({
@@ -120,29 +122,32 @@ it('保存前の再整形でも、購入制約に併記された既存道具の�
   expect(saved.elements.money.text).toContain('use existing tools');
 });
 
-it('2段階目で利用上限に達したら未完成を保存せず、抽出を再送しないで再開する', async () => {
-  const ai = mockPufuAi(draft);
-  app.env.AI = { run: ai };
-  app.env.AI_CALL_DAILY_LIMIT = '1';
-  const job = await create();
-  await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(1);
-  expect(await get(job.target_id)).toMatchObject({ status: 'queued', score: null });
-  expect(
-    (
-      await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?')
-        .bind(job.target_id)
-        .all()
-    ).results,
-  ).toEqual([]);
-  app.env.AI_CALL_DAILY_LIMIT = '2';
-  await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(2);
-  expect(await get(job.target_id)).toMatchObject({
-    status: 'ready',
-    score: { elements: { people: { text: '担当は2名。' } } },
-  });
-});
+it.each([1, 2])(
+  '利用上限%d回で未完成を保存せず、成功した段階を再送せずに再開する',
+  async (limit) => {
+    const ai = mockPufuAi(draft);
+    app.env.AI = { run: ai };
+    app.env.AI_CALL_DAILY_LIMIT = String(limit);
+    const job = await create();
+    await runPufu(app.env, job, mockStep());
+    expect(ai).toHaveBeenCalledTimes(limit);
+    expect(await get(job.target_id)).toMatchObject({ status: 'queued', score: null });
+    expect(
+      (
+        await app.env.DB.prepare('SELECT * FROM pufu_phases WHERE pufu_id=?')
+          .bind(job.target_id)
+          .all()
+      ).results,
+    ).toEqual([]);
+    app.env.AI_CALL_DAILY_LIMIT = '3';
+    await runPufu(app.env, job, mockStep());
+    expect(ai).toHaveBeenCalledTimes(3);
+    expect(await get(job.target_id)).toMatchObject({
+      status: 'ready',
+      score: { elements: { people: { text: '担当は2名。' } } },
+    });
+  },
+);
 
 it('構成が不正なら抽出のキャッシュから再開し、二重送信しない', async () => {
   const ai = mockPufuAi(draft);
@@ -159,10 +164,10 @@ it('構成が不正なら抽出のキャッシュから再開し、二重送信�
     .bind(job.id)
     .run();
   await runPufu(app.env, job, mockStep());
-  expect(ai).toHaveBeenCalledTimes(3);
+  expect(ai).toHaveBeenCalledTimes(4);
   expect((await get(job.target_id)).status).toBe('ready');
   expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
-    n: 3,
+    n: 4,
   });
 });
 
@@ -203,3 +208,26 @@ it.each(['delete', 'generation', 'privacy'] as const)(
     ).toEqual([]);
   },
 );
+
+it('勝利条件の統合が不正なら中間目的のキャッシュから再開する', async () => {
+  const ai = mockPufuAi(draft);
+  const valid = ai.getMockImplementation()!;
+  let calls = 0;
+  ai.mockImplementation(async (...args) => (++calls === 3 ? { response: '{}' } : valid(...args)));
+  app.env.AI = { run: ai };
+  const job = await create();
+  await expect(runPufu(app.env, job, mockStep())).rejects.toThrow('出力形式');
+  expect((await get(job.target_id)).score).toBeNull();
+  await app.env.DB.prepare("UPDATE pufu_scores SET status='queued' WHERE id=?")
+    .bind(job.target_id)
+    .run();
+  await app.env.DB.prepare("UPDATE processing_jobs SET status='pending' WHERE id=?")
+    .bind(job.id)
+    .run();
+  await runPufu(app.env, job, mockStep());
+  expect(ai).toHaveBeenCalledTimes(4);
+  expect((await get(job.target_id)).status).toBe('ready');
+  const prompts = ai.mock.calls.map(([, input]) => JSON.parse(input.messages[1].content));
+  expect(prompts.filter((p) => 'sources' in p)).toHaveLength(1);
+  expect(prompts.filter((p) => 'actionGroups' in p)).toHaveLength(1);
+});

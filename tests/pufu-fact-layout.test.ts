@@ -1,3 +1,4 @@
+import { mockPufuStages, purposeDraft } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import { arrangePufu } from '../server/pufu-plan';
@@ -39,10 +40,7 @@ const plan = {
   purposes: [{ text: '段階的デプロイの確認結果が得られている。' }],
 };
 function provider(first: unknown = facts, second: unknown = plan) {
-  return vi
-    .fn<NonNullable<Env['AI']>['run']>()
-    .mockResolvedValueOnce({ response: JSON.stringify(first) })
-    .mockResolvedValueOnce({ response: JSON.stringify(second) });
+  return mockPufuStages(first, second);
 }
 const env = (run: NonNullable<Env['AI']>['run']) =>
   ({ AI: { run }, AI_MODEL: 'test' }) as unknown as Env;
@@ -210,7 +208,7 @@ it.each([
 it('成功済み抽出のキャッシュに任意工程が残っていても構成入口で除外する', async () => {
   const optional = 'ソースマスターを納品することがある。';
   const run = vi.fn<NonNullable<Env['AI']>['run']>().mockResolvedValue({
-    response: JSON.stringify(plan),
+    response: JSON.stringify(purposeDraft(plan)),
   });
   const cached: PufuFacts = {
     actions: ['段階的デプロイをリハーサルで確認する。', optional],
@@ -279,7 +277,7 @@ it('本文は抽出段階で参照し、構成段階へは抽出した短文だ�
   const run = provider();
   const title = 'タイトルだけにある将来の規格対応保証';
   await generatePufu(env(run), { ...context, stock: { ...context.stock!, title } });
-  expect(run).toHaveBeenCalledTimes(2);
+  expect(run).toHaveBeenCalledTimes(3);
   const first = run.mock.calls[0][1];
   const second = run.mock.calls[1][1];
   expect(first.messages[1].content).toContain('再取り込み');

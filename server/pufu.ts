@@ -1,6 +1,7 @@
 import { normalizeGeneratedScore } from './pufu-output';
 import { extractPufuFacts } from './pufu-source-facts';
 import { arrangePufu } from './pufu-plan';
+import { integratePufuWin } from './pufu-win';
 import { pufuModelLabel } from './pufu-ai';
 import type { Env, Job } from './env';
 import { isDemo } from './env';
@@ -23,7 +24,7 @@ export async function generatePufu(
   stage: PufuStageRunner = (_name, operation) => operation(context),
 ): Promise<PufuScore> {
   if (isDemo(env) && !env.AI)
-    return stage('arrange-pufu-v1', async (fresh) => {
+    return stage('arrange-pufu-v2', async (fresh) => {
       const reference = (
         fresh.question?.text ||
         fresh.stocks?.[0]?.title ||
@@ -55,7 +56,11 @@ export async function generatePufu(
   const facts = await stage('extract-pufu-facts-v1', (fresh) =>
     extractPufuFacts(env, fresh, language),
   );
-  return stage('arrange-pufu-v1', (fresh) => arrangePufu(env, fresh, facts, language));
+  const score = await stage('arrange-pufu-v2', (fresh) => arrangePufu(env, fresh, facts, language));
+  if (!score.purposes.length) return score;
+  return stage('integrate-pufu-win-v1', (fresh) =>
+    integratePufuWin(env, fresh, facts, score, language),
+  );
 }
 
 export function queuePufuJob(env: Env, id: string): D1PreparedStatement {
