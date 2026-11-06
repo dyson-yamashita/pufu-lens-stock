@@ -43,16 +43,40 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await screen.getByRole('button', '連携を許可', { exact: true }).click();
   await expect(browser.locator('.app-shell')).toBeVisible();
   await app.open('/#mcp');
-  await expect(screen.getByRole('link', 'スキルのインストール方法')).toHaveAttribute(
+  const integration = browser.locator('section[aria-labelledby="mcp-integration-heading"]');
+  await expect(integration.getByRole('heading', '接続中のサービス')).toBeVisible();
+  const skillLinks = browser.locator('.skill-links li');
+  await expect(skillLinks).toHaveCount(2);
+  await expect(skillLinks.first().getByRole('link', 'スキルのインストール方法')).toHaveAttribute(
     'href',
     '/manual#skills',
   );
-  await expect(screen.getByRole('link', '配布スキル一覧（GitHub）')).toHaveAttribute(
+  await expect(skillLinks.last().getByRole('link', '配布スキル一覧（GitHub）')).toHaveAttribute(
     'href',
     'https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills',
   );
-  const row = browser.locator('.mcp-connections .token-row');
+  const row = browser.locator('.mcp-integration .mcp-connections .token-row');
   await expect(row).toContainText('E2E ChatGPT');
+  const layout = await browser.evaluate(() => {
+    const mcp = document.querySelector('.mcp-integration')!.getBoundingClientRect();
+    const skills = document
+      .querySelector('.skill-links')!
+      .closest('section')!
+      .getBoundingClientRect();
+    const links = Array.from(document.querySelectorAll('.skill-links li'), (link) =>
+      link.getBoundingClientRect(),
+    );
+    return {
+      servicesBeforeSkills: mcp.bottom <= skills.top,
+      linksStacked: links[0].bottom <= links[1].top,
+      fitsViewport: document.documentElement.scrollWidth <= window.innerWidth,
+    };
+  });
+  expect(layout).toEqual({
+    servicesBeforeSkills: true,
+    linksStacked: true,
+    fitsViewport: true,
+  });
   await screen.getByRole('button', '編集', { exact: true }).click();
   await screen.getByLabel('連携先の表示名').fill('仕事用ChatGPT');
   await expect(screen.getByLabel(fixture.projectName, { exact: true })).toBeChecked();
