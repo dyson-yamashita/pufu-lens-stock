@@ -20,8 +20,8 @@ export async function reviewPufuWin(
   const meaningCheck = z.strictObject({
     passed: z.boolean(),
     reason: z.string().trim().min(1).max(100),
-    sourceQuote: z.string().max(100),
-    candidateQuote: z.string().max(100),
+    sourceQuote: z.string().trim().max(100),
+    candidateQuote: z.string().trim().max(100),
   });
   const schema = z.strictObject({
     meaningChecks: z.strictObject({

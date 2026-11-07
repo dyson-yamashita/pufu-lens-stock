@@ -90,7 +90,7 @@ export async function generatePufu(
     integratePufuWin(env, fresh, facts, score, language),
   );
   for (let attempt = 0; attempt < 2; attempt++) {
-    candidate = normalizeGeneratedScore(candidate, context, language);
+    candidate = normalizeGeneratedScore(candidate, context, language, facts.conditions);
     const review = await stage(attempt ? stages.review_repaired : stages.review, (fresh) =>
       reviewPufuWin(env, fresh, facts, candidate, language),
     );
@@ -166,7 +166,8 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
       };
       const score = await generatePufu(env, context, resolveLanguage(job.language), stage);
       await step.do('save-pufu', async () => {
-        const normalized = normalizeGeneratedScore(score, context, resolveLanguage(job.language));
+        // Save the reviewed score without another transformation of its elements.
+        const normalized = pufuScoreSchema.parse(score);
         if (normalized.winCondition.text !== score.winCondition.text)
           throw new Error('検証後の勝利条件が変化しました。再試行してください。');
         const json = JSON.stringify(normalized);

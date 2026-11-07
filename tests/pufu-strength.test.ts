@@ -19,6 +19,18 @@ it.each([
   expect(unsupportedPufuStrength(context(source), candidate).length).toBeGreaterThan(0);
 });
 it.each([
+  ['重複を確認し、重複した記録を取り除いて一覧を保存する。', '重複のない一覧が保存されている。'],
+  [
+    'Inspect duplicates and save a report.',
+    'The report records duplicates; deduplication is not required.',
+  ],
+  ['重複を確認し、重複した記録を削除し、一覧を保存する。', '重複のない一覧が保存されている。'],
+  ['重複を確認して保存する。', '重複排除は行わず、確認した一覧が保存されている。'],
+  [
+    'Check for duplicates and save the report.',
+    'The report is saved without eliminating duplicates.',
+  ],
+  ['一覧を保存する。', '重複排除した一覧が保存されている。'],
   ['重複は削除しない。重複を確認して保存する。', '重複を削除せず、確認した一覧が保存されている。'],
   ['重複を削除して一覧を保存する。', '重複排除した一覧が保存されている。'],
   ['Remove duplicate copies and save the records.', 'The records have been deduplicated.'],

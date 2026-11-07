@@ -1,4 +1,4 @@
-import { pufuScoreSchema, type PufuContext, type PufuScore } from '../shared/pufu';
+import { elementKeys, pufuScoreSchema, type PufuContext, type PufuScore } from '../shared/pufu';
 import { defaultLanguage, type Language } from '../shared/locale';
 
 export const cleanGeneratedText = (text: string) =>
@@ -125,6 +125,7 @@ export function normalizeGeneratedScore(
   input: PufuScore,
   context: PufuContext,
   language: Language = defaultLanguage,
+  conditions: { element: (typeof elementKeys)[number]; text: string }[] = [],
 ): PufuScore {
   const score = structuredClone(pufuScoreSchema.parse(input));
   score.gainingGoal.text = context.task || cleanGeneratedText(score.gainingGoal.text);
@@ -213,6 +214,23 @@ export function normalizeGeneratedScore(
       .join('\n'),
   );
   limitUnsupportedOutcomes(score, completeEvidence, context, language);
+  // Keep protected facts after every normalization, independently for each element.
+  for (const key of elementKeys) {
+    const required = [
+      ...new Set(
+        conditions
+          .filter((condition) => condition.element === key)
+          .map((condition) => condition.text),
+      ),
+    ];
+    if (required.join(' ').length > 240)
+      throw new Error('重要な条件が表示上限を超えています。資料を短くしてください。');
+    if (!required.length || required.every((text) => score.elements[key].text.includes(text)))
+      continue;
+    const combined = [...required, score.elements[key].text].filter(Boolean).join(' ');
+    score.elements[key].text = combined.length <= 240 ? combined : required.join(' ');
+  }
+
   if (
     (!context.task && (!score.gainingGoal.text || score.gainingGoal.text.length > 200)) ||
     generatedNodes.some((node) => node.text.length > 240)

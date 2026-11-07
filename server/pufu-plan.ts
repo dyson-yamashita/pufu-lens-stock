@@ -151,14 +151,7 @@ Elements are already fixed and inserted by the server; never output elements. Do
     }),
     context,
     language,
+    facts.conditions,
   );
-  const canonical = (value: string) => value.replace(/\s+/gu, '').replace(/[。.;；]+$/gu, '');
-  const retained = Object.values(score.elements).map((node) => canonical(node.text));
-  if (
-    (facts.conditions ?? []).some(
-      (condition) => !retained.some((text) => text.includes(canonical(condition.text))),
-    )
-  )
-    throw new Error('重要な条件を保持できません。資料を短くして再試行してください。');
   return score;
 }

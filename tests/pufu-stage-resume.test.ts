@@ -416,3 +416,38 @@ it('別の文を検証したキャッシュで保存しない', async () => {
   await expect(runPufu(app.env, job, step)).rejects.toThrow('検証');
   expect((await get(job.target_id)).score).toBeNull();
 });
+
+it('保護した予算・購入禁止条件を構成・統合・検証からDB保存まで維持する', async () => {
+  const text = '予算は50万円以内で、新規購入はしない。';
+  const ai = mockPufuAi({
+    ...draft,
+    winCondition: '資料が保存され、内容を確認できる。',
+    purposes: [
+      { text: '資料が保存されている。', measures: [{ text: '資料を保存する。', color: 'white' }] },
+    ],
+    elements: {},
+  });
+  const valid = ai.getMockImplementation()!;
+  ai.mockImplementation(async (...args) => {
+    const response = await valid(...args);
+    const value = JSON.parse((response as { response: string }).response);
+    if ('actions' in value)
+      value.conditions = [
+        {
+          evidence: value.actions[0].evidence,
+          scope: 'project',
+          element: 'money',
+          text,
+          quote: '新規購入はしない。',
+        },
+      ];
+    return { response: JSON.stringify(value) };
+  });
+  const job = await create('新規購入はしない。予算は50万円以内で運用する。資料を保存する。');
+  app.env.AI = { run: ai };
+  await runPufu(app.env, job, mockStep());
+  const pufu = await get(job.target_id);
+  expect(pufu.status).toBe('ready');
+  expect(pufu.score?.elements.money.text).toContain(text);
+  expect(ai).toHaveBeenCalledTimes(4);
+});

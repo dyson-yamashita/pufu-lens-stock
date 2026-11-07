@@ -116,5 +116,6 @@ Then write winCondition as ONE sentence, aiming for 140 characters and using up 
     },
     context,
     language,
+    facts.conditions,
   );
 }

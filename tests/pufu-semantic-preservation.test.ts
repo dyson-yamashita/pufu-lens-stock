@@ -157,49 +157,52 @@ it.each(
   },
 );
 
-it('検証モデルが捏造した禁止条件を、原文照合なしに修復理由として採用しない', async () => {
-  const score = pufuScoreSchema.parse({
-    gainingGoal: { uuid: 'g', text: context.task, comment: { color: 'blue', text: '' } },
-    winCondition: {
-      uuid: 'w',
-      text: '資料が保存されている。',
-      comment: { color: 'blue', text: '' },
-    },
-    purposes: [
-      {
-        uuid: 'p',
+it.each(['外部公開は禁止する。', ' '])(
+  '存在しない条件や空白だけの引用(%s)を修復根拠にしない',
+  async (sourceQuote) => {
+    const score = pufuScoreSchema.parse({
+      gainingGoal: { uuid: 'g', text: context.task, comment: { color: 'blue', text: '' } },
+      winCondition: {
+        uuid: 'w',
         text: '資料が保存されている。',
-        measures: [],
         comment: { color: 'blue', text: '' },
       },
-    ],
-    elements: Object.fromEntries(
-      elementKeys.map((key) => [
+      purposes: [
+        {
+          uuid: 'p',
+          text: '資料が保存されている。',
+          measures: [],
+          comment: { color: 'blue', text: '' },
+        },
+      ],
+      elements: Object.fromEntries(
+        elementKeys.map((key) => [
+          key,
+          { uuid: key, text: '', comment: { color: 'blue', text: '' } },
+        ]),
+      ),
+    });
+    const review = reviewDraft({ purposes: [{ purpose: 1 }] });
+    const checks = Object.fromEntries(
+      Object.entries(review.meaningChecks).map(([key, value]) => [
         key,
-        { uuid: key, text: '', comment: { color: 'blue', text: '' } },
+        { ...value, sourceQuote: '', candidateQuote: '' },
       ]),
-    ),
-  });
-  const review = reviewDraft({ purposes: [{ purpose: 1 }] });
-  const checks = Object.fromEntries(
-    Object.entries(review.meaningChecks).map(([key, value]) => [
-      key,
-      { ...value, sourceQuote: '', candidateQuote: '' },
-    ]),
-  );
-  checks.constraintCoverage = {
-    passed: false,
-    reason: '資料にない公開禁止を要求している。',
-    sourceQuote: '外部公開は禁止する。',
-    candidateQuote: '',
-  };
-  const run = vi.fn().mockResolvedValue({ response: { ...review, meaningChecks: checks } });
-  await expect(
-    reviewPufuWin(env(run), context, { actions: [], elements }, score, 'ja'),
-  ).rejects.toThrow('根拠');
-});
+    );
+    checks.constraintCoverage = {
+      passed: false,
+      reason: '資料にない公開禁止を要求している。',
+      sourceQuote,
+      candidateQuote: '',
+    };
+    const run = vi.fn().mockResolvedValue({ response: { ...review, meaningChecks: checks } });
+    await expect(
+      reviewPufuWin(env(run), context, { actions: [], elements }, score, 'ja'),
+    ).rejects.toThrow('根拠');
+  },
+);
 
-it('禁止事項だけの資料でも、整形による再配置で重要条件が消えたら成功にしない', async () => {
+it('禁止事項だけの資料でも、整形による再配置後に重要条件を優先して復元する', async () => {
   const policies = ['基礎', '応用', '運用', '管理', '保守', '移管'].map(
     (prefix) => `${prefix}${'研修'.repeat(20)}は行わない。`,
   );
@@ -208,12 +211,34 @@ it('禁止事項だけの資料でも、整形による再配置で重要条件�
     text,
   }));
   const run = vi.fn().mockResolvedValue({ response: { purposes: [] } });
-  await expect(
-    arrangePufu(
-      env(run),
-      { ...context, details: policies.join('') },
-      { actions: [], elements, conditions },
-      'ja',
-    ),
-  ).rejects.toThrow('条件');
+  const score = await arrangePufu(
+    env(run),
+    { ...context, details: policies.join('') },
+    { actions: [], elements, conditions },
+    'ja',
+  );
+  const retained = Object.values(score.elements)
+    .map((node) => node.text)
+    .join(' ');
+  for (const text of policies) expect(retained).toContain(text);
+  for (const node of Object.values(score.elements))
+    expect(node.text.length).toBeLessThanOrEqual(240);
+});
+
+it('予算の整形で言い回しが変わっても、忠実な重要条件を優先配置して保持する', async () => {
+  const run = vi
+    .fn()
+    .mockResolvedValue({ response: { purposes: [{ text: '資料が保存されている。' }] } });
+  const text = '予算は50万円以内で、新規購入はしない。';
+  const score = await arrangePufu(
+    env(run),
+    { ...context, details: '新規購入はしない。予算は50万円以内で運用する。資料を保存する。' },
+    {
+      actions: ['資料を保存する。'],
+      elements,
+      conditions: [{ element: 'money', text }],
+    },
+    'ja',
+  );
+  expect(score.elements.money.text).toContain(text);
 });
