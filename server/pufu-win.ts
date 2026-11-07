@@ -57,14 +57,17 @@ export async function integratePufuWin(
       .string()
       .trim()
       .min(1)
-      .max(language === 'ja' ? 120 : 240)
       .describe(
         '全目的の成果が結び付いた成就の状態を一文で。工程列挙・資源条件の転記ではなく、誰にとって何が成立するかを表す。 / ONE sentence stating the shared achieved situation, not a workflow or copied resource constraints.',
       )
       .refine((value) => {
         const sentence =
           language === 'en' ? value.replace(/\b(Mr|Mrs|Ms|Dr|Prof)\.(?=\s+\p{Lu})/gu, '$1') : value;
-        return !/[\r\n]/u.test(value) && [...segmenter.segment(sentence)].length === 1;
+        return (
+          value.length <= (language === 'ja' ? 120 : 240) &&
+          !/[\r\n]/u.test(value) &&
+          [...segmenter.segment(sentence)].length === 1
+        );
       }),
   });
   const definition = pufuGenerationDefinitions(language).winCondition;

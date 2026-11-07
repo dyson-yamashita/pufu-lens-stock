@@ -82,7 +82,7 @@ it('検証失敗を試行ごとに記録し、内容を漏らさず再試行後�
   const step = mockStep();
   const run = step.do.bind(step);
   step.do = (async (name: string, config: unknown, operation?: () => Promise<unknown>) => {
-    if (name !== 'extract-pufu-facts-v1')
+    if (name !== 'extract-pufu-facts-v2')
       return (run as (...args: unknown[]) => Promise<unknown>)(name, config, operation);
     await expect(operation!()).rejects.toThrow('evidence_not_found');
     await expect(operation!()).rejects.toThrow('subject_not_in_evidence');
@@ -94,7 +94,7 @@ it('検証失敗を試行ごとに記録し、内容を漏らさず再試行後�
       'pufu_fact_validation_failed',
       {
         jobId: job.id,
-        stage: 'extract-pufu-facts-v1',
+        stage: 'extract-pufu-facts-v2',
         attempt: 1,
         maxAttempts: 10,
         reason: 'evidence_not_found',
@@ -106,7 +106,7 @@ it('検証失敗を試行ごとに記録し、内容を漏らさず再試行後�
       'pufu_fact_validation_failed',
       {
         jobId: job.id,
-        stage: 'extract-pufu-facts-v1',
+        stage: 'extract-pufu-facts-v2',
         attempt: 2,
         maxAttempts: 10,
         reason: 'subject_not_in_evidence',
@@ -119,7 +119,7 @@ it('検証失敗を試行ごとに記録し、内容を漏らさず再試行後�
   expect(await get(job.target_id)).toMatchObject({ status: 'ready', generation_progress: null });
   expect(
     await app.env.DB.prepare('SELECT status,attempts FROM ai_calls WHERE id=?')
-      .bind(`${job.id}:extract-pufu-facts-v1`)
+      .bind(`${job.id}:extract-pufu-facts-v2`)
       .first(),
   ).toMatchObject({ status: 'done', attempts: 3 });
 });
@@ -152,7 +152,7 @@ it('詳細APIは現在の世代の処理段階と再試行を返し、完了後�
     configOrOperation: unknown,
     operation?: () => Promise<unknown>,
   ) => {
-    if (name !== 'extract-pufu-facts-v1')
+    if (name !== 'extract-pufu-facts-v2')
       return (run as (...args: unknown[]) => Promise<unknown>)(name, configOrOperation, operation);
     await expect(operation!()).rejects.toThrow('出力形式');
     expect(await get(job.target_id)).toMatchObject({
@@ -185,10 +185,10 @@ it('抽出と構成を別々に計数し、完成したプ譜だけを保存す�
   expect(
     (await app.env.DB.prepare('SELECT id,status,attempts FROM ai_calls ORDER BY id').all()).results,
   ).toEqual([
-    { id: `${job.id}:arrange-pufu-v2`, status: 'done', attempts: 1 },
-    { id: `${job.id}:extract-pufu-facts-v1`, status: 'done', attempts: 1 },
-    { id: `${job.id}:integrate-pufu-win-v2`, status: 'done', attempts: 1 },
-    { id: `${job.id}:review-pufu-win-v1`, status: 'done', attempts: 1 },
+    { id: `${job.id}:arrange-pufu-v3`, status: 'done', attempts: 1 },
+    { id: `${job.id}:extract-pufu-facts-v2`, status: 'done', attempts: 1 },
+    { id: `${job.id}:integrate-pufu-win-v3`, status: 'done', attempts: 1 },
+    { id: `${job.id}:review-pufu-win-v2`, status: 'done', attempts: 1 },
   ]);
   expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
     n: 4,
@@ -308,7 +308,7 @@ it.each(['delete', 'generation', 'privacy'] as const)(
     const original = step.do.bind(step);
     step.do = (async (name: string, ...args: unknown[]) => {
       const result = await (original as (...args: unknown[]) => Promise<unknown>)(name, ...args);
-      if (name === 'extract-pufu-facts-v1') {
+      if (name === 'extract-pufu-facts-v2') {
         if (change === 'delete')
           expect(
             (await app.request(`/api/v1/pufus/${job.target_id}`, { method: 'DELETE' })).status,
@@ -407,7 +407,7 @@ it('別の文を検証したキャッシュで保存しない', async () => {
   const step = mockStep();
   const base = step.do.bind(step);
   step.do = (async (name: string, ...args: unknown[]) =>
-    name === 'review-pufu-win-v1'
+    name === 'review-pufu-win-v2'
       ? {
           retryAt: null,
           json: JSON.stringify({ value: { winCondition: '別の勝利条件。', issues: [] } }),

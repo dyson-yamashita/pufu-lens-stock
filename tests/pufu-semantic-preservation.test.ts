@@ -80,19 +80,89 @@ it('240字枠の事例・背景より禁止条件を優先し、条件自体が�
   ).rejects.toThrow('条件');
 });
 
-it.each([
-  'decisionTarget',
-  'completedOutcome',
-  'claimStrength',
-  'constraintCoverage',
-  'readableSentence',
-])('旧来の判定が全合格でも、意味検証%sの不合格理由を修復へ渡す', async (key) => {
-  const reason = '上映可否を保存可否へ変更している。';
+it.each(
+  [
+    'decisionTarget',
+    'completedOutcome',
+    'claimStrength',
+    'constraintCoverage',
+    'readableSentence',
+  ].flatMap((key) => [
+    { key, location: 'details' },
+    { key, location: 'question' },
+  ]),
+)(
+  '旧来の判定が全合格でも、$locationに基づく意味検証$keyの不合格を修復へ渡す',
+  async ({ key, location }) => {
+    const reason = '上映可否を保存可否へ変更している。';
+    const score = pufuScoreSchema.parse({
+      gainingGoal: { uuid: 'g', text: context.task, comment: { color: 'blue', text: '' } },
+      winCondition: {
+        uuid: 'w',
+        text: '保存可否を判断できる状態。',
+        comment: { color: 'blue', text: '' },
+      },
+      purposes: [
+        {
+          uuid: 'p',
+          text: '資料が保存されている。',
+          measures: [],
+          comment: { color: 'blue', text: '' },
+        },
+      ],
+      elements: Object.fromEntries(
+        elementKeys.map((k) => [k, { uuid: k, text: '', comment: { color: 'blue', text: '' } }]),
+      ),
+    });
+    const checks = Object.fromEntries(
+      [
+        'decisionTarget',
+        'completedOutcome',
+        'claimStrength',
+        'constraintCoverage',
+        'readableSentence',
+      ].map((name) => [
+        name,
+        {
+          passed: name !== key,
+          reason: name === key ? reason : '資料と候補の内容を照合した。',
+          sourceQuote: name === key ? '上映可否は依頼者が判断する。' : '',
+          candidateQuote: name === key ? '保存可否を判断できる状態。' : '',
+        },
+      ]),
+    );
+    const run = vi.fn().mockResolvedValue({
+      response: {
+        ...reviewDraft({ purposes: [{ purpose: 1 }] }),
+        issues: ['既存の指摘1', '既存の指摘2', '既存の指摘3'],
+        meaningChecks: checks,
+      },
+    });
+    const sourceContext: PufuContext =
+      location === 'question'
+        ? {
+            ...context,
+            details: '',
+            question: { id: 'q', text: context.details ?? '', source: 'user' },
+          }
+        : context;
+    const result = await reviewPufuWin(
+      env(run),
+      sourceContext,
+      { actions: [], elements },
+      score,
+      'ja',
+    );
+    expect(result.issues).toContain(reason);
+  },
+);
+
+it('検証モデルが捏造した禁止条件を、原文照合なしに修復理由として採用しない', async () => {
   const score = pufuScoreSchema.parse({
     gainingGoal: { uuid: 'g', text: context.task, comment: { color: 'blue', text: '' } },
     winCondition: {
       uuid: 'w',
-      text: '保存可否を判断できる状態。',
+      text: '資料が保存されている。',
       comment: { color: 'blue', text: '' },
     },
     purposes: [
@@ -104,24 +174,46 @@ it.each([
       },
     ],
     elements: Object.fromEntries(
-      elementKeys.map((k) => [k, { uuid: k, text: '', comment: { color: 'blue', text: '' } }]),
+      elementKeys.map((key) => [
+        key,
+        { uuid: key, text: '', comment: { color: 'blue', text: '' } },
+      ]),
     ),
   });
+  const review = reviewDraft({ purposes: [{ purpose: 1 }] });
   const checks = Object.fromEntries(
-    [
-      'decisionTarget',
-      'completedOutcome',
-      'claimStrength',
-      'constraintCoverage',
-      'readableSentence',
-    ].map((name) => [
-      name,
-      { passed: name !== key, reason: name === key ? reason : '資料と候補の内容を照合した。' },
+    Object.entries(review.meaningChecks).map(([key, value]) => [
+      key,
+      { ...value, sourceQuote: '', candidateQuote: '' },
     ]),
   );
-  const run = vi.fn().mockResolvedValue({
-    response: { ...reviewDraft({ purposes: [{ purpose: 1 }] }), meaningChecks: checks },
-  });
-  const result = await reviewPufuWin(env(run), context, { actions: [], elements }, score, 'ja');
-  expect(result.issues).toContain(reason);
+  checks.constraintCoverage = {
+    passed: false,
+    reason: '資料にない公開禁止を要求している。',
+    sourceQuote: '外部公開は禁止する。',
+    candidateQuote: '',
+  };
+  const run = vi.fn().mockResolvedValue({ response: { ...review, meaningChecks: checks } });
+  await expect(
+    reviewPufuWin(env(run), context, { actions: [], elements }, score, 'ja'),
+  ).rejects.toThrow('根拠');
+});
+
+it('禁止事項だけの資料でも、整形による再配置で重要条件が消えたら成功にしない', async () => {
+  const policies = ['基礎', '応用', '運用', '管理', '保守', '移管'].map(
+    (prefix) => `${prefix}${'研修'.repeat(20)}は行わない。`,
+  );
+  const conditions = policies.map((text, index) => ({
+    element: (index < 3 ? 'quality' : 'environment') as 'quality' | 'environment',
+    text,
+  }));
+  const run = vi.fn().mockResolvedValue({ response: { purposes: [] } });
+  await expect(
+    arrangePufu(
+      env(run),
+      { ...context, details: policies.join('') },
+      { actions: [], elements, conditions },
+      'ja',
+    ),
+  ).rejects.toThrow('条件');
 });

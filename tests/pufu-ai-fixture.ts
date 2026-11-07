@@ -93,7 +93,12 @@ export function reviewDraft(data: { purposes: { purpose: number }[] }, issues: s
         'readableSentence',
       ].map((key) => [
         key,
-        { passed: !issues.length, reason: issues[0] ?? '原資料と検証対象の意味は一致する。' },
+        {
+          passed: true,
+          reason: '原資料と検証対象の意味は一致する。',
+          sourceQuote: '',
+          candidateQuote: '',
+        },
       ]),
     ),
     purposeChecks: data.purposes.map((p) => ({ purpose: p.purpose, integrated: !issues.length })),

@@ -24,14 +24,15 @@ export type PufuStageRunner = <T extends object>(
 ) => Promise<T>;
 class PufuSuperseded extends Error {}
 
-// 順番は詳細画面が現在の工程を選ぶ際にも使う。Workflowの永続化キーは変更しない。
+// 順番は詳細画面の現在工程にも使う。同じ形式の永続化キーは変更しない。
+// 条件保持・意味検証の契約を更新し、旧形式の段階キャッシュによる迂回を防ぐ。
 const stages = {
-  extract: 'extract-pufu-facts-v1',
-  arrange: 'arrange-pufu-v2',
-  integrate: 'integrate-pufu-win-v2',
-  review: 'review-pufu-win-v1',
-  repair: 'repair-pufu-win-v1',
-  review_repaired: 'review-repaired-pufu-win-v1',
+  extract: 'extract-pufu-facts-v2',
+  arrange: 'arrange-pufu-v3',
+  integrate: 'integrate-pufu-win-v3',
+  review: 'review-pufu-win-v2',
+  repair: 'repair-pufu-win-v2',
+  review_repaired: 'review-repaired-pufu-win-v2',
 } satisfies Record<PufuGenerationProgress['stage'], string>;
 
 export function pufuProgressQuery(env: Env, id: string, userId: string): D1PreparedStatement {
