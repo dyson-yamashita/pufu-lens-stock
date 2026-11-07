@@ -79,7 +79,7 @@ async function generate<T>(
       { role: 'user', content: JSON.stringify(input) },
     ],
     max_tokens: 3000,
-    temperature: 0.2,
+    temperature: 0,
     ...reasoningOptions(env.AI_MODEL, 'none'),
     response_format: structuredOutput(env.AI_MODEL, schema, 'result'),
   });

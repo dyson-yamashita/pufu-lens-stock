@@ -33,7 +33,7 @@ export async function callPufuModel<T>(
         { role: 'user', content },
       ],
       max_tokens: maxTokens,
-      temperature: 0.2,
+      temperature: 0,
       ...reasoningOptions(model, reasoningEffort),
       response_format: structuredOutput(model, schema, 'pufu'),
     },
