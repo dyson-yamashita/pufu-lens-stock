@@ -27,7 +27,6 @@ export function mockPufuAi(draft: Draft, reviewIssues: string[] = []) {
       const fact = (text: string) => ({ evidence, scope: 'project', text });
       return {
         response: JSON.stringify({
-          conditions: [],
           actions: actions.slice(0, 9).map(({ text }) => fact(text)),
           completionActions: actions.slice(9).map(({ text }) => fact(text)),
           elements: Object.fromEntries(
@@ -84,23 +83,6 @@ export function integrationDraft(
 }
 export function reviewDraft(data: { purposes: { purpose: number }[] }, issues: string[] = []) {
   return {
-    meaningChecks: Object.fromEntries(
-      [
-        'decisionTarget',
-        'completedOutcome',
-        'claimStrength',
-        'constraintCoverage',
-        'readableSentence',
-      ].map((key) => [
-        key,
-        {
-          passed: true,
-          reason: '原資料と検証対象の意味は一致する。',
-          sourceQuote: '',
-          candidateQuote: '',
-        },
-      ]),
-    ),
     purposeChecks: data.purposes.map((p) => ({ purpose: p.purpose, integrated: !issues.length })),
     elementChecks: Object.fromEntries(elementKeys.map((key) => [key, true])),
     grounded: !issues.length,
@@ -113,9 +95,7 @@ export function mockPufuStages(facts: unknown, plan: unknown) {
     const data = JSON.parse(input.messages[1].content);
     const value =
       'sources' in data
-        ? facts && typeof facts === 'object'
-          ? { conditions: [], ...facts }
-          : facts
+        ? facts
         : 'actionGroups' in data
           ? purposeDraft(plan)
           : 'winCondition' in data

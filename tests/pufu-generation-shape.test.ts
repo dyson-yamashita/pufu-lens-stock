@@ -411,46 +411,43 @@ it.each([
   if (task) expect(score.gainingGoal.text).toBe(task);
 });
 
-it.each([
-  '@cf/zai-org/glm-4.7-flash',
-  '@cf/zai-org/glm-5.3-flash',
-  '@cf/deepseek-ai/deepseek-v4.1-flash-1017',
-  '@cf/google/gemma-4-26b-a4b-it',
-])('プ譜専用モデル%sで各段階の上限を守り、choicesの最終回答だけを保存する', async (model) => {
-  const run = mockPufuAi(draft);
-  const original = run.getMockImplementation()!;
-  run.mockImplementation(async (...args) => {
-    const answer = (await original(...args)) as { response: string };
-    return {
-      choices: [
-        { message: { content: answer.response, reasoning_content: '内部検討は保存しない。' } },
-      ],
-    };
-  });
-  const score = await generatePufu(
-    { AI: { run }, AI_MODEL: 'default-model', AI_PUFU_MODEL: model } as unknown as Env,
-    context,
-  );
-  expect(run).toHaveBeenCalledTimes(4);
-  expect(run.mock.calls.map(([name]) => name)).toEqual([model, model, model, model]);
-  expect(run.mock.calls.map(([, input]) => input.max_tokens)).toEqual([6000, 2000, 2000, 1200]);
-  for (const [, input] of run.mock.calls) {
-    expect(input.response_format).toMatchObject({
-      type: 'json_schema',
-      json_schema: { name: 'pufu', strict: true },
+it.each(['@cf/zai-org/glm-4.7-flash', '@cf/zai-org/glm-5.3-flash'])(
+  'プ譜専用モデル%sで各段階の上限を守り、choicesの最終回答だけを保存する',
+  async (model) => {
+    const run = mockPufuAi(draft);
+    const original = run.getMockImplementation()!;
+    run.mockImplementation(async (...args) => {
+      const answer = (await original(...args)) as { response: string };
+      return {
+        choices: [
+          { message: { content: answer.response, reasoning_content: '内部検討は保存しない。' } },
+        ],
+      };
     });
-    if (model.includes('5.3'))
-      expect(input).toMatchObject({
-        reasoning_effort: input.max_tokens === 6000 ? 'low' : 'high',
+    const score = await generatePufu(
+      { AI: { run }, AI_MODEL: 'default-model', AI_PUFU_MODEL: model } as unknown as Env,
+      context,
+    );
+    expect(run).toHaveBeenCalledTimes(4);
+    expect(run.mock.calls.map(([name]) => name)).toEqual([model, model, model, model]);
+    expect(run.mock.calls.map(([, input]) => input.max_tokens)).toEqual([6000, 2000, 2000, 1200]);
+    for (const [, input] of run.mock.calls) {
+      expect(input.response_format).toMatchObject({
+        type: 'json_schema',
+        json_schema: { name: 'pufu', strict: true },
       });
-    else if (model.includes('deepseek')) expect(input).toMatchObject({ reasoning_effort: 'none' });
-    else expect(input).toMatchObject({ chat_template_kwargs: { enable_thinking: false } });
-    expect(input.messages[0].content).not.toContain('/no_think');
-  }
-  expect(score.winCondition.text).toBe(draft.winCondition);
-  expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
-  expect(JSON.stringify(score)).not.toContain('内部検討');
-});
+      if (model.includes('5.3'))
+        expect(input).toMatchObject({
+          reasoning_effort: input.max_tokens === 6000 ? 'low' : 'high',
+        });
+      else expect(input).toMatchObject({ chat_template_kwargs: { enable_thinking: false } });
+      expect(input.messages[0].content).not.toContain('/no_think');
+    }
+    expect(score.winCondition.text).toBe(draft.winCondition);
+    expect(nodes(score).every((node) => node.comment.text === '')).toBe(true);
+    expect(JSON.stringify(score)).not.toContain('内部検討');
+  },
+);
 
 it('choices応答の最終回答がなければ思考過程を回答として保存しない', async () => {
   const run = vi.fn(async (_model: string, _input: unknown) => ({

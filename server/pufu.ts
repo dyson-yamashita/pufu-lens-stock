@@ -24,15 +24,14 @@ export type PufuStageRunner = <T extends object>(
 ) => Promise<T>;
 class PufuSuperseded extends Error {}
 
-// 順番は詳細画面の現在工程にも使う。同じ形式の永続化キーは変更しない。
-// 条件保持・意味検証の契約を更新し、旧形式の段階キャッシュによる迂回を防ぐ。
+// 順番は詳細画面が現在の工程を選ぶ際にも使う。Workflowの永続化キーは変更しない。
 const stages = {
-  extract: 'extract-pufu-facts-v2',
-  arrange: 'arrange-pufu-v3',
-  integrate: 'integrate-pufu-win-v3',
-  review: 'review-pufu-win-v2',
-  repair: 'repair-pufu-win-v2',
-  review_repaired: 'review-repaired-pufu-win-v2',
+  extract: 'extract-pufu-facts-v1',
+  arrange: 'arrange-pufu-v2',
+  integrate: 'integrate-pufu-win-v2',
+  review: 'review-pufu-win-v1',
+  repair: 'repair-pufu-win-v1',
+  review_repaired: 'review-repaired-pufu-win-v1',
 } satisfies Record<PufuGenerationProgress['stage'], string>;
 
 export function pufuProgressQuery(env: Env, id: string, userId: string): D1PreparedStatement {
@@ -90,7 +89,7 @@ export async function generatePufu(
     integratePufuWin(env, fresh, facts, score, language),
   );
   for (let attempt = 0; attempt < 2; attempt++) {
-    candidate = normalizeGeneratedScore(candidate, context, language, facts.conditions);
+    candidate = normalizeGeneratedScore(candidate, context, language);
     const review = await stage(attempt ? stages.review_repaired : stages.review, (fresh) =>
       reviewPufuWin(env, fresh, facts, candidate, language),
     );
@@ -166,8 +165,7 @@ export async function runPufu(env: Env, job: Job, step: WorkflowStep) {
       };
       const score = await generatePufu(env, context, resolveLanguage(job.language), stage);
       await step.do('save-pufu', async () => {
-        // Save the reviewed score without another transformation of its elements.
-        const normalized = pufuScoreSchema.parse(score);
+        const normalized = normalizeGeneratedScore(score, context, resolveLanguage(job.language));
         if (normalized.winCondition.text !== score.winCondition.text)
           throw new Error('検証後の勝利条件が変化しました。再試行してください。');
         const json = JSON.stringify(normalized);

@@ -41,7 +41,6 @@ function provider(
             .details!.split('。')
             .filter(Boolean)
             .map((text) => ({ text, evidence: 'E1', scope: 'project' })),
-          conditions: [],
           completionActions: [],
           elements: Object.fromEntries(
             elementKeys.map((key) => [
