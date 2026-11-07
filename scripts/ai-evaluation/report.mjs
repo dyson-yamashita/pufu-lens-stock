@@ -79,7 +79,7 @@ writeFileSync(
       fixtures,
       pricesPerMillionTokens: prices,
       method:
-        'Production generation functions with file-exchanged Workers AI REST results. Two repetitions, temperature 0.2. No transport retry. Costs use uncached list prices; unknown usage stays null. API time excludes tool/local/scheduler overhead. Model reasoning bodies are removed. No database or deployed binding involved.',
+        'Production generation functions with file-exchanged Workers AI REST results. Repetition numbers are recorded for each fixture/profile; temperature 0.2. No transport retry. Costs use uncached list prices; unknown usage stays null. API time excludes tool/local/scheduler overhead. Model reasoning bodies are removed. No database or deployed binding involved.',
       records,
     },
     null,

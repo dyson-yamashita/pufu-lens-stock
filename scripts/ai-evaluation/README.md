@@ -30,3 +30,9 @@ node scripts/ai-evaluation/report.mjs /tmp/ai-evaluation-exchanges docs/evaluati
 ```
 
 ディレクトリ名は`{fixtureId}-{summary|memory|pufu}-{baseline|gemma|deepseek}-{1|2}`とする。レポートに含める交換ファイルは合成入力のものだけにする。usageが取得できない失敗の費用を0とせずnullで残す。単価は2026-11-07の通常入力/出力単価のスナップショット。請求額、無料枠、キャッシュ割引は算出しない。意味の正しさ・条件保持は出力とfixtureを人手で比較し、構造検証の通過と区別する。
+
+## 意味保持修正の記録
+
+最終コードの比較は`2026-11-workers-ai-semantic-fix-results.json`、旧評価の実際の誤回答を再検証した記録は`2026-11-workers-ai-semantic-guards-results.json`。どちらも上記replay.mjsへ渡して再生できる。旧形式の入力ハッシュは意味保持修正で変わっているので、旧評価の完全再生には当時のコミットを使用する。
+
+既知誤回答を新しく実推論で確認する場合はknown-error.tsをrunnerと同様にバンドルする。引数は`元評価JSON decision-swap|check-to-removal|deduplication|broken-sentence|missing-prohibition pufu baseline|deepseek 交換ディレクトリ`。元の最終scoreを読み、missing-prohibitionだけは重要条件を事実抽出してから再検証する。成功はドライバの実行完了であり、拒否できたかはfinal.jsonの`rejected`を見る。認証はファイル交換の外で扱い、結果不明な通信を自動再実行しない。

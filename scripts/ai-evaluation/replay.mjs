@@ -9,6 +9,7 @@ import console from 'node:console';
 import assert from 'node:assert/strict';
 
 const archive = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+const knownErrors = archive.kind === 'known-error';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const bundle = join(root, `.ai-evaluation-${process.pid}.mjs`);
 const scratch = mkdtempSync(join(tmpdir(), 'ai-evaluation-'));
@@ -24,7 +25,12 @@ const stripUUIDs = (value) => {
 };
 try {
   await build({
-    entryPoints: [join(root, 'scripts/ai-evaluation/runner.ts')],
+    entryPoints: [
+      join(
+        root,
+        knownErrors ? 'scripts/ai-evaluation/known-error.ts' : 'scripts/ai-evaluation/runner.ts',
+      ),
+    ],
     bundle: true,
     platform: 'node',
     format: 'esm',
@@ -32,7 +38,14 @@ try {
     outfile: bundle,
   });
   const fixtureFile = join(scratch, 'fixtures.json');
-  writeFileSync(fixtureFile, JSON.stringify(archive.fixtures));
+  writeFileSync(
+    fixtureFile,
+    JSON.stringify(
+      knownErrors
+        ? { fixtures: archive.fixtures, records: archive.originalRecords }
+        : archive.fixtures,
+    ),
+  );
   for (const record of archive.records) {
     const directory = mkdtempSync(join(scratch, 'run-'));
     for (const [index, call] of record.calls.entries()) {
@@ -41,7 +54,14 @@ try {
     }
     execFileSync(
       process.execPath,
-      [bundle, fixtureFile, record.fixture, record.kind, record.profile, directory],
+      [
+        bundle,
+        fixtureFile,
+        knownErrors ? record.alias : record.fixture,
+        record.kind ?? 'pufu',
+        record.profile,
+        directory,
+      ],
       { cwd: root, stdio: 'pipe' },
     );
     const final = JSON.parse(readFileSync(join(directory, 'final.json'), 'utf8'));
