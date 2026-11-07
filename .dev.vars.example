@@ -7,7 +7,9 @@ WORKERS_AI_ENABLED=false
 # VECTORIZE_INDEX_NAME=pufu-search-development
 # AI_SEARCH_DAILY_LIMIT=100
 # AI_INDEX_DAILY_LIMIT=200
-AI_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
+AI_MODEL=@cf/google/gemma-4-26b-a4b-it
+AI_PUFU_MODEL=@cf/deepseek-ai/deepseek-v4.1-flash-1017
+AI_PUFU_PLAN_MODEL=@cf/deepseek-ai/deepseek-v4.1-flash-1017
 # 同じWi-Fiの端末で試す場合は、MacのプライベートIPv4アドレスを指定します。
 # LOCAL_DEMO_LAN_ORIGIN=http://192.168.1.10:5173
 # Googleログインも試す場合に設定します。空欄でもローカルデモは動作します。

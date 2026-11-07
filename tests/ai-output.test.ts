@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildMemory, summarize, type Source } from '../server/ai';
+import { buildMemory, generateQuestion, summarize, parseAiJson, type Source } from '../server/ai';
+import { z } from 'zod';
+import { callPufuModel, pufuInputLimit } from '../server/pufu-ai';
 import type { Env } from '../server/env';
 
 const source: Source = {
@@ -11,6 +13,119 @@ const source: Source = {
   project: '設計',
 };
 const context = { name: '設計', description: '', scope: 'user' };
+
+it('Gemmaの要約・問いはchoicesの最終回答を使い、thinkingを無効化する', async () => {
+  const summary = source.summary;
+  const question = { text: '再試行時の重複をどう防ぐか？' };
+  const run = vi.fn<NonNullable<Env['AI']>['run']>();
+  for (const result of [summary, question])
+    run.mockResolvedValueOnce({
+      choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(result) } }],
+    });
+  const env = { AI: { run }, AI_MODEL: '@cf/google/gemma-4-26b-a4b-it' } as unknown as Env;
+  expect(await summarize(env, source.title, '再試行では重複を防ぐ。'.repeat(20))).toEqual(summary);
+  expect(
+    await generateQuestion(env, {
+      title: source.title,
+      summary,
+      note: '',
+      project: { name: context.name, description: '' },
+    }),
+  ).toEqual(question);
+  expect(run).toHaveBeenCalledTimes(2);
+  for (const [model, input] of run.mock.calls) {
+    expect(model).toBe(env.AI_MODEL);
+    expect(input).toMatchObject({
+      chat_template_kwargs: { enable_thinking: false },
+      response_format: { json_schema: { name: 'result', strict: true } },
+    });
+  }
+});
+
+it.each(['@cf/google/gemma-4-26b-a4b-it', '@cf/deepseek-ai/deepseek-v4.1-flash-1017'])(
+  '%sのchat応答を読み、推論文と存在しない根拠IDを保存しない',
+  async (model) => {
+    const run = vi.fn<NonNullable<Env['AI']>['run']>().mockResolvedValue({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: {
+            content: JSON.stringify({
+              interests: [],
+              knowledge: [
+                { text: '再試行では重複を防ぐ。', articleIds: ['article-1', 'invented'] },
+                { text: '根拠のない知識', articleIds: ['invented'] },
+              ],
+              questions: [],
+            }),
+            reasoning_content: '内部検討',
+          },
+        },
+      ],
+    });
+    const result = await buildMemory(
+      { AI: { run }, AI_MODEL: model } as unknown as Env,
+      [source],
+      context,
+    );
+    expect(result.knowledge).toEqual([
+      { text: '再試行では重複を防ぐ。', articleIds: ['article-1'] },
+    ]);
+    expect(JSON.stringify(result)).not.toContain('内部検討');
+    expect(run.mock.calls[0][1].response_format).toMatchObject({
+      json_schema: { name: 'result', strict: true, schema: { type: 'object' } },
+    });
+    expect(run.mock.calls[0][1]).toMatchObject(
+      model.includes('deepseek')
+        ? { reasoning_effort: 'none' }
+        : { chat_template_kwargs: { enable_thinking: false } },
+    );
+  },
+);
+
+it.each([
+  { content: null, finish_reason: 'stop' },
+  { content: '{"text":"回答"}', finish_reason: 'length' },
+  { content: '{"text":"回答"}', finish_reason: 'content_filter' },
+  { content: '{"text":7}', finish_reason: 'stop' },
+])('不完全または不正なchat応答を保存しない: %j', ({ content, finish_reason }) => {
+  expect(() =>
+    parseAiJson(
+      {
+        choices: [
+          {
+            finish_reason,
+            message: {
+              content,
+              reasoning_content: '{"text":"推論"}',
+            },
+          },
+        ],
+      },
+      z.object({ text: z.string() }),
+    ),
+  ).toThrow('出力形式');
+});
+
+it('DeepSeekの抽出入力を40KBに保ち、上限超過を送信前に拒否する', async () => {
+  const run = vi.fn<NonNullable<Env['AI']>['run']>();
+  const env = {
+    AI: { run },
+    AI_MODEL: '@cf/deepseek-ai/deepseek-v4.1-flash-1017',
+  } as unknown as Env;
+  expect(pufuInputLimit(env)).toBe(40000);
+  await expect(
+    callPufuModel(
+      env,
+      '指示',
+      { text: 'あ'.repeat(14000) },
+      z.object({ text: z.string() }),
+      500,
+      pufuInputLimit(env),
+    ),
+  ).rejects.toThrow('入力上限');
+  expect(run).not.toHaveBeenCalled();
+});
 
 describe('短い本文の要約', () => {
   it.each([

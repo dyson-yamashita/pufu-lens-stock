@@ -155,7 +155,7 @@ export async function testApp(
     },
     APP_URL: 'http://localhost:5173',
     LOCAL_DEMO_ENABLED: 'false',
-    AI_MODEL: '@cf/qwen/qwen3-30b-a3b-fp8',
+    AI_MODEL: '@cf/google/gemma-4-26b-a4b-it',
     // Workflowスタブは自動完了しない。上限制御のテストだけ本番の既定同時数を使う。
     AI_CONCURRENT_JOBS: options.quotaDefaults ? undefined : '100',
     ARTICLE_WORKFLOW: binding,
