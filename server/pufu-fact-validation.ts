@@ -1,4 +1,5 @@
 const reasons = {
+  condition_quote_not_in_evidence: '条件の引用が指定した根拠区間に存在しません',
   evidence_not_found: '指定した根拠IDが資料に存在しません',
   subject_not_in_evidence: '対象名が指定した根拠区間に存在しません',
   action_index_out_of_range: '配置先の工程番号が範囲外です',

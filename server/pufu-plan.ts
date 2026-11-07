@@ -47,6 +47,9 @@ export async function arrangePufu(
         facts.elements[key],
         displayCases.filter((value) => value.placement === key),
         language,
+        (facts.conditions ?? [])
+          .filter((condition) => condition.element === key)
+          .map((condition) => condition.text),
       ),
     ]),
   ) as Record<(typeof elementKeys)[number], string>;
@@ -113,6 +116,7 @@ Elements are already fixed and inserted by the server; never output elements. Do
     qualityConditions: facts.elements.quality,
     materialConditions: facts.elements.environment,
     elements: facts.elements,
+    conditions: facts.conditions ?? [],
     rolesAndDecisions: [...facts.elements.people, ...facts.elements.businessScheme],
     actionGroups: actionGroups.map((actions, index) => ({ purpose: index + 1, actions })),
   };
@@ -130,7 +134,7 @@ Elements are already fixed and inserted by the server; never output elements. Do
     text: cleanGeneratedText(value),
     comment: { color: 'blue' as const, text: '' },
   });
-  return normalizeGeneratedScore(
+  const score = normalizeGeneratedScore(
     pufuScoreSchema.parse({
       gainingGoal: node(
         context.task || ('gainingGoal' in plan ? (plan.gainingGoal as string) : ''),
@@ -147,5 +151,7 @@ Elements are already fixed and inserted by the server; never output elements. Do
     }),
     context,
     language,
+    facts.conditions,
   );
+  return score;
 }

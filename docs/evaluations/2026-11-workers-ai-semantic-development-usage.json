@@ -1,0 +1,1381 @@
+{
+  "date": "2026-11-07",
+  "method": "Usage ledger for exploratory calls, including incomplete/stopped pipelines. Not a final-source benchmark. Six calls also appear in semantic-guards-results and must not be double-counted. Final 34-call matrix is separate. Input/output uncached list-price estimate; no secrets or reasoning bodies.",
+  "pricesPerMillionTokens": {
+    "@cf/qwen/qwen3-30b-a3b-fp8": [0.0509, 0.335],
+    "@cf/google/gemma-4-26b-a4b-it": [0.1, 0.3],
+    "@cf/deepseek-ai/deepseek-v4.1-flash-1017": [0.3, 1.2],
+    "@cf/zai-org/glm-5.3-flash": [0.15, 0.5],
+    "@cf/moonshotai/kimi-k2.6": [0.95, 4]
+  },
+  "records": [
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "3cd10929d14e74bd1cf6c9f699d3e41408d8928da3c9d5735fe7bc73244c43a5",
+      "usage": {
+        "prompt_tokens": 1047,
+        "completion_tokens": 479,
+        "total_tokens": 1526,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 36.05000305175781
+      },
+      "uncachedUSD": 0.00039654999999999996,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 1,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "6de1fd85bab5d427eda79310ef5f9290bbd368928df48c123e4d0020aaee8195",
+      "usage": {
+        "prompt_tokens": 875,
+        "completion_tokens": 58,
+        "total_tokens": 933,
+        "prompt_tokens_details": {
+          "cached_tokens": 448
+        },
+        "neurons": 64.48455047607422
+      },
+      "uncachedUSD": 0.00106325,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 2,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "8aa052c6f93c61883d1665535d45f2b0945dc3f1d695505f1aef0bab20a2bf18",
+      "usage": {
+        "prompt_tokens": 701,
+        "completion_tokens": 178,
+        "total_tokens": 879,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "neurons": 106.88272094726562
+      },
+      "uncachedUSD": 0.0013779499999999997,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 3,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "38b7f37c5c1cfd8103b27e8e8ed08d17c2c7e9c302a824a5eaf9fa11789d6b8d",
+      "usage": {
+        "prompt_tokens": 1129,
+        "completion_tokens": 227,
+        "total_tokens": 1356,
+        "prompt_tokens_details": {
+          "cached_tokens": 384
+        },
+        "neurons": 152.47181701660156
+      },
+      "uncachedUSD": 0.0019805499999999998,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-2",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "3cd10929d14e74bd1cf6c9f699d3e41408d8928da3c9d5735fe7bc73244c43a5",
+      "usage": {
+        "prompt_tokens": 1047,
+        "completion_tokens": 653,
+        "total_tokens": 1700,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 43.9590950012207
+      },
+      "uncachedUSD": 0.00048354999999999996,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-2",
+      "index": 1,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "dbdea7c02bcbc7726767d5139730bda737dcd3d84eedd06a1c1433d061e3fe63",
+      "usage": {
+        "prompt_tokens": 910,
+        "completion_tokens": 42,
+        "total_tokens": 952,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 93.86363983154297
+      },
+      "uncachedUSD": 0.0010325,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-2",
+      "index": 2,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "4c2a2178b2dd35b824b1654bac61ca9e3e41414af06c18e3cf0dd3b0d9952f48",
+      "usage": {
+        "prompt_tokens": 769,
+        "completion_tokens": 181,
+        "total_tokens": 950,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 90.86454772949219
+      },
+      "uncachedUSD": 0.00145455,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-2",
+      "index": 3,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "33d212bcb0ad68492b0c7ca60581b11ababee89a692a726166c5678069f9096a",
+      "usage": {
+        "prompt_tokens": 1201,
+        "completion_tokens": 279,
+        "total_tokens": 1480,
+        "prompt_tokens_details": {
+          "cached_tokens": 704
+        },
+        "neurons": 154.61727905273438
+      },
+      "uncachedUSD": 0.0022569499999999998,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-2",
+      "index": 4,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "ee558ef69d79403e086e4d16a0e5d4dab7f85d34459504566020cd0f59d6fb98",
+      "usage": {
+        "prompt_tokens": 875,
+        "completion_tokens": 182,
+        "total_tokens": 1057,
+        "prompt_tokens_details": {
+          "cached_tokens": 704
+        },
+        "neurons": 91.19000244140625
+      },
+      "uncachedUSD": 0.00155925,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-baseline-2",
+      "index": 5,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "fba82ddbac2b9b3aeea23c2a62a1d8bda9d10a12690d918f91faeb4085f71b20",
+      "usage": {
+        "prompt_tokens": 1202,
+        "completion_tokens": 326,
+        "total_tokens": 1528,
+        "prompt_tokens_details": {
+          "cached_tokens": 896
+        },
+        "neurons": 158.00546264648438
+      },
+      "uncachedUSD": 0.0024458999999999996,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "2e761066cfdcf4849d272cea0b968f2f8b4f3b2b4ae6fd0c200b8e568d944c1f",
+      "usage": {
+        "prompt_tokens": 1073,
+        "completion_tokens": 458,
+        "total_tokens": 1531,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 63.83236312866211
+      },
+      "uncachedUSD": 0.0008715,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "c6bc3032c469e4122605ef7275f08ca0e3ba71aeb554a6bb71e28659cf3f5157",
+      "usage": {
+        "prompt_tokens": 987,
+        "completion_tokens": 42,
+        "total_tokens": 1029,
+        "prompt_tokens_details": {
+          "cached_tokens": 320
+        },
+        "neurons": 22.9472713470459
+      },
+      "uncachedUSD": 0.00034649999999999997,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "ee0b4148644b22b4918d673ed0e64387194650c7f1c8222d7c99d9eef60e909b",
+      "usage": {
+        "prompt_tokens": 740,
+        "completion_tokens": 219,
+        "total_tokens": 959,
+        "prompt_tokens_details": {
+          "cached_tokens": 192
+        },
+        "neurons": 38.94108963012695
+      },
+      "uncachedUSD": 0.0004848,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "0c34778d3cf6e54b4635162e685274378f0cd5ee2e9f60f1c729ec321940f97d",
+      "usage": {
+        "prompt_tokens": 1190,
+        "completion_tokens": 313,
+        "total_tokens": 1503,
+        "prompt_tokens_details": {
+          "cached_tokens": 384
+        },
+        "neurons": 56.336727142333984
+      },
+      "uncachedUSD": 0.0007325999999999999,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-2",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "2e761066cfdcf4849d272cea0b968f2f8b4f3b2b4ae6fd0c200b8e568d944c1f",
+      "usage": {
+        "prompt_tokens": 1073,
+        "completion_tokens": 328,
+        "total_tokens": 1401,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 39.38726806640625
+      },
+      "uncachedUSD": 0.0007155,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-2",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "8c9098c43c76dfac5bdb698ba6740cc5d5d6743abb48c2afae0b68979874adbc",
+      "usage": {
+        "prompt_tokens": 877,
+        "completion_tokens": 49,
+        "total_tokens": 926,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 13.868725776672363
+      },
+      "uncachedUSD": 0.00032189999999999996,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-2",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "ab76e1e0638a2bc597fc8815a9138954908ed82f1e76e8ec834d23913d6aa17c",
+      "usage": {
+        "prompt_tokens": 726,
+        "completion_tokens": 212,
+        "total_tokens": 938,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "neurons": 29.242908477783203
+      },
+      "uncachedUSD": 0.00047219999999999993,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-en-pufu-deepseek-2",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "05a51f9715bd59a9705ed303297307db662f4a21cd15c935f14563e564f56fb9",
+      "usage": {
+        "prompt_tokens": 1179,
+        "completion_tokens": 209,
+        "total_tokens": 1388,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "neurons": 41.270179748535156
+      },
+      "uncachedUSD": 0.0006045,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "6bd1452cb1faad88817efdbf4c1b2520751bd953b991909e3cf05975c493e9a6",
+      "usage": {
+        "prompt_tokens": 1503,
+        "completion_tokens": 789,
+        "total_tokens": 2292,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 56.359092712402344
+      },
+      "uncachedUSD": 0.0006199500000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-baseline-2",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "6bd1452cb1faad88817efdbf4c1b2520751bd953b991909e3cf05975c493e9a6",
+      "usage": {
+        "prompt_tokens": 1503,
+        "completion_tokens": 851,
+        "total_tokens": 2354,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "neurons": 45.21363830566406
+      },
+      "uncachedUSD": 0.0006509500000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-baseline-2",
+      "index": 1,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "22486828b587ac19f7f473bc91d8b5c29df48d7a36d7da1f09b400c6eca8785c",
+      "usage": {
+        "prompt_tokens": 1450,
+        "completion_tokens": 68,
+        "total_tokens": 1518,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024
+        },
+        "neurons": 76.41272735595703
+      },
+      "uncachedUSD": 0.0016495,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-baseline-2",
+      "index": 2,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "e71f5d4a2b2d11bc6e0265467ee4f2cccf5ba36c03be2d9f1dd89349f23fcf85",
+      "usage": {
+        "prompt_tokens": 1264,
+        "completion_tokens": 376,
+        "total_tokens": 1640,
+        "prompt_tokens_details": {
+          "cached_tokens": 448
+        },
+        "neurons": 213.71636962890625
+      },
+      "uncachedUSD": 0.0027048000000000003,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-baseline-2",
+      "index": 3,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "897ba3b7fed3b1e573225b9a503db79ff8589be7ac5efa89f4d49f6fdd71ff05",
+      "usage": {
+        "prompt_tokens": 1906,
+        "completion_tokens": 313,
+        "total_tokens": 2219,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "neurons": 223.2709197998047
+      },
+      "uncachedUSD": 0.0030627,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "06c6b01ace70e2ef7c3cdbbf353767b56d081fd2ae5b7641b129bb176c1281dd",
+      "usage": {
+        "prompt_tokens": 1415,
+        "completion_tokens": 608,
+        "total_tokens": 2023,
+        "prompt_tokens_details": {
+          "cached_tokens": 1344
+        },
+        "neurons": 68.99671936035156
+      },
+      "uncachedUSD": 0.0011541,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "fe4c4bdf28e5fff77378d543144f96f9adfbf11d9718566a24ff4ce22d984b62",
+      "usage": {
+        "prompt_tokens": 1368,
+        "completion_tokens": 68,
+        "total_tokens": 1436,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 22.49017906188965
+      },
+      "uncachedUSD": 0.000492,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "5582bce6db09a97888be04abb988e96ddeef32af2e2b343ca13a3da9283c678c",
+      "usage": {
+        "prompt_tokens": 1139,
+        "completion_tokens": 300,
+        "total_tokens": 1439,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 41.55381393432617
+      },
+      "uncachedUSD": 0.0007017000000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "2430d9686afe4e71df71ac5920438c4a3562089db12848a09ae8cc1a3ecb2c31",
+      "usage": {
+        "prompt_tokens": 1752,
+        "completion_tokens": 279,
+        "total_tokens": 2031,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 52.55999755859375
+      },
+      "uncachedUSD": 0.0008604000000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "06c6b01ace70e2ef7c3cdbbf353767b56d081fd2ae5b7641b129bb176c1281dd",
+      "usage": {
+        "prompt_tokens": 1415,
+        "completion_tokens": 777,
+        "total_tokens": 2192,
+        "prompt_tokens_details": {
+          "cached_tokens": 1344
+        },
+        "neurons": 87.4330825805664
+      },
+      "uncachedUSD": 0.0013569,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "1db4c484b25ed252a06074f5291235d96aff565e427887c73edaa7897b8b5218",
+      "usage": {
+        "prompt_tokens": 1360,
+        "completion_tokens": 78,
+        "total_tokens": 1438,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "neurons": 11.38908576965332
+      },
+      "uncachedUSD": 0.0005016,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "b9d0d5c986d1856aa964d18931f9112cd313fb81312624311a6d08e957ac93ad",
+      "usage": {
+        "prompt_tokens": 1150,
+        "completion_tokens": 300,
+        "total_tokens": 1450,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 41.853816986083984
+      },
+      "uncachedUSD": 0.000705,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "8456ed05157146af4eec1d53d3f57cf90f8f56126e60c155675cb5f26211e59c",
+      "usage": {
+        "prompt_tokens": 1763,
+        "completion_tokens": 281,
+        "total_tokens": 2044,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 53.07817840576172
+      },
+      "uncachedUSD": 0.0008660999999999999,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "2e53985ad6eeb5482423656754cd420a5d8fb0d2bf518802b80c0ef4f6f3a258",
+      "usage": {
+        "prompt_tokens": 1474,
+        "completion_tokens": 374,
+        "total_tokens": 1848,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 37.099998474121094
+      },
+      "uncachedUSD": 0.0004081,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-1",
+      "index": 1,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "571e3ba2cfafab4a46bcfdab45f28ae86fd036c1dde733ac15bbb860e1c34ee8",
+      "usage": {
+        "prompt_tokens": 1175,
+        "completion_tokens": 61,
+        "total_tokens": 1236,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024
+        },
+        "neurons": 50.117271423339844
+      },
+      "uncachedUSD": 0.00136025,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-1",
+      "index": 2,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "7771e30e5a293623dec4d8c69ced75ae28d0ae934aa6ba1e5b991a70452e6286",
+      "usage": {
+        "prompt_tokens": 1110,
+        "completion_tokens": 291,
+        "total_tokens": 1401,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 132.73635864257812
+      },
+      "uncachedUSD": 0.0022185,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-1",
+      "index": 3,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "b75facca5939436d380c3ee1bca0c6c2000fcb1e231ed1fa3dc18a47cc4f649b",
+      "usage": {
+        "prompt_tokens": 1680,
+        "completion_tokens": 325,
+        "total_tokens": 2005,
+        "prompt_tokens_details": {
+          "cached_tokens": 1152
+        },
+        "neurons": 180.53819274902344
+      },
+      "uncachedUSD": 0.002896,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-2",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "2e53985ad6eeb5482423656754cd420a5d8fb0d2bf518802b80c0ef4f6f3a258",
+      "usage": {
+        "prompt_tokens": 1474,
+        "completion_tokens": 460,
+        "total_tokens": 1934,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 41.00909423828125
+      },
+      "uncachedUSD": 0.0004511,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-2",
+      "index": 1,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "99dc27336fb2297e9a24003784a0874b2bdd51dfb83a2b3d93e0b2331e9a2e8e",
+      "usage": {
+        "prompt_tokens": 1228,
+        "completion_tokens": 57,
+        "total_tokens": 1285,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024
+        },
+        "neurons": 53.2400016784668
+      },
+      "uncachedUSD": 0.0013946,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-baseline-2",
+      "index": 2,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "d7792d20cb33e5d17d7e18488300dfe55d846ef748efed85f74434878d6d2398",
+      "usage": {
+        "prompt_tokens": 1133,
+        "completion_tokens": 244,
+        "total_tokens": 1377,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 117.63182067871094
+      },
+      "uncachedUSD": 0.00205235,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "085830b57fbf1ea9780c424cbdb077dffd5e3862f543ee029881222f41dc2085",
+      "usage": {
+        "prompt_tokens": 1391,
+        "completion_tokens": 378,
+        "total_tokens": 1769,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024
+        },
+        "neurons": 51.803993225097656
+      },
+      "uncachedUSD": 0.0008709,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "0f9f3681c0e8577adb4873453965ae000f93c528b1695e068a9cf442e21b1886",
+      "usage": {
+        "prompt_tokens": 1253,
+        "completion_tokens": 65,
+        "total_tokens": 1318,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 19.026540756225586
+      },
+      "uncachedUSD": 0.0004539,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "0266a0053b12ec0e8856a41835a2338f8453e4e2f001407ff7598e025228ae8a",
+      "usage": {
+        "prompt_tokens": 1043,
+        "completion_tokens": 282,
+        "total_tokens": 1325,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "neurons": 38.68254470825195
+      },
+      "uncachedUSD": 0.0006513,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "4ccbf1217cdc33575637f624345d50376d4d2d3d360087d7a707cbebdb0c228d",
+      "usage": {
+        "prompt_tokens": 1735,
+        "completion_tokens": 260,
+        "total_tokens": 1995,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 50.02363204956055
+      },
+      "uncachedUSD": 0.0008325,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-2",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "085830b57fbf1ea9780c424cbdb077dffd5e3862f543ee029881222f41dc2085",
+      "usage": {
+        "prompt_tokens": 1391,
+        "completion_tokens": 249,
+        "total_tokens": 1640,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "neurons": 30.88908576965332
+      },
+      "uncachedUSD": 0.0007161,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-2",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "cec7c1d23b91cf7f37b5f850a8a539e0b3dc58a8624f4d8b7b1e730f95143594",
+      "usage": {
+        "prompt_tokens": 1109,
+        "completion_tokens": 90,
+        "total_tokens": 1199,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 17.826541900634766
+      },
+      "uncachedUSD": 0.0004407,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed",
+      "id": "untrusted-ja-pufu-deepseek-2",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "2caed559f623e397c653c0de56353b6bd971ff9c6a49b5550bddcd4cc9e389e0",
+      "usage": {
+        "prompt_tokens": 1029,
+        "completion_tokens": 260,
+        "total_tokens": 1289,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 34.19017791748047
+      },
+      "uncachedUSD": 0.0006207000000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-guards",
+      "id": "broken-sentence-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "8346fc63b0f22e02e02d4e6b3ef5fac317c5803573998b72bb55e9e6d07ca351",
+      "usage": {
+        "prompt_tokens": 1257,
+        "completion_tokens": 320,
+        "total_tokens": 1577,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "neurons": 55.50654602050781
+      },
+      "uncachedUSD": 0.0007610999999999999,
+      "alsoInKnownErrorReport": true
+    },
+    {
+      "cohort": "ai-eval-fixed-guards",
+      "id": "check-to-removal-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "6103773a965784dafae441097a488c3a5e4199b0d3eb3e651def461f9aa92d73",
+      "usage": {
+        "prompt_tokens": 1950,
+        "completion_tokens": 407,
+        "total_tokens": 2357,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 247.46363830566406
+      },
+      "uncachedUSD": 0.0034805,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-guards",
+      "id": "decision-swap-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "ef3a2fc5422c12e6512748a7a3365604479bfb92de0e9176e7364bd9bfcc3837",
+      "usage": {
+        "prompt_tokens": 1778,
+        "completion_tokens": 478,
+        "total_tokens": 2256,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "neurons": 80.10981750488281
+      },
+      "uncachedUSD": 0.001107,
+      "alsoInKnownErrorReport": true
+    },
+    {
+      "cohort": "ai-eval-fixed-guards",
+      "id": "deduplication-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "39e462a5ac5c16cadd824ea57dc1e08f619af747775968d8a528201fd7b7aab1",
+      "usage": {
+        "prompt_tokens": 6357,
+        "completion_tokens": 486,
+        "total_tokens": 6843,
+        "prompt_tokens_details": {
+          "cached_tokens": 1216
+        },
+        "neurons": 638.4099731445312
+      },
+      "uncachedUSD": 0.00798315,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-guards",
+      "id": "missing-prohibition-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "ef87f93c44528284620da8dc899bbedcad3521f42622479284b4a49f5a0c2aa0",
+      "usage": {
+        "prompt_tokens": 1643,
+        "completion_tokens": 314,
+        "total_tokens": 1957,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024
+        },
+        "neurons": 51.694908142089844
+      },
+      "uncachedUSD": 0.0008697,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-guards-v4",
+      "id": "check-to-removal-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "6103773a965784dafae441097a488c3a5e4199b0d3eb3e651def461f9aa92d73",
+      "usage": {
+        "prompt_tokens": 1950,
+        "completion_tokens": 544,
+        "total_tokens": 2494,
+        "prompt_tokens_details": {
+          "cached_tokens": 1920
+        },
+        "neurons": 228.3363800048828
+      },
+      "uncachedUSD": 0.0040285,
+      "alsoInKnownErrorReport": true
+    },
+    {
+      "cohort": "ai-eval-fixed-guards-v4",
+      "id": "deduplication-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "39e462a5ac5c16cadd824ea57dc1e08f619af747775968d8a528201fd7b7aab1",
+      "usage": {
+        "prompt_tokens": 6357,
+        "completion_tokens": 551,
+        "total_tokens": 6908,
+        "prompt_tokens_details": {
+          "cached_tokens": 6336
+        },
+        "neurons": 294.3372802734375
+      },
+      "uncachedUSD": 0.00824315,
+      "alsoInKnownErrorReport": true
+    },
+    {
+      "cohort": "ai-eval-fixed-guards-v4",
+      "id": "missing-prohibition-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "ed82c915036290875852115b30de7536515cfe9b75ed79ff87b7a24d32c70f7d",
+      "usage": {
+        "prompt_tokens": 1391,
+        "completion_tokens": 277,
+        "total_tokens": 1668,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "neurons": 33.94363021850586
+      },
+      "uncachedUSD": 0.0007497000000000001,
+      "alsoInKnownErrorReport": true
+    },
+    {
+      "cohort": "ai-eval-fixed-guards-v4",
+      "id": "missing-prohibition-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "6195be2ab35cec6092ce26d80c08e2478eba9a59430c0fe8ede82664bcdeb774",
+      "usage": {
+        "prompt_tokens": 1643,
+        "completion_tokens": 353,
+        "total_tokens": 1996,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "neurons": 42.26508331298828
+      },
+      "uncachedUSD": 0.0009165,
+      "alsoInKnownErrorReport": true
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "89b7bd1d2a85d973043b0fe8c9e7ea4a6d18fe8abfa249feddfc104174cdde30",
+      "usage": {
+        "prompt_tokens": 1358,
+        "completion_tokens": 955,
+        "total_tokens": 2313,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 141.2181854248047
+      },
+      "uncachedUSD": 0.0015534000000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "8835b7864d6e827f2061668cb1144012cc0442cd291341d0e052c463d398fa29",
+      "usage": {
+        "prompt_tokens": 1931,
+        "completion_tokens": 74,
+        "total_tokens": 2005,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 60.736366271972656
+      },
+      "uncachedUSD": 0.0006680999999999999,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "78dce349d0593fdb90e073d3521c07a4bb21a887fef65e10e95b5bd0fbc05809",
+      "usage": {
+        "prompt_tokens": 1333,
+        "completion_tokens": 300,
+        "total_tokens": 1633,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "neurons": 62.23963928222656
+      },
+      "uncachedUSD": 0.0007599,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "5ae1e2f4fff0f571f6da728e99aa6a5b242c82e3ebf849a9018e647b042944b4",
+      "usage": {
+        "prompt_tokens": 2215,
+        "completion_tokens": 439,
+        "total_tokens": 2654,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 92.90509033203125
+      },
+      "uncachedUSD": 0.0011913,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 4,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "677638d39789f8b8560240d331832e530955c25b3f4307c2ed08dc503dbba46f",
+      "usage": {
+        "prompt_tokens": 1404,
+        "completion_tokens": 315,
+        "total_tokens": 1719,
+        "prompt_tokens_details": {
+          "cached_tokens": 1216
+        },
+        "neurons": 40.154178619384766
+      },
+      "uncachedUSD": 0.0007992,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "conditions-ja-pufu-deepseek-1",
+      "index": 5,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "a8daef2b9f83f707dd1089b7c297c7d552b2a2b559a6d9bd0437db2a89097f92",
+      "usage": {
+        "prompt_tokens": 2215,
+        "completion_tokens": 291,
+        "total_tokens": 2506,
+        "prompt_tokens_details": {
+          "cached_tokens": 2112
+        },
+        "neurons": 35.70653533935547
+      },
+      "uncachedUSD": 0.0010137,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "80ed01f23e238e1cf6be1280731f8fcc1023f4551affc782ab8b19f0d0ed0ab0",
+      "usage": {
+        "prompt_tokens": 1334,
+        "completion_tokens": 175,
+        "total_tokens": 1509,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 29.814542770385742
+      },
+      "uncachedUSD": 0.0006102000000000001,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "15cf63ad3f45fcb2b7683f81c4771bc2c1dbe41c67b3f19a2a62a94227457cd4",
+      "usage": {
+        "prompt_tokens": 1050,
+        "completion_tokens": 65,
+        "total_tokens": 1115,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 13.490178108215332
+      },
+      "uncachedUSD": 0.000393,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "669345ffeb1313b7d58a2c4b1fce4f3003a62f51d3ad6501364c757a0d98be38",
+      "usage": {
+        "prompt_tokens": 951,
+        "completion_tokens": 249,
+        "total_tokens": 1200,
+        "prompt_tokens_details": {
+          "cached_tokens": 704
+        },
+        "neurons": 34.28399658203125
+      },
+      "uncachedUSD": 0.0005841,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot",
+      "id": "untrusted-ja-pufu-deepseek-1",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "83fa53916183b7c746f78db488e7746e2745b6b9418ce2601701d873389b0f6d",
+      "usage": {
+        "prompt_tokens": 1562,
+        "completion_tokens": 305,
+        "total_tokens": 1867,
+        "prompt_tokens_details": {
+          "cached_tokens": 896
+        },
+        "neurons": 51.925086975097656
+      },
+      "uncachedUSD": 0.0008345999999999999,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot-v2",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "06c6b01ace70e2ef7c3cdbbf353767b56d081fd2ae5b7641b129bb176c1281dd",
+      "usage": {
+        "prompt_tokens": 1415,
+        "completion_tokens": 782,
+        "total_tokens": 2197,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 98.2418212890625
+      },
+      "uncachedUSD": 0.0013629,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot-v2",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "1db4c484b25ed252a06074f5291235d96aff565e427887c73edaa7897b8b5218",
+      "usage": {
+        "prompt_tokens": 1360,
+        "completion_tokens": 78,
+        "total_tokens": 1438,
+        "prompt_tokens_details": {
+          "cached_tokens": 832
+        },
+        "neurons": 23.362905502319336
+      },
+      "uncachedUSD": 0.0005016,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot-v2",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "ccbb52c9dcd985503774f529ed81f3161bbe8ee53c01e6b2c60872ad1cab8a49",
+      "usage": {
+        "prompt_tokens": 1139,
+        "completion_tokens": 287,
+        "total_tokens": 1426,
+        "prompt_tokens_details": {
+          "cached_tokens": 704
+        },
+        "neurons": 43.556724548339844
+      },
+      "uncachedUSD": 0.0006860999999999999,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-pilot-v2",
+      "id": "conditions-ja-pufu-deepseek-2",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "971e073377a062cd118acb6bf7e431b09a970e2b417cc8d0e45398b52903f3df",
+      "usage": {
+        "prompt_tokens": 1759,
+        "completion_tokens": 274,
+        "total_tokens": 2033,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 52.20545196533203
+      },
+      "uncachedUSD": 0.0008565,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 0,
+      "model": "@cf/zai-org/glm-5.3-flash",
+      "requestHash": "3cd10929d14e74bd1cf6c9f699d3e41408d8928da3c9d5735fe7bc73244c43a5",
+      "usage": {
+        "prompt_tokens": 1047,
+        "completion_tokens": 557,
+        "total_tokens": 1604,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 39.595455169677734
+      },
+      "uncachedUSD": 0.00043554999999999993,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 1,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "617f2da66bc23d4ddad6b9d06d93a7ae66e30272c09d556ae54996a3f5a639a1",
+      "usage": {
+        "prompt_tokens": 941,
+        "completion_tokens": 44,
+        "total_tokens": 985,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "neurons": 97.26818084716797
+      },
+      "uncachedUSD": 0.0010699499999999999,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 2,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "703a027732a624d67698e6f53c1292fc3a31939aa0b9b48f7f7a424099111781",
+      "usage": {
+        "prompt_tokens": 701,
+        "completion_tokens": 173,
+        "total_tokens": 874,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 82.08272552490234
+      },
+      "uncachedUSD": 0.00135795,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-baseline-1",
+      "index": 3,
+      "model": "@cf/moonshotai/kimi-k2.6",
+      "requestHash": "6ad6e2ffdee64899d42b6193fdaeb3ebc62e3bd3168ac59b9936d28ba688b979",
+      "usage": {
+        "prompt_tokens": 1219,
+        "completion_tokens": 301,
+        "total_tokens": 1520,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 173.36456298828125
+      },
+      "uncachedUSD": 0.00236205,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 0,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "2e761066cfdcf4849d272cea0b968f2f8b4f3b2b4ae6fd0c200b8e568d944c1f",
+      "usage": {
+        "prompt_tokens": 1073,
+        "completion_tokens": 458,
+        "total_tokens": 1531,
+        "prompt_tokens_details": {
+          "cached_tokens": 960
+        },
+        "neurons": 53.569087982177734
+      },
+      "uncachedUSD": 0.0008715,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 1,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "c6bc3032c469e4122605ef7275f08ca0e3ba71aeb554a6bb71e28659cf3f5157",
+      "usage": {
+        "prompt_tokens": 987,
+        "completion_tokens": 42,
+        "total_tokens": 1029,
+        "prompt_tokens_details": {
+          "cached_tokens": 896
+        },
+        "neurons": 7.5523600578308105
+      },
+      "uncachedUSD": 0.00034649999999999997,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 2,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "0b0bab031da035747683f748d9d7e7c24c3707da34c09af6b70186abd18fe8d0",
+      "usage": {
+        "prompt_tokens": 740,
+        "completion_tokens": 216,
+        "total_tokens": 956,
+        "prompt_tokens_details": {
+          "cached_tokens": 576
+        },
+        "neurons": 28.350543975830078
+      },
+      "uncachedUSD": 0.0004812,
+      "alsoInKnownErrorReport": false
+    },
+    {
+      "cohort": "ai-eval-fixed-v3-pilot",
+      "id": "conditions-en-pufu-deepseek-1",
+      "index": 3,
+      "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "requestHash": "45da8e1f5f4477c76343b86ac90980200bbb62abe5959c41a5585206aef11b02",
+      "usage": {
+        "prompt_tokens": 1282,
+        "completion_tokens": 372,
+        "total_tokens": 1654,
+        "prompt_tokens_details": {
+          "cached_tokens": 704
+        },
+        "neurons": 56.72945022583008
+      },
+      "uncachedUSD": 0.000831,
+      "alsoInKnownErrorReport": false
+    }
+  ]
+}
