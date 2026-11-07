@@ -795,6 +795,11 @@ export const ja: Record<string, string> = {
   'ui.pufu_page.generating_pufu': 'プ譜を生成しています',
   'ui.pufu_page.loading_pufu': 'プ譜を読み込んでいます',
   'ui.pufu_progress.stage.extract': '資料から事実を抽出',
+  'ui.pufu_progress.stage.repair_facts': '根拠との不一致を修正',
+  'ui.pufu_progress.stage.compact': '施策と条件を短く整理',
+  'ui.pufu_progress.stage.review_compact': '短文化した内容を検証',
+  'ui.pufu_progress.stage.repair_compact': '短文化の指摘を修正',
+  'ui.pufu_progress.stage.review_repaired_compact': '修正した短文を再検証',
   'ui.pufu_progress.stage.arrange': '中間目的と施策を構成',
   'ui.pufu_progress.stage.integrate': '勝利条件をまとめる',
   'ui.pufu_progress.stage.review': '勝利条件を検証',
@@ -954,7 +959,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     '「プ譜」一覧の「プ譜を追加」を押し、保存先のプロジェクトを選びます。問いから作る場合は、問いの詳細の「プ譜」タブで「問い・気づきから考える」を選びます。',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    '参照する問い・気づきとストックは、それぞれ1件まで選べます。選択したストックを優先し、未選択なら問いの関連ストック1件を自動参照します。関連ストックが複数あれば1件を選択してください。要約・メモと取得済み本文を使います（長い資料は一部を参照）。獲得目標を入力するとそのまま使い、空欄なら参照資料からAIが推測します。「廟算八要素・取り組む予定の施策」も任意で入力できます。条件は記事本文から短く整理し、不明な項目と根拠のない施策は空欄にします。新しい活動やコメント・参考情報の注記は自動で追加しません。「プ譜を作成」で案を生成します。通常は1件の生成にAI呼び出し枠を4回分使用します。勝利条件の確認で修正が必要な場合は、1回だけ作り直し、追加で2回分使用します。エラーの再試行も利用枠を使います。',
+    '参照する問い・気づきとストックは、それぞれ1件まで選べます。選択したストックを優先し、未選択なら問いの関連ストック1件を自動参照します。関連ストックが複数あれば1件を選択してください。要約・メモと取得済み本文を使います（長い資料は一部を参照）。獲得目標を入力するとそのまま使い、空欄なら参照資料からAIが推測します。「廟算八要素・取り組む予定の施策」も任意で入力できます。条件は記事本文から短く整理し、不明な項目と根拠のない施策は空欄にします。新しい活動やコメント・参考情報の注記は自動で追加しません。「プ譜を作成」で案を生成します。通常は1件の生成にAI呼び出し枠を4回分使用します。長い施策・条件の短文化と検証には追加で2回分（短文化の修正が必要ならさらに最大2回分）、根拠の不一致を部分修復する場合は追加で1回分使用します。勝利条件の確認で修正が必要な場合は、1回だけ作り直し、追加で2回分使用します。意味を保って短くできない項目は元の記述を残します。エラーの再試行も利用枠を使います。',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'プ譜の画像を押すと、拡大表示できます。ピンチや＋・−で拡大縮小し、ドラッグで移動します。',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':

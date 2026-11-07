@@ -19,6 +19,7 @@ export function pufuWinInput(context: PufuContext, facts: PufuFacts, score: Pufu
     ) as Record<(typeof elementKeys)[number], string[]>,
     // 対象と時制を残す。独自計画では背景であり、利用者の資源・実施予定ではない。
     centralCases: facts.cases ?? [],
+    sourceConditions: facts.sourceConditions ?? facts.conditions ?? [],
   };
 }
 
@@ -117,5 +118,6 @@ Then write winCondition as ONE sentence, aiming for 140 characters and using up 
     context,
     language,
     facts.conditions,
+    facts.verifiedDisplay,
   );
 }

@@ -802,6 +802,11 @@ export const en: Record<string, string> = {
   'ui.pufu_page.generating_pufu': 'Generating Pufu',
   'ui.pufu_page.loading_pufu': 'Loading Pufu',
   'ui.pufu_progress.stage.extract': 'Extract facts from the source material',
+  'ui.pufu_progress.stage.repair_facts': 'Repair source mismatches',
+  'ui.pufu_progress.stage.compact': 'Shorten actions and conditions',
+  'ui.pufu_progress.stage.review_compact': 'Verify shortened content',
+  'ui.pufu_progress.stage.repair_compact': 'Revise shortened content',
+  'ui.pufu_progress.stage.review_repaired_compact': 'Verify revised short content',
   'ui.pufu_progress.stage.arrange': 'Organize intermediate goals and actions',
   'ui.pufu_progress.stage.integrate': 'Write the win condition',
   'ui.pufu_progress.stage.review': 'Verify the win condition',
@@ -968,7 +973,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     'Choose Add Pufu in the Pufu list and select a destination project. To start from a question, open its Pufu tab and choose Explore this question or insight.',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Conditions are summarized from the article body; missing conditions and measures without evidence stay blank. New activities, comments and reference notes are not added. Choose Create Pufu to generate a draft. A typical generation uses four AI calls from your allowance. If the win condition needs correction, it is regenerated once, using two additional calls. Error retries also use your allowance.',
+    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Conditions are summarized from the article body; missing conditions and measures without evidence stay blank. New activities, comments and reference notes are not added. Choose Create Pufu to generate a draft. A typical generation uses four AI calls from your allowance. Shortening and verifying long actions or conditions uses two additional calls (up to two more if the shortened content needs correction); repairing source mismatches uses one additional call. If the win condition needs correction, it is regenerated once, using two additional calls. If an item cannot be shortened faithfully, its original wording is kept. Error retries also use your allowance.',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'Press the Pufu image to enlarge it. Pinch or use + and − to zoom, and drag to move.',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':

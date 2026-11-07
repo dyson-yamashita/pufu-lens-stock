@@ -1,6 +1,7 @@
 import { integrationDraft, reviewDraft } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
+import { extractPufuFacts } from '../server/pufu-source-facts';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 import type { Env } from '../server/env';
 
@@ -50,6 +51,28 @@ function setup(
 ) {
   const run = vi.fn<NonNullable<Env['AI']>['run']>().mockImplementation(async (_model, input) => {
     const data = JSON.parse(input.messages[1].content);
+    if ('compactNodes' in data)
+      return {
+        response: JSON.stringify({
+          texts: {
+            quality:
+              'サンプル作品ではグラデーション減少のリスクを説明し、フィルムらしさを残した。条件A。',
+          },
+        }),
+      };
+    if ('verifyCompaction' in data)
+      return {
+        response: JSON.stringify({
+          checks: {
+            quality: {
+              text: data.verifyCompaction.quality.text,
+              preserved: true,
+              grounded: true,
+              reason: '固有判断と条件を保持。',
+            },
+          },
+        }),
+      };
     if ('sources' in data) {
       const evidence = data.sources[0].text.match(/\[(E\d+)\]/)[1];
       return {
@@ -196,7 +219,7 @@ it.each([
   },
 ])('事例の検証失敗を理由と項目で区別する: $diagnostic.reason', async ({ invalid, diagnostic }) => {
   const { env } = setup([invalid]);
-  const failed = generatePufu(env, context);
+  const failed = extractPufuFacts(env, context, 'ja');
   await expect(failed).rejects.toMatchObject({
     name: 'PufuFactValidationError',
     diagnostic,
@@ -235,7 +258,7 @@ it('事例と一般条件が長い場合も条件文を切らず上限内で保�
   const score = await generatePufu(env, context);
   expect(score.elements.quality.text.length).toBeLessThanOrEqual(240);
   expect(score.elements.quality.text).toContain('フィルムらしさを残した。');
-  expect(score.elements.quality.text).toContain(quality[0]);
+  expect(score.elements.quality.text).toContain('条件A。');
   expect(score.elements.quality.text).not.toContain('条件B');
 });
 
@@ -259,9 +282,9 @@ it('原文にない見出しは実在する引用符内の名称へ戻し、未�
     '「サンプル作品」では、35ミリ',
   );
   const invalid = setup([{ ...cases[0], subject: '「サンプル作品」の未確認版' }]);
-  await expect(generatePufu(invalid.env, context)).rejects.toThrow('主要事例');
+  await expect(extractPufuFacts(invalid.env, context, 'ja')).rejects.toThrow('主要事例');
   const prefixed = setup([{ ...cases[0], subject: 'DVD版「サンプル作品」の素材条件' }]);
-  await expect(generatePufu(prefixed.env, context)).rejects.toThrow('主要事例');
+  await expect(extractPufuFacts(prefixed.env, context, 'ja')).rejects.toThrow('主要事例');
 });
 
 it('採用しない背景の見出しや配置番号を検証して独自計画の生成を停止しない', async () => {

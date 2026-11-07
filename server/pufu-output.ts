@@ -126,6 +126,7 @@ export function normalizeGeneratedScore(
   context: PufuContext,
   language: Language = defaultLanguage,
   conditions: { element: (typeof elementKeys)[number]; text: string }[] = [],
+  verifiedDisplay: Record<string, string> = {},
 ): PufuScore {
   const score = structuredClone(pufuScoreSchema.parse(input));
   score.gainingGoal.text = context.task || cleanGeneratedText(score.gainingGoal.text);
@@ -152,7 +153,11 @@ export function normalizeGeneratedScore(
         sameLanguage(text, language) &&
         !unknownStatement(text),
     );
-  if (money.length && money.join(' ').length <= 240) {
+  if (
+    !(score.elements.money.uuid in verifiedDisplay) &&
+    money.length &&
+    money.join(' ').length <= 240
+  ) {
     // 金銭の文だけを置換し、同じ要素に併記された設備などの条件は保持する。
     const otherConditions = sentences(score.elements.money.text)
       .flatMap((text) =>
@@ -231,6 +236,12 @@ export function normalizeGeneratedScore(
     score.elements[key].text = combined.length <= 240 ? combined : required.join(' ');
   }
 
+  if (
+    generatedNodes.some(
+      (node) => node.uuid in verifiedDisplay && node.text !== verifiedDisplay[node.uuid],
+    )
+  )
+    throw new Error('短文化の検証後に施策・条件が変化しました。再試行してください。');
   if (
     (!context.task && (!score.gainingGoal.text || score.gainingGoal.text.length > 200)) ||
     generatedNodes.some((node) => node.text.length > 240)

@@ -52,76 +52,66 @@ async function create(details = '担当は2名。既存の窓口で試験運用�
 const get = async (id: string) =>
   ((await (await app.request(`/api/v1/pufus/${id}`)).json()) as { pufu: Pufu }).pufu;
 
-it('検証失敗を試行ごとに記録し、内容を漏らさず再試行後に完了する', async () => {
-  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+it('根拠修復だけを追加計数し、内容をログへ漏らさず完了する', async () => {
+  const log = vi.spyOn(console, 'info').mockImplementation(() => {});
   const ai = mockPufuAi(draft);
   const valid = ai.getMockImplementation()!;
-  let extraction = 0;
-  ai.mockImplementation(async (...args) => {
-    const response = await valid(...args);
+  ai.mockImplementation(async (model, input) => {
+    const data = JSON.parse(input.messages[1].content);
+    if ('repairFacts' in data)
+      return {
+        response: JSON.stringify({
+          'cases.materials[0]': {
+            evidence: 'E1',
+            subject: '担当',
+            text: '2名。',
+            kind: 'actual',
+          },
+        }),
+      };
+    const response = await valid(model, input);
     const value = JSON.parse((response as { response: string }).response);
-    if ('actions' in value && ++extraction <= 2) {
+    if ('actions' in value)
       value.cases = {
         materials: [
           {
-            evidence: extraction === 1 ? 'E999' : 'E1',
+            evidence: 'E999',
             subject: '非公開の対象名',
-            text: 'AIが返した非公開の説明文',
+            text: '2名。',
             kind: 'actual',
           },
         ],
         decisions: [],
         processing: [],
       };
-      return { response: JSON.stringify(value) };
-    }
-    return response;
+    return { response: JSON.stringify(value) };
   });
   const job = await create('非公開の資料本文。担当は2名。既存の窓口で試験運用する。');
   app.env.AI = { run: ai };
-  const step = mockStep();
-  const run = step.do.bind(step);
-  step.do = (async (name: string, config: unknown, operation?: () => Promise<unknown>) => {
-    if (name !== 'extract-pufu-facts-v2')
-      return (run as (...args: unknown[]) => Promise<unknown>)(name, config, operation);
-    await expect(operation!()).rejects.toThrow('evidence_not_found');
-    await expect(operation!()).rejects.toThrow('subject_not_in_evidence');
-    return operation!();
-  }) as typeof step.do;
-  await runPufu(app.env, job, step);
+  await runPufu(app.env, job, mockStep());
   expect(log.mock.calls).toEqual([
     [
-      'pufu_fact_validation_failed',
+      'pufu_fact_repair_requested',
       {
-        jobId: job.id,
-        stage: 'extract-pufu-facts-v2',
-        attempt: 1,
-        maxAttempts: 10,
-        reason: 'evidence_not_found',
-        path: 'cases.materials[0]',
-        evidence: 'E999',
-      },
-    ],
-    [
-      'pufu_fact_validation_failed',
-      {
-        jobId: job.id,
-        stage: 'extract-pufu-facts-v2',
-        attempt: 2,
-        maxAttempts: 10,
-        reason: 'subject_not_in_evidence',
-        path: 'cases.materials[0]',
-        evidence: 'E1',
+        issues: [
+          {
+            path: 'cases.materials[0]',
+            reason: 'evidence_not_found',
+            evidence: 'E999',
+          },
+        ],
       },
     ],
   ]);
-  expect(JSON.stringify(log.mock.calls)).not.toMatch(/非公開|AIが返した/);
+  expect(JSON.stringify(log.mock.calls)).not.toMatch(/非公開/);
   expect(await get(job.target_id)).toMatchObject({ status: 'ready', generation_progress: null });
-  expect(
-    await app.env.DB.prepare('SELECT status,attempts FROM ai_calls WHERE id=?')
-      .bind(`${job.id}:extract-pufu-facts-v2`)
-      .first(),
-  ).toMatchObject({ status: 'done', attempts: 3 });
+  const rows = (
+    await app.env.DB.prepare('SELECT id,status,attempts FROM ai_calls WHERE job_id=?')
+      .bind(job.id)
+      .all()
+  ).results;
+  expect(rows).toHaveLength(5);
+  expect(rows.every((row) => row.status === 'done' && row.attempts === 1)).toBe(true);
 });
 
 it('詳細APIは現在の世代の処理段階と再試行を返し、完了後は進捗を返さない', async () => {
@@ -152,7 +142,7 @@ it('詳細APIは現在の世代の処理段階と再試行を返し、完了後�
     configOrOperation: unknown,
     operation?: () => Promise<unknown>,
   ) => {
-    if (name !== 'extract-pufu-facts-v2')
+    if (name !== 'extract-pufu-facts-v3')
       return (run as (...args: unknown[]) => Promise<unknown>)(name, configOrOperation, operation);
     await expect(operation!()).rejects.toThrow('出力形式');
     expect(await get(job.target_id)).toMatchObject({
@@ -185,10 +175,10 @@ it('抽出と構成を別々に計数し、完成したプ譜だけを保存す�
   expect(
     (await app.env.DB.prepare('SELECT id,status,attempts FROM ai_calls ORDER BY id').all()).results,
   ).toEqual([
-    { id: `${job.id}:arrange-pufu-v3`, status: 'done', attempts: 1 },
-    { id: `${job.id}:extract-pufu-facts-v2`, status: 'done', attempts: 1 },
-    { id: `${job.id}:integrate-pufu-win-v3`, status: 'done', attempts: 1 },
-    { id: `${job.id}:review-pufu-win-v2`, status: 'done', attempts: 1 },
+    { id: `${job.id}:arrange-pufu-v4`, status: 'done', attempts: 1 },
+    { id: `${job.id}:extract-pufu-facts-v3`, status: 'done', attempts: 1 },
+    { id: `${job.id}:integrate-pufu-win-v4`, status: 'done', attempts: 1 },
+    { id: `${job.id}:review-pufu-win-v3`, status: 'done', attempts: 1 },
   ]);
   expect(await app.env.DB.prepare('SELECT COUNT(*) AS n FROM ai_attempts').first()).toEqual({
     n: 4,
@@ -308,7 +298,7 @@ it.each(['delete', 'generation', 'privacy'] as const)(
     const original = step.do.bind(step);
     step.do = (async (name: string, ...args: unknown[]) => {
       const result = await (original as (...args: unknown[]) => Promise<unknown>)(name, ...args);
-      if (name === 'extract-pufu-facts-v2') {
+      if (name === 'extract-pufu-facts-v3') {
         if (change === 'delete')
           expect(
             (await app.request(`/api/v1/pufus/${job.target_id}`, { method: 'DELETE' })).status,
@@ -407,7 +397,7 @@ it('別の文を検証したキャッシュで保存しない', async () => {
   const step = mockStep();
   const base = step.do.bind(step);
   step.do = (async (name: string, ...args: unknown[]) =>
-    name === 'review-pufu-win-v2'
+    name === 'review-pufu-win-v3'
       ? {
           retryAt: null,
           json: JSON.stringify({ value: { winCondition: '別の勝利条件。', issues: [] } }),

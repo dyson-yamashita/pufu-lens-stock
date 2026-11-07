@@ -11,7 +11,12 @@ import DeleteAction from './DeleteAction';
 
 const stepNumbers = {
   extract: 1,
+  repair_facts: 1,
   arrange: 2,
+  compact: 2,
+  review_compact: 2,
+  repair_compact: 2,
+  review_repaired_compact: 2,
   integrate: 3,
   review: 4,
   repair: 5,

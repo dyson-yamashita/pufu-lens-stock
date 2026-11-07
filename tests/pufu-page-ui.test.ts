@@ -176,6 +176,29 @@ it('修正した勝利条件の再検証を英語で全6ステップの最後と
   ).toEqual(['complete', 'complete', 'complete', 'complete', 'complete', 'current']);
 });
 
+it.each([
+  ['repair_facts', 'Repair source mismatches', 'Step 1 of 4'],
+  ['compact', 'Shorten actions and conditions', 'Step 2 of 4'],
+  ['review_compact', 'Verify shortened content', 'Step 2 of 4'],
+  ['repair_compact', 'Revise shortened content', 'Step 2 of 4'],
+  ['review_repaired_compact', 'Verify revised short content', 'Step 2 of 4'],
+])('追加工程%sを現在の工程内に表示する', async (stage, label, position) => {
+  setLanguage('en');
+  vi.mocked(api).mockResolvedValue({
+    pufu: {
+      ...pufu,
+      status: 'generating',
+      score: null,
+      generation_progress: { stage, attempt: 1, status: 'running' },
+    },
+  });
+  await render();
+  const progress = document.querySelector('[role="status"]')?.textContent;
+  expect(progress).toContain(label);
+  expect(progress).toContain(position);
+  expect(document.querySelector('.pufu-progress-steps')?.children).toHaveLength(4);
+});
+
 it('エディター取得失敗でも画面と保存済みの文脈を残し、自動再読み込みは1回だけ行う', async () => {
   await render();
   expect(document.body.textContent).toContain('アプリのメニュー');

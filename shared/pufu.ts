@@ -112,7 +112,18 @@ export type PufuSummary = PufuRelations & {
   updated_at: string;
 };
 export type PufuGenerationProgress = {
-  stage: 'extract' | 'arrange' | 'integrate' | 'review' | 'repair' | 'review_repaired';
+  stage:
+    | 'extract'
+    | 'repair_facts'
+    | 'arrange'
+    | 'compact'
+    | 'review_compact'
+    | 'repair_compact'
+    | 'review_repaired_compact'
+    | 'integrate'
+    | 'review'
+    | 'repair'
+    | 'review_repaired';
   attempt: number;
   status: 'running' | 'done' | 'failed';
 };

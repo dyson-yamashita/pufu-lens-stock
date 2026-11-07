@@ -2,7 +2,7 @@ import { mockPufuStages, purposeDraft } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
 import { generatePufu } from '../server/pufu';
 import { arrangePufu } from '../server/pufu-plan';
-import type { PufuFacts } from '../server/pufu-source-facts';
+import { extractPufuFacts, type PufuFacts } from '../server/pufu-source-facts';
 import type { Env } from '../server/env';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 
@@ -125,7 +125,7 @@ it.each([
 it('条件付きで必須の工程とMayの日付は任意工程と誤認しない', async () => {
   const action = 'Replace damaged cables before use and deliver the record by May 1.';
   const run = provider({ ...facts, actions: [sourced(action)] });
-  const score = await generatePufu(env(run), context);
+  const score = await generatePufu(env(run), context, 'en');
   expect(score.purposes[0].measures[0].text).toBe(action);
 });
 
@@ -269,7 +269,7 @@ it('長い作業の列挙を中間目的の本文として受理しない', asyn
 
 it('存在しない根拠を持つ事実から構成へ進まない', async () => {
   const run = provider({ ...facts, actions: [{ ...facts.actions[0], evidence: 'E999' }] });
-  await expect(generatePufu(env(run), context)).rejects.toMatchObject({
+  await expect(extractPufuFacts(env(run), context, 'ja')).rejects.toMatchObject({
     diagnostic: { reason: 'evidence_not_found', path: 'actions[0]', evidence: 'E999' },
   });
   expect(run).toHaveBeenCalledTimes(1);

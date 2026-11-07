@@ -1,5 +1,14 @@
 import { normalizeGeneratedScore } from './pufu-output';
-import { extractPufuFacts } from './pufu-source-facts';
+import { extractPufuDraft, resolvePufuFacts } from './pufu-source-facts';
+import { pufuRepairTargets, repairPufuFacts } from './pufu-fact-repair';
+import {
+  canReviewPufuCompaction,
+  canCompactPufu,
+  compactPufu,
+  compactedPufuFacts,
+  pufuCompactNodes,
+  reviewPufuCompaction,
+} from './pufu-compaction';
 import { arrangePufu } from './pufu-plan';
 import { integratePufuWin } from './pufu-win';
 import { reviewPufuWin } from './pufu-win-review';
@@ -27,12 +36,17 @@ class PufuSuperseded extends Error {}
 // 順番は詳細画面の現在工程にも使う。同じ形式の永続化キーは変更しない。
 // 条件保持・意味検証の契約を更新し、旧形式の段階キャッシュによる迂回を防ぐ。
 const stages = {
-  extract: 'extract-pufu-facts-v2',
-  arrange: 'arrange-pufu-v3',
-  integrate: 'integrate-pufu-win-v3',
-  review: 'review-pufu-win-v2',
-  repair: 'repair-pufu-win-v2',
-  review_repaired: 'review-repaired-pufu-win-v2',
+  extract: 'extract-pufu-facts-v3',
+  repair_facts: 'repair-pufu-facts-v1',
+  arrange: 'arrange-pufu-v4',
+  compact: 'compact-pufu-v2',
+  review_compact: 'review-pufu-compaction-v2',
+  repair_compact: 'repair-pufu-compaction-v1',
+  review_repaired_compact: 'review-repaired-pufu-compaction-v1',
+  integrate: 'integrate-pufu-win-v4',
+  review: 'review-pufu-win-v3',
+  repair: 'repair-pufu-win-v3',
+  review_repaired: 'review-repaired-pufu-win-v3',
 } satisfies Record<PufuGenerationProgress['stage'], string>;
 
 export function pufuProgressQuery(env: Env, id: string, userId: string): D1PreparedStatement {
@@ -83,14 +97,80 @@ export async function generatePufu(
         language,
       );
     });
-  const facts = await stage(stages.extract, (fresh) => extractPufuFacts(env, fresh, language));
-  const score = await stage(stages.arrange, (fresh) => arrangePufu(env, fresh, facts, language));
+  let extraction = await stage(stages.extract, (fresh) => extractPufuDraft(env, fresh, language));
+  const targets = pufuRepairTargets(extraction);
+  if (Object.keys(targets).length) {
+    extraction = await stage(stages.repair_facts, () =>
+      repairPufuFacts(env, extraction, targets, language),
+    );
+  }
+  // 検証失敗はstepの外で停止し、同じ誤回答を全体再生成で繰り返さない。
+  let facts = resolvePufuFacts(extraction);
+  let score = await stage(stages.arrange, (fresh) => arrangePufu(env, fresh, facts, language));
+  if (Object.keys(pufuCompactNodes(score, language)).length) {
+    const original = score;
+    const nodes = pufuCompactNodes(original, language);
+    if (!canCompactPufu(original, facts, language))
+      throw new Error('短文化の入力上限を超えています。');
+    let compacted = await stage(stages.compact, () => compactPufu(env, original, facts, language));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const texts = Object.fromEntries([
+        ...elementKeys.map((key) => [key, compacted.elements[key].text]),
+        ...compacted.purposes.flatMap((p) => p.measures.map((m) => [m.uuid, m.text])),
+      ]);
+      let issues = Object.fromEntries(
+        Object.entries(nodes)
+          .filter(([key, value]) => texts[key].length > value.limit)
+          .map(([key, value]) => [
+            key,
+            `完全文のまま${value.limit}文字以内へ言い換えてください。 / Rewrite as a complete sentence within ${value.limit} characters.`,
+          ]),
+      );
+      if (!canReviewPufuCompaction(original, compacted, facts, language))
+        throw new Error('短文化した候補が検証の入力上限を超えています。再試行してください。');
+      const review = await stage(
+        attempt ? stages.review_repaired_compact : stages.review_compact,
+        () => reviewPufuCompaction(env, original, compacted, facts, language),
+      );
+      if (Object.keys(nodes).some((key) => review.texts[key] !== texts[key]))
+        throw new Error('短文化の検証対象が一致しません。再試行してください。');
+      if (review.accepted && !Object.keys(issues).length) break;
+      issues = Object.fromEntries(
+        Object.keys(nodes)
+          .filter((key) => key in review.issues || key in issues)
+          .map((key) => [key, [review.issues[key], issues[key]].filter(Boolean).join(' ')]),
+      );
+      if (!Object.keys(issues).length) throw new Error('短文化の修正理由を確認できません。');
+      if (attempt) {
+        // 短文化の品質だけで生成全体を失敗させない。不合格項目は検証前の正しい文へ戻す。
+        for (const key of elementKeys)
+          if (key in issues) compacted.elements[key].text = nodes[key].text;
+        for (const purpose of compacted.purposes)
+          for (const measure of purpose.measures)
+            if (measure.uuid in issues) measure.text = nodes[measure.uuid].text;
+        break;
+      }
+      if (!canCompactPufu(original, facts, language, { candidate: compacted, issues }))
+        throw new Error('短文化修正の入力上限を超えています。再試行してください。');
+      compacted = await stage(stages.repair_compact, () =>
+        compactPufu(env, original, facts, language, { candidate: compacted, issues }),
+      );
+    }
+    score = compacted;
+    facts = compactedPufuFacts(facts, compacted);
+  }
   if (!score.purposes.length) return score;
   let candidate = await stage(stages.integrate, (fresh) =>
     integratePufuWin(env, fresh, facts, score, language),
   );
   for (let attempt = 0; attempt < 2; attempt++) {
-    candidate = normalizeGeneratedScore(candidate, context, language, facts.conditions);
+    candidate = normalizeGeneratedScore(
+      candidate,
+      context,
+      language,
+      facts.conditions,
+      facts.verifiedDisplay,
+    );
     const review = await stage(attempt ? stages.review_repaired : stages.review, (fresh) =>
       reviewPufuWin(env, fresh, facts, candidate, language),
     );
