@@ -26,6 +26,16 @@ const retry = {
   retries: { limit: 2, delay: '5 seconds' as const, backoff: 'exponential' as const },
   timeout: '3 minutes' as const,
 };
+function generationStep<T extends object>(
+  env: Env,
+  job: Job,
+  step: WorkflowStep,
+  name: string,
+  operation: () => Promise<T>,
+) {
+  // モデル変更後に、旧モデルのWorkflow/DBキャッシュを新モデル名で保存しない。
+  return aiStep(env, job, step, `${name}:${modelName(env)}`, operation);
+}
 async function claimJob(env: Env, id: string) {
   // 起動応答を失っても、開始済みのジョブはdispatcherの待機・失敗処理から保護する。
   // 停止が先に確定した場合は、遅れて起動したWorkflowをここで拒否する。
@@ -80,7 +90,7 @@ async function runQuestion(env: Env, job: Job, step: WorkflowStep) {
       };
     });
     if (!source) return;
-    const question = await aiStep(env, job, step, 'generate-question', () =>
+    const question = await generationStep(env, job, step, 'generate-question', () =>
       generateQuestion(env, source, resolveLanguage(job.language)),
     );
     await step.do('save-question', async () => {
@@ -226,7 +236,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         this.env,
         title,
         text,
-        (name, operation) => aiStep(this.env, job, step, name, operation),
+        (name, operation) => generationStep(this.env, job, step, name, operation),
         resolveLanguage(job.language),
       );
       await step.do('commit-summary', async () => {
@@ -346,7 +356,7 @@ export class MemoryWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> {
         return;
       }
       const call: AiCall<MemoryData> = (name, operation) =>
-        aiStep(this.env, job, step, name, operation);
+        generationStep(this.env, job, step, name, operation);
       // ステップに永続化するのはIDだけ。要約をまとめた戻り値の1MiB超過を防ぐ。
       const addedIds = new Set(state.addedIds);
       const memory = full
