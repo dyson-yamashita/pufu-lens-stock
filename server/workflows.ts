@@ -139,7 +139,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
     try {
       const article = await step.do('load-article', async () => {
         const row = await this.env.DB.prepare(
-          'SELECT id, source_url, source_type, input_text, title, status FROM articles WHERE id = ? AND user_id = ? AND generation = ?',
+          'SELECT id, source_url, source_type, input_text, title, status, skip_summary FROM articles WHERE id = ? AND user_id = ? AND generation = ?',
         )
           .bind(job.target_id, job.user_id, job.revision)
           .first<{
@@ -147,6 +147,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
             source_url: string;
             source_type: 'url' | 'text';
             input_text: string | null;
+            skip_summary: number;
             title: string;
             status: string;
           }>();
@@ -232,13 +233,15 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         if (!content) throw new Error('保存した本文が見つかりません。');
         return content.text();
       });
-      const summary = await summarize(
-        this.env,
-        title,
-        text,
-        (name, operation) => generationStep(this.env, job, step, name, operation),
-        resolveLanguage(job.language),
-      );
+      const summary: ArticleSummary = article.skip_summary
+        ? { overview: text, keyPoints: [], topics: [], verbatim: true }
+        : await summarize(
+            this.env,
+            title,
+            text,
+            (name, operation) => generationStep(this.env, job, step, name, operation),
+            resolveLanguage(job.language),
+          );
       await step.do('commit-summary', async () => {
         const current = await this.env.DB.prepare(
           'SELECT status FROM articles WHERE id = ? AND generation = ?',
@@ -254,7 +257,11 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
             "UPDATE articles SET summary_json = ?, model = ?, status = 'ready', error = NULL, updated_at = ? WHERE id = ? AND generation = ?",
           ).bind(
             JSON.stringify(summary),
-            summary.shortSource ? 'source-extract' : modelName(this.env),
+            summary.verbatim
+              ? 'source-verbatim'
+              : summary.shortSource
+                ? 'source-extract'
+                : modelName(this.env),
             now(),
             article.id,
             job.revision,

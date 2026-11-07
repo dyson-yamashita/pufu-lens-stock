@@ -1,6 +1,6 @@
 import type { MemoryData, MemoryCoverage } from '../shared/domain';
 import { isYouTubeUrl } from '../shared/youtube';
-import type { Source } from './ai';
+import { summaryForAi, type Source } from './ai';
 import type { Env } from './env';
 import { hash } from './security';
 import { defaultLanguage, resolveLanguage, type Language } from '../shared/locale';
@@ -59,12 +59,21 @@ export async function loadMemoryInputPage(
         // 動画情報・旧要約は参照せず、利用者のメモだけを既存の入力形式に載せる。
         summary: youtube
           ? { overview: '利用者が記入したメモ', keyPoints: [note.slice(0, 500)], topics: [] }
-          : JSON.parse(row.summary_json!),
+          : summaryForAi(JSON.parse(row.summary_json!)),
         note,
         project: [...new Set(memberships.map((item) => item.name))].sort().join(','),
         savedAt: memberships.map((item) => item.savedAt).sort()[0],
       };
-      return { source, hash: await hash(JSON.stringify({ source, memberships })) };
+      return {
+        source,
+        hash: await hash(
+          JSON.stringify({
+            source,
+            memberships,
+            ...(source.summary.verbatim ? { body: row.summary_json } : {}),
+          }),
+        ),
+      };
     }),
   );
   return {

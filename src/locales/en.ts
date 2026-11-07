@@ -123,6 +123,9 @@ export const en: Record<string, string> = {
   'ui.app.queued': 'Queued',
   'ui.app.retrieving_article': 'Retrieving article',
   'ui.app.generating_summary': 'Generating summary',
+  'ui.app.verbatim_content': 'The body is shown unchanged, without summarizing.',
+  'ui.user_manual.mcp_verbatim_stock':
+    'Ask the connected AI to save the body without summarizing to adopt your text or the body retrieved from a URL unchanged. This is saved separately from a summarized stock. Its body is not shown on public project pages. AI questions, insights and memory updates still run as usual, using excerpts for long bodies.',
   'ui.app.summarized': 'Summarized',
   'ui.app.retrieval_failed': 'Retrieval failed',
   'ui.app.pufu_lens_home': 'Pufu Lens home',
@@ -1030,7 +1033,7 @@ export const en: Record<string, string> = {
     "Allow Create/edit Pufu in your MCP connection to save ideas from conversations to a project and edit saved content. Reconnect existing integrations to grant the additional operations. MCP can link up to 100 questions and 100 stocks in the same project. Linking a question is optional; you can later link or unlink questions in the same project. Pufu created without a question can also be opened from the Pufu list. Public pages show Pufu linked to questions. Ask to save as the next phase to append a phase without changing the previous one. Optionally record what prompted the change in the new phase's comments. Ask the connected AI for the writing guidelines to learn the meanings of gaining goals, win conditions and other elements. Retrieving guidelines does not change saved Pufu.",
   'ui.user_manual.find_related_stocks_with_mcp': 'Find related stocks with MCP: ',
   'ui.user_manual.search_uses_keywords_by_default_to_also_find_similar':
-    'Search uses keywords by default. To also find similar meanings, ask the destination app to use hybrid search. This requires administrator search configuration and a ready index. It falls back to keyword search while preparing, at usage limits or during connection failures; check which mode was actually used. Article bodies are not searched.',
+    'Search uses keywords by default. To also find similar meanings, ask the destination app to use hybrid search. This requires administrator search configuration and a ready index. It falls back to keyword search while preparing, at usage limits or during connection failures; check which mode was actually used. Article bodies are not searched, except for bodies adopted without summarizing.',
   'ui.user_manual.view_pufu_in_chatgpt_and_other_apps': 'View Pufu in ChatGPT and other apps: ',
   'ui.user_manual.choose_a_pufu_from_the_list_or_question_details':
     "Choose a Pufu from the list or question details and request its JSON or image. You can choose among multiple Pufu. Ask to display the Pufu to use an inline viewer with zoom, pan and PNG saving in supported apps. Choose Fetch again if display fails. If the viewer is unavailable, request an image or external link. Images are generated on request from the selected Pufu's latest phase. Anyone with the link can view it for one hour; fetch again after expiration or after the Pufu is changed or deleted. If links are unavailable, request a saved PNG file. Access is limited to projects the signed-in user allowed for reading.",

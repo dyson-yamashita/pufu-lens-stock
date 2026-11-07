@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectScoreModel } from '@goto-lab/pufu-editor';
 import { elementKeys, type PufuScore } from '../shared/pufu';
 import worker from '../server/index';
-import { testApp } from './helpers';
+import { testApp, mockEvent, mockStep } from './helpers';
+import { ArticleWorkflow } from '../server/workflows';
+import type { Job } from '../server/env';
+import * as ingest from '../server/ingest';
 import { mcpToken } from './mcp-helpers';
 import { searchBindings } from './search-helpers';
 import { syncSearchIndex } from '../server/search-index';
@@ -919,6 +922,156 @@ describe('MCPによるストックと問いの取得・追加', () => {
         structuredContent: { status: 403 },
       });
   });
+
+  it.each(['text', 'url'] as const)(
+    'skip_summaryで%sの本文全体をそのまま採用し、要約せず通常保存と独立して再送・再処理できる',
+    async (type) => {
+      const token = await mcpToken(app, 'alice-project');
+      const text =
+        '\n  本文をそのまま採用する。  \n\n' +
+        '長い資料の内容と条件を省略しない。'.repeat(300) +
+        '\n  ';
+      const fetchArticle = vi
+        .spyOn(ingest, 'fetchArticle')
+        .mockResolvedValue({ title: '資料', text });
+      const ai = vi.fn().mockRejectedValue(new Error('要約AIを呼んではいけません'));
+      app.env.AI = { run: ai };
+      try {
+        const input = {
+          project_id: 'alice-project',
+          ...(type === 'text' ? { type, text } : { type, url: 'https://example.com/verbatim' }),
+          skip_summary: true,
+          request_id: crypto.randomUUID(),
+        };
+        const saved = (await call(token, 'add_stock', input)).result;
+        expect(saved.isError).not.toBe(true);
+        const stockId = saved.structuredContent.id as string;
+        const article = await app.env.DB.prepare('SELECT article_id FROM stocks WHERE id = ?')
+          .bind(stockId)
+          .first<{ article_id: string }>();
+        const runArticle = async () => {
+          const job = await app.env.DB.prepare(
+            "SELECT * FROM processing_jobs WHERE kind = 'article' AND target_id = ? ORDER BY revision DESC LIMIT 1",
+          )
+            .bind(article!.article_id)
+            .first<Job>();
+          await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
+        };
+        await runArticle();
+        const detail = async () =>
+          (await call(token, 'get_stock', { stock_id: stockId, include_content: true })).result
+            .structuredContent;
+        expect(await detail()).toMatchObject({
+          stock: {
+            status: 'ready',
+            model: 'source-verbatim',
+            title: type === 'text' ? '本文をそのまま採用する。' : '資料',
+            summary: { overview: text, keyPoints: [], topics: [], verbatim: true },
+          },
+          content: text,
+          content_truncated: false,
+        });
+        expect(ai).not.toHaveBeenCalled();
+        expect(fetchArticle).toHaveBeenCalledTimes(type === 'url' ? 1 : 0);
+        expect((await call(token, 'add_stock', input)).result.structuredContent).toMatchObject({
+          id: stockId,
+          duplicate: true,
+        });
+        expect(
+          (await call(token, 'add_stock', { ...input, skip_summary: false })).result,
+        ).toMatchObject({ isError: true, structuredContent: { status: 409 } });
+        const normal = (
+          await call(token, 'add_stock', {
+            ...input,
+            skip_summary: false,
+            request_id: crypto.randomUUID(),
+          })
+        ).result;
+        expect(normal.isError).not.toBe(true);
+        expect(normal.structuredContent.id).not.toBe(stockId);
+        const ordinary = await app.env.DB.prepare(
+          'SELECT a.skip_summary FROM articles a JOIN stocks s ON s.article_id = a.id WHERE s.id = ?',
+        )
+          .bind(normal.structuredContent.id)
+          .first();
+        expect(ordinary).toEqual({ skip_summary: 0 });
+        // 取得失敗後の明示再試行でも保存時の本文採用設定を維持する。
+        await app.env.DB.prepare(
+          "UPDATE articles SET status = 'failed', error = '再試行用の取得失敗' WHERE id = ?",
+        )
+          .bind(article!.article_id)
+          .run();
+        expect(
+          (await app.request(`/api/v1/stocks/${stockId}/retry`, { method: 'POST' })).status,
+        ).toBe(202);
+        await runArticle();
+        expect(await detail()).toMatchObject({
+          stock: { summary: { overview: text, verbatim: true } },
+          content: text,
+        });
+        expect(ai).not.toHaveBeenCalled();
+        expect(
+          await app.env.DB.prepare(
+            "SELECT kind FROM processing_jobs WHERE kind = 'question' AND target_id = ?",
+          )
+            .bind(stockId)
+            .first(),
+        ).toEqual({ kind: 'question' });
+        expect(
+          await app.env.DB.prepare(
+            "SELECT kind FROM processing_jobs WHERE kind = 'project_memory' AND target_id = 'alice-project' LIMIT 1",
+          ).first(),
+        ).toEqual({ kind: 'project_memory' });
+      } finally {
+        fetchArticle.mockRestore();
+      }
+    },
+  );
+
+  it('skip_summary省略時は従来どおりAIで要約する', async () => {
+    const token = await mcpToken(app, 'alice-project');
+    const text = '通常の要約を必要とする本文です。'.repeat(20);
+    const summary = { overview: '通常の要約', keyPoints: ['要点'], topics: [] };
+    const ai = vi.fn().mockResolvedValue({ response: summary });
+    app.env.AI = { run: ai };
+    const saved = (
+      await call(token, 'add_stock', {
+        type: 'text',
+        project_id: 'alice-project',
+        text,
+        request_id: crypto.randomUUID(),
+      })
+    ).result;
+    expect(saved.isError).not.toBe(true);
+    const job = await app.env.DB.prepare(
+      "SELECT j.* FROM processing_jobs j JOIN stocks s ON s.article_id = j.target_id WHERE s.id = ? AND j.kind = 'article'",
+    )
+      .bind(saved.structuredContent.id)
+      .first<Job>();
+    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
+    const detail = (await call(token, 'get_stock', { stock_id: saved.structuredContent.id }))
+      .result;
+    expect(detail.structuredContent).toMatchObject({ stock: { status: 'ready', summary } });
+    expect(ai).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([{ skip_summary: 'true' }, { skip_summary: true, text: ' \n ' }])(
+    '本文採用でも不正な入力を拒否する: %j',
+    async (invalid) => {
+      const token = await mcpToken(app, 'alice-project');
+      expect(
+        (
+          await call(token, 'add_stock', {
+            type: 'text',
+            project_id: 'alice-project',
+            text: '本文',
+            request_id: crypto.randomUUID(),
+            ...invalid,
+          })
+        ).result.isError,
+      ).toBe(true);
+    },
+  );
 
   it('初期化・ツール列挙・検索・URL/テキスト保存・独立した問いの追加と再送が動く', async () => {
     const token = await mcpToken(app, 'alice-project');

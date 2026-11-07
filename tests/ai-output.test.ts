@@ -203,3 +203,42 @@ describe('Workers AIへの出力形式の指定', () => {
     await expect(buildMemory(env, [source], context)).rejects.toThrow('AIの出力形式');
   });
 });
+
+it('本文採用で要点のないストックも、AI未接続のデモで問いとメモリを作成できる', async () => {
+  const env = { LOCAL_DEMO_ENABLED: 'true', APP_URL: 'http://localhost:5173' } as Env;
+  const overview = '原文の本文です。'.repeat(100);
+  const summary = { overview, keyPoints: [], topics: [], verbatim: true as const };
+  expect(
+    await generateQuestion(env, {
+      title: source.title,
+      summary,
+      note: '',
+      project: { name: '設計', description: '' },
+    }),
+  ).toMatchObject({ text: expect.stringContaining(overview.slice(0, 100)) });
+  const memory = await buildMemory(env, [{ ...source, summary }], context);
+  expect(memory.knowledge).toEqual([
+    { text: overview.slice(0, 500), articleIds: [source.articleId] },
+  ]);
+});
+
+it('本文採用の問い生成は保存原文を変更せず長文の抜粋だけをAIへ渡す', async () => {
+  const summary = {
+    overview: '原文'.repeat(60000),
+    keyPoints: [],
+    topics: [],
+    verbatim: true as const,
+  };
+  const run = vi.fn().mockResolvedValue({ response: { text: 'どの条件を確認する？' } });
+  const env = { AI: { run }, AI_MODEL: '@cf/google/gemma-4-26b-a4b-it' } as unknown as Env;
+  await generateQuestion(env, {
+    title: source.title,
+    summary,
+    note: '',
+    project: { name: '設計', description: '' },
+  });
+  expect(JSON.parse(run.mock.calls[0][1].messages[1].content).summary.overview).toBe(
+    summary.overview.slice(0, 1600),
+  );
+  expect(summary.overview).toHaveLength(120000);
+});

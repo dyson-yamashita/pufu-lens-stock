@@ -168,6 +168,12 @@ export async function summarize(
   }
   return summaries[0];
 }
+// 原文の保存内容は変えず、派生AI処理では従来の要約と同じ長さの抜粋を使う。
+// 特にメモリ入力25件を永続化するWorkflowステップの上限を超えないようにする。
+export function summaryForAi(summary: ArticleSummary): ArticleSummary {
+  return summary.verbatim ? { ...summary, overview: summary.overview.slice(0, 1600) } : summary;
+}
+
 export async function generateQuestion(
   env: Env,
   source: QuestionSource,
@@ -176,7 +182,7 @@ export async function generateQuestion(
   if (isDemo(env) && !env.AI)
     return questionSchema.parse({
       text: translate(language, 'question.template', {
-        point: source.summary.keyPoints[0].slice(0, 100),
+        point: (source.summary.keyPoints[0] ?? source.summary.overview).slice(0, 100),
         project: source.project.name,
         note: source.note.trim() ? translate(language, 'question.note') : '',
       }),
@@ -184,7 +190,7 @@ export async function generateQuestion(
   return generate(
     env,
     '記事の要約をもとに、この保存先プロジェクトで考えを深めるための問いを1つだけ作ってください。プロジェクトの目的と保存時のメモを参考にします。メモは関心の文脈としてのみ使い、メモ本文や個人情報をそのまま引用しません。記事の要点を検証したり、応用条件・限界を考えたりする具体的で短い問いにします。ユーザーの賛同・信念を断定しません。回答、解説、箇条書き、複数の問いは出力しません。JSON形式: {"text":"...？"}。textは500文字以内。',
-    source,
+    { ...source, summary: summaryForAi(source.summary) },
     questionSchema,
     language,
   );
@@ -273,9 +279,10 @@ export async function buildMemory(
       interests: topicCounts(sources)
         .slice(0, 5)
         .map(({ topic, count }) => translate(language, 'memory.interest', { topic, count })),
-      knowledge: sources
-        .slice(0, 8)
-        .map((source) => ({ text: source.summary.keyPoints[0], articleIds: [source.articleId] })),
+      knowledge: sources.slice(0, 8).map((source) => ({
+        text: (source.summary.keyPoints[0] ?? source.summary.overview).slice(0, 500),
+        articleIds: [source.articleId],
+      })),
       questions: [],
     };
   const instruction = memoryInstruction;

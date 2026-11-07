@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryWorkflow } from '../server/workflows';
+import { loadMemoryInputPage } from '../server/memory';
 import { testApp, mockEvent, mockStep } from './helpers';
 import type { Job } from '../server/env';
 import type { MemoryData } from '../shared/domain';
@@ -80,6 +81,42 @@ describe('メモリの差分更新と反映状況', () => {
       method: 'POST',
       body: { project_id: 'alice-project', mode, request_id },
     });
+
+  it('長い原文を複数採用してもメモリ入力ページを小さく保ち、原文の後半変更も検知する', async () => {
+    const overview = '原文の条件を保持。'.repeat(12000);
+    const articles = await Promise.all(Array.from({ length: 4 }, (_, i) => ready(`原文資料${i}`)));
+    await app.env.DB.batch(
+      articles.map(({ articleId }) =>
+        app.env.DB.prepare(
+          'UPDATE articles SET skip_summary = 1, summary_json = ? WHERE id = ?',
+        ).bind(JSON.stringify({ overview, keyPoints: [], topics: [], verbatim: true }), articleId),
+      ),
+    );
+    const page = await loadMemoryInputPage(app.env, 'alice', 'alice-project', 0);
+    expect(page.inputs).toHaveLength(4);
+    expect(new TextEncoder().encode(JSON.stringify(page)).byteLength).toBeLessThan(1024 * 1024);
+    expect(page.inputs[0].source.summary.overview).toBe(overview.slice(0, 1600));
+    await execute();
+    expect((await memory()).memory?.article_count).toBe(4);
+    expect(
+      await app.env.DB.prepare(
+        "SELECT json_extract(summary_json, '$.overview') AS overview FROM articles WHERE id = ?",
+      )
+        .bind(articles[1].articleId)
+        .first(),
+    ).toEqual({ overview });
+    const first = page.inputs[0];
+    await app.env.DB.prepare('UPDATE articles SET summary_json = ? WHERE id = ?')
+      .bind(
+        JSON.stringify({ overview: overview + '追記', keyPoints: [], topics: [], verbatim: true }),
+        first.source.articleId,
+      )
+      .run();
+    const updated = await loadMemoryInputPage(app.env, 'alice', 'alice-project', 0);
+    expect(
+      updated.inputs.find(({ source }) => source.articleId === first.source.articleId)?.hash,
+    ).not.toBe(first.hash);
+  });
 
   it('追加分だけを既存メモリへ統合し、プロジェクトとユーザーの履歴を独立に保存する', async () => {
     const old = await ready('以前の記事');
