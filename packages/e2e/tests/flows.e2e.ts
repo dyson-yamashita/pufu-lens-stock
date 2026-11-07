@@ -27,6 +27,8 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   };
   expect(data.stocks).toHaveLength(1);
   expect(data.stocks[0].project_id).toBe(fixture.projectId);
+  await screen.getByRole('button', '閉じる', { exact: true }).click();
+  await expect(screen.getByRole('dialog')).toBeHidden();
   // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
   const verbatimText =
     '  原文の段落を保ちます。\n\n' + '長い本文を省略せず採用します。'.repeat(100) + '\n  ';
