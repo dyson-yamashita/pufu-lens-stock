@@ -110,6 +110,27 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(await (await get(root(key))).json()).toMatchObject({ project: { search_indexable: 0 } });
   });
 
+  it('本文採用モードの原文は公開APIの一覧・詳細・関連ストックへ含めない', async () => {
+    const text = 'SECRET_VERBATIM_BODY';
+    await app.env.DB.prepare(
+      "UPDATE articles SET skip_summary = 1, summary_json = ? WHERE id = 'article'",
+    )
+      .bind(JSON.stringify({ overview: text, keyPoints: [], topics: [], verbatim: true }))
+      .run();
+    const key = await publish();
+    for (const path of ['/stocks', '/stocks/stock', '/questions/question', '/pufus/pufu']) {
+      const response = await get(`${root(key)}${path}`);
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(JSON.stringify(json)).not.toContain(text);
+      if (path === '/stocks/stock')
+        expect(json).toMatchObject({ stock: { id: 'stock', summary: null } });
+    }
+    expect(await (await app.request('/api/v1/stocks/stock')).json()).toMatchObject({
+      stock: { summary: { overview: text } },
+    });
+  });
+
   it.each(['queued', 'generating', 'failed'])(
     '短文メモの問いが%sでも、最後に確定した公開問いとプ譜を閲覧できる',
     async (status) => {

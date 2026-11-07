@@ -108,7 +108,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       instructions:
         t(
-          '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加後の要約・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+          '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加のskip_summary=trueで要約せず本文を採用できます。本文処理・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
         ) +
         '\n' +
         t('mcp.memory.instructions') +
@@ -382,7 +382,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'ストック検索',
       description:
-        'タイトル・要約・メモで検索します（本文は検索対象外）。modeはkeyword（既定）、semantic（意味）、hybrid（語句と意味を統合）。意味検索は関連度順で候補各100件の範囲を返します。hybridの未設定・障害・上限時はkeywordへ戻りsearch.fallback_reasonを返します。search.modeで実際の方式を確認してください。既定は抜粋だけの軽量一覧で、詳細はget_stockを使います。statusは記事の取得・要約状態、sourceのwebはURL、userはテキストです。',
+        'タイトル・要約・メモで検索します（本文採用時は採用した本文も検索対象です）。modeはkeyword（既定）、semantic（意味）、hybrid（語句と意味を統合）。意味検索は関連度順で候補各100件の範囲を返します。hybridの未設定・障害・上限時はkeywordへ戻りsearch.fallback_reasonを返します。search.modeで実際の方式を確認してください。既定は抜粋だけの軽量一覧で、詳細はget_stockを使います。statusは記事の取得・要約状態、sourceのwebはURL、userはテキストです。',
       inputSchema: z.object({
         ...filters,
         ...stockListOptionsSchema.shape,
@@ -394,7 +394,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
           '意味検索の最小類似度（0〜1、既定0.35）。高いほど意味の近い候補に絞ります。',
         ),
         q: filters.q.describe(
-          '最大200文字。タイトル・要約（要点・トピックを含む）・メモを検索。本文は検索しません。',
+          '最大200文字。タイトル・要約（要点・トピックを含む）・メモを検索。本文採用時は採用した本文も検索します。',
         ),
         limit: stockListOptionsSchema.shape.limit.describe(
           '1〜24件。最新の1件はlimit: 1を指定します。',
@@ -423,7 +423,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'ストック詳細',
       description:
-        'ストックの要約・要点・トピック・メモ・保存先を取得します。本文が必要な場合だけinclude_contentをtrueにしてください。本文は20,000文字までです。',
+        'ストックの要約・要点・トピック・メモ・保存先を取得します。本文採用時はsummary.verbatim=trueでsummary.overviewに本文全体を返します。通常の本文取得や本文採用時の別取得はinclude_content=trueで指定し、contentは20,000文字までです。',
       inputSchema: z.object({ stock_id: id, include_content: z.boolean().default(false) }),
       annotations: read,
       _meta: security('stocks:read'),
@@ -448,7 +448,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     {
       title: 'ストック追加',
       description:
-        '指定プロジェクトにURLまたはテキストを保存します。type=urlならurl、type=textならtextを指定します。request_idは保存操作ごとに新しいUUIDを使い、再送では同じ値を使います。要約・AIの問い・気づき・メモリ更新を非同期に開始します。',
+        '指定プロジェクトにURLまたはテキストを保存します。type=urlならurl、type=textならtextを指定します。skip_summary=trueで要約せず、入力または取得した本文をそのまま採用します。省略時は従来どおり要約します。要約ありと本文採用は別のストックとして保存します。request_idは保存操作ごとに新しいUUIDを使い、再送では同じ値を使います。本文処理・AIの問い・気づき・メモリ更新は非同期です。',
       inputSchema: z.object({
         project_id: id,
         type: z.enum(['url', 'text']),
@@ -456,6 +456,12 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
         text: z.string().max(20000).optional(),
         title: z.string().max(200).optional(),
         note: z.string().max(2000).optional(),
+        skip_summary: z
+          .boolean()
+          .default(false)
+          .describe(
+            'trueで要約せず本文をそのまま採用します。既定はfalse。AIの問い・気づき・メモリ更新は通常どおり実行します。',
+          ),
         request_id: z.uuid(),
       }),
       annotations: { ...add, openWorldHint: true },

@@ -214,3 +214,15 @@ it.each(['text', 'url'] as const)(
     expect(detail.querySelector<HTMLTextAreaElement>('.comments textarea')?.value).toBe('');
   },
 );
+
+it('本文採用モードは原文全体を表示し、短文用の案内や存在しない要点を表示しない', async () => {
+  const text = '\n  原文の空白と改行を保ちます。\n\n' + '内容を省略しない。'.repeat(200) + '\n  ';
+  stock.summary = { overview: text, keyPoints: [], topics: [], verbatim: true };
+  stock.model = 'source-verbatim';
+  await openStock();
+  const detail = document.querySelector('.detail-summary')!;
+  expect(detail.querySelector('.verbatim-content')?.textContent).toBe(text);
+  expect(detail.textContent).toContain('要約せず、本文をそのまま表示しています。');
+  expect(detail.textContent).not.toContain('本文が短いため');
+  expect(detail.querySelector('h4')).toBeNull();
+});

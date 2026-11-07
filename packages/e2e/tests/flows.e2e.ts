@@ -27,6 +27,32 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   };
   expect(data.stocks).toHaveLength(1);
   expect(data.stocks[0].project_id).toBe(fixture.projectId);
+  // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
+  const verbatimText =
+    '  原文の段落を保ちます。\n\n' + '長い本文を省略せず採用します。'.repeat(100) + '\n  ';
+  const verbatim = await fixture.request('/stocks', 'POST', {
+    type: 'text',
+    project_id: fixture.projectId,
+    title: 'E2E要約しない本文',
+    text: verbatimText,
+    skip_summary: true,
+  });
+  await app.open(`/#project/${fixture.projectId}`);
+  await screen.getByRole('heading', 'E2E要約しない本文', { exact: true }).click();
+  await expect(
+    screen.getByText('要約せず、本文をそのまま表示しています。', { exact: true }),
+  ).toBeVisible();
+  await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
+  await browser.reload();
+  await screen.getByRole('heading', 'E2E要約しない本文', { exact: true }).click();
+  await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
+  expect(await fixture.request(`/stocks/${verbatim.id}`)).toMatchObject({
+    stock: { summary: { overview: verbatimText, verbatim: true } },
+  });
+  const whiteSpace = await browser.evaluate(
+    () => getComputedStyle(document.querySelector('.verbatim-content')!).whiteSpace,
+  );
+  expect(whiteSpace).toBe('pre-wrap');
 });
 
 test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して一覧へ戻る', async ({

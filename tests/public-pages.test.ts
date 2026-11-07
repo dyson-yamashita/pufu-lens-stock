@@ -270,3 +270,19 @@ it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.t
   expect(missing.headers.get('Strict-Transport-Security')).toContain('max-age=');
   expect(missing.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
 });
+
+it('本文採用モードの原文を公開HTML・メタ情報へ含めない', async () => {
+  const text = 'PRIVATE_VERBATIM_BODY';
+  await app.env.DB.prepare(
+    "UPDATE articles SET skip_summary = 1, summary_json = ? WHERE id = 'article'",
+  )
+    .bind(JSON.stringify({ overview: text, keyPoints: [], topics: [], verbatim: true }))
+    .run();
+  for (const path of [`/p/${key}?view=stocks`, `/p/${key}/stocks/stock`]) {
+    const response = await read(path);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('公開ストック');
+    expect(html).not.toContain(text);
+  }
+});

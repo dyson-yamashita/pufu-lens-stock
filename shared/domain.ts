@@ -8,7 +8,10 @@ export const summarySchema = z.object({
   keyPoints: z.array(z.string().min(1).max(500)).min(1).max(8),
   topics: z.array(z.string().min(1).max(40)).max(8),
 });
-export type ArticleSummary = z.infer<typeof summarySchema> & { shortSource?: true };
+export type ArticleSummary = z.infer<typeof summarySchema> & {
+  shortSource?: true;
+  verbatim?: true;
+};
 export const stockListOptionsSchema = z.object({
   limit: z.number().int().min(1).max(24).default(24),
   sort_by: z.literal('created_at').default('created_at'),
@@ -23,6 +26,7 @@ export const stockTextLimit = 20000;
 const stockFields = {
   project_id: z.string().min(1).max(100).optional(),
   note: z.string().max(2000).default(''),
+  skip_summary: z.boolean().default(false),
 };
 export const stockInputSchema = z.union([
   z
@@ -40,11 +44,11 @@ export const stockInputSchema = z.union([
       title: z.string().trim().max(200).default(''),
       text: z
         .string()
-        .trim()
-        .min(1, '本文を入力してください。')
+        .refine((text) => text.trim().length > 0, '本文を入力してください。')
         .max(stockTextLimit, '本文は20,000文字以内で入力してください。'),
     })
-    .strict(),
+    .strict()
+    .transform((data) => ({ ...data, text: data.skip_summary ? data.text : data.text.trim() })),
 ]);
 export const questionSchema = z.object({
   text: z

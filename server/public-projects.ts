@@ -38,6 +38,7 @@ const questionJoins =
   'questions q JOIN projects p ON p.id=q.project_id LEFT JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id';
 const publicWhere = 'p.public_id=? AND p.is_public=1';
 function stock(row: Omit<PublicStock, 'summary'> & { summary_json: string | null }): PublicStock {
+  // 本文採用モードは要約欄にも本文を保持するため、公開レスポンスへ含めない。
   // 明示したフィールドだけを返し、保存本文・個人メモ・生成時の内部情報は返さない。
   const parsed = row.summary_json ? (JSON.parse(row.summary_json) as ArticleSummary) : null;
   return {
@@ -46,13 +47,14 @@ function stock(row: Omit<PublicStock, 'summary'> & { summary_json: string | null
     source_url: row.source_url,
     domain: row.domain,
     created_at: row.created_at,
-    summary: parsed
-      ? {
-          overview: parsed.overview,
-          keyPoints: parsed.keyPoints,
-          topics: parsed.topics,
-        }
-      : null,
+    summary:
+      parsed && !parsed.verbatim
+        ? {
+            overview: parsed.overview,
+            keyPoints: parsed.keyPoints,
+            topics: parsed.topics,
+          }
+        : null,
   };
 }
 function pageOptions(value: string | undefined) {

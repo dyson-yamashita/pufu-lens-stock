@@ -2646,7 +2646,12 @@ function StockDetail({
             <YouTubePlayer url={stock.source_url} />
           ) : stock.summary ? (
             <>
-              <p>{stock.summary.overview}</p>
+              <p className={stock.summary.verbatim ? 'verbatim-content' : undefined}>
+                {stock.summary.overview}
+              </p>
+              {stock.summary.verbatim && (
+                <p className="local-model-note">{t('ui.app.verbatim_content')}</p>
+              )}
               {stock.summary.shortSource && (
                 <div className="local-model-note">
                   <p>{t('ui.app.this_text_is_short_so_the_original_is_shown')}</p>
@@ -2660,7 +2665,7 @@ function StockDetail({
                   )}
                 </div>
               )}
-              <h4>{t('ui.app.key_points')}</h4>
+              {stock.summary.keyPoints.length > 0 && <h4>{t('ui.app.key_points')}</h4>}
               <ul>
                 {stock.summary.keyPoints.map((point, index) => (
                   <li key={index}>{point}</li>

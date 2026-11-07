@@ -121,6 +121,8 @@ export async function testApp(
   )
     migrations.push('0036_language.sql');
   if (!migrations.includes('0044_memory_history.sql')) migrations.push('0044_memory_history.sql');
+  if (!migrations.includes('0045_stock_skip_summary.sql'))
+    migrations.push('0045_stock_skip_summary.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(

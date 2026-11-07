@@ -501,14 +501,16 @@ export function createApp(trustedPrincipal?: Principal) {
     const youtube = source !== null && isYouTubeUrl(source.href);
     const title =
       data.type === 'text'
-        ? data.title || data.text.split('\n', 1)[0].trim().slice(0, 80)
+        ? data.title || data.text.trim().split('\n', 1)[0].trim().slice(0, 80)
         : youtube
           ? 'YouTube'
           : source!.hostname;
-    const canonical =
+    const sourceCanonical =
       data.type === 'text'
         ? `text:${await hash(JSON.stringify([title, data.text]))}`
         : canonicalUrl(data.url);
+    // 要約ありの記事と本文採用の記事は別に保持し、既存の保存内容を変更しない。
+    const canonical = data.skip_summary ? `verbatim:${sourceCanonical}` : sourceCanonical;
     const requestHash = await hash(
       JSON.stringify([
         projectId,
@@ -563,7 +565,7 @@ export function createApp(trustedPrincipal?: Principal) {
     const articleId = crypto.randomUUID();
     const statements = [
       c.env.DB.prepare(
-        'INSERT OR IGNORE INTO articles (id, user_id, canonical_url, source_url, title, domain, source_type, input_text, status, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR IGNORE INTO articles (id, user_id, canonical_url, source_url, title, domain, source_type, input_text, status, error, skip_summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       ).bind(
         articleId,
         user.id,
@@ -575,6 +577,7 @@ export function createApp(trustedPrincipal?: Principal) {
         data.type === 'text' ? data.text : youtube ? null : (data.supplemental_text ?? null),
         youtube ? 'failed' : 'queued',
         youtube ? youtubeUnavailableMessage : null,
+        data.skip_summary ? 1 : 0,
       ),
       ...(youtube ? [unavailableArticle()] : []),
       c.env.DB.prepare(
