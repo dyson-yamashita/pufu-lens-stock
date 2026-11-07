@@ -160,7 +160,7 @@ describe('Pufu JSON -> SVG -> PNG (real WASM)', () => {
     expect(() => createPufuSvg(score)).toThrow(expect.objectContaining({ code: 'INVALID_TEXT' }));
     expect(renderPufuPng(sparse, { font }).png.length).toBeGreaterThan(0);
   });
-  it('escapes XML and rejects duplicate UUID, invalid progress, count overflow', () => {
+  it('escapes XML and rejects duplicate UUID, invalid progress and invalid nodes', () => {
     const score = structuredClone(sparse);
     score.gainingGoal.text = '<script>A & B</script>';
     expect(createPufuSvg(score)).toContain('&lt;script&gt;');
@@ -169,9 +169,18 @@ describe('Pufu JSON -> SVG -> PNG (real WASM)', () => {
     score.purposes[0].measures[0].progress = 0;
     score.winCondition.uuid = score.gainingGoal.uuid;
     expect(() => createPufuSvg(score)).toThrow(PufuImageError);
-    expect(() => createPufuSvg({ ...sparse, purposes: Array(100000).fill(null) })).toThrow(
-      PufuImageError,
-    );
+    expect(() => createPufuSvg({ ...sparse, purposes: [null] })).toThrow(PufuImageError);
+  });
+  it('renders more than 12 measures without dropping nodes', () => {
+    const score = structuredClone(sparse);
+    score.purposes[0].measures = Array.from({ length: 13 }, (_, index) => ({
+      ...score.purposes[0].measures[0],
+      uuid: `measure-${index}`,
+      text: `施策${index}`,
+    }));
+    const svg = createPufuSvg(score);
+    expect(svg.match(/data-role="measure"/g)).toHaveLength(13);
+    expect(renderPufuPng(score, { font }).png.length).toBeGreaterThan(0);
   });
   it('releases WASM allocations across repeated renders', () => {
     for (let i = 0; i < 30; i++)

@@ -309,15 +309,6 @@ export default function PufuEditor({
               {dirty ? t('ui.pufu_editor.unsaved_changes') : t('ui.pufu_editor.saved')}
             </span>
             <div>
-              <PufuJsonImport
-                disabled={busy}
-                onBusyChange={setBusy}
-                onError={(message) => {
-                  setError(message);
-                  setNotice('');
-                }}
-                onImport={importScore}
-              />
               <button className="button primary" disabled={busy} onClick={() => save()}>
                 {busy ? (
                   <LoaderCircle className="spin" size={17} aria-hidden="true" />
@@ -328,6 +319,18 @@ export default function PufuEditor({
               </button>
             </div>
           </div>
+          <details className="pufu-json-import-panel">
+            <summary>{t('pufu.import_json')}</summary>
+            <PufuJsonImport
+              disabled={busy}
+              onBusyChange={setBusy}
+              onError={(message) => {
+                setError(message);
+                setNotice('');
+              }}
+              onImport={importScore}
+            />
+          </details>
           {error && (
             <p className="form-error" role="alert">
               {error}

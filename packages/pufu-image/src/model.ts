@@ -24,7 +24,7 @@ export const pufuScoreSchema = z
   .strictObject({
     gainingGoal: node,
     winCondition: node,
-    purposes: z.array(node.extend({ measures: z.array(measure).max(12) })).max(12),
+    purposes: z.array(node.extend({ measures: z.array(measure) })),
     elements: z.strictObject({
       people: node,
       money: node,

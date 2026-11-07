@@ -108,12 +108,14 @@ it('問いからの作成は目標が空でも送信できる', async () => {
   );
 });
 
-it('JSONからの作成はAI生成せず、選んだ保存先・タイトル・関連とスコアを保存する', async () => {
+it('JSONファイルからの作成は問いから開いても関連を紐付けず、保存先・タイトル・スコアを保存する', async () => {
   await render('question');
+  await select('stocks');
   const mode = document.querySelector('#pufu-source')!;
   expect(mode).not.toBeNull();
   Object.defineProperty(mode, 'value', { configurable: true, value: 'json' });
   await act(async () => mode.dispatchEvent(new window.Event('change', { bubbles: true })));
+  expect(document.querySelector('.pufu-relations')).toBeNull();
   expect(submitButton().disabled).toBe(true);
   const title = document.querySelector<HTMLInputElement>('#pufu-title')!;
   title.value = '取込タイトル';
@@ -133,10 +135,41 @@ it('JSONからの作成はAI生成せず、選んだ保存先・タイトル・�
     expect.objectContaining({
       title: '取込タイトル',
       project_id: 'project',
-      question_ids: ['question'],
+      question_ids: [],
       stock_ids: [],
       score,
     }),
   );
   expect(onDone).toHaveBeenCalledWith('imported');
+});
+
+it('貼り付けたJSONを明示的に読み込み、AI作成で選択した関連を送らずに保存する', async () => {
+  await render();
+  await select('questions');
+  await select('stocks');
+  const mode = document.querySelector('#pufu-source')!;
+  Object.defineProperty(mode, 'value', { configurable: true, value: 'json' });
+  await act(async () => mode.dispatchEvent(new window.Event('change', { bubbles: true })));
+  const textarea = document.querySelector<HTMLTextAreaElement>('.pufu-json-import textarea')!;
+  const load = document.querySelector<HTMLButtonElement>('.pufu-json-import button:last-child')!;
+  expect(load.disabled).toBe(true);
+  textarea.value = '{}';
+  await act(async () => textarea.dispatchEvent(new window.Event('input', { bubbles: true })));
+  await act(async () => load.click());
+  expect(document.querySelector('[role="alert"]')).not.toBeNull();
+  expect(submitButton().disabled).toBe(true);
+  textarea.value = JSON.stringify(score);
+  await act(async () => textarea.dispatchEvent(new window.Event('input', { bubbles: true })));
+  expect(submitButton().disabled).toBe(true);
+  await act(async () => load.click());
+  expect(document.querySelector('[role="alert"]')).toBeNull();
+  expect(document.querySelector('[role="status"]')!.textContent).toContain(score.gainingGoal.text);
+  expect(send).not.toHaveBeenCalled();
+  vi.mocked(send).mockResolvedValue({ pufu: { id: 'pasted' } });
+  await submit();
+  expect(send).toHaveBeenCalledWith(
+    '/api/v1/pufus',
+    expect.objectContaining({ project_id: 'project', question_ids: [], stock_ids: [], score }),
+  );
+  expect(onDone).toHaveBeenCalledWith('pasted');
 });

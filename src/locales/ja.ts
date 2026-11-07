@@ -3,19 +3,23 @@ export const ja: Record<string, string> = {
   'pufu.create_with_ai': 'AIで作成',
   'pufu.create_from_json': 'JSONから作成',
   'pufu.import_json': 'JSONをインポート',
+  'pufu.import_file': 'JSONファイルを選択',
+  'pufu.import_text': 'JSONを貼り付け',
+  'pufu.import_load_text': 'JSONテキストを読み込む',
+  'pufu.import_text_source': '貼り付けたJSON',
   'pufu.import_create_help':
-    'pufu editorでエクスポートしたJSONを選び、「プ譜を作成」で保存します。AI生成は行いません。',
-  'pufu.import_selected': '選択したファイル：{{filename}}／獲得目標：{{goal}}',
-  'pufu.import_too_large': 'JSONファイルは256KiB以内で選択してください。',
+    'pufu editorのJSONファイルを選択するか、JSONを貼り付けて「JSONテキストを読み込む」を押し、「プ譜を作成」で保存します。問い・ストックの紐付けは不要です。AI生成は行いません。',
+  'pufu.import_selected': '読み込み元：{{filename}}／獲得目標：{{goal}}',
+  'pufu.import_too_large': 'JSONは256KiB以内にしてください。',
   'pufu.import_read_failed': 'ファイルを読み込めませんでした。もう一度選択してください。',
   'pufu.import_invalid_json':
-    'JSONとして読み込めません。pufu editorでエクスポートしたJSONファイルを選択してください。',
+    'JSONとして読み込めません。pufu editorでエクスポートしたJSONを入力してください。',
   'pufu.import_invalid_score':
-    'プ譜の形式が正しくないか、保存上限を超えています。本文は各1,200文字、コメントは各600文字、中間目的・各施策は12件以内にし、要素のIDが重複していないか確認してください。',
+    'プ譜の形式が正しくないか、保存上限を超えています。本文は各1,200文字、コメントは各600文字以内にし、要素のIDが重複していないか確認してください。',
   'pufu.import_replace_confirm': '編集中の未保存の内容を、JSONの内容に置き換えますか？',
   'pufu.import_edit_notice': 'JSONを読み込みました。「保存」でこの局面に反映します。',
   'manual.pufu_import':
-    'JSONから作成するには、作成画面の「作成方法」で「JSONから作成」を選び、pufu editorのJSONをインポートして「プ譜を作成」を押します。編集時は、対象の局面で「編集する」→「JSONをインポート」→「保存」の順に操作します。選択中の局面全体が置き換わり、他の局面は変わりません。ファイルは256KiB以内で、本文は各1,200文字、コメントは各600文字、中間目的・各施策は12件以内です。',
+    'JSONから作成するには、作成画面の「作成方法」で「JSONから作成」を選び、pufu editorのJSONファイルを選択するか、JSONを貼り付けて「JSONテキストを読み込む」→「プ譜を作成」を押します。問い・ストックは紐付けずに作成します。編集時は、対象の局面で「編集する」→「JSONをインポート」を開き、ファイル選択またはテキストの読み込み後に「保存」を押します。選択中の局面全体が置き換わり、他の局面は変わりません。JSONは256KiB以内、本文は各1,200文字、コメントは各600文字以内です。中間目的・施策の件数制限はありません。',
   'first_steps.title': 'はじめの3ステップ',
   'first_steps.start_project': '最初のプロジェクトをつくりましょう',
   'first_steps.project_intro':
@@ -714,7 +718,7 @@ export const ja: Record<string, string> = {
     '保存していない変更があります。保存せずに局面を切り替えますか？',
   'ui.pufu_editor.could_not_read_the_edited_content': '編集内容を読み取れませんでした。',
   'ui.pufu_editor.keep_each_text_within_1_200_characters_each_comment':
-    '文章は各1,200文字以内、コメントは600文字以内、中間目的と各施策は12件以内で入力してください。',
+    '文章は各1,200文字以内、コメントは600文字以内で入力し、要素のIDが重複していないか確認してください。',
   'ui.pufu_editor.phase_value_added': '第{{value0}}局面を追加しました。',
   'ui.pufu_editor.pufu_saved': 'プ譜を保存しました。',
   'ui.pufu_editor.local_demo_without_ai_a_template_proposal_is_created':

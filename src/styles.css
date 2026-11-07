@@ -3471,6 +3471,21 @@ article.pufu-list-item {
   gap: 12px;
   margin: 20px 0 14px;
 }
+.pufu-json-import {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.pufu-json-import .button {
+  justify-self: start;
+}
+.pufu-json-import-panel {
+  margin-bottom: 14px;
+}
+.pufu-json-import-panel summary {
+  cursor: pointer;
+  padding: 12px 0;
+}
 .pufu-toolbar > div {
   display: flex;
   flex-wrap: wrap;
