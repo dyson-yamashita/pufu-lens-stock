@@ -45,6 +45,7 @@ function provider(issues: string[][] = [[]], wins = [win]) {
       const reasons = issues[Math.min(reviews++, issues.length - 1)];
       return {
         response: JSON.stringify({
+          ...reviewDraft(data, reasons),
           purposeChecks: data.purposes.map((p: { purpose: number }) => ({
             purpose: p.purpose,
             integrated: !reasons.length,

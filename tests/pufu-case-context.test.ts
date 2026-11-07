@@ -61,6 +61,7 @@ function setup(
               evidence,
               scope: index === 0 ? (options.firstScope ?? 'project') : 'project',
             })),
+          conditions: [],
           completionActions: [{ ...fact('データを納品する。'), evidence }],
           elements: Object.fromEntries(
             elementKeys.map((k) => [
