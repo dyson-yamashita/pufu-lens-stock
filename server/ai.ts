@@ -1,4 +1,5 @@
 import { invokeAi } from './usage';
+import { reasoningOptions, structuredOutput } from './ai-model';
 import { summarySchema, memorySchema, questionSchema } from '../shared/domain';
 import type { ArticleSummary, MemoryData } from '../shared/domain';
 import type { Env } from './env';
@@ -24,6 +25,22 @@ export type QuestionSource = {
 const directCall = <T>(_name: string, operation: () => Promise<T>): Promise<T> => operation();
 export const modelName = (env: Env) => (isDemo(env) && !env.AI ? 'local-extractive' : env.AI_MODEL);
 export function parseAiJson<T>(response: unknown, schema: z.ZodType<T>): T {
+  if (typeof response === 'object' && response !== null && 'choices' in response) {
+    const chat = z
+      .object({
+        choices: z
+          .array(
+            z.object({
+              message: z.object({ content: z.string() }),
+              finish_reason: z.literal('stop').nullish(),
+            }),
+          )
+          .min(1),
+      })
+      .safeParse(response);
+    if (!chat.success) throw new Error('AIの出力形式が正しくありません。');
+    response = { response: chat.data.choices[0].message.content };
+  }
   const raw =
     typeof response === 'object' && response !== null && 'response' in response
       ? response.response
@@ -63,7 +80,8 @@ async function generate<T>(
     ],
     max_tokens: 3000,
     temperature: 0.2,
-    response_format: { type: 'json_schema', json_schema: z.toJSONSchema(schema) },
+    ...reasoningOptions(env.AI_MODEL, 'none'),
+    response_format: structuredOutput(env.AI_MODEL, schema, 'result'),
   });
   return parseAiJson(response, schema);
 }
