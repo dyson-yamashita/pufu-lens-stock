@@ -21,6 +21,11 @@ export function parsePufuJson(text: string): PufuScore {
   } catch {
     throw new Error(t('pufu.import_invalid_json'));
   }
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    // 元アプリの所有者・プロジェクト・更新情報は引き継がず、プ譜の本文だけを検証する。
+    const { gainingGoal, winCondition, purposes, elements } = value as Record<string, unknown>;
+    value = { gainingGoal, winCondition, purposes, elements };
+  }
   const result = pufuScoreSchema.safeParse(value);
   if (!result.success) throw new Error(t('pufu.import_invalid_score'));
   return result.data;

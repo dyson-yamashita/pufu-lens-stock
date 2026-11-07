@@ -28,7 +28,20 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
     const invalid = join(scratch, 'invalid.json');
     const changed = structuredClone(score);
     changed.gainingGoal.text = 'JSONから置き換えた局面';
-    await writeFile(original, JSON.stringify(score));
+    const exported = {
+      id: 'original-score',
+      projectId: 'original-project',
+      number: 3,
+      title: '元アプリのタイトル',
+      owner: 'original-owner',
+      editors: ['original-editor'],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+      _version: 1,
+      _lastChangedAt: 1767312000000,
+      _deleted: null,
+    };
+    await writeFile(original, JSON.stringify({ ...score, ...exported }));
     await writeFile(invalid, '{}');
     await app.open('/#pufus');
     await screen.getByRole('button', 'プ譜を追加').click();
@@ -60,7 +73,7 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
     await screen.getByRole('button', 'JSONテキストを読み込む').click();
     await expect(screen.getByRole('alert')).toContainText('JSONとして読み込めません');
     await expect(gainingGoal).toHaveValue(score.gainingGoal.text);
-    await screen.getByLabel('JSONを貼り付け').fill(JSON.stringify(changed));
+    await screen.getByLabel('JSONを貼り付け').fill(JSON.stringify({ ...changed, ...exported }));
     await screen.getByRole('button', 'JSONテキストを読み込む').click();
     await expect(gainingGoal).toHaveValue(changed.gainingGoal.text);
     // インポートだけではサーバーに保存しない。
@@ -108,7 +121,7 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
     await browser.locator('#pufu-project').selectOption({ value: fixture.projectId });
     await screen.getByLabel('作成方法').selectOption({ value: 'json' });
     await screen.getByLabel('タイトル任意').fill('貼り付けから作成したプ譜');
-    await screen.getByLabel('JSONを貼り付け').fill(JSON.stringify(changed));
+    await screen.getByLabel('JSONを貼り付け').fill(JSON.stringify({ ...changed, ...exported }));
     await expect(screen.getByRole('button', 'プ譜を作成')).toBeDisabled();
     await screen.getByRole('button', 'JSONテキストを読み込む').click();
     await screen.getByRole('button', 'プ譜を作成').click();
