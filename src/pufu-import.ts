@@ -9,6 +9,12 @@ export async function readPufuJson(file: Pick<File, 'size' | 'text'>): Promise<P
   } catch {
     throw new Error(t('pufu.import_read_failed'));
   }
+  return parsePufuJson(text);
+}
+
+export function parsePufuJson(text: string): PufuScore {
+  if (new TextEncoder().encode(text).byteLength > 262144)
+    throw new Error(t('pufu.import_too_large'));
   let value: unknown;
   try {
     value = JSON.parse(text.replace(/^\uFEFF/, ''));

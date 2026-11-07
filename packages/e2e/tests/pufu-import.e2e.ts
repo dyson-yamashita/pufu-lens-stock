@@ -19,18 +19,22 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
     score.winCondition.comment.text = 'JSON取込のコメント';
     score.purposes[0].measures[0].color = 'red';
     score.purposes[0].measures[0].progress = 65;
+    score.purposes[0].measures = Array.from({ length: 13 }, (_, i) => ({
+      ...score.purposes[0].measures[0],
+      uuid: `measure-${i}`,
+      text: `取込施策${i + 1}`,
+    }));
     const original = join(scratch, 'original.json');
-    const replacement = join(scratch, 'replacement.json');
     const invalid = join(scratch, 'invalid.json');
     const changed = structuredClone(score);
     changed.gainingGoal.text = 'JSONから置き換えた局面';
     await writeFile(original, JSON.stringify(score));
-    await writeFile(replacement, JSON.stringify(changed));
     await writeFile(invalid, '{}');
     await app.open('/#pufus');
     await screen.getByRole('button', 'プ譜を追加').click();
     await browser.locator('#pufu-project').selectOption({ value: fixture.projectId });
     await screen.getByLabel('作成方法').selectOption({ value: 'json' });
+    await expect(browser.locator('.pufu-relations')).toHaveCount(0);
     await screen.getByLabel('タイトル任意').fill('JSONで作成したプ譜');
     await expect(screen.getByRole('button', 'プ譜を作成')).toBeDisabled();
     await browser.locator('input[type="file"]').setInputFiles(invalid);
@@ -44,14 +48,20 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
     expect(pufus).toHaveLength(1);
     const id = pufus[0].id;
     expect(await fixture.request(`/pufus/${id}`)).toMatchObject({
-      pufu: { score, status: 'ready' },
+      pufu: { score, status: 'ready', question_ids: [], stock_ids: [] },
     });
     await app.open(`/#pufu/${id}`);
     await screen.getByRole('button', '局面を追加').click();
     await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
     await screen.getByRole('button', '編集する').click();
+    await browser.locator('.pufu-json-import-panel summary').click();
     const gainingGoal = browser.locator('.pufu-editor-root textarea[role="gaining-goal"]');
-    await browser.locator('input[type="file"]').setInputFiles(replacement);
+    await screen.getByLabel('JSONを貼り付け').fill('{');
+    await screen.getByRole('button', 'JSONテキストを読み込む').click();
+    await expect(screen.getByRole('alert')).toContainText('JSONとして読み込めません');
+    await expect(gainingGoal).toHaveValue(score.gainingGoal.text);
+    await screen.getByLabel('JSONを貼り付け').fill(JSON.stringify(changed));
+    await screen.getByRole('button', 'JSONテキストを読み込む').click();
     await expect(gainingGoal).toHaveValue(changed.gainingGoal.text);
     // インポートだけではサーバーに保存しない。
     expect(await fixture.request(`/pufus/${id}`)).toMatchObject({ pufu: { score } });
@@ -93,6 +103,25 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
       screen.getByRole('button', 'JSON', { exact: true }).click(),
     );
     expect(JSON.parse(await readFile(download.absolutePath, 'utf8'))).toEqual(score);
+    await app.open('/#pufus');
+    await screen.getByRole('button', 'プ譜を追加').click();
+    await browser.locator('#pufu-project').selectOption({ value: fixture.projectId });
+    await screen.getByLabel('作成方法').selectOption({ value: 'json' });
+    await screen.getByLabel('タイトル任意').fill('貼り付けから作成したプ譜');
+    await screen.getByLabel('JSONを貼り付け').fill(JSON.stringify(changed));
+    await expect(screen.getByRole('button', 'プ譜を作成')).toBeDisabled();
+    await screen.getByRole('button', 'JSONテキストを読み込む').click();
+    await screen.getByRole('button', 'プ譜を作成').click();
+    await expect(screen.getByRole('heading', '貼り付けから作成したプ譜')).toBeVisible();
+    await browser.reload();
+    await expect(browser.locator('.pufu-context-task')).toContainText(changed.gainingGoal.text);
+    const { pufus: all } = (await fixture.request('/pufus')) as { pufus: { id: string }[] };
+    expect(all).toHaveLength(2);
+    expect(await fixture.request(`/pufus/${all.find((pufu) => pufu.id !== id)!.id}`)).toMatchObject(
+      {
+        pufu: { score: changed, status: 'ready', question_ids: [], stock_ids: [] },
+      },
+    );
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }

@@ -50,6 +50,45 @@ async function create(data = {}) {
   expect(response.status).toBe(201);
   return ((await response.json()) as { pufu: { id: string } }).pufu.id;
 }
+it('12件を超える中間目的と施策を関連なしで作成・編集・局面追加して保持する', async () => {
+  const many = structuredClone(score);
+  many.purposes = Array.from({ length: 13 }, (_, i) => ({
+    ...score.purposes[0],
+    uuid: `purpose-${i}`,
+    measures: Array.from({ length: 13 }, (_, j) => ({
+      ...score.purposes[0].measures[0],
+      uuid: `measure-${i}-${j}`,
+    })),
+  }));
+  const id = await create({ score: many, question_ids: [], stock_ids: [] });
+  expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
+    pufu: { score: many, question_id: null, question_ids: [], stock_ids: [] },
+  });
+  many.purposes[12].measures[12].text = '13番目の施策を編集';
+  expect(
+    (
+      await app.request(`/api/v1/pufus/${id}`, {
+        method: 'PATCH',
+        body: { revision: 1, phase: 1, score: many },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await app.request(`/api/v1/pufus/${id}/phases`, {
+        method: 'POST',
+        body: { revision: 2, phase: 1, score: many },
+      })
+    ).status,
+  ).toBe(201);
+  expect(await (await app.request(`/api/v1/pufus/${id}`)).json()).toMatchObject({
+    pufu: {
+      score: many,
+      current_phase: 2,
+      phases: [{ score: many }, { score: many }],
+    },
+  });
+});
 async function createLegacy(data: { question_ids: string[]; stock_ids: string[] }) {
   const id = await create();
   await app.env.DB.batch([

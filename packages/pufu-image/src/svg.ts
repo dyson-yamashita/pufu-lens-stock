@@ -318,18 +318,6 @@ function purposeHeight(text: ReturnType<typeof textBlock>, width: number, size: 
 function validateScore(input: unknown) {
   let parsed;
   try {
-    // Zodが配列全体を走査する前に件数を確認し、巨大な不正配列の処理を避ける。
-    const object = input as { purposes?: { measures?: unknown[] }[] } | null | undefined;
-    if (Array.isArray(object?.purposes)) {
-      if (object.purposes.length > 12)
-        throw new PufuImageError('INVALID_INPUT', '中間目的は12件以内で指定してください。');
-      for (const purpose of object.purposes)
-        if (Array.isArray(purpose?.measures) && purpose.measures.length > 12)
-          throw new PufuImageError(
-            'INVALID_INPUT',
-            '施策は中間目的ごとに12件以内で指定してください。',
-          );
-    }
     parsed = pufuScoreSchema.safeParse(input);
   } catch (cause) {
     if (cause instanceof PufuImageError) throw cause;

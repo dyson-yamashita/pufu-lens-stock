@@ -50,8 +50,9 @@ export default function PufuForm({
       return;
     }
     if (source === 'json' && !imported) return;
-    const questionIds = questionId ? [questionId] : questions.map((item) => item.id).sort();
-    const stockIds = stocks.map((item) => item.id).sort();
+    const questionIds =
+      source === 'json' ? [] : questionId ? [questionId] : questions.map((item) => item.id).sort();
+    const stockIds = source === 'json' ? [] : stocks.map((item) => item.id).sort();
     const key = JSON.stringify([
       project,
       questionId,
@@ -155,30 +156,32 @@ export default function PufuForm({
         <option value="ai">{t('pufu.create_with_ai')}</option>
         <option value="json">{t('pufu.create_from_json')}</option>
       </select>
-      <details className="pufu-relations" open>
-        <summary>{t('ui.pufu_form.reference_materials')}</summary>
-        <p className="field-hint">{t('ui.pufu_form.reference_help')}</p>
-        {!questionId && (
+      {source === 'ai' && (
+        <details className="pufu-relations" open>
+          <summary>{t('ui.pufu_form.reference_materials')}</summary>
+          <p className="field-hint">{t('ui.pufu_form.reference_help')}</p>
+          {!questionId && (
+            <RelationPicker
+              key={`${project}-questions`}
+              kind="questions"
+              single
+              projectId={project}
+              value={questions}
+              onChange={setQuestions}
+              disabled={busy || disabled}
+            />
+          )}
           <RelationPicker
-            key={`${project}-questions`}
-            kind="questions"
+            key={`${project}-stocks`}
+            kind="stocks"
             single
             projectId={project}
-            value={questions}
-            onChange={setQuestions}
+            value={stocks}
+            onChange={setStocks}
             disabled={busy || disabled}
           />
-        )}
-        <RelationPicker
-          key={`${project}-stocks`}
-          kind="stocks"
-          single
-          projectId={project}
-          value={stocks}
-          onChange={setStocks}
-          disabled={busy || disabled}
-        />
-      </details>
+        </details>
+      )}
       <label htmlFor="pufu-title">
         {t('ui.app.title_2')}
         <span className="optional">{t('ui.app.optional')}</span>
