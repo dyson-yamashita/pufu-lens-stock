@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildMemory, summarize, parseAiJson, type Source } from '../server/ai';
+import { buildMemory, generateQuestion, summarize, parseAiJson, type Source } from '../server/ai';
 import { z } from 'zod';
 import { callPufuModel, pufuInputLimit } from '../server/pufu-ai';
 import type { Env } from '../server/env';
@@ -13,6 +13,34 @@ const source: Source = {
   project: '設計',
 };
 const context = { name: '設計', description: '', scope: 'user' };
+
+it('Gemmaの要約・問いはchoicesの最終回答を使い、thinkingを無効化する', async () => {
+  const summary = source.summary;
+  const question = { text: '再試行時の重複をどう防ぐか？' };
+  const run = vi.fn<NonNullable<Env['AI']>['run']>();
+  for (const result of [summary, question])
+    run.mockResolvedValueOnce({
+      choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(result) } }],
+    });
+  const env = { AI: { run }, AI_MODEL: '@cf/google/gemma-4-26b-a4b-it' } as unknown as Env;
+  expect(await summarize(env, source.title, '再試行では重複を防ぐ。'.repeat(20))).toEqual(summary);
+  expect(
+    await generateQuestion(env, {
+      title: source.title,
+      summary,
+      note: '',
+      project: { name: context.name, description: '' },
+    }),
+  ).toEqual(question);
+  expect(run).toHaveBeenCalledTimes(2);
+  for (const [model, input] of run.mock.calls) {
+    expect(model).toBe(env.AI_MODEL);
+    expect(input).toMatchObject({
+      chat_template_kwargs: { enable_thinking: false },
+      response_format: { json_schema: { name: 'result', strict: true } },
+    });
+  }
+});
 
 it.each(['@cf/google/gemma-4-26b-a4b-it', '@cf/deepseek-ai/deepseek-v4.1-flash-1017'])(
   '%sのchat応答を読み、推論文と存在しない根拠IDを保存しない',

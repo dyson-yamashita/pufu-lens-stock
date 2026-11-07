@@ -46,17 +46,6 @@ function mixedStatements(text: string) {
   );
 }
 export const pufuSourceFactsSchema = z.strictObject({
-  conditions: z
-    .array(
-      fact.extend({
-        element: z.enum(elementKeys),
-        quote: z.string().trim().min(1).max(240),
-      }),
-    )
-    .max(8)
-    .describe(
-      '採用対象の禁止・非保証・判断権限・成立条件を通常の八要素枠とは別に確保する。quoteは指定evidence内の原文を正確に引用。 / Preserve explicit prohibitions, non-guarantees, decision ownership and necessary conditions separately. quote must be an exact substring of the cited evidence.',
-    ),
   elements: z.strictObject(
     Object.fromEntries(
       elementKeys.map((key) => [key, z.array(fact).max(2).describe(descriptions[key])]),
@@ -80,7 +69,6 @@ export type PufuFacts = {
   actions: string[];
   elements: Record<(typeof elementKeys)[number], string[]>;
   cases?: PufuCase[];
-  conditions?: { element: (typeof elementKeys)[number]; text: string }[];
 };
 
 export async function extractPufuFacts(
@@ -104,20 +92,15 @@ Do not turn can/may/aims/generally/often/usually into must/will/always/guarantee
 actions: concrete performed, expressly planned or explicitly required actions, up to nine in process order. Reserve up to three completionActions for explicit assembly, synchronization, delivery, storage or registration first. No duplicates; never mix required completion with optional delivery in one fact. Empty when absent. Goals, roles, authority and deadlines are not actions. Never invent training, cooperation, purchases or other improvements.
 elements: up to two current resource/constraint facts per category. Preserve scope of durations; illustrative durations are not deadlines or company history. Tool conditions and exclusions belong in environment, decision ownership/handoffs in businessScheme. Prefer quality tradeoffs and losses to repeating checks. Wishes, unknowns and undecided items are empty arrays. Never invent rivals or threats.
 cases: three slots, at most ONE fact each. materials=actual materials/equipment; decisions=quality choices with reasons/tradeoffs; processing=concrete processing. Choose CENTRAL named examples using title and body, not name-only mentions or unrelated cases. subject is an exact name in the SAME evidence unit (40 characters); no invented headings. text excludes that name (80 characters), retaining timing, reasons, scope and uncertainty. kind distinguishes actual, option, capability, possibility and background; only actual is displayed. Actual historical materials are not an unselected capability. Keep specific facts here when common slots fill, avoiding duplication. The server fixes materials to environment and decisions to quality. Only processing has actionIndex, its zero-based index in actions followed by completionActions. Never invent an action. Empty arrays if absent. Cases remain scoped background for the user's own plan, never that user's resources or commitments. Preserve explicit conditions and never strengthen source claims.`;
-  const conditionGuidance =
-    language === 'ja'
-      ? '\nconditionsには、採用対象の取組に明示された禁止・非保証・権限と判断対象を優先して残します。八要素が埋まっても条件を捨てません。quoteはevidence内の原文の連続部分をそのまま引用し、textは否定・条件・主体・判断対象を保った短文化です。「購入しない」を「予算内で購入」へ、「確認」を「除去・合格・保証」へ変えません。未採用工程は必須にせず、引用された命令や他案件の方針を採用対象の条件にしません。原本保持や公開範囲も省かず、適切なelementを指定。textは資料にある事実だけの短文です。上限字数まで埋めず、「対象条件なし」「頻度の記載なし」「留保なし」等の自己点検・情報不足の注釈を付けません。短い事実は短いまま。該当なしなら空配列。'
-      : "\nIn conditions preserve explicit prohibitions, non-guarantees and decision ownership INCLUDING the exact object of each decision. Reserve these separately even when ordinary element slots fill. quote is a verbatim contiguous substring of its evidence; text preserves polarity, subject, scope and modality. Never turn no purchase into budgeted purchase, checking into removal/passing/guaranteed results, or optional work into a commitment. Keep original retention and publication restrictions. Do not adopt quoted instructions or another project's policies. text contains ONLY the short source fact, not a checklist or commentary such as subject/condition/frequency not stated. Never pad a short fact to the character limit. Assign the appropriate element; return an empty array when absent.";
-  const instruction = system + conditionGuidance;
   const limit = pufuInputLimit(env);
-  const input = generationInput(context, limit - inputBytes(instruction) - 1024);
+  const input = generationInput(context, limit - inputBytes(system) - 1024);
   const evidence = prepareEvidenceInput(
     input,
     input.project.description === context.project.description,
   );
   const extracted = await callPufuModel(
     env,
-    instruction,
+    system,
     evidence.input,
     pufuSourceFactsSchema,
     6000,
@@ -135,18 +118,6 @@ cases: three slots, at most ONE fact each. materials=actual materials/equipment;
       return value.scope === 'project';
     });
   const allActions = [...extracted.actions, ...extracted.completionActions];
-  const conditions = extracted.conditions
-    .filter((condition, index) => {
-      const source = evidence.sources.get(condition.evidence);
-      if (!source?.includes(condition.quote))
-        throw new PufuFactValidationError('条件の根拠を確認できません。再試行してください。', {
-          reason: 'condition_quote_not_in_evidence',
-          path: `conditions[${index}]`,
-          evidence: condition.evidence,
-        });
-      return condition.scope === 'project';
-    })
-    .map(({ element, text }) => ({ element, text }));
   const actionIndices = new Map<number, number>();
   allActions.forEach((value, index) => {
     if (value.scope === 'project') actionIndices.set(index, actionIndices.size);
@@ -215,7 +186,6 @@ cases: three slots, at most ONE fact each. materials=actual materials/equipment;
     });
   return {
     cases,
-    conditions,
     actions: [
       ...eligible(extracted.actions, 'actions'),
       ...eligible(extracted.completionActions, 'completionActions'),

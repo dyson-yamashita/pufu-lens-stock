@@ -126,6 +126,75 @@ describe('本文取得から要約とメモリまで', () => {
     expect((await object!.text()).includes('ページ3の本文')).toBe(true);
   });
 
+  it('要約・問い・メモリは旧モデルのDB/Workflowキャッシュを再利用せずGemmaで生成する', async () => {
+    const { id: stockId } = await savedArticle();
+    articleFetch();
+    const summary = { overview: 'Gemmaの要約。', keyPoints: ['重複を防ぐ。'], topics: [] };
+    const question = { text: '再試行時の重複をどう防ぐか？' };
+    const memory = { interests: ['再試行の設計'], knowledge: [], questions: [] };
+    const ai = vi.fn<NonNullable<Env['AI']>['run']>(async (_model, input) => {
+      const format = input.response_format!.json_schema as {
+        schema: { properties: Record<string, unknown> };
+      };
+      const properties = format.schema.properties;
+      const result =
+        'overview' in properties ? summary : 'interests' in properties ? memory : question;
+      return { choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(result) } }] };
+    });
+    app.env.AI = { run: ai };
+    for (const kind of ['article', 'question', 'project_memory']) {
+      const job = (await app.env.DB.prepare(
+        'SELECT * FROM processing_jobs WHERE kind=? ORDER BY revision DESC LIMIT 1',
+      )
+        .bind(kind)
+        .first<Job>())!;
+      expect(job).not.toBeNull();
+      const name =
+        kind === 'article'
+          ? 'article-summary-0'
+          : kind === 'question'
+            ? 'generate-question'
+            : 'memory-part-0';
+      await app.env.DB.prepare(
+        "INSERT INTO ai_calls(id,job_id,user_id,status,result_json) VALUES (?,?,'alice','done','{}')",
+      )
+        .bind(`${job.id}:${name}`, job.id)
+        .run();
+      const step = mockStep();
+      const original = step.do.bind(step);
+      const legacyCache = vi.fn(() => ({ retryAt: null, json: '{}' }));
+      step.do = (async (stage: string, ...args: unknown[]) =>
+        stage === name
+          ? legacyCache()
+          : (original as (...args: unknown[]) => Promise<unknown>)(
+              stage,
+              ...args,
+            )) as typeof step.do;
+      const workflow =
+        kind === 'project_memory'
+          ? new MemoryWorkflow(app.ctx, app.env)
+          : new ArticleWorkflow(app.ctx, app.env);
+      await workflow.run(mockEvent(job.id), step);
+      expect(legacyCache).not.toHaveBeenCalled();
+    }
+    expect(ai.mock.calls.map(([model]) => model)).toEqual(Array(3).fill(app.env.AI_MODEL));
+    const article = await app.env.DB.prepare(
+      'SELECT status,model,summary_json FROM articles',
+    ).first<{ status: string; model: string; summary_json: string }>();
+    expect(article).toMatchObject({ status: 'ready', model: app.env.AI_MODEL });
+    expect(JSON.parse(article!.summary_json)).toEqual(summary);
+    expect(
+      await app.env.DB.prepare('SELECT status,model,text FROM questions WHERE stock_id=?')
+        .bind(stockId)
+        .first(),
+    ).toMatchObject({ status: 'ready', model: app.env.AI_MODEL, text: question.text });
+    expect(
+      await app.env.DB.prepare('SELECT model,data_json FROM memories WHERE project_id=?')
+        .bind('alice-project')
+        .first(),
+    ).toMatchObject({ model: app.env.AI_MODEL, data_json: JSON.stringify(memory) });
+  });
+
   it('記事の本文・要約・根拠付きプロジェクト／ユーザーメモリを生成する', async () => {
     const { id: stockId } = await savedArticle();
     const fetchMock = articleFetch();

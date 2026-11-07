@@ -48,18 +48,10 @@ export function caseText(value: PufuCase, language: Language) {
 }
 
 // 完全文のまま上限に収める。事例を優先し、条件を途中で切って意味を変えない。
-export function elementWithCases(
-  base: string[],
-  cases: PufuCase[],
-  language: Language,
-  conditions: string[] = [],
-) {
-  const selected = [...new Set(conditions)];
-  if (selected.join(' ').length > 240)
-    throw new Error('重要な条件が表示上限を超えています。資料を短くしてください。');
+export function elementWithCases(base: string[], cases: PufuCase[], language: Language) {
+  const selected: string[] = [];
   for (const value of [...cases.map((value) => caseText(value, language)), ...base]) {
-    if (!selected.includes(value) && [...selected, value].join(' ').length <= 240)
-      selected.push(value);
+    if ([...selected, value].join(' ').length <= 240) selected.push(value);
   }
   return selected.join(' ');
 }

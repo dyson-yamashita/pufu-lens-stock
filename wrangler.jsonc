@@ -66,9 +66,9 @@
   "vars": {
     "APP_URL": "http://localhost:5173",
     "LOCAL_DEMO_ENABLED": "false",
-    "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
-    "AI_PUFU_MODEL": "@cf/zai-org/glm-5.3-flash",
-    "AI_PUFU_PLAN_MODEL": "@cf/moonshotai/kimi-k2.6",
+    "AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
+    "AI_PUFU_MODEL": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+    "AI_PUFU_PLAN_MODEL": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
   },
   "env": {
     "production": {
@@ -79,9 +79,9 @@
         // Replaced from the APP_URL environment variable during production builds.
         "APP_URL": "https://app.example.invalid",
         "LOCAL_DEMO_ENABLED": "false",
-        "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
-        "AI_PUFU_MODEL": "@cf/zai-org/glm-5.3-flash",
-        "AI_PUFU_PLAN_MODEL": "@cf/moonshotai/kimi-k2.6",
+        "AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
+        "AI_PUFU_MODEL": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+        "AI_PUFU_PLAN_MODEL": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
       },
       "d1_databases": [
         {

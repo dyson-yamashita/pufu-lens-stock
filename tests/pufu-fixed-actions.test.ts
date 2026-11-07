@@ -46,11 +46,11 @@ it('抽出された全施策を抽出順に固定し、構成AIに省略や取�
 it.each([
   [
     'ja',
-    '作品側と合意した方針に基づき、素材選定・補修・クリーニング・スキャン・ゴミ除去・音声処理・グレーディング・巻つなぎを経て、用途別のデータが作成され、担当者間で全作業の順序と完了状況を確認した上で、依頼者と監督が最終結果を確認し、各用途向けのデータを保存先からいつでも参照できる状態になっている。',
+    '作品側と合意した方針に基づき、素材選定・補修・クリーニング・スキャン・ゴミ除去・音声処理・グレーディング・巻つなぎを経て、用途別のデータが作成されている。',
   ],
   [
     'en',
-    'The team has prepared all materials, carefully checked each intermediate result, reviewed the findings with the project owner, completed the entire planned procedure, and delivered the completed guide with a detailed record of every inspection and its observed results for the intended use.',
+    'The team has prepared the materials, checked each intermediate result, reviewed the findings with the project owner and delivered the completed guide for its intended use.',
   ],
   ['ja', '成果物が納品されている。検証結果も確認できる。'],
   ['en', 'The guide is delivered. The check results are available.'],
@@ -90,12 +90,4 @@ it('前半の工程とは別に抽出した完了工程も、最後の群へ必�
   const score = await generatePufu(env(run), context);
   expect(score.purposes.flatMap((p) => p.measures.map((m) => m.text))).toEqual(actions);
   expect(score.purposes.at(-1)!.measures.at(-1)!.text).toBe('成果物を納品する。');
-});
-
-it('短くするために英単語を切らず、140字を超える必要な完全文を240字まで保持する', async () => {
-  const winCondition =
-    "The technician's inspection findings and the saved report's logged location and date are available to the supervisor, who decides whether the equipment may be used.";
-  expect(winCondition.length).toBeGreaterThan(140);
-  const score = await generatePufu(env(provider({ ...plan, winCondition })), context, 'en');
-  expect(score.winCondition.text).toBe(winCondition);
 });

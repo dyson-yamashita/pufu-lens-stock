@@ -22,7 +22,7 @@ export function structuredOutput(model: string, schema: z.ZodType, name: string)
 
 export function reasoningOptions(model: string, effort: 'none' | 'low' | 'high') {
   // With the current stage budgets, DeepSeek low exhausted 6,000 tokens in
-  // reasoning and returned no final answer in the migration evaluation.
+  // reasoning and returned no final answer. Disable it for these stage budgets.
   if (model === deepseek) return { reasoning_effort: 'none' as const };
   if (model === '@cf/zai-org/glm-5.3-flash')
     return { reasoning_effort: effort === 'none' ? ('low' as const) : effort };
@@ -35,7 +35,7 @@ export function reasoningOptions(model: string, effort: 'none' | 'low' | 'high')
 
 export function pufuSourceByteLimit(model: string) {
   // Application byte budget, not the provider's token context window.
-  // Keep the current extraction coverage when evaluating DeepSeek as a GLM replacement.
+  // Preserve the extraction coverage after migrating from GLM to DeepSeek.
   return model === deepseek || /^@cf\/zai-org\/glm-(?:4\.7|5\.3)-flash$/.test(model)
     ? 40000
     : 24000;
