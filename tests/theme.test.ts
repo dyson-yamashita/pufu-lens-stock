@@ -74,9 +74,9 @@ it.each([false, true])(
     });
     expect(app.document.documentElement.dataset.theme).toBe(dark ? 'dark' : 'light');
     expect(app.document.documentElement.style.colorScheme).toBe(dark ? 'dark' : 'light');
-    expect(app.document.documentElement.style.backgroundColor).toBe(dark ? '#101827' : '#fbfcff');
+    expect(app.document.documentElement.style.backgroundColor).toBe(dark ? '#0b1422' : '#f5f8fc');
     expect(app.document.querySelector('meta')?.getAttribute('content')).toBe(
-      dark ? '#101827' : '#233b63',
+      dark ? '#0b1422' : '#1769aa',
     );
   },
 );

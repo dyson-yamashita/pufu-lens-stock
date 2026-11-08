@@ -7,23 +7,23 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --primary: #233b63;
-  --primary-hover: #182c4d;
-  --button: #233b63;
-  --button-hover: #182c4d;
+  --primary: #1769aa;
+  --primary-hover: #10558b;
+  --button: #1769aa;
+  --button-hover: #10558b;
   --on-button: #fff;
-  --text: #26354d;
-  --muted: #586981;
-  --placeholder: #6b778b;
-  --border: #d9e1ed;
+  --text: #17324d;
+  --muted: #52677d;
+  --placeholder: #61758a;
+  --border: #d6e1ec;
   --card: #fff;
-  --page: #fbfcff;
-  --wash: #edf2f9;
-  --sidebar: #eef2f8;
-  --selected: #dce6f4;
+  --page: #f5f8fc;
+  --wash: #edf3f9;
+  --sidebar: #ffffff;
+  --selected: #e5f7fc;
   --field-border: #bccadd;
-  --accent: #48678e;
-  --focus: #466ba3;
+  --accent: #276486;
+  --focus: #1769aa;
   --favorite-outline: #8694a8;
   --favorite: #f6c945;
   --favorite-border: #a17012;
@@ -44,23 +44,23 @@
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --primary: #b3cdf3;
-  --primary-hover: #d2e2fa;
-  --button: #a9c8f5;
-  --button-hover: #c4dcff;
-  --on-button: #10213a;
-  --text: #e5eaf3;
-  --muted: #afbdd2;
+  --primary: #72c7f0;
+  --primary-hover: #b0e3fa;
+  --button: #72c7f0;
+  --button-hover: #9ad9f5;
+  --on-button: #102237;
+  --text: #eaf4ff;
+  --muted: #b3c5d8;
   --placeholder: #99aac2;
-  --border: #36445c;
-  --card: #172033;
-  --page: #101827;
-  --wash: #202e44;
-  --sidebar: #141e30;
-  --selected: #2a3f5e;
+  --border: #31465e;
+  --card: #111e30;
+  --page: #0b1422;
+  --wash: #182b40;
+  --sidebar: #101c2b;
+  --selected: #16384c;
   --field-border: #667b98;
-  --accent: #b3c9e7;
-  --focus: #a9c8f5;
+  --accent: #a0cee3;
+  --focus: #72c7f0;
   --favorite-outline: #a5b5cc;
   --favorite-border: #f6c945;
   --context-label-bg: #3d2d20;
@@ -366,16 +366,13 @@ p {
   object-fit: contain;
 }
 .boot {
-  background: linear-gradient(145deg, #f5f9ff, #eaf3ff 50%, #dcecff);
+  background: var(--page);
   display: flex;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 24px;
-}
-:root[data-theme='dark'] .boot {
-  background: linear-gradient(145deg, #101b2e, #152a45 50%, #1b3553);
 }
 .boot .brand {
   gap: 14px;
@@ -2424,16 +2421,10 @@ p {
   margin-bottom: 17px;
 }
 .login-page {
-  --login-accent: #c94b16;
-  --login-button: #ff672a;
-  --login-button-hover: #ff7d48;
-  --on-login-button: #fff;
+  --login-accent: var(--primary);
   min-height: 100dvh;
   background: var(--page);
   overflow: hidden;
-}
-:root[data-theme='dark'] .login-page {
-  --login-accent: #ffae8d;
 }
 .login-page > header {
   display: flex;
@@ -2488,9 +2479,6 @@ p {
   font-size: 15px;
 }
 .google-button {
-  --button: var(--login-button);
-  --button-hover: var(--login-button-hover);
-  --on-button: var(--on-login-button);
   margin-top: 31px;
   gap: 16px;
   min-width: 230px;
@@ -2498,7 +2486,7 @@ p {
 .google-g {
   font-family: Arial, sans-serif;
   background: #fff;
-  color: #c94b16;
+  color: #1769aa;
   padding: 3px 6px;
   border-radius: 50%;
   font-size: 13px;
@@ -2543,6 +2531,7 @@ p {
   padding: 24px;
   border-radius: 14px;
   background: var(--card);
+  border: 1px solid var(--border);
 }
 .what-you-can-do-heading {
   display: flex;
@@ -2574,10 +2563,15 @@ p {
   line-height: 1.8;
 }
 .login-art {
+  min-width: 0;
+  background: var(--wash);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   position: relative;
   min-height: 420px;
 }
 .orbit {
+  display: none;
   position: absolute;
   width: 330px;
   height: 330px;
@@ -2596,12 +2590,12 @@ p {
 .art-article {
   position: relative;
   width: 340px;
+  max-width: calc(100% - 32px);
   margin: 84px auto 0;
   padding: 30px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 13px;
-  transform: rotate(-5deg);
 }
 .art-article h3 {
   font-size: 17px;
@@ -2642,8 +2636,8 @@ p {
   border-radius: 12px;
   padding: 21px;
   width: 376px;
+  max-width: calc(100% - 32px);
   margin: -10px auto 0;
-  transform: rotate(3deg);
 }
 .art-memory-icon {
   display: flex;
@@ -2680,7 +2674,6 @@ p {
   border-radius: 7px;
   right: 15px;
   top: 40px;
-  transform: rotate(6deg);
 }
 @media (min-width: 1600px) {
   .page-body {
@@ -2893,7 +2886,7 @@ p {
     padding: 24px;
   }
   .login-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     margin: 12px auto 16px;
     padding: 0 28px;
     gap: 5px;
@@ -2909,10 +2902,9 @@ p {
   }
   .login-art {
     margin: 5px auto 0;
-    width: 400px;
+    width: 100%;
     min-height: 400px;
-    transform: scale(0.9);
-    transform-origin: center;
+    transform: none;
   }
   .google-button {
     margin-top: 24px;
@@ -3027,10 +3019,8 @@ p {
     font-size: 35px;
   }
   .login-art {
-    width: 350px;
-    transform: scale(0.83);
-    margin-left: -8px;
-    transform-origin: left center;
+    width: 100%;
+    margin-left: 0;
     min-height: 380px;
   }
   .login-page .brand {
@@ -4002,9 +3992,7 @@ article.pufu-list-item {
   min-height: 148px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: linear-gradient(90deg, var(--wash) 25%, var(--card) 50%, var(--wash) 75%);
-  background-size: 200% 100%;
-  animation: public-skeleton-shimmer 1.4s ease-in-out infinite;
+  background: var(--wash);
 }
 .public-pufu-score-skeleton {
   margin-top: 28px;
@@ -4014,19 +4002,6 @@ article.pufu-list-item {
   border-radius: 8px;
   background: var(--wash);
   box-shadow: 0 4px 16px var(--shadow);
-}
-@keyframes public-skeleton-shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .public-skeleton-card {
-    animation: none;
-  }
 }
 .public-tabs {
   display: flex;
