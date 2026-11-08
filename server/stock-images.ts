@@ -182,7 +182,7 @@ export function stockImagesApp() {
       const concurrent = await replay();
       if (concurrent) return concurrent;
       throw new HTTPException(409, {
-        message: '画像はストックごとに10枚までです。保存先も確認してください。',
+        message: '画像はストックごとに5枚までです。保存先も確認してください。',
       });
     }
     try {

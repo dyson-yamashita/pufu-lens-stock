@@ -3,7 +3,7 @@ import { mcpJa } from './mcp-ja';
 export const mcpEn = {
   'mcp.stock_images.title': 'Attach an image to a stock',
   'mcp.stock_images.description':
-    'Attach one PNG, JPEG, GIF or WebP to an existing stock. Use the id returned by add_stock as stock_id. Supply raw Base64 without a data URL prefix, up to 5 MB per image and 10 images per stock. Requires stocks:write and access to the destination project. Attachments in public projects also appear on public pages. Images are excluded from AI summaries, questions and memory. Use a new UUID request_id per operation and reuse the same image and UUID for retries. get_stock returns the attachment list.',
+    'Attach one PNG, JPEG, GIF or WebP to an existing stock. Use the id returned by add_stock as stock_id. Supply raw Base64 without a data URL prefix, up to 5 MB per image and 5 images per stock. Requires stocks:write and access to the destination project. Attachments in public projects also appear on public pages. Images are excluded from AI summaries, questions and memory. Use a new UUID request_id per operation and reuse the same image and UUID for retries. get_stock returns the attachment list.',
   'trueで要約せず本文をそのまま採用します。既定はfalse。AIの問い・気づき・メモリ更新は通常どおり実行します。':
     'When true, adopt the body unchanged without summarizing. Defaults to false. AI questions/insights and memory updates still run.',
   '履歴の版番号を正しく指定してください。': 'Enter a valid memory history revision.',

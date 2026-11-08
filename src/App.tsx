@@ -2735,12 +2735,16 @@ function StockDetail({
       {tab === 'summary' ? (
         <div className="detail-summary">
           {youtube ? (
-            <YouTubePlayer url={stock.source_url} />
+            <>
+              <YouTubePlayer url={stock.source_url} />
+              <StockImages stockId={stock.id} view="summary" />
+            </>
           ) : stock.summary ? (
             <>
               <p className={stock.summary.verbatim ? 'verbatim-content' : undefined}>
                 <LinkedText text={stock.summary.overview} />
               </p>
+              <StockImages stockId={stock.id} view="summary" />
               {stock.summary.shortSource && (
                 <div className="local-model-note">
                   <p>{t('ui.app.this_text_is_short_so_the_original_is_shown')}</p>
@@ -2772,10 +2776,13 @@ function StockDetail({
               ) : null}
             </>
           ) : (
-            <p>
-              {(applicationError(stock.error) || undefined) ??
-                t('ui.app.generating_the_summary_please_wait')}
-            </p>
+            <>
+              <p>
+                {(applicationError(stock.error) || undefined) ??
+                  t('ui.app.generating_the_summary_please_wait')}
+              </p>
+              <StockImages stockId={stock.id} view="summary" />
+            </>
           )}
           {stock.status === 'failed' && !youtube && (
             <>

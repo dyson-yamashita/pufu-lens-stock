@@ -96,6 +96,7 @@ beforeEach(() => {
     if (url.pathname === '/api/v1/stocks') return { stocks: [stock], total: 1 };
     if (url.pathname === '/api/v1/questions') return { questions: [], total: 0 };
     if (url.pathname === '/api/v1/stocks/youtube-stock') return { stock };
+    if (url.pathname === '/api/v1/stocks/youtube-stock/images') return { images: [] };
     if (url.pathname === '/api/v1/comments') return { comments: [], has_more: false };
     throw new Error('想定外の取得先: ' + path);
   });
@@ -112,6 +113,32 @@ async function openStock() {
   expect(button).not.toBeNull();
   await act(async () => button.click());
 }
+it('要約本文の直後に添付画像を表示し、画像タブから戻ると追加分も表示する', async () => {
+  const original = vi.mocked(api).getMockImplementation()!;
+  let count = 1;
+  vi.mocked(api).mockImplementation((path, options) =>
+    path === '/api/v1/stocks/youtube-stock/images'
+      ? Promise.resolve({
+          images: Array.from({ length: count }, (_, i) => ({
+            id: String(i),
+            filename: `${i}.png`,
+          })),
+        })
+      : original(path, options),
+  );
+  await openStock();
+  const summary = document.querySelector('.detail-summary')!;
+  expect(summary.querySelector('p')?.nextElementSibling?.className).toBe('stock-image-carousel');
+  expect(summary.querySelector('img')?.getAttribute('alt')).toBe('0.png');
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')];
+  await act(async () => tabs.find((button) => button.textContent === '画像')!.click());
+  count = 2;
+  await act(async () => tabs.find((button) => button.textContent === '要約')!.click());
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('[aria-label="次の画像"]')!.click(),
+  );
+  expect(document.querySelector('.detail-summary img')?.getAttribute('alt')).toBe('1.png');
+});
 it('短い本文の案内から公開範囲の説明つきメモフォームを開き、保存エラー後も再入力できる', async () => {
   await openStock();
   const detail = document.querySelector('.stock-detail')!;

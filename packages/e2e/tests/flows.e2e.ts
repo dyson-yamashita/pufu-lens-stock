@@ -40,6 +40,11 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(screen.getByRole('heading', 'E2Eで保存した本文')).toBeVisible();
   await app.open(`/#project/${fixture.projectId}`);
   await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await expect(browser.locator('.detail-summary .stock-image-carousel img')).toHaveAttribute(
+    'alt',
+    'stock-image.png',
+  );
+  await expect(screen.getByRole('button', '次の画像')).toHaveCount(0);
   await screen.getByRole('button', '入力した本文').click();
   await expect(browser.locator('.article-body')).toContainText(sourceText);
   const data = (await fixture.request(`/stocks?project_id=${fixture.projectId}`)) as {
@@ -65,6 +70,18 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
       return Boolean(image?.complete && image.naturalWidth > 0);
     }),
   ).toBe(true);
+  await screen.getByRole('button', '要約', { exact: true }).click();
+  await expect(browser.locator('.stock-image-position')).toHaveText('1 / 2');
+  await screen.getByRole('button', '次の画像').click();
+  await expect(browser.locator('.stock-image-carousel img')).toHaveAttribute(
+    'alt',
+    'detail-image.png',
+  );
+  await screen.getByRole('button', '前の画像').click();
+  await expect(browser.locator('.stock-image-carousel img')).toHaveAttribute(
+    'alt',
+    'stock-image.png',
+  );
   await browser.reload();
   await screen.getByRole('heading', 'E2Eで保存した本文').click();
   await screen.getByRole('button', '画像', { exact: true }).click();
@@ -533,7 +550,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     '_blank',
   );
   await expect(browser.locator('.public-stock-points')).toHaveCount(0);
-  await expect(browser.locator('.public-stock-detail .stock-image-list img')).toHaveAttribute(
+  await expect(browser.locator('.public-stock-detail .stock-image-carousel img')).toHaveAttribute(
     'alt',
     'stock-image.png',
   );

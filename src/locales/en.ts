@@ -1352,6 +1352,10 @@ export const en: Record<string, string> = {
     'YouTube content cannot be recorded. Only its URL remains in stocks.',
   'boot.initial': 'Opening your knowledge shelf...',
   'stock_images.title': 'Images',
+  'stock_images.carousel': 'carousel',
+  'stock_images.previous': 'Previous image',
+  'stock_images.next': 'Next image',
+  'stock_images.load_error': 'Could not load the attached images.',
   'stock_images.partial_save':
     'The stock was saved, but some images could not be saved. Retry only the remaining images.',
   'stock_images.stock_saved': 'The stock has been saved.',
@@ -1361,7 +1365,7 @@ export const en: Record<string, string> = {
   'stock_images.request_conflict':
     'The image is still uploading or a different image was sent with the same request ID.',
   'stock_images.hint':
-    'Attach up to 10 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory. Select an image to open it in a new tab.',
+    'Attach up to 5 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory. Select an image to open it in a new tab.',
   'stock_images.attach': 'Attach image',
   'stock_images.loading': 'Loading images…',
   'stock_images.processing': 'Saving or deleting image…',
@@ -1375,8 +1379,8 @@ export const en: Record<string, string> = {
   'stock_images.invalid_type': 'Choose a PNG, JPEG, GIF or WebP image.',
   'stock_images.invalid_filename': 'Check the image filename.',
   'stock_images.limit_reached':
-    'You can attach up to 10 images per stock. Also check that the stock still exists.',
+    'You can attach up to 5 images per stock. Also check that the stock still exists.',
   'manual.stock_images':
-    'Choose files under Attach image when saving a new stock to save them with its text. Open Images in a saved stock’s details to add more. If only an image fails to save, retry it; the stock has already been saved. PNG, JPEG, GIF and WebP are supported, up to 5 MB per image and 10 images per stock. Select an image to open it in a new tab, or choose Delete to remove it. Attachments follow the project’s visibility and appear in public projects. Turning publishing off also disables their public URLs. Images are excluded from AI summaries, questions and memory. In MCP, allow stocks:write and use add_stock followed by add_stock_image. Deleting a stock, project or account also deletes its attachments.',
+    'Choose files under Attach image when saving a new stock to save them with its text. Open Images in a saved stock’s details to add more. If only an image fails to save, retry it; the stock has already been saved. PNG, JPEG, GIF and WebP are supported, up to 5 MB per image and 5 images per stock. Images also appear below the summary. With multiple images, use the previous/next buttons, left/right arrow keys or swipe horizontally to switch. Select an image to open it in a new tab, or choose Delete in the Images tab to remove it. Attachments follow the project’s visibility and appear in public projects. Turning publishing off also disables their public URLs. Images are excluded from AI summaries, questions and memory. In MCP, allow stocks:write and use add_stock followed by add_stock_image. Deleting a stock, project or account also deletes its attachments.',
   'boot.waiting': 'Preparing your shelf is taking a little longer.\nPlease wait.',
 };

@@ -40,6 +40,7 @@ let pufuTitle: string | null;
 let root: Root;
 let document: Document;
 beforeEach(() => {
+  delete stock.images;
   pufuTitle = null;
   setLanguage('ja');
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
@@ -138,6 +139,28 @@ async function navigate(hash: string) {
     window.dispatchEvent(new window.Event('hashchange'));
   });
 }
+it('公開ストックでも要約の直後に画像を表示し、公開URLのままカルーセルで切り替える', async () => {
+  stock.images = ['first', 'second'].map((id) => ({
+    id,
+    filename: `${id}.png`,
+    url: `/api/public/projects/project/stocks/stock/images/${id}`,
+    content_type: 'image/png',
+    size: 100,
+    created_at: '2026-11-08',
+  }));
+  await render('#stock/stock');
+  const summary = document.querySelector('.public-stock-detail .public-summary')!;
+  expect(summary.nextElementSibling?.className).toBe('stock-image-carousel');
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('[aria-label="次の画像"]')!.click(),
+  );
+  expect(document.querySelector('.stock-image-carousel img')?.getAttribute('alt')).toBe(
+    'second.png',
+  );
+  expect(document.querySelector('.stock-image-carousel a')?.getAttribute('href')).toBe(
+    stock.images[1].url,
+  );
+});
 it('プロジェクト取得中は public-main にレイアウト骨格を出し短い loading だけにしない', async () => {
   let resolveProject!: (value: unknown) => void;
   const load = vi.mocked(api).getMockImplementation()!;

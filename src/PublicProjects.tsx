@@ -40,6 +40,7 @@ import type {
 import { api, send } from './api';
 import QuestionLabels from './QuestionLabels';
 import LinkedText from './LinkedText';
+import StockImageCarousel from './StockImageCarousel';
 import YouTubePlayer from './YouTubePlayer';
 import YouTubeThumbnail from './YouTubeThumbnail';
 import { isYouTubeUrl, youtubeDisplayTitle } from '../shared/youtube';
@@ -649,6 +650,7 @@ function StockDetails({
           <LinkedText text={stock.summary?.overview || t('ui.public_projects.no_summary_yet')} />
         </p>
       )}
+      <StockImageCarousel images={stock.images ?? []} />
       {!youtube && stock.summary && stock.summary.keyPoints.length > 0 && (
         <section className="public-stock-points" aria-label={t('ui.public_projects.key_points')}>
           <PointsHeading>{t('ui.public_projects.key_points')}</PointsHeading>
@@ -660,21 +662,6 @@ function StockDetails({
         </section>
       )}
       <StockTopics stock={stock} />
-      {!!stock.images?.length && (
-        <section aria-label={t('stock_images.title')}>
-          <PointsHeading>{t('stock_images.title')}</PointsHeading>
-          <ul className="stock-image-list">
-            {stock.images.map((image) => (
-              <li key={image.id}>
-                <a href={image.url} target="_blank" rel="noopener noreferrer">
-                  <img src={image.url} alt={image.filename} loading="lazy" />
-                </a>
-                <span className="stock-image-name">{image.filename}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {href && (
         <a className="text-link" href={href} target="_blank" rel="noreferrer">
           {youtube ? t('ui.app.open_on_youtube') : t('ui.app.open_original_article')}{' '}
