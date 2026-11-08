@@ -627,7 +627,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.what_will_be_published': '公開する内容',
   'ui.public_projects.project_name_and_public_introduction': 'プロジェクト名と公開用の紹介文',
   'ui.public_projects.stock_titles_urls_summaries_key_points_and_topics':
-    'ストックのタイトル・URL・要約（要約せず保存した場合は原文）・要点・トピック',
+    'ストックの添付画像・タイトル・URL・要約（要約せず保存した場合は原文）・要点・トピック',
   'ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of':
     '問い・気づきと、紐づくプ譜の各局面・振り返り',
   'ui.public_projects.memories_private_notes_retrieved_article_text_and_internal_project':
@@ -1000,7 +1000,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.share_the_displayed_public_url_the_project_is_also':
     '表示された参照用URLを共有します。トップページの公開プロジェクトにも掲載されます。',
   'ui.user_manual.public_pages_can_be_viewed_without_signing_in_and':
-    '公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の関連ストックと問い・気づきは、見出しを押すと開閉できます。「◀」「▶」で前後の局面へ移動でき、画像を押すと選択中の局面を拡大して閲覧できます。ストックのタイトル・URL・要約（要約せず保存した場合は原文）・要点・トピック、問い、紐づくプ譜の各局面・振り返りが公開されます。',
+    '公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の関連ストックと問い・気づきは、見出しを押すと開閉できます。「◀」「▶」で前後の局面へ移動でき、画像を押すと選択中の局面を拡大して閲覧できます。ストックの添付画像・タイトル・URL・要約（要約せず保存した場合は原文）・要点・トピック、問い、紐づくプ譜の各局面・振り返りが公開されます。',
   'ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text':
     'メモリ・個人メモ・詳細画面のコメント欄・通常の要約保存で取得した本文・内部用のプロジェクト概要は公開しません。要約せず保存した原文、プ譜の本文やエディター内の要素コメントは公開されるため、公開前に確認してください。公開をオフにして保存すると、参照用URLからも閲覧できなくなります。',
   'ui.user_manual.use_other_apps': 'ほかのアプリから使う',
@@ -1329,5 +1329,30 @@ export const ja: Record<string, string> = {
   'error.youtube_content_cannot_be_recorded_only_its_url_remains_in':
     'YouTubeのコンテンツは記録できません。URLのみストックに残します。',
   'boot.initial': '知識の棚を開いています...',
+  'stock_images.title': '画像',
+  'stock_images.partial_save':
+    'ストックは保存済みですが、一部の画像を保存できませんでした。未保存の画像だけ再試行できます。',
+  'stock_images.stock_saved': 'ストックは保存済みです。',
+  'stock_images.finish_without_remaining': '未保存の画像を添付せず完了',
+  'stock_images.retry_upload': '未保存の画像を再試行',
+  'stock_images.request_id': '画像のリクエストIDを確認してください。',
+  'stock_images.request_conflict': '画像を保存中か、同じリクエストIDで異なる画像が送信されました。',
+  'stock_images.hint':
+    'PNG・JPEG・GIF・WebP、1枚5MBまで、10枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。画像を押すと別タブで開きます。',
+  'stock_images.attach': '画像を添付',
+  'stock_images.loading': '画像を読み込んでいます…',
+  'stock_images.processing': '画像を保存・削除しています…',
+  'stock_images.empty': '添付画像はありません。',
+  'stock_images.retry': '再読み込み',
+  'stock_images.open': '画像を開く：{{name}}',
+  'stock_images.delete': '削除',
+  'stock_images.delete_named': '画像を削除：{{name}}',
+  'stock_images.confirm_delete': '「{{name}}」を削除しますか？この操作は取り消せません。',
+  'stock_images.too_large': '画像は1枚5MBまでです。',
+  'stock_images.invalid_type': 'PNG・JPEG・GIF・WebPの画像を選んでください。',
+  'stock_images.invalid_filename': '画像のファイル名を確認してください。',
+  'stock_images.limit_reached': '画像はストックごとに10枚までです。保存先も確認してください。',
+  'manual.stock_images':
+    '新規ストックの保存画面で「画像を添付」からファイルを選ぶと、本文と一緒に保存できます。保存済みストックは詳細の「画像」から追加できます。画像だけ保存に失敗した場合は再試行でき、ストックは保存済みです。PNG・JPEG・GIF・WebPに対応し、1枚5MB・ストックごとに10枚までです。画像を押すと別タブで開き、「削除」で取り除けます。公開範囲は保存先に従い、公開プロジェクトでは画像も公開されます。非公開に戻すと画像の公開URLも閲覧できなくなります。AIの要約・問い・メモリには含まれません。MCP連携ではストック追加の権限を許可し、add_stockで保存してからadd_stock_imageで画像を添付できます。ストック・プロジェクト・アカウントを削除すると添付画像も削除されます。',
   'boot.waiting': '棚の準備に時間がかかっています。\nしばらくお待ちください',
 };

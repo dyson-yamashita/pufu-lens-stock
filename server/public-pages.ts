@@ -63,7 +63,15 @@ function stockText(stock: PublicStock, preview = false) {
       : '';
   const points =
     stock.summary?.keyPoints.map((point) => `<li>${escape(point)}</li>`).join('') ?? '';
-  return `<article${preview ? ' class="public-stock-card"' : ''}><h2>${escape(stock.title)}</h2><p class="public-summary">${body}</p>${points ? `<ul>${points}</ul>` : ''}${source}</article>`;
+  const images = !preview
+    ? (stock.images ?? [])
+        .map(
+          (image) =>
+            `<li><a href="${escape(image.url)}"><img src="${escape(image.url)}" alt="${escape(image.filename)}" loading="lazy"></a></li>`,
+        )
+        .join('')
+    : '';
+  return `<article${preview ? ' class="public-stock-card"' : ''}><h2>${escape(stock.title)}</h2><p class="public-summary">${body}</p>${points ? `<ul>${points}</ul>` : ''}${images ? `<ul class="stock-image-list">${images}</ul>` : ''}${source}</article>`;
 }
 function pufuText(score: PufuScore) {
   const labels = ['人員', '予算', '時間', '品質', '商流', '環境', '競合', '外敵'];

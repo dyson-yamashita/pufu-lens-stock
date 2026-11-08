@@ -27,6 +27,7 @@ const sections = (tr: typeof t) => [
         <p>{tr('ui.user_manual.short_text_is_shown_as_originally_written_without_expanding')}</p>
         <p>{tr('ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings')}</p>
         <p>{tr('ui.user_manual.to_change_a_title_press_the_pencil_beside_it')}</p>
+        <p>{tr('manual.stock_images')}</p>
         <p>{tr('ui.user_manual.to_delete_a_stock_open_other_actions_at_the')}</p>
         <p>{tr('ui.user_manual.to_delete_a_whole_project_open_project_deletion_at')}</p>
         <p className="manual-note">

@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { expect } from 'e2e';
 import { test, requestId } from '../src/fixtures.ts';
 import { goals } from '../src/executor.ts';
@@ -16,7 +17,26 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(screen.getByRole('dialog', '記事をストック')).toBeVisible();
   await screen.getByRole('tab', 'テキスト').click();
   await screen.getByLabel('本文').fill(sourceText);
+  let failFirstImage = true;
+  await browser.route('**/api/v1/stocks/*/images', async (route) => {
+    if (route.request.method === 'POST' && failFirstImage) {
+      failFirstImage = false;
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'E2E一時的な画像保存失敗' }),
+      });
+    }
+    await route.continue();
+  });
+  await browser
+    .locator('#new-stock-images')
+    .setInputFiles(
+      fileURLToPath(new URL('../../../tests/fixtures/stock-image.png', import.meta.url)),
+    );
   await screen.getByRole('button', 'ストックする').click();
+  await expect(screen.getByText('ストックは保存済みです。', { exact: true })).toBeVisible();
+  await screen.getByRole('button', '未保存の画像を再試行').click();
   await expect(screen.getByRole('heading', 'E2Eで保存した本文')).toBeVisible();
   await app.open(`/#project/${fixture.projectId}`);
   await screen.getByRole('heading', 'E2Eで保存した本文').click();
@@ -27,6 +47,47 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   };
   expect(data.stocks).toHaveLength(1);
   expect(data.stocks[0].project_id).toBe(fixture.projectId);
+  await screen.getByRole('button', '画像', { exact: true }).click();
+  await expect(browser.locator('.stock-image-list img')).toHaveAttribute('alt', 'stock-image.png');
+  await browser
+    .locator('.stock-images input[type="file"]')
+    .setInputFiles(
+      fileURLToPath(new URL('../../../tests/fixtures/detail-image.png', import.meta.url)),
+    );
+  const attachment = browser.locator('.stock-image-list img[alt="detail-image.png"]');
+  await expect(attachment).toHaveAttribute('alt', 'detail-image.png');
+  expect(
+    await browser.evaluate(async () => {
+      const image = document.querySelector<HTMLImageElement>(
+        '.stock-image-list img[alt="detail-image.png"]',
+      );
+      await image?.decode();
+      return Boolean(image?.complete && image.naturalWidth > 0);
+    }),
+  ).toBe(true);
+  await browser.reload();
+  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await screen.getByRole('button', '画像', { exact: true }).click();
+  await expect(attachment).toHaveAttribute('alt', 'detail-image.png');
+  const images = (await fixture.request(`/stocks/${data.stocks[0].id}/images`)) as {
+    images: { id: string }[];
+  };
+  expect(images.images).toHaveLength(2);
+  const imageUrl = `${fixture.url}/api/v1/stocks/${data.stocks[0].id}/images/${images.images[0].id}`;
+  expect((await fetch(imageUrl)).status).toBe(401);
+  const dismiss = await browser.onDialog('dismiss');
+  await screen.getByRole('button', '画像を削除：detail-image.png', { exact: true }).click();
+  await expect(attachment).toHaveCount(1);
+  await dismiss();
+  const accept = await browser.onDialog('accept');
+  await screen.getByRole('button', '画像を削除：detail-image.png', { exact: true }).click();
+  await expect(attachment).toHaveCount(0);
+  await accept();
+  await browser.reload();
+  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await screen.getByRole('button', '画像', { exact: true }).click();
+  await expect(attachment).toHaveCount(0);
+  await expect(browser.locator('.stock-image-list img')).toHaveAttribute('alt', 'stock-image.png');
   await screen.getByRole('button', '閉じる', { exact: true }).click();
   await expect(screen.getByRole('dialog')).toBeHidden();
   // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
@@ -410,6 +471,19 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     skip_summary: true,
     note: 'E2E_PRIVATE_NOTE',
   });
+  const imageResponse = await fetch(`${fixture.url}/api/v1/stocks/${stock.id}/images`, {
+    method: 'POST',
+    headers: {
+      Cookie: fixture.cookie,
+      Origin: fixture.url,
+      'Content-Type': 'image/png',
+      'X-File-Name': 'stock-image.png',
+    },
+    body: await readFile(new URL('../../../tests/fixtures/stock-image.png', import.meta.url)),
+  });
+  expect(imageResponse.status).toBe(201);
+  const { image } = (await imageResponse.json()) as { image: { id: string } };
+  const publicImageUrl = `${fixture.url}/api/public/projects/${publicId}/stocks/${stock.id}/images/${image.id}`;
   await fixture.request(`/pufus/${pufu.id}/relations`, 'PATCH', {
     revision: 1,
     question_ids: [question.id],
@@ -459,6 +533,11 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     '_blank',
   );
   await expect(browser.locator('.public-stock-points')).toHaveCount(0);
+  await expect(browser.locator('.public-stock-detail .stock-image-list img')).toHaveAttribute(
+    'alt',
+    'stock-image.png',
+  );
+  expect((await fetch(publicImageUrl)).status).toBe(200);
   await browser.reload();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
   await expect(browser.locator('.public-stock-detail .public-summary a')).toHaveAttribute(
@@ -527,6 +606,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();
   await screen.getByRole('button', '公開設定を保存').click();
   await expect(screen.getByRole('status').filter({ hasText: '非公開にしました。' })).toBeVisible();
+  expect((await fetch(publicImageUrl)).status).toBe(404);
   for (const suffix of [
     '',
     '/stocks',

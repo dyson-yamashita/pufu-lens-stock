@@ -8,6 +8,7 @@ import { publicDocumentRoutes } from '../shared/public-document-routes';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { AppEnv } from './env';
+import { stockImageMcpMaxBytes } from '../shared/stock-images';
 export { ArticleWorkflow, MemoryWorkflow } from './workflows';
 
 const app = createApp();
@@ -19,8 +20,8 @@ entry.onError((_error, c) => {
 entry.use(
   '/mcp',
   bodyLimit({
-    // プ譜保存の256KiBに、JSON-RPCの包みとツール引数の余白を加える。
-    maxSize: 278528,
+    // 5MB画像のBase64にJSON-RPCとツール引数の余白を加える。各ツールの個別制限は維持。
+    maxSize: stockImageMcpMaxBytes,
     onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
   }),
 );

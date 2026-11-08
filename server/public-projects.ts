@@ -12,6 +12,8 @@ import type {
 import type { ArticleSummary } from '../shared/domain';
 import { pufuScoreSchema } from '../shared/pufu';
 import { now } from './db';
+import { stockImageResponse } from './stock-images';
+import type { StockImage } from '../shared/stock-images';
 import { stockRelationsColumn, pufuRelationsColumns, withRelations } from './relations';
 
 const notFound = () =>
@@ -154,6 +156,15 @@ export function publicProjectsApp() {
       has_more: page * limit < total,
     });
   });
+  app.get('/projects/:key/stocks/:id/images/:imageId', async (c) => {
+    const image = await c.env.DB.prepare(
+      `SELECT i.content_key,i.content_type,i.size FROM stock_images i JOIN stocks s ON s.id=i.stock_id JOIN projects p ON p.id=s.project_id WHERE ${publicWhere} AND s.id=? AND i.id=? AND i.status='ready'`,
+    )
+      .bind(c.req.param('key'), c.req.param('id'), c.req.param('imageId'))
+      .first<StockImage & { content_key: string }>();
+    if (!image) throw notFound();
+    return stockImageResponse(c.env, image);
+  });
   app.get('/projects/:key/stocks/:id', async (c) => {
     const { page, limit, offset } = pageOptions(c.req.query('page'));
     const [stocks, questions, count] = await c.env.DB.batch<Record<string, unknown>>([
@@ -168,9 +179,20 @@ export function publicProjectsApp() {
       ).bind(c.req.param('key'), c.req.param('id')),
     ]);
     if (!stocks.results.length) throw notFound();
+    const images = await c.env.DB.prepare(
+      "SELECT id,filename,content_type,size,created_at FROM stock_images WHERE stock_id=? AND status='ready' ORDER BY created_at,id",
+    )
+      .bind(c.req.param('id'))
+      .all<StockImage>();
     const total = Number(count.results[0].total);
     return c.json({
-      stock: stock(stocks.results[0] as Parameters<typeof stock>[0]),
+      stock: {
+        ...stock(stocks.results[0] as Parameters<typeof stock>[0]),
+        images: images.results.map((image) => ({
+          ...image,
+          url: `/api/public/projects/${encodeURIComponent(c.req.param('key'))}/stocks/${encodeURIComponent(c.req.param('id'))}/images/${encodeURIComponent(image.id)}`,
+        })),
+      },
       questions: questions.results.map(withRelations),
       total,
       page,

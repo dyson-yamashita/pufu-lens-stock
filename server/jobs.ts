@@ -7,6 +7,7 @@ import { MAX_ATTEMPTS, MAX_WAIT_MS, stopWaitingJob, deferJob } from './job-retri
 import { syncSearchIndex } from './search-index';
 import { cleanupExpiredPufuImageLinks } from './pufu-image-links';
 import { cleanupLegacyUserMemory } from './privacy';
+import { cleanupStockImages } from './stock-images';
 
 export async function dispatchJobs(env: Env): Promise<void> {
   // 未開始の古い世代だけを集約する。最新の要求は上限時もpendingのまま残す。
@@ -83,6 +84,7 @@ export async function scheduledMaintenance(env: Env): Promise<void> {
   }
   await cleanupDeletedAccounts(env);
   await cleanupMemoryHistory(env);
+  await cleanupStockImages(env);
   try {
     await cleanupExpiredPufuImageLinks(env);
   } catch {

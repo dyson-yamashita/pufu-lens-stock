@@ -1,5 +1,11 @@
 // Only application-owned error messages are eligible for translation.
 export const errorKeys: Record<string, string> = {
+  '画像のリクエストIDを確認してください。': 'stock_images.request_id',
+  '画像を保存中か、同じリクエストIDで異なる画像が送信されました。': 'stock_images.request_conflict',
+  '画像は1枚5MBまでです。': 'stock_images.too_large',
+  'PNG・JPEG・GIF・WebPの画像を選んでください。': 'stock_images.invalid_type',
+  '画像のファイル名を確認してください。': 'stock_images.invalid_filename',
+  '画像はストックごとに10枚までです。保存先も確認してください。': 'stock_images.limit_reached',
   '履歴の版番号を正しく指定してください。': 'error.memory_history_revision',
   'メモリ履歴が見つかりません。': 'error.memory_history_not_found',
   'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。':

@@ -89,6 +89,8 @@ import { readPufuImageLink } from './pufu-image-links';
 import { addCommentSchema, listCommentsSchema } from '../shared/comments';
 import { addComment, listComments } from './comments';
 import { resolveLanguage } from '../shared/locale';
+import { stockImagesApp, cleanupStockImages } from './stock-images';
+import { stockImageMaxBytes } from '../shared/stock-images';
 
 const projectSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -148,19 +150,21 @@ export function createApp(trustedPrincipal?: Principal) {
     (c, next) =>
       bodyLimit({
         maxSize:
-          (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
-          (c.req.method === 'POST' && c.req.path === '/api/v1/pufus') ||
-          (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
-            ? 262144
-            : c.req.method === 'POST' &&
-                (c.req.path === '/api/v1/stocks' ||
-                  /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
-              ? 163840
+          c.req.method === 'POST' && /^\/api\/v1\/stocks\/[^/]+\/images$/.test(c.req.path)
+            ? stockImageMaxBytes
+            : (c.req.method === 'PATCH' && /^\/api\/v1\/pufus\/[^/]+$/.test(c.req.path)) ||
+                (c.req.method === 'POST' && c.req.path === '/api/v1/pufus') ||
+                (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
+              ? 262144
               : c.req.method === 'POST' &&
-                  (/^\/api\/v1\/projects\/[^/]+\/pufus\/generate$/.test(c.req.path) ||
-                    /^\/api\/v1\/questions\/[^/]+\/pufus$/.test(c.req.path))
-                ? 65536
-                : 16384,
+                  (c.req.path === '/api/v1/stocks' ||
+                    /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
+                ? 163840
+                : c.req.method === 'POST' &&
+                    (/^\/api\/v1\/projects\/[^/]+\/pufus\/generate$/.test(c.req.path) ||
+                      /^\/api\/v1\/questions\/[^/]+\/pufus$/.test(c.req.path))
+                  ? 65536
+                  : 16384,
         onError: (c) => c.json({ error: '送信内容が大きすぎます。' }, 413),
       })(c, next),
   );
@@ -220,9 +224,10 @@ export function createApp(trustedPrincipal?: Principal) {
       principal.kind === 'mcp' &&
       !(
         (c.req.method === 'GET' &&
-          /^\/api\/v1\/(comments|projects|memory(?:\/history(?:\/[^/]+)?)?|stocks|stocks\/[^/]+(?:\/content)?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
+          /^\/api\/v1\/(comments|projects|memory(?:\/history(?:\/[^/]+)?)?|stocks|stocks\/[^/]+(?:\/(?:content|images))?|pufus|questions|questions\/[^/]+(?:\/pufu(?:\/[^/]+(?:\/image)?)?)?)$/.test(
             c.req.path,
           )) ||
+        (c.req.method === 'POST' && /^\/api\/v1\/stocks\/[^/]+\/images$/.test(c.req.path)) ||
         (c.req.method === 'POST' &&
           ['/api/v1/comments', '/api/v1/stocks', '/api/v1/questions', '/api/v1/pufus'].includes(
             c.req.path,
@@ -242,6 +247,7 @@ export function createApp(trustedPrincipal?: Principal) {
     await next();
   });
   app.route('/api/v1/projects', publicationApp());
+  app.route('/api/v1/stocks/:id/images', stockImagesApp());
   app.get('/api/v1/comments', async (c) => {
     const query = c.req.query();
     const parsed = listCommentsSchema.safeParse({
@@ -436,6 +442,7 @@ export function createApp(trustedPrincipal?: Principal) {
       ...orphanCleanupStatements(c.env, user.id),
       ...dirtyMemoryStatements(c.env, user.id, []),
     ]);
+    c.executionCtx.waitUntil(cleanupStockImages(c.env));
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true });
   });
@@ -1322,6 +1329,7 @@ export function createApp(trustedPrincipal?: Principal) {
         ? dirtyMemoryStatements(c.env, user.id, [stock.project_id])
         : []),
     ]);
+    c.executionCtx.waitUntil(cleanupStockImages(c.env));
     c.executionCtx.waitUntil(dispatchJobs(c.env));
     return c.json({ ok: true });
   });

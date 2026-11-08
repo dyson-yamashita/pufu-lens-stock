@@ -660,6 +660,21 @@ function StockDetails({
         </section>
       )}
       <StockTopics stock={stock} />
+      {!!stock.images?.length && (
+        <section aria-label={t('stock_images.title')}>
+          <PointsHeading>{t('stock_images.title')}</PointsHeading>
+          <ul className="stock-image-list">
+            {stock.images.map((image) => (
+              <li key={image.id}>
+                <a href={image.url} target="_blank" rel="noopener noreferrer">
+                  <img src={image.url} alt={image.filename} loading="lazy" />
+                </a>
+                <span className="stock-image-name">{image.filename}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {href && (
         <a className="text-link" href={href} target="_blank" rel="noreferrer">
           {youtube ? t('ui.app.open_on_youtube') : t('ui.app.open_original_article')}{' '}
