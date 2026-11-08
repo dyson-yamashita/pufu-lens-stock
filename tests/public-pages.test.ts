@@ -272,7 +272,10 @@ it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.t
 });
 
 it('本文採用モードの原文全体を公開HTMLへ安全に表示する', async () => {
-  const text = '\n  原文 <img src=x onerror=alert(1)>\n\n' + '本文の内容。'.repeat(400) + '\n  ';
+  const text =
+    '\n  原文 <img src=x onerror=alert(1)>\n https://example.com/a?x=1&y=2。 javascript:alert(1)\n' +
+    '本文の内容。'.repeat(400) +
+    '\n  ';
   await app.env.DB.prepare(
     "UPDATE articles SET skip_summary = 1, summary_json = ? WHERE id = 'article'",
   )
@@ -285,6 +288,14 @@ it('本文採用モードの原文全体を公開HTMLへ安全に表示する', 
     const { document } = parseHTML(html);
     expect(html).toContain('公開ストック');
     expect(document.querySelector('#root article .public-summary')?.textContent).toBe(text);
+    const links = document.querySelectorAll('#root article .public-summary a');
+    if (path.endsWith('?view=stocks')) expect(links).toHaveLength(0);
+    else {
+      expect(links).toHaveLength(1);
+      expect(links[0].getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
+      expect(links[0].getAttribute('target')).toBe('_blank');
+      expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
+    }
     expect(document.querySelector('#root article')?.classList.contains('public-stock-card')).toBe(
       path.endsWith('?view=stocks'),
     );

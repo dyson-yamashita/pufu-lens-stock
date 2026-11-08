@@ -127,9 +127,6 @@ export const ja: Record<string, string> = {
   'ui.app.queued': '処理待ち',
   'ui.app.retrieving_article': '本文を取得中',
   'ui.app.generating_summary': '要約を生成中',
-  'ui.app.verbatim_content': '要約せず、本文をそのまま表示しています。',
-  'ui.user_manual.mcp_verbatim_stock':
-    '連携先のAIに「要約せず本文をそのまま保存して」と依頼すると、入力したテキストやURLから取得した本文をそのままストックに採用できます。通常の要約保存とは別に保存され、ログイン後の画面と公開プロジェクトで要約の代わりに原文を表示します。AIの問い・気づきとメモリの更新は通常どおり行われます（長い本文は一部を参照）。',
   'ui.app.summarized': '要約済み',
   'ui.app.retrieval_failed': '取得失敗',
   'ui.app.pufu_lens_home': 'Pufu Lens ホーム',
@@ -921,7 +918,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.choose_the_destination_project_enter_a_post_url_or':
     '保存先のプロジェクトを選び、投稿URLか本文を入力して「ストックする」を押します。',
   'ui.user_manual.open_the_added_card_to_view_its_summary_key':
-    '追加したカードを開くと、要約・要点・問いを確認できます。',
+    '追加したカードを開くと、要約・要点・問いを確認できます。本文中のURLはリンクから開けます。',
   'ui.user_manual.to_add_a_note_or_a_title_for_text':
     '保存時にメモやテキストのタイトルを付ける場合は、「詳細」を開いて入力します。',
   'ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with':

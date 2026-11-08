@@ -157,7 +157,6 @@ const sections = (tr: typeof t) => [
           <strong>{tr('ui.user_manual.connect_chatgpt_and_other_apps')}</strong>
           {tr('ui.user_manual.register_the_url_under_integrations_mcp_integration_in_the')}
         </li>
-        <li>{tr('ui.user_manual.mcp_verbatim_stock')}</li>
         <li>{tr('ui.user_manual.edit_mcp_connection')}</li>
         <li>{tr('manual.mcp_project_memory')}</li>
         <li>

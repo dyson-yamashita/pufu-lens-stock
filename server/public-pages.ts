@@ -18,6 +18,7 @@ import { publicPathPattern } from '../shared/public-route';
 import { articleJsonLd } from '../shared/seo';
 import { publicDocumentAssetPaths } from '../shared/public-document-routes';
 import { homePath, legalPath, manualPath, siteOrigin } from '../shared/site-paths';
+import { textLinks } from '../shared/text-links';
 
 const publicApi = publicProjectsApp();
 const sitemapSize = 1000;
@@ -46,13 +47,23 @@ async function readPublic<T>(c: Context<AppEnv>, path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 function stockText(stock: PublicStock, preview = false) {
+  const overview = stock.summary?.overview ?? '';
+  const body = preview
+    ? escape(overview)
+    : textLinks(overview)
+        .map((part) =>
+          part.href
+            ? `<a class="body-link" href="${escape(part.href)}" target="_blank" rel="noopener noreferrer">${escape(part.text)}</a>`
+            : escape(part.text),
+        )
+        .join('');
   const source =
     stock.source_url && /^https?:\/\//i.test(stock.source_url)
       ? link(stock.source_url, '出典を読む')
       : '';
   const points =
     stock.summary?.keyPoints.map((point) => `<li>${escape(point)}</li>`).join('') ?? '';
-  return `<article${preview ? ' class="public-stock-card"' : ''}><h2>${escape(stock.title)}</h2><p class="public-summary">${escape(stock.summary?.overview ?? '')}</p>${points ? `<ul>${points}</ul>` : ''}${source}</article>`;
+  return `<article${preview ? ' class="public-stock-card"' : ''}><h2>${escape(stock.title)}</h2><p class="public-summary">${body}</p>${points ? `<ul>${points}</ul>` : ''}${source}</article>`;
 }
 function pufuText(score: PufuScore) {
   const labels = ['人員', '予算', '時間', '品質', '商流', '環境', '競合', '外敵'];

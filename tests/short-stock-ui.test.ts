@@ -215,14 +215,35 @@ it.each(['text', 'url'] as const)(
   },
 );
 
-it('本文採用モードは原文全体を表示し、短文用の案内や存在しない要点を表示しない', async () => {
-  const text = '\n  原文の空白と改行を保ちます。\n\n' + '内容を省略しない。'.repeat(200) + '\n  ';
+it('本文採用モードは原文を保ちURLをリンク化し、短文用の案内や空の要点を表示しない', async () => {
+  const text =
+    '\n  原文の空白と改行を保ちます。https://example.com/a?x=1&y=2\n\n' +
+    '<img src=x onerror=alert(1)> javascript:alert(1) ' +
+    '内容を省略しない。'.repeat(200) +
+    '\n  ';
   stock.summary = { overview: text, keyPoints: [], topics: [], verbatim: true };
   stock.model = 'source-verbatim';
   await openStock();
   const detail = document.querySelector('.detail-summary')!;
   expect(detail.querySelector('.verbatim-content')?.textContent).toBe(text);
-  expect(detail.textContent).toContain('要約せず、本文をそのまま表示しています。');
+  const link = detail.querySelector('.verbatim-content a')!;
+  expect(link.getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
+  expect(link.getAttribute('target')).toBe('_blank');
+  expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  expect(detail.querySelectorAll('.verbatim-content a')).toHaveLength(1);
+  expect(detail.querySelector('img[onerror]')).toBeNull();
   expect(detail.textContent).not.toContain('本文が短いため');
   expect(detail.querySelector('h4')).toBeNull();
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (path, options) =>
+    path === `/api/v1/stocks/${stock.id}/content` ? { content: text } : load(path, options),
+  );
+  const contentTab = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+    (button) => button.textContent === '入力した本文',
+  )!;
+  await act(async () => contentTab.click());
+  const body = document.querySelector('.article-body')!;
+  expect(body.textContent).toBe(text);
+  expect(body.querySelector('a')?.getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
+  expect(body.querySelector('img[onerror]')).toBeNull();
 });
