@@ -218,7 +218,9 @@ it('一覧のストックは詳細へのリンクで、要点は詳細で関連�
 });
 it('本文採用モードは一覧・詳細・問いの関連ストックに原文を表示し空の要点を出さない', async () => {
   const text =
-    '\n  原文 <img src=x onerror=alert(1)>\n\n' + '内容を省略しない。'.repeat(200) + '\n  ';
+    '\n  原文 <img src=x onerror=alert(1)>\n https://example.com/a?x=1&y=2。\n' +
+    '内容を省略しない。'.repeat(200) +
+    '\n  ';
   const verbatimStock = {
     ...stock,
     summary: { overview: text, keyPoints: [], topics: [], verbatim: true },
@@ -236,7 +238,10 @@ it('本文採用モードは一覧・詳細・問いの関連ストックに原�
     await navigate(hash);
     const detail = document.querySelector('.public-stock-detail')!;
     expect(detail.querySelector('.public-summary')?.textContent).toBe(text);
-    expect(detail.textContent).toContain('要約せず、本文をそのまま表示しています。');
+    const link = detail.querySelector('.public-summary a')!;
+    expect(link.getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
     expect(detail.textContent).not.toContain('要約はまだありません。');
     expect(detail.querySelector('.public-stock-points')).toBeNull();
     expect(detail.querySelector('img[onerror]')).toBeNull();

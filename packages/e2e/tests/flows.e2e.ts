@@ -31,7 +31,9 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(screen.getByRole('dialog')).toBeHidden();
   // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
   const verbatimText =
-    '  原文の段落を保ちます。\n\n' + '長い本文を省略せず採用します。'.repeat(100) + '\n  ';
+    '  原文の段落を保ちます。https://example.com/source?x=1&y=2\n\n' +
+    '長い本文を省略せず採用します。'.repeat(100) +
+    '\n  ';
   const verbatim = await fixture.request('/stocks', 'POST', {
     type: 'text',
     project_id: fixture.projectId,
@@ -41,13 +43,19 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   });
   await app.open(`/#project/${fixture.projectId}`);
   await screen.getByRole('heading', 'E2E要約しない本文', { exact: true }).click();
-  await expect(
-    screen.getByText('要約せず、本文をそのまま表示しています。', { exact: true }),
-  ).toBeVisible();
   await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
+  await expect(browser.locator('.verbatim-content a')).toHaveAttribute(
+    'href',
+    'https://example.com/source?x=1&y=2',
+  );
+  await expect(browser.locator('.verbatim-content a')).toHaveAttribute('target', '_blank');
   await browser.reload();
   await screen.getByRole('heading', 'E2E要約しない本文', { exact: true }).click();
   await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
+  await expect(browser.locator('.verbatim-content a')).toHaveAttribute(
+    'href',
+    'https://example.com/source?x=1&y=2',
+  );
   expect(await fixture.request(`/stocks/${verbatim.id}`)).toMatchObject({
     stock: { summary: { overview: verbatimText, verbatim: true } },
   });
@@ -55,6 +63,12 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
     () => getComputedStyle(document.querySelector('.verbatim-content')!).whiteSpace,
   );
   expect(whiteSpace).toBe('pre-wrap');
+  await screen.getByRole('button', '入力した本文', { exact: true }).click();
+  await expect(browser.locator('.article-body')).toHaveText(verbatimText);
+  await expect(browser.locator('.article-body a')).toHaveAttribute(
+    'href',
+    'https://example.com/source?x=1&y=2',
+  );
 });
 
 test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して一覧へ戻る', async ({
@@ -385,7 +399,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     score,
   })) as { pufu: { id: string } };
   const verbatimText =
-    '  公開とログイン後の画面で原文を表示します。\n\n' +
+    '  公開とログイン後の画面で原文を表示します。https://example.com/public?x=1&y=2\n\n' +
     '長い本文の空白と改行を保持します。'.repeat(100) +
     '\n  原文の末尾。\n  ';
   const stock = await fixture.request('/stocks', 'POST', {
@@ -436,9 +450,21 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
   await browser.locator('.public-stock-card').click();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
+  await expect(browser.locator('.public-stock-detail .public-summary a')).toHaveAttribute(
+    'href',
+    'https://example.com/public?x=1&y=2',
+  );
+  await expect(browser.locator('.public-stock-detail .public-summary a')).toHaveAttribute(
+    'target',
+    '_blank',
+  );
   await expect(browser.locator('.public-stock-points')).toHaveCount(0);
   await browser.reload();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
+  await expect(browser.locator('.public-stock-detail .public-summary a')).toHaveAttribute(
+    'href',
+    'https://example.com/public?x=1&y=2',
+  );
   await expect(screen.getByText('要約はまだありません。', { exact: true })).toHaveCount(0);
   const whiteSpace = await browser.evaluate(
     () =>

@@ -2046,6 +2046,11 @@ p {
   font-size: 14px;
   line-height: 2;
 }
+.body-link {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  overflow-wrap: anywhere;
+}
 .detail-summary .verbatim-content {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

@@ -126,9 +126,6 @@ export const en: Record<string, string> = {
   'ui.app.queued': 'Queued',
   'ui.app.retrieving_article': 'Retrieving article',
   'ui.app.generating_summary': 'Generating summary',
-  'ui.app.verbatim_content': 'The body is shown unchanged, without summarizing.',
-  'ui.user_manual.mcp_verbatim_stock':
-    'Ask the connected AI to save the body without summarizing to adopt your text or the body retrieved from a URL unchanged. This is saved separately from a summarized stock. The original body replaces the summary in both signed-in views and public projects. AI questions, insights and memory updates still run as usual, using excerpts for long bodies.',
   'ui.app.summarized': 'Summarized',
   'ui.app.retrieval_failed': 'Retrieval failed',
   'ui.app.pufu_lens_home': 'Pufu Lens home',
@@ -934,7 +931,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.choose_the_destination_project_enter_a_post_url_or':
     'Choose the destination project, enter a post URL or article text, and press Save stock.',
   'ui.user_manual.open_the_added_card_to_view_its_summary_key':
-    'Open the added card to view its summary, key points and questions.',
+    'Open the added card to view its summary, key points and questions. URLs in the body can be opened as links.',
   'ui.user_manual.to_add_a_note_or_a_title_for_text':
     'To add a note or a title for text while saving, open Details.',
   'ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with':

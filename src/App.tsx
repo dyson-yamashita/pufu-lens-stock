@@ -10,6 +10,7 @@ import {
   manualHref,
 } from './i18n';
 import LanguageSelect from './LanguageSelect';
+import LinkedText from './LinkedText';
 import type { Language } from '../shared/locale';
 import {
   useCallback,
@@ -2647,11 +2648,8 @@ function StockDetail({
           ) : stock.summary ? (
             <>
               <p className={stock.summary.verbatim ? 'verbatim-content' : undefined}>
-                {stock.summary.overview}
+                <LinkedText text={stock.summary.overview} />
               </p>
-              {stock.summary.verbatim && (
-                <p className="local-model-note">{t('ui.app.verbatim_content')}</p>
-              )}
               {stock.summary.shortSource && (
                 <div className="local-model-note">
                   <p>{t('ui.app.this_text_is_short_so_the_original_is_shown')}</p>
@@ -2746,7 +2744,9 @@ function StockDetail({
           </p>
         ) : (
           <pre className="article-body">
-            {content ?? t('ui.app.no_retrieved_text_is_available_for_sample_articles_open')}
+            <LinkedText
+              text={content ?? t('ui.app.no_retrieved_text_is_available_for_sample_articles_open')}
+            />
           </pre>
         )
       ) : tab === 'note' ? (
