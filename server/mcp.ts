@@ -32,6 +32,11 @@ import type { User } from '../shared/domain';
 import type { McpContext } from './mcp-oauth';
 import { addCommentSchema, listCommentsSchema } from '../shared/comments';
 import {
+  stockImageMaxBase64Length,
+  stockImageMaxBytes,
+  stockImageTypes,
+} from '../shared/stock-images';
+import {
   type MemoryCoverage,
   stockInputSchema,
   stockListOptionsSchema,
@@ -193,16 +198,29 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     const ids = allowedProjectIds(principal);
     return requested ?? (ids?.length === 1 ? ids[0] : undefined);
   };
-  async function invoke(path: string, method = 'GET', body?: unknown, requestId?: string) {
+  async function invoke(
+    path: string,
+    method = 'GET',
+    body?: unknown,
+    requestId?: string,
+    binary?: { bytes: Uint8Array; type: string; filename: string },
+  ) {
     const response = await api.request(
       `${env.APP_URL}/api/v1/${path}`,
       {
         method,
         headers: {
           'Content-Type': 'application/json',
+          ...(binary
+            ? { 'Content-Type': binary.type, 'X-File-Name': encodeURIComponent(binary.filename) }
+            : {}),
           ...(requestId ? { 'Idempotency-Key': requestId } : {}),
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: binary
+          ? new Blob([binary.bytes as Uint8Array<ArrayBuffer>])
+          : body === undefined
+            ? undefined
+            : JSON.stringify(body),
       },
       env,
       ctx,
@@ -431,6 +449,8 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
     ({ stock_id, include_content }) =>
       run('stocks:read', async () => {
         const data = await ownedDetail('stocks', stock_id);
+        const { images } = await invoke(`stocks/${encodeURIComponent(stock_id)}/images`);
+        data.images = images;
         if (include_content) {
           const content = (await invoke(`stocks/${encodeURIComponent(stock_id)}/content`)).content;
           const text = typeof content === 'string' ? content : null;
@@ -475,6 +495,38 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
         if (!parsed.success)
           throw new ToolError('URLまたはテキストの入力内容を確認してください。', 400);
         return invoke('stocks', 'POST', parsed.data, request_id);
+      }),
+  );
+  register(
+    'add_stock_image',
+    {
+      title: 'mcp.stock_images.title',
+      description: 'mcp.stock_images.description',
+      inputSchema: z.object({
+        stock_id: id,
+        filename: z.string().trim().min(1).max(255),
+        content_type: z.enum(stockImageTypes),
+        base64: z.string().min(4).max(stockImageMaxBase64Length),
+        request_id: z.uuid(),
+      }),
+      annotations: add,
+      _meta: security('stocks:write'),
+    },
+    (args) =>
+      run('stocks:write', async () => {
+        // Check ownership and selected-project scope before decoding a potentially large image.
+        await ownedDetail('stocks', args.stock_id);
+        if (args.base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(args.base64))
+          throw new ToolError('PNG・JPEG・GIF・WebPの画像を選んでください。', 400);
+        const bytes = Buffer.from(args.base64, 'base64');
+        if (bytes.length > stockImageMaxBytes) throw new ToolError('画像は1枚5MBまでです。', 413);
+        return invoke(
+          `stocks/${encodeURIComponent(args.stock_id)}/images`,
+          'POST',
+          undefined,
+          args.request_id,
+          { bytes, type: args.content_type, filename: args.filename },
+        );
       }),
   );
   register(

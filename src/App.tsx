@@ -11,6 +11,9 @@ import {
 } from './i18n';
 import LanguageSelect from './LanguageSelect';
 import LinkedText from './LinkedText';
+import StockImages from './StockImages';
+import { stockImageFileError, uploadStockImage } from './stock-image-upload';
+import { stockImageLimit, stockImageTypes } from '../shared/stock-images';
 import type { Language } from '../shared/locale';
 import {
   useCallback,
@@ -2226,6 +2229,50 @@ function SaveForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const key = useRef(createRequestId());
+  const [images, setImages] = useState<{ file: File; requestId: string }[]>([]);
+  const [saved, setSaved] = useState<{
+    duplicate: boolean;
+    youtube: boolean;
+    stock: SavedStock;
+  } | null>(null);
+  async function attachImages(result: NonNullable<typeof saved>) {
+    setBusy(true);
+    setError('');
+    try {
+      for (const image of images) {
+        await uploadStockImage(result.stock.id, image.file, image.requestId);
+        setImages((current) => current.filter((item) => item.requestId !== image.requestId));
+      }
+      onDone(result.duplicate, result.youtube, result.stock);
+    } catch (e) {
+      setError(t('stock_images.partial_save') + ' ' + applicationError((e as Error).message));
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (saved)
+    return (
+      <div>
+        <p role="status">{busy ? t('stock_images.processing') : t('stock_images.stock_saved')}</p>
+        <FormError error={error} />
+        <div className="form-actions">
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => onDone(saved.duplicate, saved.youtube, saved.stock)}
+          >
+            {t('stock_images.finish_without_remaining')}
+          </button>
+          <button
+            className="button primary"
+            disabled={busy}
+            onClick={() => void attachImages(saved)}
+          >
+            {t('stock_images.retry_upload')}
+          </button>
+        </div>
+      </div>
+    );
   return (
     <form
       onSubmit={async (event: FormEvent) => {
@@ -2260,11 +2307,19 @@ function SaveForm({
             headers: { 'Idempotency-Key': key.current },
             body: JSON.stringify(parsed.data),
           });
-          onDone(result.duplicate, parsed.data.type === 'url' && isYouTubeUrl(parsed.data.url), {
-            id: result.id,
-            projectId: target,
-            label: title.trim() || (type === 'url' ? url : text.slice(0, 80)),
-          });
+          const savedStock = {
+            duplicate: result.duplicate,
+            youtube: parsed.data.type === 'url' && isYouTubeUrl(parsed.data.url),
+            stock: {
+              id: result.id,
+              projectId: target,
+              label: title.trim() || (type === 'url' ? url : text.slice(0, 80)),
+            },
+          };
+          if (images.length) {
+            setSaved(savedStock);
+            await attachImages(savedStock);
+          } else onDone(savedStock.duplicate, savedStock.youtube, savedStock.stock);
         } catch (e) {
           setError(applicationError((e as Error).message));
           if ((e as ApiError).status === 409) key.current = createRequestId();
@@ -2429,6 +2484,40 @@ function SaveForm({
           />
         </details>
       </div>
+      <label htmlFor="new-stock-images">{t('stock_images.attach')}</label>
+      <p id="new-stock-images-hint" className="local-model-note">
+        {t('stock_images.hint')}
+      </p>
+      <input
+        id="new-stock-images"
+        type="file"
+        multiple
+        accept={stockImageTypes.join(',')}
+        disabled={busy}
+        aria-describedby="new-stock-images-hint"
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          const validationError =
+            files.length > stockImageLimit
+              ? t('stock_images.limit_reached')
+              : files.map(stockImageFileError).find(Boolean);
+          if (validationError) {
+            setError(validationError);
+            setImages([]);
+            event.currentTarget.value = '';
+            return;
+          }
+          setError('');
+          setImages(files.map((file) => ({ file, requestId: createRequestId() })));
+        }}
+      />
+      {images.length > 0 && (
+        <ul>
+          {images.map((image) => (
+            <li key={image.requestId}>{image.file.name}</li>
+          ))}
+        </ul>
+      )}
       <FormError error={error} />
       <div className="form-actions">
         <button className="button primary" disabled={busy || !target}>
@@ -2615,12 +2704,14 @@ function StockDetail({
         {(youtube
           ? [
               ['summary', t('ui.app.video')],
+              ['images', t('stock_images.title')],
               ['comments', t('ui.app.comments')],
               ['note', t('ui.app.note_destination')],
             ]
           : [
               ['summary', t('ui.app.summary')],
               ['question', t('ui.app.questions_insights')],
+              ['images', t('stock_images.title')],
               ['comments', t('ui.app.comments')],
               [
                 'content',
@@ -2736,6 +2827,8 @@ function StockDetail({
         </div>
       ) : tab === 'question' ? (
         <StockQuestion stockId={stock.id} onQuestion={onQuestion} />
+      ) : tab === 'images' ? (
+        <StockImages key={stock.id} stockId={stock.id} />
       ) : tab === 'content' ? (
         content === undefined ? (
           <p className="content-loading">

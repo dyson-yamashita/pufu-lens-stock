@@ -629,7 +629,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.what_will_be_published': 'What will be published',
   'ui.public_projects.project_name_and_public_introduction': 'Project name and public introduction',
   'ui.public_projects.stock_titles_urls_summaries_key_points_and_topics':
-    'Stock titles, URLs, summaries (or original bodies saved without summarizing), key points and topics',
+    'Stock attachments, titles, URLs, summaries (or original bodies saved without summarizing), key points and topics',
   'ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of':
     'Questions, insights, and all phases and reflections of linked Pufu',
   'ui.public_projects.memories_private_notes_retrieved_article_text_and_internal_project':
@@ -1351,5 +1351,32 @@ export const en: Record<string, string> = {
   'error.youtube_content_cannot_be_recorded_only_its_url_remains_in':
     'YouTube content cannot be recorded. Only its URL remains in stocks.',
   'boot.initial': 'Opening your knowledge shelf...',
+  'stock_images.title': 'Images',
+  'stock_images.partial_save':
+    'The stock was saved, but some images could not be saved. Retry only the remaining images.',
+  'stock_images.stock_saved': 'The stock has been saved.',
+  'stock_images.finish_without_remaining': 'Finish without remaining images',
+  'stock_images.retry_upload': 'Retry remaining images',
+  'stock_images.request_id': 'Check the image request ID.',
+  'stock_images.request_conflict':
+    'The image is still uploading or a different image was sent with the same request ID.',
+  'stock_images.hint':
+    'Attach up to 10 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory. Select an image to open it in a new tab.',
+  'stock_images.attach': 'Attach image',
+  'stock_images.loading': 'Loading images…',
+  'stock_images.processing': 'Saving or deleting image…',
+  'stock_images.empty': 'No attached images.',
+  'stock_images.retry': 'Reload',
+  'stock_images.open': 'Open image: {{name}}',
+  'stock_images.delete': 'Delete',
+  'stock_images.delete_named': 'Delete image: {{name}}',
+  'stock_images.confirm_delete': 'Delete “{{name}}”? This cannot be undone.',
+  'stock_images.too_large': 'Each image must be within 5 MB.',
+  'stock_images.invalid_type': 'Choose a PNG, JPEG, GIF or WebP image.',
+  'stock_images.invalid_filename': 'Check the image filename.',
+  'stock_images.limit_reached':
+    'You can attach up to 10 images per stock. Also check that the stock still exists.',
+  'manual.stock_images':
+    'Choose files under Attach image when saving a new stock to save them with its text. Open Images in a saved stock’s details to add more. If only an image fails to save, retry it; the stock has already been saved. PNG, JPEG, GIF and WebP are supported, up to 5 MB per image and 10 images per stock. Select an image to open it in a new tab, or choose Delete to remove it. Attachments follow the project’s visibility and appear in public projects. Turning publishing off also disables their public URLs. Images are excluded from AI summaries, questions and memory. In MCP, allow stocks:write and use add_stock followed by add_stock_image. Deleting a stock, project or account also deletes its attachments.',
   'boot.waiting': 'Preparing your shelf is taking a little longer.\nPlease wait.',
 };

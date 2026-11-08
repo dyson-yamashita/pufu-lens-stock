@@ -1,6 +1,7 @@
 import type { PufuRelations, StockRelations } from './relations';
 import type { ArticleSummary } from './domain';
 import type { PufuScore } from './pufu';
+import type { StockImage } from './stock-images';
 
 export type Publication = {
   is_public: boolean;
@@ -20,6 +21,7 @@ export type PublicProject = {
 };
 export type PublicProjectDetail = PublicProject & { search_indexable: number };
 export type PublicStock = {
+  images?: (StockImage & { url: string })[];
   id: string;
   title: string;
   source_url: string | null;

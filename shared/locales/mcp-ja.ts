@@ -1,4 +1,7 @@
 export const mcpJa = {
+  'mcp.stock_images.title': 'ストックに画像を添付',
+  'mcp.stock_images.description':
+    '既存ストックにPNG・JPEG・GIF・WebP画像を1枚添付します。add_stockの戻り値のidをstock_idに指定してください。base64はdata URLの接頭辞を除いた画像のBase64で、1枚5MB・ストックごとに10枚まで。stocks:writeと保存先プロジェクトへの許可が必要です。公開プロジェクトの添付画像は公開ページにも表示されます。AIの要約・問い・メモリには含めません。request_idは操作ごとに新しいUUIDを指定し、通信再試行時は同じ画像とUUIDを使ってください。get_stockで添付一覧を取得できます。',
   'trueで要約せず本文をそのまま採用します。既定はfalse。AIの問い・気づき・メモリ更新は通常どおり実行します。':
     'trueで要約せず本文をそのまま採用します。既定はfalse。AIの問い・気づき・メモリ更新は通常どおり実行します。',
   '履歴の版番号を正しく指定してください。': '履歴の版番号を正しく指定してください。',
