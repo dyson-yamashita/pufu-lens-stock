@@ -40,6 +40,13 @@
   --pending-bg: #f8f0df;
   --overlay: #172b485b;
   --shadow: #15243d30;
+  --brand-action: linear-gradient(115deg, #075fa5, #087a8b);
+  --brand-action-hover: linear-gradient(115deg, #084c86, #086574);
+  --brand-glow-blue: #a9d7ff80;
+  --brand-glow-cyan: #b1f0ed99;
+  --brand-surface: linear-gradient(135deg, #ffffff 15%, #f2f9ff 65%, #e5f8f8);
+  --brand-panel: linear-gradient(135deg, #eef7ff, #e5f7f8);
+  --brand-shadow: 0 16px 40px #23638b0d;
   color-scheme: light;
 }
 :root[data-theme='dark'] {
@@ -76,6 +83,13 @@
   --pending-bg: #3b3222;
   --overlay: #030812b3;
   --shadow: #0008;
+  --brand-action: linear-gradient(115deg, #91bfff, #78e1dc);
+  --brand-action-hover: linear-gradient(115deg, #b4d5ff, #a5f2e9);
+  --brand-glow-blue: #28579c66;
+  --brand-glow-cyan: #167d8852;
+  --brand-surface: linear-gradient(135deg, #19283e 15%, #16273b 65%, #15363e);
+  --brand-panel: linear-gradient(135deg, #1d3555, #19434b);
+  --brand-shadow: 0 16px 40px #00000026;
 }
 * {
   box-sizing: border-box;
@@ -260,11 +274,11 @@ p {
   white-space: nowrap;
 }
 .primary {
-  background: var(--button);
+  background: var(--brand-action, var(--button));
   color: var(--on-button);
 }
 .primary:hover:not(:disabled) {
-  background: var(--button-hover);
+  background: var(--brand-action-hover, var(--button-hover));
 }
 .secondary {
   background: var(--card);
@@ -436,6 +450,8 @@ p {
   }
 }
 .app-shell {
+  background:
+    radial-gradient(ellipse at 90% 0, var(--brand-glow-cyan), transparent 42%), var(--page);
   display: flex;
   min-height: 100vh;
 }
@@ -443,7 +459,7 @@ p {
   width: 272px;
   flex-shrink: 0;
   padding: 34px 20px 0;
-  background: var(--sidebar);
+  background: linear-gradient(165deg, var(--sidebar) 35%, var(--wash), var(--selected));
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -1090,6 +1106,7 @@ p {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  box-shadow: var(--brand-shadow);
 }
 .article-card:hover {
   border-color: var(--field-border);
@@ -1246,7 +1263,7 @@ p {
   font-size: 12px;
 }
 .memory-card {
-  background: var(--wash);
+  background: var(--brand-panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 21px 21px 0;
@@ -1445,7 +1462,7 @@ p {
   margin-bottom: 20px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--card);
+  background: var(--brand-surface);
 }
 .first-steps h2 {
   font-size: 16px;
@@ -2426,7 +2443,10 @@ p {
 .login-page {
   --login-accent: var(--primary);
   min-height: 100dvh;
-  background: var(--page);
+  background:
+    radial-gradient(ellipse 70% 650px at 85% 180px, var(--brand-glow-cyan), transparent 75%),
+    radial-gradient(ellipse 65% 700px at 20% 0, var(--brand-glow-blue), transparent 75%),
+    var(--page);
   overflow: hidden;
 }
 .login-page > header {
@@ -2530,11 +2550,12 @@ p {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .what-you-can-do-item {
+  box-shadow: var(--brand-shadow);
   min-width: 0;
   padding: 24px;
-  border-radius: 14px;
+  border-radius: 22px;
   border: 1px solid var(--border);
-  background: var(--card);
+  background: var(--brand-surface);
 }
 .what-you-can-do-heading {
   display: flex;
@@ -2566,7 +2587,7 @@ p {
   line-height: 1.8;
 }
 .login-art {
-  background: radial-gradient(ellipse at center, var(--selected), transparent 70%);
+  background: radial-gradient(ellipse 50% 50% at center, var(--brand-glow-cyan), transparent);
   position: relative;
   min-height: 420px;
 }
@@ -2591,9 +2612,10 @@ p {
   width: 340px;
   margin: 84px auto 0;
   padding: 30px;
-  background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 13px;
+  border-radius: 22px;
+  background: var(--brand-surface);
+  box-shadow: var(--brand-shadow);
   transform: rotate(-5deg);
 }
 .art-article h3 {
@@ -2630,12 +2652,13 @@ p {
   align-items: center;
   gap: 13px;
   position: relative;
-  background: var(--selected);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 21px;
   width: 376px;
   margin: -10px auto 0;
+  background: var(--brand-panel);
+  box-shadow: var(--brand-shadow);
   transform: rotate(3deg);
 }
 .art-memory-icon {
