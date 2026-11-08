@@ -168,15 +168,15 @@ it('形式偽装・SVG・空・過大入力を拒否し、ファイル名を検�
 });
 
 it('並行アップロードでも上限を守り、削除後は再添付できる', async () => {
-  const responses = await Promise.all(Array.from({ length: 12 }, () => upload()));
-  expect(responses.filter((response) => response.status === 201)).toHaveLength(10);
+  const responses = await Promise.all(Array.from({ length: 7 }, () => upload()));
+  expect(responses.filter((response) => response.status === 201)).toHaveLength(5);
   expect(responses.filter((response) => response.status === 409)).toHaveLength(2);
   const { images } = (await (await app.request(base)).json()) as { images: StockImage[] };
   expect((await app.request(`${base}/${images[0].id}`, { method: 'DELETE' })).status).toBe(200);
   expect((await app.request(`${base}/${images[0].id}`)).status).toBe(404);
-  expect(await objects()).toHaveLength(9);
+  expect(await objects()).toHaveLength(4);
   await saved();
-  expect(await objects()).toHaveLength(10);
+  expect(await objects()).toHaveLength(5);
 });
 
 it.each(['stock', 'project', 'account'])(
@@ -349,4 +349,12 @@ it('MCPの追加権限とプロジェクト範囲を守り、Base64画像を添�
   const detail = await call(readToken, { stock_id: 'stock' }, 'get_stock');
   expect(detail.structuredContent.images).toMatchObject([{ filename: 'mcp.png' }]);
   expect(await objects()).toHaveLength(1);
+  for (let i = 0; i < 4; i++)
+    expect((await call(token, { ...args, request_id: crypto.randomUUID() })).isError).not.toBe(
+      true,
+    );
+  const sixth = await call(token, { ...args, request_id: crypto.randomUUID() });
+  expect(sixth.isError).toBe(true);
+  expect(sixth.structuredContent.status).toBe(409);
+  expect(await objects()).toHaveLength(5);
 });

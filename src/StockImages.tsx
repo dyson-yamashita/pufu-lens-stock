@@ -4,8 +4,15 @@ import { api, createRequestId } from './api';
 import { stockImageFileError, uploadStockImage } from './stock-image-upload';
 import { applicationError, t, useLanguage } from './i18n';
 import { stockImageLimit, stockImageTypes, type StockImage } from '../shared/stock-images';
+import StockImageCarousel from './StockImageCarousel';
 
-export default function StockImages({ stockId }: { stockId: string }) {
+export default function StockImages({
+  stockId,
+  view = 'manage',
+}: {
+  stockId: string;
+  view?: 'manage' | 'summary';
+}) {
   useLanguage();
   const [images, setImages] = useState<StockImage[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,6 +34,29 @@ export default function StockImages({ stockId }: { stockId: string }) {
       active = false;
     };
   }, [base, revision]);
+  if (view === 'summary')
+    return images ? (
+      <StockImageCarousel
+        images={images.map((image) => ({
+          ...image,
+          url: `${base}/${encodeURIComponent(image.id)}`,
+        }))}
+      />
+    ) : error ? (
+      <div className="stock-image-load-error">
+        <p role="alert">{t('stock_images.load_error')}</p>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => {
+            setError('');
+            setRevision((current) => current + 1);
+          }}
+        >
+          {t('stock_images.retry')}
+        </button>
+      </div>
+    ) : null;
   return (
     <section className="stock-images" aria-label={t('stock_images.title')} aria-busy={busy}>
       <p id={hintId} className="local-model-note">

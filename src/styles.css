@@ -1751,6 +1751,43 @@ p {
   list-style: none;
   padding: 0;
 }
+.stock-image-carousel {
+  margin: 20px 0;
+  min-width: 0;
+}
+.stock-image-slide {
+  touch-action: pan-y pinch-zoom;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.stock-image-slide a {
+  display: block;
+}
+.stock-image-slide img {
+  display: block;
+  width: 100%;
+  height: clamp(200px, 40vh, 360px);
+  object-fit: contain;
+}
+.stock-image-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 8px;
+}
+.stock-image-controls .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.stock-image-caption {
+  margin: 8px 0 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
 .stock-image-list li {
   display: flex;
   flex-direction: column;

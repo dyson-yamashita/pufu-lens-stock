@@ -1330,6 +1330,10 @@ export const ja: Record<string, string> = {
     'YouTubeのコンテンツは記録できません。URLのみストックに残します。',
   'boot.initial': '知識の棚を開いています...',
   'stock_images.title': '画像',
+  'stock_images.carousel': 'カルーセル',
+  'stock_images.previous': '前の画像',
+  'stock_images.next': '次の画像',
+  'stock_images.load_error': '添付画像を読み込めませんでした。',
   'stock_images.partial_save':
     'ストックは保存済みですが、一部の画像を保存できませんでした。未保存の画像だけ再試行できます。',
   'stock_images.stock_saved': 'ストックは保存済みです。',
@@ -1338,7 +1342,7 @@ export const ja: Record<string, string> = {
   'stock_images.request_id': '画像のリクエストIDを確認してください。',
   'stock_images.request_conflict': '画像を保存中か、同じリクエストIDで異なる画像が送信されました。',
   'stock_images.hint':
-    'PNG・JPEG・GIF・WebP、1枚5MBまで、10枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。画像を押すと別タブで開きます。',
+    'PNG・JPEG・GIF・WebP、1枚5MBまで、5枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。画像を押すと別タブで開きます。',
   'stock_images.attach': '画像を添付',
   'stock_images.loading': '画像を読み込んでいます…',
   'stock_images.processing': '画像を保存・削除しています…',
@@ -1351,8 +1355,8 @@ export const ja: Record<string, string> = {
   'stock_images.too_large': '画像は1枚5MBまでです。',
   'stock_images.invalid_type': 'PNG・JPEG・GIF・WebPの画像を選んでください。',
   'stock_images.invalid_filename': '画像のファイル名を確認してください。',
-  'stock_images.limit_reached': '画像はストックごとに10枚までです。保存先も確認してください。',
+  'stock_images.limit_reached': '画像はストックごとに5枚までです。保存先も確認してください。',
   'manual.stock_images':
-    '新規ストックの保存画面で「画像を添付」からファイルを選ぶと、本文と一緒に保存できます。保存済みストックは詳細の「画像」から追加できます。画像だけ保存に失敗した場合は再試行でき、ストックは保存済みです。PNG・JPEG・GIF・WebPに対応し、1枚5MB・ストックごとに10枚までです。画像を押すと別タブで開き、「削除」で取り除けます。公開範囲は保存先に従い、公開プロジェクトでは画像も公開されます。非公開に戻すと画像の公開URLも閲覧できなくなります。AIの要約・問い・メモリには含まれません。MCP連携ではストック追加の権限を許可し、add_stockで保存してからadd_stock_imageで画像を添付できます。ストック・プロジェクト・アカウントを削除すると添付画像も削除されます。',
+    '新規ストックの保存画面で「画像を添付」からファイルを選ぶと、本文と一緒に保存できます。保存済みストックは詳細の「画像」から追加できます。画像だけ保存に失敗した場合は再試行でき、ストックは保存済みです。PNG・JPEG・GIF・WebPに対応し、1枚5MB・ストックごとに5枚までです。要約の下でも画像を確認でき、複数ある場合は前後ボタン・左右キー・横スワイプで切り替えられます。画像を押すと別タブで開き、「画像」タブの「削除」で取り除けます。公開範囲は保存先に従い、公開プロジェクトでは画像も公開されます。非公開に戻すと画像の公開URLも閲覧できなくなります。AIの要約・問い・メモリには含まれません。MCP連携ではストック追加の権限を許可し、add_stockで保存してからadd_stock_imageで画像を添付できます。ストック・プロジェクト・アカウントを削除すると添付画像も削除されます。',
   'boot.waiting': '棚の準備に時間がかかっています。\nしばらくお待ちください',
 };
