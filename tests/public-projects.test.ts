@@ -110,25 +110,40 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(await (await get(root(key))).json()).toMatchObject({ project: { search_indexable: 0 } });
   });
 
-  it('本文採用モードの原文は公開APIの一覧・詳細・関連ストックへ含めない', async () => {
-    const text = 'SECRET_VERBATIM_BODY';
+  it('本文採用モードは公開APIにも原文全体を返し、個人メモと内部情報は含めない', async () => {
+    const text = '\n  本文を省略せず公開します。\n\n' + '原文の内容。'.repeat(400) + '\n  ';
     await app.env.DB.prepare(
       "UPDATE articles SET skip_summary = 1, summary_json = ? WHERE id = 'article'",
     )
-      .bind(JSON.stringify({ overview: text, keyPoints: [], topics: [], verbatim: true }))
+      .bind(
+        JSON.stringify({
+          overview: text,
+          keyPoints: [],
+          topics: [],
+          verbatim: true,
+          private_extra: 'SECRET_EXTRA',
+        }),
+      )
       .run();
     const key = await publish();
     for (const path of ['/stocks', '/stocks/stock', '/questions/question', '/pufus/pufu']) {
       const response = await get(`${root(key)}${path}`);
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(JSON.stringify(json)).not.toContain(text);
-      if (path === '/stocks/stock')
-        expect(json).toMatchObject({ stock: { id: 'stock', summary: null } });
+      expect(JSON.stringify(json)).not.toContain('SECRET_');
+      const summary = { overview: text, keyPoints: [], topics: [], verbatim: true };
+      if (path === '/stocks') expect(json).toMatchObject({ items: [{ id: 'stock', summary }] });
+      if (path === '/stocks/stock' || path === '/questions/question')
+        expect(json).toMatchObject({ stock: { id: 'stock', summary } });
+      if (path === '/questions/question')
+        expect(json).toMatchObject({ stocks: [{ id: 'stock', summary }] });
     }
     expect(await (await app.request('/api/v1/stocks/stock')).json()).toMatchObject({
       stock: { summary: { overview: text } },
     });
+    await publication('alice-project', false);
+    for (const path of ['/stocks', '/stocks/stock', '/questions/question', '/pufus/pufu'])
+      expect((await get(`${root(key)}${path}`)).status).toBe(404);
   });
 
   it.each(['queued', 'generating', 'failed'])(

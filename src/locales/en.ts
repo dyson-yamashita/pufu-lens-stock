@@ -128,7 +128,7 @@ export const en: Record<string, string> = {
   'ui.app.generating_summary': 'Generating summary',
   'ui.app.verbatim_content': 'The body is shown unchanged, without summarizing.',
   'ui.user_manual.mcp_verbatim_stock':
-    'Ask the connected AI to save the body without summarizing to adopt your text or the body retrieved from a URL unchanged. This is saved separately from a summarized stock. Its body is not shown on public project pages. AI questions, insights and memory updates still run as usual, using excerpts for long bodies.',
+    'Ask the connected AI to save the body without summarizing to adopt your text or the body retrieved from a URL unchanged. This is saved separately from a summarized stock. The original body replaces the summary in both signed-in views and public projects. AI questions, insights and memory updates still run as usual, using excerpts for long bodies.',
   'ui.app.summarized': 'Summarized',
   'ui.app.retrieval_failed': 'Retrieval failed',
   'ui.app.pufu_lens_home': 'Pufu Lens home',
@@ -632,11 +632,11 @@ export const en: Record<string, string> = {
   'ui.public_projects.what_will_be_published': 'What will be published',
   'ui.public_projects.project_name_and_public_introduction': 'Project name and public introduction',
   'ui.public_projects.stock_titles_urls_summaries_key_points_and_topics':
-    'Stock titles, URLs, summaries, key points and topics',
+    'Stock titles, URLs, summaries (or original bodies saved without summarizing), key points and topics',
   'ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of':
     'Questions, insights, and all phases and reflections of linked Pufu',
   'ui.public_projects.memories_private_notes_retrieved_article_text_and_internal_project':
-    'Memories, private notes, retrieved article text and internal project descriptions are not published.',
+    'Memories, private notes, article text retrieved for summarized stocks and internal project descriptions are not published. Original bodies saved without summarizing are public.',
   'ui.public_projects.additions_and_changes_made_while_published_are_also_reflected':
     'Additions and changes made while published are also reflected. Pufu content is public too, so review it before publishing.',
   'ui.public_projects.public_introduction': 'Public introduction ',
@@ -1017,9 +1017,9 @@ export const en: Record<string, string> = {
   'ui.user_manual.share_the_displayed_public_url_the_project_is_also':
     'Share the displayed public URL. The project is also listed in the public-project directory on the home page.',
   'ui.user_manual.public_pages_can_be_viewed_without_signing_in_and':
-    'Public pages can be viewed without signing in and cannot be edited. Switch lists with the Stocks, Questions & insights, and Pufu tabs. Press the related stocks or questions & insights heading to expand or collapse it. Use ◀ and ▶ to switch phases, and press the image to enlarge the selected phase. Published information includes stock titles, URLs, summaries, key points and topics, questions, and all phases and reflections of linked Pufu.',
+    'Public pages can be viewed without signing in and cannot be edited. Switch lists with the Stocks, Questions & insights, and Pufu tabs. Press the related stocks or questions & insights heading to expand or collapse it. Use ◀ and ▶ to switch phases, and press the image to enlarge the selected phase. Published information includes stock titles, URLs, summaries (or original bodies saved without summarizing), key points and topics, questions, and all phases and reflections of linked Pufu.',
   'ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text':
-    'Memories, private notes, comments in details, retrieved article text and internal project descriptions are not published. Pufu text and its element comments are public, so review them first. Turn publishing off and save to disable access through the public URL too.',
+    'Memories, private notes, comments in details, article text retrieved for summarized stocks and internal project descriptions are not published. Original bodies saved without summarizing, Pufu text and its element comments are public, so review them first. Turn publishing off and save to disable access through the public URL too.',
   'ui.user_manual.use_other_apps': 'Use other apps',
   'ui.user_manual.iphone_share_menu': 'iPhone share menu: ',
   'ui.user_manual.create_a_token_under_shortcut_integration_then_configure_the':

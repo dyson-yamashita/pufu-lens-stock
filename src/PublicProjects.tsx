@@ -648,7 +648,10 @@ function StockDetails({
           {stock.summary?.overview || t('ui.public_projects.no_summary_yet')}
         </p>
       )}
-      {!youtube && stock.summary && (
+      {!youtube && stock.summary?.verbatim && (
+        <p className="public-help">{t('ui.app.verbatim_content')}</p>
+      )}
+      {!youtube && stock.summary && stock.summary.keyPoints.length > 0 && (
         <section className="public-stock-points" aria-label={t('ui.public_projects.key_points')}>
           <PointsHeading>{t('ui.public_projects.key_points')}</PointsHeading>
           <ul>

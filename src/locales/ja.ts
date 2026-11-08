@@ -129,7 +129,7 @@ export const ja: Record<string, string> = {
   'ui.app.generating_summary': '要約を生成中',
   'ui.app.verbatim_content': '要約せず、本文をそのまま表示しています。',
   'ui.user_manual.mcp_verbatim_stock':
-    '連携先のAIに「要約せず本文をそのまま保存して」と依頼すると、入力したテキストやURLから取得した本文をそのままストックに採用できます。通常の要約保存とは別に保存され、この本文はプロジェクトを公開しても表示されません。AIの問い・気づきとメモリの更新は通常どおり行われます（長い本文は一部を参照）。',
+    '連携先のAIに「要約せず本文をそのまま保存して」と依頼すると、入力したテキストやURLから取得した本文をそのままストックに採用できます。通常の要約保存とは別に保存され、ログイン後の画面と公開プロジェクトで要約の代わりに原文を表示します。AIの問い・気づきとメモリの更新は通常どおり行われます（長い本文は一部を参照）。',
   'ui.app.summarized': '要約済み',
   'ui.app.retrieval_failed': '取得失敗',
   'ui.app.pufu_lens_home': 'Pufu Lens ホーム',
@@ -630,11 +630,11 @@ export const ja: Record<string, string> = {
   'ui.public_projects.what_will_be_published': '公開する内容',
   'ui.public_projects.project_name_and_public_introduction': 'プロジェクト名と公開用の紹介文',
   'ui.public_projects.stock_titles_urls_summaries_key_points_and_topics':
-    'ストックのタイトル・URL・要約・要点・トピック',
+    'ストックのタイトル・URL・要約（要約せず保存した場合は原文）・要点・トピック',
   'ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of':
     '問い・気づきと、紐づくプ譜の各局面・振り返り',
   'ui.public_projects.memories_private_notes_retrieved_article_text_and_internal_project':
-    'メモリ、個人メモ、取得した本文、内部用のプロジェクト概要は公開しません。',
+    'メモリ、個人メモ、通常の要約保存で取得した本文、内部用のプロジェクト概要は公開しません。要約せず保存した原文は公開されます。',
   'ui.public_projects.additions_and_changes_made_while_published_are_also_reflected':
     '公開中に追加・変更した内容も反映されます。プ譜に書かれた内容も公開されるため、公開前に各内容を確認してください。',
   'ui.public_projects.public_introduction': '公開用の紹介文 ',
@@ -1003,9 +1003,9 @@ export const ja: Record<string, string> = {
   'ui.user_manual.share_the_displayed_public_url_the_project_is_also':
     '表示された参照用URLを共有します。トップページの公開プロジェクトにも掲載されます。',
   'ui.user_manual.public_pages_can_be_viewed_without_signing_in_and':
-    '公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の関連ストックと問い・気づきは、見出しを押すと開閉できます。「◀」「▶」で前後の局面へ移動でき、画像を押すと選択中の局面を拡大して閲覧できます。ストックのタイトル・URL・要約・要点・トピック、問い、紐づくプ譜の各局面・振り返りが公開されます。',
+    '公開ページはログインなしで閲覧でき、編集はできません。「ストック」「問い・気づき」「プ譜」のタブで一覧を切り替えられます。公開プ譜の関連ストックと問い・気づきは、見出しを押すと開閉できます。「◀」「▶」で前後の局面へ移動でき、画像を押すと選択中の局面を拡大して閲覧できます。ストックのタイトル・URL・要約（要約せず保存した場合は原文）・要点・トピック、問い、紐づくプ譜の各局面・振り返りが公開されます。',
   'ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text':
-    'メモリ・個人メモ・詳細画面のコメント欄・取得した本文・内部用のプロジェクト概要は公開しません。プ譜の本文やエディター内の要素コメントは公開されるため、公開前に確認してください。公開をオフにして保存すると、参照用URLからも閲覧できなくなります。',
+    'メモリ・個人メモ・詳細画面のコメント欄・通常の要約保存で取得した本文・内部用のプロジェクト概要は公開しません。要約せず保存した原文、プ譜の本文やエディター内の要素コメントは公開されるため、公開前に確認してください。公開をオフにして保存すると、参照用URLからも閲覧できなくなります。',
   'ui.user_manual.use_other_apps': 'ほかのアプリから使う',
   'ui.user_manual.iphone_share_menu': 'iPhoneの共有メニュー：',
   'ui.user_manual.create_a_token_under_shortcut_integration_then_configure_the':
