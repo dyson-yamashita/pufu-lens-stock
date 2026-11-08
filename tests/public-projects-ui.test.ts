@@ -5,13 +5,14 @@ import { parseHTML } from 'linkedom';
 import PublicProjectPage from '../src/PublicProjects';
 import { api } from '../src/api';
 import { setLanguage } from '../src/i18n';
+import type { PublicStock } from '../shared/public-project';
 
 vi.mock('../src/PublicPufuScore', () => ({
   default: ({ phase }: { phase: number }) =>
     createElement('div', { 'data-testid': 'score' }, `第${phase}局面の本文と画像`),
 }));
 vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
-const stock = {
+const stock: PublicStock = {
   id: 'stock',
   title: 'ストックのタイトル',
   source_url: 'https://example.com/a',
@@ -214,6 +215,32 @@ it('一覧のストックは詳細へのリンクで、要点は詳細で関連�
     '_blank',
   );
   expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
+});
+it('本文採用モードは一覧・詳細・問いの関連ストックに原文を表示し空の要点を出さない', async () => {
+  const text =
+    '\n  原文 <img src=x onerror=alert(1)>\n\n' + '内容を省略しない。'.repeat(200) + '\n  ';
+  const verbatimStock = {
+    ...stock,
+    summary: { overview: text, keyPoints: [], topics: [], verbatim: true },
+  };
+  const load = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (url, options) => {
+    const data = (await load(url, options)) as object;
+    if (new URL(url, 'https://example.com').pathname.endsWith('/stocks'))
+      return { ...data, items: [verbatimStock] };
+    return { ...data, stock: verbatimStock };
+  });
+  await render();
+  expect(document.querySelector('.public-stock-card .public-summary')?.textContent).toBe(text);
+  for (const hash of ['#stock/stock', '#question/ai']) {
+    await navigate(hash);
+    const detail = document.querySelector('.public-stock-detail')!;
+    expect(detail.querySelector('.public-summary')?.textContent).toBe(text);
+    expect(detail.textContent).toContain('要約せず、本文をそのまま表示しています。');
+    expect(detail.textContent).not.toContain('要約はまだありません。');
+    expect(detail.querySelector('.public-stock-points')).toBeNull();
+    expect(detail.querySelector('img[onerror]')).toBeNull();
+  }
 });
 it('問い一覧にはAI・プ譜のラベルを表示し、要点は問いの詳細に表示する', async () => {
   await render('#questions');

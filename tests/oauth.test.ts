@@ -252,7 +252,7 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
             terms_accepted: true,
             privacy_accepted: true,
             terms_version: '2026-10-30',
-            privacy_version: '2026-10-30',
+            privacy_version: '2026-11-07',
           },
         })
       ).status,

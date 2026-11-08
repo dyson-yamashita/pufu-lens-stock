@@ -45,12 +45,14 @@ async function readPublic<T>(c: Context<AppEnv>, path: string): Promise<T> {
     throw new HTTPException(response.status === 404 ? 404 : response.status === 400 ? 400 : 500);
   return response.json() as Promise<T>;
 }
-function stockText(stock: PublicStock) {
+function stockText(stock: PublicStock, preview = false) {
   const source =
     stock.source_url && /^https?:\/\//i.test(stock.source_url)
       ? link(stock.source_url, '出典を読む')
       : '';
-  return `<article><h2>${escape(stock.title)}</h2>${paragraph(stock.summary?.overview ?? '')}<ul>${stock.summary?.keyPoints.map((point) => `<li>${escape(point)}</li>`).join('') ?? ''}</ul>${source}</article>`;
+  const points =
+    stock.summary?.keyPoints.map((point) => `<li>${escape(point)}</li>`).join('') ?? '';
+  return `<article${preview ? ' class="public-stock-card"' : ''}><h2>${escape(stock.title)}</h2><p class="public-summary">${escape(stock.summary?.overview ?? '')}</p>${points ? `<ul>${points}</ul>` : ''}${source}</article>`;
 }
 function pufuText(score: PufuScore) {
   const labels = ['人員', '予算', '時間', '品質', '商流', '環境', '競合', '外敵'];
@@ -224,7 +226,7 @@ async function projectPage(c: Context<AppEnv>) {
       content = `<h2>問い・気づき</h2><ul>${result.items.map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>${pagination(base, view, page, result.has_more)}`;
     } else {
       const result = await readPublic<PublicList<PublicStock>>(c, `${key}/stocks?page=${page}`);
-      content = `<h2>ストック</h2>${result.items.map((s) => `${link(`${base}/stocks/${encodeURIComponent(s.id)}`, s.title)}${stockText(s)}`).join('')}${pagination(base, view, page, result.has_more)}`;
+      content = `<h2>ストック</h2>${result.items.map((s) => `${link(`${base}/stocks/${encodeURIComponent(s.id)}`, s.title)}${stockText(s, true)}`).join('')}${pagination(base, view, page, result.has_more)}`;
     }
   }
   if (page > 1) query.set('page', String(page));

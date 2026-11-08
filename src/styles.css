@@ -4048,6 +4048,7 @@ article.pufu-list-item {
 .public-summary {
   line-height: 1.9;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .public-content-card ul {
   padding-left: 20px;

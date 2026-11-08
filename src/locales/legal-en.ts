@@ -94,11 +94,11 @@ export const legalEn = {
       blocks: [
         {
           type: 'paragraph',
-          text: "Publishing makes the project name and public introduction; stock titles, URLs, summaries, key points and topics; questions and insights; and all phases and reflections of linked Pufu scores accessible without signing in. The project is also listed on the home page's public-project directory. Before publishing, check for confidential information and third parties' personal information.",
+          text: "Publishing makes the project name and public introduction; stock titles, URLs, summaries (or original bodies saved without summarizing), key points and topics; questions and insights; and all phases and reflections of linked Pufu scores accessible without signing in. The project is also listed on the home page's public-project directory. Before publishing, check for confidential information and third parties' personal information.",
         },
         {
           type: 'paragraph',
-          text: "Memories, private notes, retrieved article bodies and internal project descriptions are not published. Turning publication off and saving removes access through the Service's public pages. We may be unable to delete copies already made by third parties or search-engine caches.",
+          text: "Memories, private notes, article bodies retrieved for summarized stocks and internal project descriptions are not published. Original bodies saved without summarizing are public. Turning publication off and saving removes access through the Service's public pages. We may be unable to delete copies already made by third parties or search-engine caches.",
         },
       ],
     },

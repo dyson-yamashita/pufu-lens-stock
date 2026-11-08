@@ -271,8 +271,8 @@ it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.t
   expect(missing.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
 });
 
-it('本文採用モードの原文を公開HTML・メタ情報へ含めない', async () => {
-  const text = 'PRIVATE_VERBATIM_BODY';
+it('本文採用モードの原文全体を公開HTMLへ安全に表示する', async () => {
+  const text = '\n  原文 <img src=x onerror=alert(1)>\n\n' + '本文の内容。'.repeat(400) + '\n  ';
   await app.env.DB.prepare(
     "UPDATE articles SET skip_summary = 1, summary_json = ? WHERE id = 'article'",
   )
@@ -282,7 +282,20 @@ it('本文採用モードの原文を公開HTML・メタ情報へ含めない', 
     const response = await read(path);
     expect(response.status).toBe(200);
     const html = await response.text();
+    const { document } = parseHTML(html);
     expect(html).toContain('公開ストック');
-    expect(html).not.toContain(text);
+    expect(document.querySelector('#root article .public-summary')?.textContent).toBe(text);
+    expect(document.querySelector('#root article')?.classList.contains('public-stock-card')).toBe(
+      path.endsWith('?view=stocks'),
+    );
+    expect(document.querySelector('#root img[onerror]')).toBeNull();
+    expect(document.querySelector('#root article ul')).toBeNull();
+    expect(html).not.toContain('PRIVATE_');
   }
+  const result = await app.request('/api/v1/projects/alice-project/publication', {
+    method: 'PATCH',
+    body: { is_public: false, public_description: '' },
+  });
+  expect(result.status).toBe(200);
+  expect((await read(`/p/${key}/stocks/stock`)).status).toBe(404);
 });

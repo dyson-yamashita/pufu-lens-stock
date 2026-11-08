@@ -384,11 +384,17 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     request_id: requestId(),
     score,
   })) as { pufu: { id: string } };
+  const verbatimText =
+    '  公開とログイン後の画面で原文を表示します。\n\n' +
+    '長い本文の空白と改行を保持します。'.repeat(100) +
+    '\n  原文の末尾。\n  ';
   const stock = await fixture.request('/stocks', 'POST', {
     project_id: fixture.projectId,
     type: 'text',
     title: 'E2Eの公開するストック',
-    text: '公開プ譜の関連ストックの折りたたみを確認する本文です。',
+    text: verbatimText,
+    skip_summary: true,
+    note: 'E2E_PRIVATE_NOTE',
   });
   await fixture.request(`/pufus/${pufu.id}/relations`, 'PATCH', {
     revision: 1,
@@ -416,6 +422,9 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   expect(await (await fetch(`${fixture.url}/sitemaps/${publicId}/pufus-1.xml`)).text()).toContain(
     `/p/${publicId}/pufus/${pufu.id}`,
   );
+  await app.open(`/#project/${fixture.projectId}`);
+  await screen.getByRole('heading', 'E2Eの公開するストック', { exact: true }).click();
+  await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
   const cookies = await browser.cookies();
   await app.clearState();
   await app.open('/');
@@ -424,6 +433,27 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   ).toContainText('1 プ譜');
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
+  await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
+  await browser.locator('.public-stock-card').click();
+  await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
+  await expect(browser.locator('.public-stock-points')).toHaveCount(0);
+  await browser.reload();
+  await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
+  await expect(screen.getByText('要約はまだありません。', { exact: true })).toHaveCount(0);
+  const whiteSpace = await browser.evaluate(
+    () =>
+      getComputedStyle(document.querySelector('.public-stock-detail .public-summary')!).whiteSpace,
+  );
+  expect(whiteSpace).toBe('pre-wrap');
+  const publicStock = await fetch(
+    `${fixture.url}/api/public/projects/${publicId}/stocks/${stock.id}`,
+  );
+  const publicStockJson = await publicStock.json();
+  expect(publicStockJson).toMatchObject({
+    stock: { summary: { overview: verbatimText, verbatim: true } },
+  });
+  expect(JSON.stringify(publicStockJson)).not.toContain('E2E_PRIVATE_NOTE');
+  await app.open(`/p/${publicId}`);
   await browser.locator('.public-tabs a').filter({ hasText: 'プ譜' }).click();
   await expect(browser.locator('.public-pufu-card h3')).toHaveText('E2Eの公開プ譜タイトル');
   await expect(browser.locator('.public-pufu-card h3 + p')).toHaveText('E2Eの公開プ譜・次の局面');
@@ -471,7 +501,14 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();
   await screen.getByRole('button', '公開設定を保存').click();
   await expect(screen.getByRole('status').filter({ hasText: '非公開にしました。' })).toBeVisible();
-  for (const suffix of ['', '/pufus', `/pufus/${pufu.id}`, `/pufus/${pufu.id}?phase=1`])
+  for (const suffix of [
+    '',
+    '/stocks',
+    `/stocks/${stock.id}`,
+    '/pufus',
+    `/pufus/${pufu.id}`,
+    `/pufus/${pufu.id}?phase=1`,
+  ])
     expect((await fetch(`${fixture.url}/api/public/projects/${publicId}${suffix}`)).status).toBe(
       404,
     );

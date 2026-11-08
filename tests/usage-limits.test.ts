@@ -320,7 +320,7 @@ describe('永続利用量制限', () => {
         terms_accepted: true,
         privacy_accepted: true,
         terms_version: '2026-10-30',
-        privacy_version: '2026-10-30',
+        privacy_version: '2026-11-07',
       },
     });
     expect(

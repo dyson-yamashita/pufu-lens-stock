@@ -11,7 +11,7 @@ const acceptance = {
   terms_accepted: true,
   privacy_accepted: true,
   terms_version: '2026-10-30',
-  privacy_version: '2026-10-30',
+  privacy_version: '2026-11-07',
 };
 describe('初回のニックネームと規約への同意', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -107,7 +107,7 @@ describe('初回のニックネームと規約への同意', () => {
       await app.env.DB.prepare('SELECT terms_version,privacy_version FROM users WHERE id=?')
         .bind('alice')
         .first(),
-    ).toEqual({ terms_version: '2026-10-30', privacy_version: '2026-10-30' });
+    ).toEqual({ terms_version: '2026-10-30', privacy_version: '2026-11-07' });
     expect((await app.request('/api/v1/projects')).status).toBe(200);
     const again = await accept({ ...acceptance, name: '重複登録' });
     expect(await again.json()).toMatchObject({ user: data.user });
