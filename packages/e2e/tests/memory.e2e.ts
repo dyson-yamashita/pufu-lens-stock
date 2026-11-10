@@ -41,7 +41,18 @@ test('MEMORY-001 メモリの過去版を開き最新へ戻り再読込後も履
     text: '情報・問い・行動を行き来する。目標があるときはプ譜から始め、実践の経験から問いを見直せるようにする。',
   });
   await waitCount(2);
+  await browser.emulateMedia({ colorScheme: 'light' });
   await app.open(`/#memory/${fixture.projectId}`);
+  const panelBackground = () =>
+    browser.evaluate(
+      () => getComputedStyle(document.querySelector('.full-memory')!).backgroundColor,
+    );
+  await expect(browser.locator('.full-memory')).toBeVisible();
+  expect(await panelBackground()).toBe('rgb(255, 255, 255)');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await panelBackground()).toBe('rgb(22, 38, 48)');
+  await browser.emulateMedia({ colorScheme: 'light' });
   await screen.getByRole('button', 'メモリの履歴', { exact: true }).click();
   const old = browser.locator('.memory-version').filter({ hasText: `第${first}版 · 1件の記事` });
   await expect(old).toBeVisible();
