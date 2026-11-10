@@ -11,7 +11,7 @@
   --primary-hover: #07577f;
   --button: #0ea7ff;
   --button-hover: #0095e7;
-  --on-button: #15252d;
+  --on-button: #fff;
   --text: #213746;
   --muted: #496477;
   --placeholder: #587286;
@@ -48,6 +48,7 @@
   --primary-hover: #b3e5ff;
   --button: #70c8f9;
   --button-hover: #97d9ff;
+  --on-button: #15252d;
   --text: #e7f3fa;
   --muted: #adcadb;
   --placeholder: #99b2c2;
@@ -2462,13 +2463,14 @@ p {
   --login-accent: #c94b16;
   --login-button: #ff672a;
   --login-button-hover: #ff7d48;
-  --on-login-button: #3b190b;
+  --on-login-button: #fff;
   min-height: 100dvh;
   background: var(--page);
   overflow: hidden;
 }
 :root[data-theme='dark'] .login-page {
   --login-accent: #ffae8d;
+  --on-login-button: #3b190b;
 }
 .login-page > header {
   display: flex;
