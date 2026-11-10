@@ -913,20 +913,25 @@ export const ja: Record<string, string> = {
   'ui.theme_settings.applied_immediately_this_setting_is_saved_in_this_browser':
     '選ぶとすぐに反映されます。設定はこのブラウザに保存します。',
   'ui.user_manual.save_articles_as_stocks': '記事をストックする',
+  'manual.stock_url_heading': '複数ページの記事・PDF・X・YouTube',
+  'manual.stock_images_heading': '画像を添付・表示する',
+  'manual.stock_edit_heading': 'ストックを整理・編集する',
+  'manual.project_lists_heading': 'プロジェクトを全体の一覧から外す',
+  'manual.stock_delete_heading': 'ストック・プロジェクトを削除する',
   'ui.user_manual.open_save_article_and_choose_url_or_text':
-    '「記事をストック」を開き、「URL」か「テキスト」を選びます。',
+    'プロジェクトがなければ先に作成します。「記事をストック」を開き、「URL」か「テキスト」を選びます。',
   'ui.user_manual.choose_the_destination_project_enter_a_post_url_or':
     '保存先のプロジェクトを選び、投稿URLか本文を入力して「ストックする」を押します。',
   'ui.user_manual.open_the_added_card_to_view_its_summary_key':
-    '追加したカードを開くと、要約・要点・問いを確認できます。本文中のURLはリンクから開けます。',
+    '追加したカードを開くと、要約・要点・問いを確認できます。短い本文は原文のまま表示し、本文中のURLはリンクから開けます。',
   'ui.user_manual.to_add_a_note_or_a_title_for_text':
     '保存時にメモやテキストのタイトルを付ける場合は、「詳細」を開いて入力します。',
   'ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with':
     '公開されたPDFのURLも保存できます。文字情報のあるPDFから本文を読み取り、要約や問いを生成します。画像だけのスキャンPDFやパスワード付きPDFは自動取得できません。取得に失敗した場合は、詳細画面で本文を補完して再試行できます。',
   'ui.user_manual.star_articles_you_want_to_revisit_use_note_destination':
     'あとで読み返したい記事には星を付けられます。「メモ・保存先」では、メモや保存先を変更できます。',
-  'ui.user_manual.short_text_is_shown_as_originally_written_without_expanding':
-    '短い本文は推測で膨らませず、原文を表示します。「ひとことメモを残す」から気になった理由を保存すると、AIの問いとメモリに反映されます。メモ本文は記事の要約に混ぜず、直接公開しません。プロジェクトの公開時は、メモをもとに作った問いも公開されます。',
+  'manual.stock_note_visibility':
+    '「ひとことメモを残す」に書いた内容はAIの問いとメモリに反映されます。メモ本文は記事の要約に混ぜず、直接公開しません。プロジェクトを公開すると、メモをもとに作った問いも公開されます。',
   'ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings':
     'プロジェクトの作成時または「設定」の「詳細設定」で「すべてのストック・問い・気づき・プ譜の一覧に表示する」をオフにすると、全体の一覧と件数から外せます。初期値はオンです。オフでもプロジェクトを指定すれば表示でき、メモリや公開設定は変わりません。',
   'ui.user_manual.to_change_a_title_press_the_pencil_beside_it':
@@ -935,15 +940,27 @@ export const ja: Record<string, string> = {
     'ストックを削除するには、詳細画面の下部にある「その他の操作」を開き、「このストックを削除」を選びます。確認画面で対象と削除範囲を確認してください。ストックとそのコメントは削除されますが、関連する問い・プ譜は残ります。他のプロジェクトに保存した同じ記事も残ります。',
   'ui.user_manual.to_delete_a_whole_project_open_project_deletion_at':
     'プロジェクト全体を削除するには、「設定」の最下部で「プロジェクトの削除」を開きます。プロジェクト内のデータが削除され、公開ページも閲覧できなくなります。',
-  'ui.user_manual.x_posts_require_x_api_configuration_in_integrations_youtube':
-    'Xの投稿は「外部連携」でX API連携の設定が必要です。YouTubeの一覧には静止画のサムネイルを表示します。画像かタイトルを押して詳細画面を開き、「動画」で再生できます。初期タイトルは「YouTube」で、タイトル右の鉛筆から変更できます。URLとメモだけを保存し、動画情報の取得や要約・問いの生成は行いません。チャンネルURLや再生できない動画は「YouTubeで開く」からご覧ください。',
+  'manual.stock_x': 'Xの投稿を保存するには、「外部連携」でX API連携を設定します。',
+  'manual.stock_youtube_playback':
+    'YouTubeは、一覧のサムネイルかタイトルを押し、詳細画面の「動画」で再生できます。チャンネルURLや再生できない動画は「YouTubeで開く」を使います。',
+  'manual.stock_youtube_storage':
+    'YouTubeはURLとメモだけを保存します。初期タイトルは「YouTube」で、タイトル右の鉛筆から変更できます。動画情報の取得や要約・問いの生成は行いません。',
   'ui.user_manual.find_and_write_questions': '問いを見つける・書く',
+  'manual.question_read_heading': 'AIが作った問いを読む',
+  'manual.question_write_heading': '自分の問い・気づきを書く',
+  'manual.question_edit_heading': '関連ストック・メモ・保存先',
+  'manual.question_generation_heading': '問いの自動生成を止める',
+  'manual.question_delete_heading': '問い・気づきを削除する',
   'ui.user_manual.use_questions_insights_or_all_questions_insights_to_view':
-    '「問い・気づき」タブや「すべての問い・気づき」から、ストックをもとにAIが作った問いを見られます。気になる問いを開いて、次に考えたいことを探してみましょう。',
+    '「問い・気づき」タブか「すべての問い・気づき」を開きます。ストックをもとにAIが作った問いのうち、気になるものを選びます。',
   'ui.user_manual.use_add_question_or_insight_to_save_your_own':
-    '「問い・気づきを追加」から、自分の問いも保存できます。同じプロジェクトのストックを複数選ぶか、関連する記事を選ばずに保存できます。検索やページを切り替えても、選択したストックは保持されます。',
-  'ui.user_manual.in_details_switch_between_content_pufu_comments_and_note':
-    '詳細画面では「本文」「プ譜」「コメント」「メモ・保存先」のタブを切り替えられます。「メモ・保存先」でメモやストックの関連を編集し、「変更を保存」で確定します。選択済みのストックのチェックを外すと関連を解除できます。メモは2,000文字までで、公開ページやAIのメモリには含まれません。',
+    '「問い・気づきを追加」を開きます。保存先を選んで内容を入力し、同じ名前のボタンで保存します。',
+  'manual.question_link_stocks':
+    '問いの追加時に、同じプロジェクトのストックを複数関連付けられます。関連付けは任意で、検索やページを切り替えても選択は残ります。',
+  'manual.question_edit':
+    '詳細画面の「メモ・保存先」でメモや関連ストックを編集し、「変更を保存」を押します。ストックのチェックを外すと関連を解除できます。',
+  'manual.question_note_visibility':
+    '問いのメモは2,000文字までです。公開ページやAIのメモリには含まれません。',
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     '自分で追加した問い・気づきは、ストックの関連を解除して保存すると、同じ画面で保存先プロジェクトを変更できます。AIが作った問いの保存先は元の記事から変更します。複数の関連がある場合など、別のプロジェクトにまたがる移動はできません。',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
@@ -1356,7 +1373,13 @@ export const ja: Record<string, string> = {
   'stock_images.invalid_type': 'PNG・JPEG・GIF・WebPの画像を選んでください。',
   'stock_images.invalid_filename': '画像のファイル名を確認してください。',
   'stock_images.limit_reached': '画像はストックごとに5枚までです。保存先も確認してください。',
-  'manual.stock_images':
-    '新規ストックの保存画面で「画像を添付」からファイルを選ぶと、本文と一緒に保存できます。保存済みストックは詳細の「画像」から追加できます。画像だけ保存に失敗した場合は再試行でき、ストックは保存済みです。PNG・JPEG・GIF・WebPに対応し、1枚5MB・ストックごとに5枚までです。要約の下でも画像を確認でき、複数ある場合は前後ボタン・左右キー・横スワイプで切り替えられます。画像を押すと別タブで開き、「画像」タブの「削除」で取り除けます。公開範囲は保存先に従い、公開プロジェクトでは画像も公開されます。非公開に戻すと画像の公開URLも閲覧できなくなります。AIの要約・問い・メモリには含まれません。MCP連携ではストック追加の権限を許可し、add_stockで保存してからadd_stock_imageで画像を添付できます。ストック・プロジェクト・アカウントを削除すると添付画像も削除されます。',
+  'manual.stock_images_add':
+    '新規ストックでは「画像を添付」、保存済みストックでは詳細画面の「画像」から追加します。PNG・JPEG・GIF・WebPに対応し、1枚5MB、1ストックにつき5枚までです。画像だけ保存に失敗した場合、ストックは保存済みです。未保存の画像だけ再試行できます。',
+  'manual.stock_images_view':
+    '画像は要約の下でも見られます。複数ある場合は前後ボタン・左右キー・横スワイプで切り替えます。画像を押すと別タブで開きます。取り除くには「画像」タブで「削除」を押します。',
+  'manual.stock_images_visibility':
+    '公開プロジェクトでは画像も公開されます。プロジェクトを非公開に戻すと画像の公開URLは使えなくなります。画像はAIの要約・問い・メモリには含まれません。ストック・プロジェクト・アカウントを削除すると、添付画像も削除されます。',
+  'manual.stock_images_mcp':
+    'MCP連携ではストック追加の権限を許可し、add_stockで保存してからadd_stock_imageで画像を添付します。',
   'boot.waiting': '棚の準備に時間がかかっています。\nしばらくお待ちください',
 };

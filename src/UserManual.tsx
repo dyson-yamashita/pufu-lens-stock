@@ -13,46 +13,86 @@ const sections = (tr: typeof t) => [
     id: 'stocks',
     title: tr('ui.user_manual.save_articles_as_stocks'),
     content: (
-      <>
-        <p>{tr('first_steps.manual')}</p>
-        <p>{tr('manual.article_pages')}</p>
+      <div className="manual-guide">
         <ol>
           <li>{tr('ui.user_manual.open_save_article_and_choose_url_or_text')}</li>
           <li>{tr('ui.user_manual.choose_the_destination_project_enter_a_post_url_or')}</li>
           <li>{tr('ui.user_manual.open_the_added_card_to_view_its_summary_key')}</li>
         </ol>
-        <p>{tr('ui.user_manual.to_add_a_note_or_a_title_for_text')}</p>
-        <p>{tr('ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with')}</p>
-        <p>{tr('ui.user_manual.star_articles_you_want_to_revisit_use_note_destination')}</p>
-        <p>{tr('ui.user_manual.short_text_is_shown_as_originally_written_without_expanding')}</p>
-        <p>{tr('ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings')}</p>
-        <p>{tr('ui.user_manual.to_change_a_title_press_the_pencil_beside_it')}</p>
-        <p>{tr('manual.stock_images')}</p>
-        <p>{tr('ui.user_manual.to_delete_a_stock_open_other_actions_at_the')}</p>
-        <p>{tr('ui.user_manual.to_delete_a_whole_project_open_project_deletion_at')}</p>
-        <p className="manual-note">
-          {tr('ui.user_manual.x_posts_require_x_api_configuration_in_integrations_youtube')}
-        </p>
-      </>
+        <div className="manual-topics">
+          <details>
+            <summary>{tr('first_steps.title')}</summary>
+            <p>{tr('first_steps.manual')}</p>
+          </details>
+          <details>
+            <summary>{tr('manual.stock_url_heading')}</summary>
+            <p>{tr('manual.article_pages')}</p>
+            <p>{tr('ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with')}</p>
+            <p>{tr('manual.stock_x')}</p>
+            <p>{tr('manual.stock_youtube_playback')}</p>
+            <p>{tr('manual.stock_youtube_storage')}</p>
+          </details>
+          <details>
+            <summary>{tr('manual.stock_images_heading')}</summary>
+            <p>{tr('manual.stock_images_add')}</p>
+            <p>{tr('manual.stock_images_view')}</p>
+            <p>{tr('manual.stock_images_visibility')}</p>
+            <p>{tr('manual.stock_images_mcp')}</p>
+          </details>
+          <details>
+            <summary>{tr('manual.stock_edit_heading')}</summary>
+            <p>{tr('ui.user_manual.to_add_a_note_or_a_title_for_text')}</p>
+            <p>{tr('ui.user_manual.star_articles_you_want_to_revisit_use_note_destination')}</p>
+            <p>{tr('ui.user_manual.to_change_a_title_press_the_pencil_beside_it')}</p>
+            <p>{tr('manual.stock_note_visibility')}</p>
+          </details>
+          <details>
+            <summary>{tr('manual.project_lists_heading')}</summary>
+            <p>
+              {tr('ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings')}
+            </p>
+          </details>
+          <details>
+            <summary>{tr('manual.stock_delete_heading')}</summary>
+            <p>{tr('ui.user_manual.to_delete_a_stock_open_other_actions_at_the')}</p>
+            <p>{tr('ui.user_manual.to_delete_a_whole_project_open_project_deletion_at')}</p>
+          </details>
+        </div>
+      </div>
     ),
   },
   {
     id: 'questions',
     title: tr('ui.user_manual.find_and_write_questions'),
     content: (
-      <>
+      <div className="manual-guide">
+        <h3>{tr('manual.question_read_heading')}</h3>
         <p>{tr('ui.user_manual.use_questions_insights_or_all_questions_insights_to_view')}</p>
+        <h3>{tr('manual.question_write_heading')}</h3>
         <p>{tr('ui.user_manual.use_add_question_or_insight_to_save_your_own')}</p>
         <p>{tr('first_steps.manual_question')}</p>
-        <p>{tr('ui.user_manual.in_details_switch_between_content_pufu_comments_and_note')}</p>
-        <p>{tr('ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and')}</p>
-        <p>
-          {tr(
-            'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate',
-          )}
-        </p>
-        <p>{tr('ui.user_manual.to_delete_a_question_or_insight_open_other_actions')}</p>
-      </>
+        <div className="manual-topics">
+          <details>
+            <summary>{tr('manual.question_edit_heading')}</summary>
+            <p>{tr('manual.question_link_stocks')}</p>
+            <p>{tr('manual.question_edit')}</p>
+            <p>{tr('manual.question_note_visibility')}</p>
+            <p>{tr('ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and')}</p>
+          </details>
+          <details>
+            <summary>{tr('manual.question_generation_heading')}</summary>
+            <p>
+              {tr(
+                'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate',
+              )}
+            </p>
+          </details>
+          <details>
+            <summary>{tr('manual.question_delete_heading')}</summary>
+            <p>{tr('ui.user_manual.to_delete_a_question_or_insight_open_other_actions')}</p>
+          </details>
+        </div>
+      </div>
     ),
   },
   {

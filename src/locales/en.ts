@@ -926,20 +926,25 @@ export const en: Record<string, string> = {
   'ui.theme_settings.applied_immediately_this_setting_is_saved_in_this_browser':
     'Applied immediately. This setting is saved in this browser.',
   'ui.user_manual.save_articles_as_stocks': 'Save articles as stocks',
+  'manual.stock_url_heading': 'Multi-page articles, PDFs, X, and YouTube',
+  'manual.stock_images_heading': 'Attach and view images',
+  'manual.stock_edit_heading': 'Organize and edit stocks',
+  'manual.project_lists_heading': 'Exclude a project from library lists',
+  'manual.stock_delete_heading': 'Delete a stock or project',
   'ui.user_manual.open_save_article_and_choose_url_or_text':
-    'Open Save article and choose URL or Text.',
+    'Create a project first if you do not have one yet. Open Save article and choose URL or Text.',
   'ui.user_manual.choose_the_destination_project_enter_a_post_url_or':
     'Choose the destination project, enter a post URL or article text, and press Save stock.',
   'ui.user_manual.open_the_added_card_to_view_its_summary_key':
-    'Open the added card to view its summary, key points and questions. URLs in the body can be opened as links.',
+    'Open the saved card to see the summary, key points, and questions. Short texts appear as written, and URLs in the text are clickable.',
   'ui.user_manual.to_add_a_note_or_a_title_for_text':
     'To add a note or a title for text while saving, open Details.',
   'ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with':
     'You can save publicly accessible PDF URLs. PDFs with text are read to generate summaries and questions. Image-only scans and password-protected PDFs cannot be retrieved automatically. If retrieval fails, supply the text in the details screen and retry.',
   'ui.user_manual.star_articles_you_want_to_revisit_use_note_destination':
     'Star articles you want to revisit. Use Note & destination to change notes or where an article is saved.',
-  'ui.user_manual.short_text_is_shown_as_originally_written_without_expanding':
-    'Short text is shown as originally written without expanding it with assumptions. Use Leave a short note to save why it caught your attention; this informs AI questions and memory. The note itself is not mixed into the article summary or published directly. When publishing a project, questions generated from the note are also published.',
+  'manual.stock_note_visibility':
+    'What you write under Leave a short note informs AI questions and memory. The note itself stays out of the summary and public pages. Publishing a project also publishes questions generated from the note.',
   'ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings':
     'When creating a project, or under Settings → Advanced settings, turn off Include in all stocks, questions & insights, and Pufu lists to exclude the project from library lists and counts. It is on by default. You can still view it by selecting the project; memory and publication settings stay the same.',
   'ui.user_manual.to_change_a_title_press_the_pencil_beside_it':
@@ -948,15 +953,27 @@ export const en: Record<string, string> = {
     'To delete a stock, open Other actions at the bottom of its details and select Delete this stock. Review the target and deletion scope in the confirmation dialog. The stock and its comments are deleted; related questions and Pufu remain. The same article saved in other projects also remains.',
   'ui.user_manual.to_delete_a_whole_project_open_project_deletion_at':
     'To delete a whole project, open Project deletion at the bottom of Settings. Data in the project is deleted and its public page becomes unavailable.',
-  'ui.user_manual.x_posts_require_x_api_configuration_in_integrations_youtube':
-    'X posts require X API configuration in Integrations. YouTube lists show still-image thumbnails. Press an image or title to open details and play it under Video. The initial title is YouTube; use the pencil beside it to change it. Only the URL and your note are saved. Video metadata is not retrieved and summaries or questions are not generated. Open channel URLs or unplayable videos with Open on YouTube.',
+  'manual.stock_x': 'To save X posts, configure the X API under Integrations.',
+  'manual.stock_youtube_playback':
+    'Select a YouTube thumbnail or title, then play it under Video in the details. For channel links or videos that cannot play here, choose Open on YouTube.',
+  'manual.stock_youtube_storage':
+    'For YouTube, Pufu Lens saves the URL and your note. The initial title is YouTube, which you can edit using the pencil. Video metadata, summaries, and questions are unavailable.',
   'ui.user_manual.find_and_write_questions': 'Find and write questions',
+  'manual.question_read_heading': 'Read AI-generated questions',
+  'manual.question_write_heading': 'Write your own question or insight',
+  'manual.question_edit_heading': 'Related stocks, notes, and destination',
+  'manual.question_generation_heading': 'Turn off automatic question generation',
+  'manual.question_delete_heading': 'Delete a question or insight',
   'ui.user_manual.use_questions_insights_or_all_questions_insights_to_view':
-    'Use Questions & insights or All questions & insights to view AI questions generated from stocks. Open a question to explore what you want to think about next.',
+    'Open Questions & insights or All questions & insights. Pick a question that interests you from the questions generated from your stocks.',
   'ui.user_manual.use_add_question_or_insight_to_save_your_own':
-    'Use Add question or insight to save your own thoughts. Select multiple stocks in the same project, or save without linking any article. Selected stocks remain selected when changing searches or pages.',
-  'ui.user_manual.in_details_switch_between_content_pufu_comments_and_note':
-    'In details, switch between Content, Pufu, Comments and Note & destination. Edit your note or stock relations under Note & destination, then choose Save changes. Uncheck selected stocks to unlink them. Notes allow up to 2,000 characters and are excluded from public pages and AI memory.',
+    'Open Add question or insight. Choose a project, enter your text, and press the button of the same name to save.',
+  'manual.question_link_stocks':
+    'When adding a question, you can link multiple stocks from the same project. Linking is optional, and your selection stays in place when you change the search or page.',
+  'manual.question_edit':
+    'In the details, edit your note or related stocks under Note & destination, then choose Save changes. Uncheck a stock to unlink it.',
+  'manual.question_note_visibility':
+    'Notes on questions can be up to 2,000 characters. They stay out of public pages and AI memory.',
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     'For questions you added yourself, unlink the stocks and save before changing the destination project on the same screen. Move AI-generated questions from their source article. Moves across projects are unavailable in cases such as multiple related stocks.',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
@@ -1380,7 +1397,13 @@ export const en: Record<string, string> = {
   'stock_images.invalid_filename': 'Check the image filename.',
   'stock_images.limit_reached':
     'You can attach up to 5 images per stock. Also check that the stock still exists.',
-  'manual.stock_images':
-    'Choose files under Attach image when saving a new stock to save them with its text. Open Images in a saved stock’s details to add more. If only an image fails to save, retry it; the stock has already been saved. PNG, JPEG, GIF and WebP are supported, up to 5 MB per image and 5 images per stock. Images also appear below the summary. With multiple images, use the previous/next buttons, left/right arrow keys or swipe horizontally to switch. Select an image to open it in a new tab, or choose Delete in the Images tab to remove it. Attachments follow the project’s visibility and appear in public projects. Turning publishing off also disables their public URLs. Images are excluded from AI summaries, questions and memory. In MCP, allow stocks:write and use add_stock followed by add_stock_image. Deleting a stock, project or account also deletes its attachments.',
+  'manual.stock_images_add':
+    'Choose Attach image on a new stock or open Images in a saved stock’s details. PNG, JPEG, GIF, and WebP are supported, up to 5 MB per image and 5 images per stock. If only an image fails to save, the stock is already saved. You can retry the remaining images.',
+  'manual.stock_images_view':
+    'Images also appear below the summary. Use the previous and next buttons, the arrow keys, or a horizontal swipe to switch images. Select an image to open it in a new tab. To remove one, choose Delete in the Images tab.',
+  'manual.stock_images_visibility':
+    'Images in public projects are public. Turning publishing off disables their public URLs. Images stay out of AI summaries, questions, and memory. Deleting a stock, project, or account also deletes its attachments.',
+  'manual.stock_images_mcp':
+    'In MCP, allow the stocks:write permission, then use add_stock followed by add_stock_image.',
   'boot.waiting': 'Preparing your shelf is taking a little longer.\nPlease wait.',
 };

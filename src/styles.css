@@ -4290,6 +4290,35 @@ article.pufu-list-item {
 .manual-section p:last-child {
   margin-bottom: 0;
 }
+.manual-guide {
+  max-inline-size: 72ch;
+}
+.manual-guide h3 {
+  margin: 18px 0 4px;
+  font-size: 16px;
+}
+.manual-guide p + p {
+  margin-top: 8px;
+}
+.manual-topics {
+  margin-top: 16px;
+}
+.manual-topics details {
+  border-top: 1px solid var(--border);
+}
+.manual-topics summary {
+  padding: 12px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.manual-topics details[open] {
+  padding-bottom: 12px;
+}
+.manual-topics p {
+  padding-inline: 4px;
+}
 .manual-note {
   padding: 14px 18px;
   border-radius: 8px;
