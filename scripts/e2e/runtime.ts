@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { transform } from 'esbuild';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -126,12 +127,34 @@ export async function withRuntime<T>(
     const built = JSON.parse(
       await readFile(join(repo, 'dist/pufu_lens_stock/wrangler.json'), 'utf8'),
     );
+    const workerDir = join(scratch, 'worker');
+    // Copy executable modules only, never .dev.vars, configuration or source maps.
+    await cp(join(repo, 'dist/pufu_lens_stock'), workerDir, {
+      recursive: true,
+      filter: async (path) => (await lstat(path)).isDirectory() || /\.(?:m?js|wasm)$/.test(path),
+    });
+    const network = await transform(
+      await readFile(join(workspace, 'src/article-network.ts'), 'utf8'),
+      { loader: 'ts', format: 'esm', target: 'es2022' },
+    );
+    await writeFile(join(workerDir, 'article-network.mjs'), network.code);
+    await writeFile(
+      join(workerDir, 'entry.mjs'),
+      `
+import { handleArticleControl } from './article-network.mjs';
+import worker, { ArticleWorkflow, MemoryWorkflow } from './${built.main}';
+export { ArticleWorkflow, MemoryWorkflow };
+export default { ...worker, fetch(request, env, ctx) {
+  return handleArticleControl(request) ?? worker.fetch(request, env, ctx);
+} };
+`,
+    );
     const config = join(scratch, 'wrangler.json');
     await writeFile(
       config,
       JSON.stringify({
         name: 'pufu-lens-e2e',
-        main: resolve(repo, 'dist/pufu_lens_stock', built.main),
+        main: join(workerDir, 'entry.mjs'),
         compatibility_date: '2026-07-30',
         compatibility_flags: ['nodejs_compat', 'global_fetch_strictly_public'],
         no_bundle: true,
