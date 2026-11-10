@@ -28,6 +28,22 @@
     ]
   },
   {
+    "id": "STOCK-002",
+    "title": "URL記事の取得状態と失敗後の再試行",
+    "sources": [
+      "src/App.tsx",
+      "server/ingest.ts",
+      "server/workflows.ts",
+      "server/api.ts",
+      "server/security.ts"
+    ],
+    "aspects": [
+      "URL入力から実際の取得・本文抽出・要約・保存と再読込までを確認。取得中を確認してからテスト専用HTTP fixtureを解放する",
+      "HTTP 503で取得が失敗した記事を画面から本文補完して再試行し、同じストックID・保存先のまま本文と要約を保持。再読込後も重複がない",
+      "DNSと外部HTTPだけをscratch Workerのfixtureに置換。実サイト・実AIの品質、PDF・YouTubeは対象外"
+    ]
+  },
+  {
     "id": "PUFU-001",
     "title": "プ譜の編集・局面・戻り先",
     "sources": [
@@ -214,6 +230,21 @@
       "プロジェクト作成済みから記事保存・問い追加で3ステップを完了",
       "保存先と記事を問いフォームへ引き継ぐ",
       "再読込後も完了した案内は非表示"
+    ]
+  },
+  {
+    "id": "QUESTION-001",
+    "title": "問いのメモと関連ストックの編集・保持",
+    "sources": [
+      "src/QuestionPage.tsx",
+      "src/QuestionSettings.tsx",
+      "src/RelationPicker.tsx",
+      "server/api.ts",
+      "server/relations.ts"
+    ],
+    "aspects": [
+      "問いの詳細画面で改行付きメモと関連ストックの追加・解除・選び直しを保存し、再読込後も保持",
+      "本文と保存先は変更されず、通常APIでメモと関連ストックIDを照合。問いの本文編集機能は存在しないため対象外"
     ]
   }
 ]
