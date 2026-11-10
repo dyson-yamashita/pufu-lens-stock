@@ -20,7 +20,8 @@
     snapshot = { preference, theme };
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
-    document.documentElement.style.backgroundColor = theme === 'dark' ? '#101827' : '#fbfcff';
+    const pageColor = theme === 'dark' ? '#101a22' : '#fcfeff';
+    document.documentElement.style.backgroundColor = pageColor;
     try {
       // The server-rendered MCP consent page reads only this non-secret display preference.
       document.cookie = `pufu_lens_theme=${preference}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
@@ -28,7 +29,7 @@
       // Display preferences also work when cookies are blocked.
     }
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#101827' : '#233b63');
+    if (meta) meta.setAttribute('content', pageColor);
     listeners.forEach((listener) => listener());
   };
   window.pufuTheme = {
