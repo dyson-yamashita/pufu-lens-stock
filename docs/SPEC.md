@@ -866,7 +866,7 @@ pnpm run check
 
 セキュリティ診断・脆弱性レビュー向けに、[Cloudflare security-audit-skill](https://github.com/cloudflare/security-audit-skill) の `security-audit` を参照資料・レポート用JSONスキーマ・検証スクリプトとともに同梱しています。スキル本文と補助ファイルは原文のまま保存し、取り込み元コミットは [.agents/security-audit-source.json](../.agents/security-audit-source.json)、MITライセンスは [.agents/SECURITY-AUDIT-LICENSE](../.agents/SECURITY-AUDIT-LICENSE) に記録しています。付属バリデーターのテストは `node --test .agents/skills/security-audit/*.test.cjs` で実行できます。
 
-[AGENTS.md](../AGENTS.md) に開始時の読み込みとスキルの使い分けを記載しています。PR作成前に `security-audit` の `standard` プロファイルでscoped runを実行します。最新の `origin/main` と作業ブランチの共通祖先からの修正差分（未コミットの変更・追加ファイルを含む）と、差分が依存する呼び出し元・権限制御を必要に応じて確認し、対象範囲・結果・未確認事項をPRに記載します。対応が必要な指摘を修正した後は、必要な検証と再監査を実施します。続いて [requesting-code-review](../.agents/skills/requesting-code-review/SKILL.md) を使い、独立したレビュー担当エージェントが変更全体を確認します。対応が必要な指摘を修正した後は、必要な検証と再レビューを実施します。Superpowersの取り込み元コミット・スキル一覧は [.agents/superpowers-source.json](../.agents/superpowers-source.json)、MITライセンスは [.agents/SUPERPOWERS-LICENSE](../.agents/SUPERPOWERS-LICENSE) にあります。補助スクリプトを含むスキルの原文を維持するため、`.agents/skills/` はアプリ用のESLint・Prettierの対象外です。
+[AGENTS.md](../AGENTS.md) に開始時の読み込みとスキルの使い分けを記載しています。PR作成前に `security-audit` の `quick` プロファイルでscoped runを実行します。最新の `origin/main` と作業ブランチの共通祖先からの修正差分（未コミットの変更・追加ファイルを含む）と、差分が依存する呼び出し元・権限制御を必要に応じて確認し、対象範囲・結果・未確認事項をPRに記載します。対応が必要な指摘を修正した後は、必要な検証と再監査を実施します。続いて [requesting-code-review](../.agents/skills/requesting-code-review/SKILL.md) を使い、独立したレビュー担当エージェントが変更全体を確認します。対応が必要な指摘を修正した後は、必要な検証と再レビューを実施します。Superpowersの取り込み元コミット・スキル一覧は [.agents/superpowers-source.json](../.agents/superpowers-source.json)、MITライセンスは [.agents/SUPERPOWERS-LICENSE](../.agents/SUPERPOWERS-LICENSE) にあります。補助スクリプトを含むスキルの原文を維持するため、`.agents/skills/` はアプリ用のESLint・Prettierの対象外です。
 
 ## ソース構成
 
