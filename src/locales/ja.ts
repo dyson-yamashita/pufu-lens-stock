@@ -907,6 +907,8 @@ export const ja: Record<string, string> = {
   'ui.search_field.clear_search': '検索をクリア',
   'ui.theme_settings.use_system_setting': 'システムに合わせる',
   'ui.theme_settings.light': 'ライト',
+  'manual.theme':
+    'トップページ右上の太陽でライトモード、月でダークモードに切り替えられます。設定はこのブラウザーに保存されます。システムの設定に合わせる場合は、ログイン後の「プロフィール」→「表示設定」で選びます。',
   'ui.theme_settings.dark': 'ダーク',
   'ui.theme_settings.display_settings': '表示設定',
   'ui.theme_settings.color_theme': 'カラーテーマ',

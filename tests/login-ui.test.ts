@@ -29,6 +29,8 @@ beforeEach(() => {
     },
     scrollTo: { configurable: true, value() {} },
   });
+  const theme = { preference: 'system', theme: 'light' } as const;
+  window.pufuTheme = { getSnapshot: () => theme, subscribe: () => () => {}, setPreference() {} };
   setLanguage('ja');
   vi.mocked(api).mockImplementation(async (path) => {
     if (path === '/api/config') return { demo: true, googleConfigured: true, aiEnabled: false };

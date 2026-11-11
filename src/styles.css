@@ -2495,6 +2495,35 @@ p {
   font-size: 12px;
   white-space: nowrap;
 }
+.theme-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--wash);
+}
+.theme-toggle button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+}
+.theme-toggle button:hover {
+  background: var(--card);
+  color: var(--primary);
+}
+.theme-toggle button[aria-pressed='true'] {
+  border-color: var(--border);
+  background: var(--card);
+  color: var(--primary);
+}
 .login-main {
   max-width: 1320px;
   margin: 24px auto 24px;

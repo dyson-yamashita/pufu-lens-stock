@@ -10,6 +10,7 @@ import {
   manualHref,
 } from './i18n';
 import LanguageSelect from './LanguageSelect';
+import ThemeToggle from './ThemeToggle';
 import LinkedText from './LinkedText';
 import StockImages from './StockImages';
 import { stockImageFileError, uploadStockImage } from './stock-image-upload';
@@ -309,6 +310,7 @@ function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<voi
             {t('ui.app.manual')}
           </a>
           <LanguageSelect id="site-language" value={language} onChange={onLanguageChange} />
+          <ThemeToggle />
         </div>
       </header>
       <main className="login-main">
