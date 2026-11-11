@@ -2499,7 +2499,6 @@ p {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 6px;
   height: 44px;
   padding: 0;
   border: 0;
@@ -2509,8 +2508,8 @@ p {
 }
 .theme-toggle-track {
   position: relative;
-  width: 32px;
-  height: 18px;
+  width: 52px;
+  height: 28px;
   border: 1px solid var(--field-border);
   border-radius: 999px;
   background: var(--wash);
@@ -2520,21 +2519,34 @@ p {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 12px;
-  height: 12px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--card);
+  box-shadow: 0 1px 3px var(--shadow);
   transition: transform 0.16s;
+}
+.theme-toggle-track > svg {
+  position: absolute;
+  top: 6px;
+  z-index: 1;
+}
+.theme-toggle-light {
+  left: 6px;
+}
+.theme-toggle-dark {
+  right: 6px;
 }
 .theme-toggle[aria-checked='true'] .theme-toggle-track {
   border-color: var(--primary);
-  background: var(--primary);
+  background: var(--selected);
 }
 .theme-toggle[aria-checked='true'] .theme-toggle-thumb {
-  transform: translateX(14px);
-  background: var(--card);
+  transform: translateX(24px);
 }
-.theme-toggle:hover,
+.theme-toggle:hover .theme-toggle-track {
+  border-color: var(--primary);
+}
 .theme-toggle[aria-checked='false'] .theme-toggle-light,
 .theme-toggle[aria-checked='true'] .theme-toggle-dark {
   color: var(--primary);

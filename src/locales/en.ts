@@ -922,7 +922,7 @@ export const en: Record<string, string> = {
   'ui.theme_settings.light': 'Light',
   'ui.theme_settings.dark_mode': 'Dark mode',
   'manual.theme':
-    'Use the switch between the sun and moon at the top right of the home page to change between light and dark mode. Your choice is saved in this browser. To follow your system setting, sign in and choose it under Profile → Display settings.',
+    'Use the switch with sun and moon icons at the top right of the home page to change between light and dark mode. Your choice is saved in this browser. To follow your system setting, sign in and choose it under Profile → Display settings.',
   'ui.theme_settings.dark': 'Dark',
   'ui.theme_settings.display_settings': 'Display settings',
   'ui.theme_settings.color_theme': 'Color theme',

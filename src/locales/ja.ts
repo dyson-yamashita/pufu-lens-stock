@@ -909,7 +909,7 @@ export const ja: Record<string, string> = {
   'ui.theme_settings.light': 'ライト',
   'ui.theme_settings.dark_mode': 'ダークモード',
   'manual.theme':
-    'トップページ右上の太陽と月の間にあるスイッチで、ライトモードとダークモードを切り替えられます。設定はこのブラウザーに保存されます。システムの設定に合わせる場合は、ログイン後の「プロフィール」→「表示設定」で選びます。',
+    'トップページ右上の太陽と月のアイコンが入ったスイッチで、ライトモードとダークモードを切り替えられます。設定はこのブラウザーに保存されます。システムの設定に合わせる場合は、ログイン後の「プロフィール」→「表示設定」で選びます。',
   'ui.theme_settings.dark': 'ダーク',
   'ui.theme_settings.display_settings': '表示設定',
   'ui.theme_settings.color_theme': 'カラーテーマ',

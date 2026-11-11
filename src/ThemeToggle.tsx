@@ -14,11 +14,11 @@ export default function ThemeToggle() {
       aria-checked={theme === 'dark'}
       onClick={() => setThemePreference(theme === 'dark' ? 'light' : 'dark')}
     >
-      <Sun className="theme-toggle-light" size={14} aria-hidden="true" />
       <span className="theme-toggle-track" aria-hidden="true">
         <span className="theme-toggle-thumb" />
+        <Sun className="theme-toggle-light" size={14} />
+        <Moon className="theme-toggle-dark" size={14} />
       </span>
-      <Moon className="theme-toggle-dark" size={14} aria-hidden="true" />
     </button>
   );
 }
