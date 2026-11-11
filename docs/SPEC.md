@@ -227,7 +227,7 @@ D1の`comments`テーブルに`target_type`（`stock / question / pufu`）、`ta
 
 トップ（`/`・`/en`）とマニュアル（`/manual`・`/en/manual`）、法務はビルド時の言語別静的HTMLをWorkerが配信します。`Accept-Language` による自動転送は行わず、hreflang（x-default含む）とURL言語に一致する `lang`・title・description・canonicalを付けます。これらの公開HTMLと `/llms.txt`、存在しないパスの hard 404 は `/p/*` と同じ Hono `secureHeaders()` を通します（HSTS・X-Frame-Options など。既定スタックはCSPを設定しません）。
 
-`/robots.txt` はクロールを許可し、`/sitemap.xml` から静的ページの `/sitemaps/site.xml` と、プロジェクト別の `/sitemaps/:key/project.xml`、最大1,000行の固定範囲を読む `/sitemaps/:key/questions-:bucket.xml`・`/sitemaps/:key/pufus-:bucket.xml`・`/sitemaps/:key/stocks-:bucket.xml` を案内します。掲載許可した公開プロジェクトと公開可能なストック・問い・プ譜、および言語別のトップ・マニュアル・法務を列挙し、日付がある箇所は `lastmod` を付けます。分割XMLの読み取りは索引で範囲を制限しますが、サイトマップ一覧の集約コストは掲載対象件数に比例するため、運用時の計測対象です。HTML・OGPメタ情報・サイトマップは `Cache-Control: no-store` で保存せず、毎回現在の公開設定を確認します。OGP画像は公開ロゴを使用し、内容由来の画像キャッシュは作りません。非公開化・削除後はHTMLも404となり本文・OGPを返しません。DB障害時は古い内容へフォールバックしません。存在しないパスはSPAの200ではなくHTTP 404を返します。
+`/robots.txt` はクロールを許可し、`/sitemap.xml` から静的ページの `/sitemaps/site.xml` と、プロジェクト別の `/sitemaps/:key/project.xml`、最大1,000行の固定範囲を読む `/sitemaps/:key/questions-:bucket.xml`・`/sitemaps/:key/pufus-:bucket.xml`・`/sitemaps/:key/stocks-:bucket.xml` を案内します。掲載許可した公開プロジェクトと公開可能なストック・問い・プ譜、および言語別のトップ・マニュアル・法務を列挙し、日付がある箇所は `lastmod` を付けます。分割XMLの読み取りは索引で範囲を制限しますが、サイトマップ一覧の集約コストは掲載対象件数に比例するため、運用時の計測対象です。HTML・OGPメタ情報・サイトマップは `Cache-Control: no-store` で保存せず、毎回現在の公開設定を確認します。OGP画像は公開ロゴを使用し、内容由来の画像キャッシュは作りません。日英トップのOGP・Xカードと公開ページのOGPには、ビルド時にロゴのSHA-256先頭16桁から計算した `?v=` を画像URLに付け、画像の差し替え時だけURLを更新します。共有先がページを再取得するまで、既存のプレビューが残る場合があります。非公開化・削除後はHTMLも404となり本文・OGPを返しません。DB障害時は古い内容へフォールバックしません。存在しないパスはSPAの200ではなくHTTP 404を返します。
 
 本番反映前に `0042_public_search_stocks.sql` を含むマイグレーションを適用してください。AI処理や追加bindingは不要です。
 

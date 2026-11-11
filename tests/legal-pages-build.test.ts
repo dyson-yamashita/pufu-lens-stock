@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
@@ -8,9 +9,12 @@ import { legalPagesPlugin } from '../scripts/legal-pages-plugin';
 
 let root: string;
 let assets: Map<string, string>;
+let logoVersion: string;
 
 beforeAll(async () => {
   vi.stubEnv('APP_URL', 'https://ogp.example.test');
+  const logo = await readFile(new URL('../public/pufu-lens-logo.png', import.meta.url));
+  logoVersion = createHash('sha256').update(logo).digest('hex').slice(0, 16);
   root = await realpath(await mkdtemp(join(tmpdir(), 'pufu-legal-build-')));
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   await writeFile(join(root, 'index.html'), html.replace('/src/main.tsx', '/entry.js'));
@@ -124,7 +128,7 @@ it.each([
 ])('%s の初期HTMLに言語別のOGPとXカードを含める', (file, path, locale, alternate, title) => {
   const { document } = parseHTML(assets.get(file)!);
   const description = document.querySelector('meta[name="description"]')!.getAttribute('content');
-  const image = 'https://ogp.example.test/pufu-lens-logo.png';
+  const image = `https://ogp.example.test/pufu-lens-logo.png?v=${logoVersion}`;
   for (const [property, content] of Object.entries({
     'og:type': 'website',
     'og:site_name': 'Pufu Lens',

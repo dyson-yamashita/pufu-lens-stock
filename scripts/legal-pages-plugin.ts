@@ -23,6 +23,7 @@ import {
   type LegalPage as LegalPageName,
 } from '../shared/site-paths';
 import type { Language } from '../shared/locale';
+import { socialImagePath } from './social-image';
 
 function origin(): string {
   return siteOrigin(process.env.APP_URL);
@@ -76,7 +77,7 @@ function prepareDocument(
   document.querySelector('meta[name="description"]')?.setAttribute('content', options.description);
   ensureCanonical(document, options.path);
   if (options.homeSocial) {
-    const image = absoluteUrl('/pufu-lens-logo.png', origin());
+    const image = absoluteUrl(socialImagePath, origin());
     const locale = options.language === 'en' ? 'en_US' : 'ja_JP';
     for (const [property, content] of Object.entries({
       'og:type': 'website',

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { parseHTML } from 'linkedom';
 import worker from '../server/index';
 import { testApp } from './helpers';
+import { socialImagePath } from '../scripts/social-image';
 let app: Awaited<ReturnType<typeof testApp>>;
 let key: string;
 const read = (path: string, method = 'GET') =>
@@ -95,7 +96,7 @@ it('プ譜と問いの個別URLは本文、固有title、OGPを返し、利用�
     `${app.env.APP_URL}/p/${key}/pufus/pf`,
   );
   expect(document.querySelector('meta[property="og:image"]')?.getAttribute('content')).toBe(
-    `${app.env.APP_URL}/pufu-lens-logo.png`,
+    `${app.env.APP_URL}${socialImagePath}`,
   );
   const question = await read(`/p/${key}/questions/q`);
   expect(await question.text()).toContain('実践の問い？');
