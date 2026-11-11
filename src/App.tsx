@@ -169,7 +169,7 @@ function pufuSourceFromHistory(): PufuSource {
 }
 const headerLabels = (): Record<Route['view'], string> => ({
   stocks: t('ui.app.stocks'),
-  stock: t('stock.detail_title'),
+  stock: t('ui.app.details'),
   questions: t('ui.app.questions_insights'),
   pufus: t('ui.app.pufu'),
   memory: t('ui.app.memory'),
@@ -1027,18 +1027,26 @@ export default function App() {
   );
   const listLabel =
     questionListContext.view === 'pufus' ? t('ui.app.pufu') : t('ui.app.questions_insights');
-  const breadcrumbListLabel = route.view === 'pufu' ? t('ui.app.pufu') : listLabel;
-  const breadcrumbListHash =
-    route.view === 'pufu'
+  const breadcrumbListLabel = stockFlow
+    ? t('ui.app.stocks')
+    : route.view === 'pufu'
+      ? t('ui.app.pufu')
+      : listLabel;
+  const breadcrumbListHash = stockFlow
+    ? stockOrigin.projectId
+      ? `#project/${encodeURIComponent(stockOrigin.projectId)}`
+      : '#'
+    : route.view === 'pufu'
       ? `#pufus${questionListContext.projectId ? `/${encodeURIComponent(questionListContext.projectId)}` : ''}`
       : questionListContext.hash;
-  const questionListHeading = questionListProject
-    ? t('ui.app.value_in_value', { value0: questionListProject.name, value1: breadcrumbListLabel })
+  const breadcrumbProject = stockFlow
+    ? projects.find((project) => project.id === stockOrigin.projectId)
+    : questionListProject;
+  const breadcrumbListHeading = breadcrumbProject
+    ? t('ui.app.value_in_value', { value0: breadcrumbProject.name, value1: breadcrumbListLabel })
     : t('ui.app.all_value', { value0: breadcrumbListLabel });
   const headerProjectId = stockFlow
-    ? openedStock && openedStock.id === route.detailId
-      ? openedStock.project_id
-      : stockOrigin.projectId
+    ? stockOrigin.projectId
     : questionFlow
       ? questionListContext.projectId
       : route.projectId;
@@ -1267,21 +1275,9 @@ export default function App() {
                 <span aria-hidden="true">/</span>{' '}
               </>
             )}
-            {stockFlow ? (
+            {detailFlow ? (
               <>
-                <a
-                  href={
-                    openedStock ? `#project/${encodeURIComponent(openedStock.project_id)}` : '#'
-                  }
-                >
-                  {t('ui.app.stocks')}
-                </a>
-                <span aria-hidden="true">/</span>
-                <span aria-current="page">{t('stock.detail_title')}</span>
-              </>
-            ) : questionFlow ? (
-              <>
-                <a href={breadcrumbListHash} title={questionListHeading}>
+                <a href={breadcrumbListHash} title={breadcrumbListHeading}>
                   {headerProjectId
                     ? breadcrumbListLabel
                     : t('ui.app.all_value', { value0: breadcrumbListLabel })}
@@ -1529,7 +1525,10 @@ export default function App() {
                 {t('stock.back')}
               </button>
               <header className="page-header">
-                <h1>{t('stock.detail_title')}</h1>
+                <div>
+                  <h1>{t('stock.detail_title')}</h1>
+                  <p>{t('stock.detail_description')}</p>
+                </div>
               </header>
               {stockError && (
                 <p className="form-error" role="alert">

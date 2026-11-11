@@ -296,6 +296,12 @@ it('本文採用モードは原文を保ちURLをリンク化し、短文用の�
 it('ストックの詳細をモーダルではなく専用URLの画面で開き、再読み込みでも復元する', async () => {
   await openStock();
   expect(window.location.hash).toBe('#stock/youtube-stock');
+  expect(
+    [...document.querySelectorAll('.breadcrumb a')].map((link) => link.textContent?.trim()),
+  ).toEqual(['トップ', 'すべてのストック', '詳細']);
+  expect(document.querySelector('.breadcrumb [aria-current="page"]')?.getAttribute('href')).toBe(
+    '#stock/youtube-stock',
+  );
   expect(document.querySelector('dialog')).toBeNull();
   expect(document.querySelector('.stock-detail-page h1')?.textContent).toBe('ストックの詳細');
   await act(async () => root.render(createElement(App, { key: 'reload' })));
@@ -316,6 +322,14 @@ it('一覧に表示されていないストックのURLを直接開いて取得�
 it('詳細の戻るボタンで保存先の一覧に戻る', async () => {
   window.location.hash = '#project/project';
   await openStock();
+  expect(
+    [...document.querySelectorAll('.breadcrumb a')].map((link) => link.textContent?.trim()),
+  ).toEqual(['トップ', stock.project_name, 'ストック', '詳細']);
+  expect(
+    [...document.querySelectorAll('.breadcrumb a')]
+      .find((link) => link.textContent?.trim() === 'ストック')
+      ?.getAttribute('href'),
+  ).toBe('#project/project');
   await act(async () =>
     document.querySelector<HTMLButtonElement>('.stock-detail-page .back-link')!.click(),
   );

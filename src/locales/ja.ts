@@ -915,6 +915,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.save_articles_as_stocks': '記事をストックする',
   'manual.stock_url_heading': '複数ページの記事・PDF・X・YouTube',
   'stock.detail_title': 'ストックの詳細',
+  'stock.detail_description': 'ストックを見つめ直し、問い・気づきにつなげましょう。',
   'stock.back': '前の画面に戻る',
   'manual.stock_detail_navigation':
     'ストックのカードを選ぶと詳細画面が開きます。「前の画面に戻る」で元の一覧や問いに戻れます。詳細画面のURLを直接開いたり、再読み込みしたりすることもできます。',

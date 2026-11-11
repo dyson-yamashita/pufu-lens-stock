@@ -41,6 +41,11 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await app.open(`/#project/${fixture.projectId}`);
   await screen.getByRole('heading', 'E2Eで保存した本文').click();
   expect(await browser.evaluate(() => window.location.hash.startsWith('#stock/'))).toBe(true);
+  expect(
+    await browser.evaluate(() =>
+      [...document.querySelectorAll('.breadcrumb a')].map((link) => link.textContent?.trim()),
+    ),
+  ).toEqual(['トップ', fixture.projectName, 'ストック', '詳細']);
   await expect(screen.getByRole('dialog')).toHaveCount(0);
   await app.screenshot('stock-detail-light');
   await browser.emulateMedia({ colorScheme: 'dark' });
