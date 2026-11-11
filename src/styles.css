@@ -2497,32 +2497,53 @@ p {
 }
 .theme-toggle {
   display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--wash);
-}
-.theme-toggle button {
-  display: grid;
-  place-items: center;
-  width: 44px;
+  gap: 6px;
   height: 44px;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--muted);
 }
-.theme-toggle button:hover {
+.theme-toggle-track {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  background: var(--wash);
+  transition: background 0.16s;
+}
+.theme-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.16s;
+}
+.theme-toggle[aria-checked='true'] .theme-toggle-track {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.theme-toggle[aria-checked='true'] .theme-toggle-thumb {
+  transform: translateX(14px);
   background: var(--card);
+}
+.theme-toggle:hover,
+.theme-toggle[aria-checked='false'] .theme-toggle-light,
+.theme-toggle[aria-checked='true'] .theme-toggle-dark {
   color: var(--primary);
 }
-.theme-toggle button[aria-pressed='true'] {
-  border-color: var(--border);
-  background: var(--card);
-  color: var(--primary);
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-track,
+  .theme-toggle-thumb {
+    transition: none;
+  }
 }
 .login-main {
   max-width: 1320px;

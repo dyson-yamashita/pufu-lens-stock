@@ -1,9 +1,10 @@
 import { expect } from 'e2e';
 import { test } from '@e2e-dev/web';
 
-test('THEME-001 トップの太陽・月でテーマを選び、再読込と言語変更後も保持する', async ({
+test('THEME-001 トップのスイッチでテーマを選び、再読込と言語変更後も保持する', async ({
   app,
   browser,
+  screen,
 }) => {
   const address = new URL(app.baseUrl ?? 'about:blank');
   if (address.protocol !== 'http:' || address.hostname !== '127.0.0.1' || !address.port)
@@ -16,24 +17,19 @@ test('THEME-001 トップの太陽・月でテーマを選び、再読込と言�
   await browser.emulateMedia({ colorScheme: 'dark' });
   await app.open('/');
   const html = browser.locator('html');
-  const toggle = browser.locator('.theme-toggle');
-  const light = toggle.getByRole('button', 'ライト', { exact: true });
-  const dark = toggle.getByRole('button', 'ダーク', { exact: true });
+  const toggle = screen.getByRole('switch', 'ダークモード', { exact: true });
   await expect(html).toHaveAttribute('data-theme', 'dark');
-  await expect(dark).toHaveAttribute('aria-pressed', 'true');
-  await expect(light).toHaveAttribute('aria-pressed', 'false');
-  await light.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await toggle.click();
   await expect(html).toHaveAttribute('data-theme', 'light');
-  await expect(light).toHaveAttribute('aria-pressed', 'true');
-  await expect(dark).toHaveAttribute('aria-pressed', 'false');
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await app.screenshot('home-theme-light');
   await browser.reload();
   await expect(html).toHaveAttribute('data-theme', 'light');
-  await expect(light).toHaveAttribute('aria-pressed', 'true');
-  await dark.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await toggle.click();
   await expect(html).toHaveAttribute('data-theme', 'dark');
-  await expect(dark).toHaveAttribute('aria-pressed', 'true');
-  await expect(light).toHaveAttribute('aria-pressed', 'false');
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
   await app.screenshot('home-theme-dark');
   await browser.reload();
   await expect(html).toHaveAttribute('data-theme', 'dark');
@@ -41,10 +37,14 @@ test('THEME-001 トップの太陽・月でテーマを選び、再読込と言�
   await expect(html).toHaveAttribute('data-theme', 'dark');
   await browser.locator('#site-language').selectOption({ value: 'en' });
   await expect(html).toHaveAttribute('lang', 'en');
-  await expect(toggle.getByRole('button', 'Dark', { exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  await toggle.getByRole('button', 'Light', { exact: true }).click();
+  const englishToggle = screen.getByRole('switch', 'Dark mode', { exact: true });
+  await expect(englishToggle).toHaveAttribute('aria-checked', 'true');
+  await englishToggle.click();
   await expect(html).toHaveAttribute('data-theme', 'light');
+  await browser.keyboard.press('Space');
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(englishToggle).toHaveAttribute('aria-checked', 'true');
+  await browser.keyboard.press('Enter');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(englishToggle).toHaveAttribute('aria-checked', 'false');
 });
