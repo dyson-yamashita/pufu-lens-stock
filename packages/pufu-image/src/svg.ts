@@ -503,11 +503,16 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     language,
   );
   const height = minBodyBottom + 49;
-  if (!Number.isSafeInteger(height) || height < 1 || width * height > imageLimits.maxPixels)
+  const scale = Math.min(1, Math.sqrt(imageLimits.maxPixels / (width * height)));
+  // Keep the full layout in the viewBox; only reduce the raster viewport.
+  // Reject layouts needing more than 50% reduction to retain readable text.
+  if (!Number.isSafeInteger(height) || height < 1 || scale < 0.5)
     throw new PufuImageError(
       'IMAGE_TOO_LARGE',
       '画像が大きすぎます。文章量や施策数を減らしてください。',
     );
+  const outputWidth = Math.floor(width * scale);
+  const outputHeight = Math.floor(height * scale);
   let lines = '';
   for (const group of groups) {
     const shift =
@@ -545,7 +550,7 @@ export function createPufuSvg(input: unknown, options: SvgOptions = {}) {
     )
     .join('');
   const description = showProgress ? labels.description : labels.descriptionWithoutProgress;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>${xml(labels.title)}：${xml(score.gainingGoal.text)}</title><desc>${xml(description)}</desc><g font-family="Noto Sans CJK JP, sans-serif">${rect(0, 0, width, height, '#ffffff', 'none', 0)}${rect(30, 24, 1696, height - 48, '#ffffff', '#bdc8d8', 0)}${heads}<line x1="402" y1="24" x2="402" y2="${height - 24}" stroke="#cbd5e1"/>${lines}${content}${win.content}${goal.content}</g></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${outputWidth}" height="${outputHeight}" viewBox="0 0 ${width} ${height}"><title>${xml(labels.title)}：${xml(score.gainingGoal.text)}</title><desc>${xml(description)}</desc><g font-family="Noto Sans CJK JP, sans-serif">${rect(0, 0, width, height, '#ffffff', 'none', 0)}${rect(30, 24, 1696, height - 48, '#ffffff', '#bdc8d8', 0)}${heads}<line x1="402" y1="24" x2="402" y2="${height - 24}" stroke="#cbd5e1"/>${lines}${content}${win.content}${goal.content}</g></svg>`;
   if (theme === 'light') return svg;
   // 色属性だけを置き換え、本文に書かれた色コードやエスケープ済みの文章は変えない。
   return svg.replace(
