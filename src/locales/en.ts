@@ -927,6 +927,10 @@ export const en: Record<string, string> = {
     'Applied immediately. This setting is saved in this browser.',
   'ui.user_manual.save_articles_as_stocks': 'Save articles as stocks',
   'manual.stock_url_heading': 'Multi-page articles, PDFs, X, and YouTube',
+  'stock.detail_title': 'Stock details',
+  'stock.back': 'Back to previous page',
+  'manual.stock_detail_navigation':
+    'Select a stock card to open its detail page. Use Back to previous page to return to the list or question. You can also open the detail URL directly or reload it.',
   'manual.stock_images_heading': 'Attach and view images',
   'manual.stock_edit_heading': 'Organize and edit stocks',
   'manual.project_lists_heading': 'Exclude a project from library lists',

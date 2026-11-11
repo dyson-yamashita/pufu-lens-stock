@@ -28,8 +28,25 @@ beforeEach(() => {
   });
   Object.defineProperty(window, 'location', {
     configurable: true,
-    value: { hash: '', pathname: '/', search: '' },
+    value: new URL('https://example.com/'),
   });
+  let historyState: unknown = null;
+  Object.defineProperty(window, 'history', {
+    configurable: true,
+    value: {
+      get state() {
+        return historyState;
+      },
+      replaceState(state: unknown) {
+        historyState = state;
+      },
+      pushState(state: unknown, _title: string, url: string) {
+        historyState = state;
+        window.location.hash = url;
+      },
+    },
+  });
+  Object.defineProperty(window, 'scrollY', { configurable: true, writable: true, value: 0 });
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
@@ -112,6 +129,7 @@ async function openStock() {
   const button = document.querySelector<HTMLButtonElement>('.article-open')!;
   expect(button).not.toBeNull();
   await act(async () => button.click());
+  await act(async () => window.dispatchEvent(new window.Event('hashchange')));
 }
 it('要約本文の直後に添付画像を表示し、画像タブから戻ると追加分も表示する', async () => {
   const original = vi.mocked(api).getMockImplementation()!;
@@ -273,4 +291,188 @@ it('本文採用モードは原文を保ちURLをリンク化し、短文用の�
   expect(body.textContent).toBe(text);
   expect(body.querySelector('a')?.getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
   expect(body.querySelector('img[onerror]')).toBeNull();
+});
+
+it('ストックの詳細をモーダルではなく専用URLの画面で開き、再読み込みでも復元する', async () => {
+  await openStock();
+  expect(window.location.hash).toBe('#stock/youtube-stock');
+  expect(document.querySelector('dialog')).toBeNull();
+  expect(document.querySelector('.stock-detail-page h1')?.textContent).toBe('ストックの詳細');
+  await act(async () => root.render(createElement(App, { key: 'reload' })));
+  expect(document.querySelector('.stock-detail h3')?.textContent).toBe(stock.title);
+  expect(document.querySelector('dialog')).toBeNull();
+});
+it('一覧に表示されていないストックのURLを直接開いて取得する', async () => {
+  const original = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation((path, options) =>
+    new URL(path, 'https://example.com').pathname === '/api/v1/stocks'
+      ? Promise.resolve({ stocks: [], total: 0 })
+      : original(path, options),
+  );
+  window.location.hash = '#stock/youtube-stock';
+  await act(async () => root.render(createElement(App)));
+  expect(document.querySelector('.stock-detail h3')?.textContent).toBe(stock.title);
+});
+it('詳細の戻るボタンで保存先の一覧に戻る', async () => {
+  window.location.hash = '#project/project';
+  await openStock();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.stock-detail-page .back-link')!.click(),
+  );
+  await act(async () => window.dispatchEvent(new window.Event('hashchange')));
+  expect(window.location.hash).toBe('#project/project');
+  expect(document.querySelector('.stock-detail-page')).toBeNull();
+  expect(document.querySelector('.article-open')).not.toBeNull();
+});
+it('存在しないストックのURLでは取得エラーを表示する', async () => {
+  window.location.hash = '#stock/missing';
+  const original = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation((path, options) =>
+    path === '/api/v1/stocks/missing'
+      ? Promise.reject(new Error('ストックが見つかりません'))
+      : original(path, options),
+  );
+  await act(async () => root.render(createElement(App)));
+  expect(document.querySelector('.stock-detail-page [role="alert"]')?.textContent).toContain(
+    'ストックが見つかりません',
+  );
+  expect(document.querySelector('.stock-detail')).toBeNull();
+});
+it('メモを保存しても詳細画面にとどまり、続けて保存できる', async () => {
+  await openStock();
+  await act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('.detail-tabs button')]
+      .find((button) => button.textContent === 'メモ・保存先')!
+      .click(),
+  );
+  const form = document.querySelector('#edit-note')!.closest('form')!;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await act(async () =>
+      form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+    );
+    expect(
+      document.querySelector<HTMLButtonElement>('.stock-detail .form-actions button')!.disabled,
+    ).toBe(false);
+    expect(window.location.hash).toBe('#stock/youtube-stock');
+    expect(document.querySelector('.stock-detail')).not.toBeNull();
+  }
+  expect(
+    vi.mocked(send).mock.calls.filter(([path]) => path === '/api/v1/stocks/youtube-stock'),
+  ).toHaveLength(2);
+});
+
+it.each([null, '再試行前の古い本文'])(
+  '再試行後はキャッシュした本文（%s）を取り直す',
+  async (oldContent) => {
+    stock.source_type = 'url';
+    stock.source_url = 'https://example.com/article';
+    stock.status = 'failed';
+    stock.summary = null;
+    let content = oldContent;
+    const original = vi.mocked(api).getMockImplementation()!;
+    vi.mocked(api).mockImplementation((path, options) =>
+      path === '/api/v1/stocks/youtube-stock/content'
+        ? Promise.resolve({ content })
+        : original(path, options),
+    );
+    vi.mocked(send).mockImplementation(async () => {
+      content = '再試行で取得した新しい本文';
+      stock = {
+        ...stock,
+        status: 'ready',
+        summary: { overview: content, keyPoints: [], topics: [] },
+      };
+      return { ok: true };
+    });
+    await openStock();
+    const tab = (label: string) =>
+      [...document.querySelectorAll<HTMLButtonElement>('.stock-detail .detail-tabs button')].find(
+        (button) => button.textContent === label,
+      )!;
+    await act(async () => tab('取得した本文').click());
+    if (oldContent) expect(document.querySelector('.article-body')?.textContent).toBe(oldContent);
+    else expect(document.querySelector('.article-body')?.textContent).toContain('サンプル記事');
+    await act(async () => tab('要約').click());
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.stock-detail button')]
+        .find((button) => button.textContent === '取得を再試行')!
+        .click(),
+    );
+    expect(document.querySelector('.stock-detail-page')).not.toBeNull();
+    await act(async () => tab('取得した本文').click());
+    expect(document.querySelector('.article-body')?.textContent).toBe('再試行で取得した新しい本文');
+  },
+);
+
+it('問いからストックへ移動して再読み込みしても、元の保存先の問い一覧に戻る', async () => {
+  const question = {
+    id: 'question',
+    stock_id: stock.id,
+    project_id: 'project',
+    project_name: stock.project_name,
+    source: 'user',
+    text: '戻り先を保てるか',
+    status: 'ready',
+    error: null,
+    model: null,
+    is_favorite: 0,
+    has_pufu: 0,
+    created_at: stock.created_at,
+    updated_at: stock.created_at,
+    article_title: stock.title,
+    article_status: stock.status,
+    domain: stock.domain,
+    note: '',
+    stocks: [{ id: stock.id, title: stock.title }],
+  };
+  const original = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation((path, options) => {
+    const pathname = new URL(path, 'https://example.com').pathname;
+    if (pathname === '/api/v1/questions')
+      return Promise.resolve({ questions: [question], total: 1 });
+    if (pathname === '/api/v1/questions/question') return Promise.resolve({ question, pufus: [] });
+    return original(path, options);
+  });
+  async function hashChange() {
+    await act(async () => window.dispatchEvent(new window.Event('hashchange')));
+  }
+  window.location.hash = '#questions/project';
+  await act(async () => root.render(createElement(App)));
+  await act(async () => document.querySelector<HTMLButtonElement>('.question-open')!.click());
+  await hashChange();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-source button')!.click(),
+  );
+  await hashChange();
+  await act(async () => root.render(createElement(App, { key: 'reload-question-origin' })));
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.stock-detail-page .back-link')!.click(),
+  );
+  await hashChange();
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('.question-detail-page .back-link')!.click(),
+  );
+  await hashChange();
+  expect(window.location.hash).toBe('#questions/project');
+});
+
+it('再試行に一度失敗しても成功後はエラーを消して詳細画面にとどまる', async () => {
+  stock.source_type = 'url';
+  stock.source_url = 'https://example.com/source';
+  stock.status = 'failed';
+  stock.summary = null;
+  vi.mocked(send)
+    .mockRejectedValueOnce(new Error('一時的な再試行エラー'))
+    .mockResolvedValueOnce({ ok: true });
+  await openStock();
+  const retry = () =>
+    [...document.querySelectorAll<HTMLButtonElement>('.detail-summary button')].find((button) =>
+      button.textContent?.includes('再試行'),
+    )!;
+  await act(async () => retry().click());
+  expect(document.querySelector('.stock-detail .form-error')?.textContent).toContain(
+    '一時的な再試行エラー',
+  );
+  await act(async () => retry().click());
+  expect(document.querySelector('.stock-detail .form-error')).toBeNull();
 });

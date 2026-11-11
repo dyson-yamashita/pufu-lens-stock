@@ -68,6 +68,10 @@ beforeEach(() => {
         get state() {
           return historyState;
         },
+        pushState(state: unknown, _title: string, url: string) {
+          historyState = state;
+          window.location.href = new URL(url, window.location.href).href;
+        },
         replaceState(state: unknown, _title: string, url?: string | URL | null) {
           historyState = state;
           if (url) window.location.href = new URL(url, window.location.href).href;
@@ -682,6 +686,7 @@ it('プ譜を見た後にストックから問いを開くと、問い一覧を�
   window.location.hash = '';
   await hashChange();
   await act(async () => document.querySelector<HTMLButtonElement>('.article-open')!.click());
+  await hashChange();
   await act(async () =>
     [...document.querySelectorAll<HTMLButtonElement>('.stock-detail .detail-tabs button')]
       .find((button) => button.textContent === '問い・気づき')!
