@@ -13,7 +13,10 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
   await screen.getByRole('button', '記事をストック', { exact: true }).click();
   await screen.getByLabel('投稿URL').fill(sourceUrl);
   await screen.getByRole('button', 'ストックする', { exact: true }).click();
-  await expect(browser.locator('.article-card .status')).toHaveText('本文を取得中');
+  // The first reload may still be queued; allow the UI's 5s polling cycle to observe extraction.
+  await expect(browser.locator('.article-card .status')).toHaveText('本文を取得中', {
+    timeout: 15000,
+  });
   const released = await fetch(`${fixture.url}/api/__e2e__/articles/${key}/release`, {
     method: 'POST',
   });
