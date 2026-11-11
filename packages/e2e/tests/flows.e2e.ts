@@ -40,6 +40,17 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(screen.getByRole('heading', 'E2Eで保存した本文')).toBeVisible();
   await app.open(`/#project/${fixture.projectId}`);
   await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  expect(await browser.evaluate(() => window.location.hash.startsWith('#stock/'))).toBe(true);
+  expect(
+    await browser.evaluate(() =>
+      [...document.querySelectorAll('.breadcrumb a')].map((link) => link.textContent?.trim()),
+    ),
+  ).toEqual(['トップ', fixture.projectName, 'ストック', '詳細']);
+  await expect(screen.getByRole('dialog')).toHaveCount(0);
+  await app.screenshot('stock-detail-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await app.screenshot('stock-detail-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
   await expect(browser.locator('.detail-summary .stock-image-carousel img')).toHaveAttribute(
     'alt',
     'stock-image.png',
@@ -83,7 +94,7 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
     'stock-image.png',
   );
   await browser.reload();
-  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await expect(browser.locator('.stock-detail-page')).toBeVisible();
   await screen.getByRole('button', '画像', { exact: true }).click();
   await expect(attachment).toHaveAttribute('alt', 'detail-image.png');
   const images = (await fixture.request(`/stocks/${data.stocks[0].id}/images`)) as {
@@ -101,12 +112,14 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(attachment).toHaveCount(0);
   await accept();
   await browser.reload();
-  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await expect(browser.locator('.stock-detail-page')).toBeVisible();
   await screen.getByRole('button', '画像', { exact: true }).click();
   await expect(attachment).toHaveCount(0);
   await expect(browser.locator('.stock-image-list img')).toHaveAttribute('alt', 'stock-image.png');
-  await screen.getByRole('button', '閉じる', { exact: true }).click();
-  await expect(screen.getByRole('dialog')).toBeHidden();
+  await screen.getByRole('button', '前の画面に戻る', { exact: true }).click();
+  await expect(browser.locator('.stock-detail-page')).toHaveCount(0);
+  expect(await browser.evaluate(() => window.location.hash)).toBe(`#project/${fixture.projectId}`);
+  await expect(browser.locator('.article-card')).toBeVisible();
   // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
   const verbatimText =
     '  原文の段落を保ちます。https://example.com/source?x=1&y=2\n\n' +
@@ -128,7 +141,7 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   );
   await expect(browser.locator('.verbatim-content a')).toHaveAttribute('target', '_blank');
   await browser.reload();
-  await screen.getByRole('heading', 'E2E要約しない本文', { exact: true }).click();
+  await expect(browser.locator('.stock-detail-page')).toBeVisible();
   await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
   await expect(browser.locator('.verbatim-content a')).toHaveAttribute(
     'href',
@@ -141,12 +154,35 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
     () => getComputedStyle(document.querySelector('.verbatim-content')!).whiteSpace,
   );
   expect(whiteSpace).toBe('pre-wrap');
+  await expect(browser.locator('.stock-detail-page')).toBeVisible();
+  await expect(screen.getByRole('dialog')).toHaveCount(0);
   await screen.getByRole('button', '入力した本文', { exact: true }).click();
   await expect(browser.locator('.article-body')).toHaveText(verbatimText);
   await expect(browser.locator('.article-body a')).toHaveAttribute(
     'href',
     'https://example.com/source?x=1&y=2',
   );
+  await screen.getByRole('button', '前の画面に戻る', { exact: true }).click();
+  await fixture.request('/questions', 'POST', {
+    project_id: fixture.projectId,
+    text: 'E2E少し小さくした問いの文字を確認します。',
+  });
+  await app.open('/#questions');
+  await expect(
+    screen.getByText('E2E少し小さくした問いの文字を確認します。', { exact: true }),
+  ).toBeVisible();
+  expect(
+    await browser.evaluate(() => {
+      const size = getComputedStyle(
+        document.querySelector('.question-card .question-text')!,
+      ).fontSize;
+      return size === (window.innerWidth <= 760 ? '17px' : '16px');
+    }),
+  ).toBe(true);
+  await app.screenshot('question-list-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await app.screenshot('question-list-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
 });
 
 test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して一覧へ戻る', async ({

@@ -19,6 +19,7 @@ const sections = (tr: typeof t) => [
           <li>{tr('ui.user_manual.choose_the_destination_project_enter_a_post_url_or')}</li>
           <li>{tr('ui.user_manual.open_the_added_card_to_view_its_summary_key')}</li>
         </ol>
+        <p>{tr('manual.stock_detail_navigation')}</p>
         <div className="manual-topics">
           <details>
             <summary>{tr('first_steps.title')}</summary>

@@ -65,7 +65,17 @@ beforeEach(() => {
     focus: { configurable: true, value: focus },
   });
   Object.defineProperties(window, {
-    location: { configurable: true, value: { hash: '', pathname: '/', search: '' } },
+    location: { configurable: true, value: new URL('https://example.com/') },
+    history: {
+      configurable: true,
+      value: {
+        state: null,
+        pushState(state: unknown, _title: string, url: string) {
+          this.state = state as null;
+          window.location.hash = url;
+        },
+      },
+    },
     matchMedia: {
       configurable: true,
       value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
@@ -178,8 +188,10 @@ async function render(screen: Screen) {
             : createElement(App),
     ),
   );
-  if (screen === 'stock')
+  if (screen === 'stock') {
     await act(async () => document.querySelector<HTMLButtonElement>('.article-open')!.click());
+    await act(async () => window.dispatchEvent(new window.Event('hashchange')));
+  }
 }
 function button(text: string, container: Pick<Document, 'querySelectorAll'> = document) {
   const found = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
@@ -235,6 +247,10 @@ it.each([
     }
     await act(async () => button(label).click());
     await act(async () => button(label, document.querySelector('.delete-confirmation')!).click());
+    if (screen === 'stock') {
+      await act(async () => window.dispatchEvent(new window.Event('hashchange')));
+      expect(document.querySelector('.stock-detail-page')).toBeNull();
+    }
     expect(deletes()).toEqual([[path, { method: 'DELETE' }]]);
     expect(send).not.toHaveBeenCalled();
     if (screen === 'question' || screen === 'pufu') expect(onDeleted).toHaveBeenCalledOnce();
@@ -281,7 +297,7 @@ it('本文がまだない生成待ちの問い・気づきも、削除対象と�
   expect(deletes()).toHaveLength(0);
 });
 
-it('ストック内の削除確認をEscapeで閉じても、親の詳細と編集中のメモは閉じない', async () => {
+it('ストック内の削除確認をEscapeで閉じても、詳細画面と編集中のメモを保持する', async () => {
   await render('stock');
   await act(async () => button('メモ・保存先').click());
   const note = document.querySelector<HTMLTextAreaElement>('#edit-note')!;

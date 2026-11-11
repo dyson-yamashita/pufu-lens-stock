@@ -28,8 +28,25 @@ beforeEach(() => {
   });
   Object.defineProperty(window, 'location', {
     configurable: true,
-    value: { hash: '', pathname: '/', search: '' },
+    value: new URL('https://example.com/'),
   });
+  let historyState: unknown = null;
+  Object.defineProperty(window, 'history', {
+    configurable: true,
+    value: {
+      get state() {
+        return historyState;
+      },
+      replaceState(state: unknown) {
+        historyState = state;
+      },
+      pushState(state: unknown, _title: string, url: string) {
+        historyState = state;
+        window.location.hash = url;
+      },
+    },
+  });
+  Object.defineProperty(window, 'scrollY', { configurable: true, writable: true, value: 0 });
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
@@ -120,6 +137,7 @@ async function openStock() {
   const button = document.querySelector<HTMLButtonElement>('.article-open')!;
   expect(button).not.toBeNull();
   await act(async () => button.click());
+  await act(async () => window.dispatchEvent(new window.Event('hashchange')));
 }
 it('一覧は静止画像だけを読み込み、画像が表示できない場合も詳細から再生できる', async () => {
   await act(async () => root.render(createElement(App)));
@@ -131,6 +149,7 @@ it('一覧は静止画像だけを読み込み、画像が表示できない場�
   const button = document.querySelector<HTMLButtonElement>('.youtube-thumbnail')!;
   expect(button.textContent).toContain('サムネイルを表示できません');
   await act(async () => button.click());
+  await act(async () => window.dispatchEvent(new window.Event('hashchange')));
   expect(document.querySelector('.stock-detail iframe')?.getAttribute('src')).toBe(
     'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE',
   );

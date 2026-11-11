@@ -28,6 +28,7 @@ export default function QuestionPage({
   onStock,
   onDeleted,
   onUpdated,
+  onLoaded,
 }: {
   id: string;
   resolve: boolean;
@@ -39,6 +40,7 @@ export default function QuestionPage({
   onStock: (id: string) => Promise<void>;
   onDeleted: () => void;
   onUpdated: () => void;
+  onLoaded?: () => void;
 }) {
   useLanguage();
   const [question, setQuestion] = useState<QuestionDetail>();
@@ -82,6 +84,9 @@ export default function QuestionPage({
       window.clearInterval(timer);
     };
   }, [id, deleting]);
+  useEffect(() => {
+    if (question) onLoaded?.();
+  }, [question, onLoaded]);
   return (
     <section
       className="question-detail-page"

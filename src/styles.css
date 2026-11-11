@@ -3331,7 +3331,7 @@ textarea::placeholder {
 }
 @media (min-width: 761px) {
   .question-card .question-text {
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.7;
   }
 }
@@ -3777,6 +3777,9 @@ article.pufu-list-item {
   .question-detail-card .question-text,
   .question-card .question-text {
     font-size: 19px;
+  }
+  .question-card .question-text {
+    font-size: 17px;
   }
   .question-detail-meta {
     flex-wrap: wrap;
@@ -4746,4 +4749,19 @@ article.pufu-list-item {
   font-size: 0.8rem;
   margin: 0.35rem 0 0;
   line-height: 1.7;
+}
+
+.stock-detail-page {
+  max-width: 900px;
+}
+.stock-detail-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 28px;
+}
+@media (max-width: 760px) {
+  .stock-detail-card {
+    padding: 22px;
+  }
 }

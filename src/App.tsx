@@ -27,6 +27,7 @@ import {
 } from 'react';
 import {
   ArrowDownToLine,
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
@@ -101,6 +102,7 @@ type MemoryResponse = {
 type Route = {
   view:
     | 'stocks'
+    | 'stock'
     | 'memory'
     | 'shortcuts'
     | 'mcp'
@@ -114,6 +116,46 @@ type Route = {
   projectId: string | null;
   detailId?: string;
 };
+type QuestionListContext = {
+  view: 'questions' | 'pufus';
+  projectId: string | null;
+  scope: string | null;
+  hash: string;
+  scroll: number;
+};
+function questionListContextFromHistory(): QuestionListContext {
+  const value = window.history?.state?.questionListContext;
+  return value &&
+    (value.view === 'questions' || value.view === 'pufus') &&
+    (value.projectId === null || typeof value.projectId === 'string') &&
+    (value.scope === null || typeof value.scope === 'string') &&
+    typeof value.hash === 'string' &&
+    value.hash.startsWith('#') &&
+    typeof value.scroll === 'number' &&
+    Number.isFinite(value.scroll)
+    ? value
+    : { view: 'questions', projectId: null, scope: null, hash: '#questions', scroll: 0 };
+}
+type StockOrigin = {
+  hash: string;
+  projectId: string | null;
+  scope: string | null;
+  scroll: number;
+  tab: 'summary' | 'question';
+};
+function stockOriginFromHistory(): StockOrigin {
+  const value = window.history?.state?.stockOrigin;
+  return value &&
+    typeof value.hash === 'string' &&
+    value.hash.startsWith('#') &&
+    (value.projectId === null || typeof value.projectId === 'string') &&
+    (value.scope === null || typeof value.scope === 'string') &&
+    typeof value.scroll === 'number' &&
+    Number.isFinite(value.scroll) &&
+    (value.tab === 'summary' || value.tab === 'question')
+    ? value
+    : { hash: '#', projectId: null, scope: null, scroll: 0, tab: 'summary' };
+}
 type PufuSource = {
   questionId: string | null;
   projectId: string | null;
@@ -128,6 +170,7 @@ function pufuSourceFromHistory(): PufuSource {
 }
 const headerLabels = (): Record<Route['view'], string> => ({
   stocks: t('ui.app.stocks'),
+  stock: t('ui.app.details'),
   questions: t('ui.app.questions_insights'),
   pufus: t('ui.app.pufu'),
   memory: t('ui.app.memory'),
@@ -152,11 +195,6 @@ type ModalState =
     }
   | {
       type: 'save';
-    }
-  | {
-      type: 'stock';
-      stock: Stock;
-      tab?: 'question';
     }
   | {
       type: 'token';
@@ -204,7 +242,8 @@ function routeFromHash(): Route {
       view === 'profile' ||
       view === 'questions' ||
       view === 'pufus' ||
-      ((view === 'question' || view === 'resolve' || view === 'pufu') && !!id) ||
+      ((view === 'question' || view === 'resolve' || view === 'pufu' || view === 'stock') &&
+        !!id) ||
       (view === 'settings' && !!id)
         ? view
         : 'stocks',
@@ -218,7 +257,7 @@ function routeFromHash(): Route {
         ? decodeURIComponent(id)
         : null,
     detailId:
-      (view === 'question' || view === 'resolve' || view === 'pufu') && id
+      (view === 'question' || view === 'resolve' || view === 'pufu' || view === 'stock') && id
         ? decodeURIComponent(id)
         : undefined,
   };
@@ -488,14 +527,18 @@ export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [route, setRoute] = useState<Route>(routeFromHash);
+  const [stockOrigin, setStockOrigin] = useState<StockOrigin>(stockOriginFromHistory);
+  const [openedStock, setOpenedStock] = useState<Stock | null>(null);
+  const [stockError, setStockError] = useState('');
+  const stockReturnScroll = useRef<number | null>(null);
+  const stockOriginRef = useRef(stockOrigin);
+  useEffect(() => {
+    stockOriginRef.current = stockOrigin;
+  }, [stockOrigin]);
   const [pufuSource, setPufuSource] = useState<PufuSource>(pufuSourceFromHistory);
-  const [questionListContext, setQuestionListContext] = useState({
-    view: 'questions' as 'questions' | 'pufus',
-    projectId: null as string | null,
-    scope: null as string | null,
-    hash: '#questions',
-    scroll: 0,
-  });
+  const [questionListContext, setQuestionListContext] = useState<QuestionListContext>(
+    questionListContextFromHistory,
+  );
   const navigationGuard = useRef<(() => boolean) | null>(null);
   const previousHash = useRef(window.location.hash);
   const previousHistoryState = useRef(window.history?.state);
@@ -539,6 +582,8 @@ export default function App() {
   const selected = projects.find((project) => project.id === route.projectId);
   const questionFlow =
     route.view === 'question' || route.view === 'resolve' || route.view === 'pufu';
+  const stockFlow = route.view === 'stock';
+  const detailFlow = questionFlow || stockFlow;
   const globalQuestionFlow = questionFlow && !questionListContext.projectId;
   const allQuestionsActive =
     (route.view === 'questions' && !route.projectId) ||
@@ -549,7 +594,9 @@ export default function App() {
   const libraryView =
     !route.projectId &&
     (route.view === 'stocks' || route.view === 'questions' || route.view === 'pufus');
-  const listProjectId = route.projectId ?? (libraryView ? libraryProjectId : null);
+  const listProjectId = stockFlow
+    ? stockOrigin.scope
+    : (route.projectId ?? (libraryView ? libraryProjectId : null));
   const filterProject = (projectId: string | null) => {
     setLibraryProjectId(projectId);
     setPage(1);
@@ -574,18 +621,55 @@ export default function App() {
     setMobileNav(false);
   };
   const openQuestion = (id: string) => {
-    if (!questionFlow)
+    if (!questionFlow && !(stockFlow && /^#(?:question|resolve|pufu)\//.test(stockOrigin.hash)))
       setQuestionListContext({
         view: 'questions',
-        projectId: route.projectId,
+        projectId: stockFlow ? stockOrigin.projectId : route.projectId,
         scope: listProjectId,
         hash:
-          route.view === 'questions'
-            ? window.location.hash
-            : `#questions${route.projectId ? `/${encodeURIComponent(route.projectId)}` : ''}`,
-        scroll: route.view === 'questions' ? window.scrollY : 0,
+          stockFlow && stockOrigin.hash.startsWith('#questions')
+            ? stockOrigin.hash
+            : route.view === 'questions'
+              ? window.location.hash
+              : `#questions${(stockFlow ? stockOrigin.projectId : route.projectId) ? `/${encodeURIComponent((stockFlow ? stockOrigin.projectId : route.projectId)!)}` : ''}`,
+        scroll:
+          stockFlow && stockOrigin.hash.startsWith('#questions')
+            ? stockOrigin.scroll
+            : route.view === 'questions'
+              ? window.scrollY
+              : 0,
       });
     navigateDetail('question', id);
+  };
+  const openStock = (stock: Stock, tab: StockOrigin['tab'] = 'summary') => {
+    const origin: StockOrigin = {
+      hash: window.location.hash || '#',
+      projectId: questionFlow ? questionListContext.projectId : route.projectId,
+      scope: questionFlow ? questionListContext.scope : listProjectId,
+      scroll: window.scrollY,
+      tab,
+    };
+    setStockOrigin(origin);
+    setOpenedStock(stock);
+    setStockError('');
+    stockOriginRef.current = origin;
+    window.history.pushState(
+      { ...window.history.state, stockOrigin: origin, questionListContext },
+      '',
+      `#stock/${encodeURIComponent(stock.id)}`,
+    );
+    window.dispatchEvent(new window.Event('hashchange'));
+    setModal(null);
+    setMobileNav(false);
+  };
+  const backFromStock = () => {
+    stockReturnScroll.current = stockOrigin.scroll;
+    window.history.pushState(
+      { ...window.history.state, questionListContext },
+      '',
+      stockOrigin.hash,
+    );
+    window.dispatchEvent(new window.Event('hashchange'));
   };
   const openPufu = (id: string) => {
     setQuestionListContext({
@@ -621,12 +705,19 @@ export default function App() {
         );
         return;
       }
+      const leavingStock = previousHash.current.startsWith('#stock/');
+      if (!leavingStock) stockReturnScroll.current = null;
       previousHash.current = window.location.hash;
       previousHistoryState.current = window.history?.state;
       const nextRoute = routeFromHash();
       if (nextRoute.view === 'pufu') setPufuSource(pufuSourceFromHistory());
+      if (nextRoute.view === 'stock') setStockOrigin(stockOriginFromHistory());
+      if (leavingStock && (window.location.hash || '#') === stockOriginRef.current.hash) {
+        stockReturnScroll.current = stockOriginRef.current.scroll;
+        setLibraryProjectId(stockOriginRef.current.scope);
+      }
       setRoute(nextRoute);
-      setPage(1);
+      if (nextRoute.view !== 'stock' && !leavingStock) setPage(1);
     };
     window.addEventListener('hashchange', listener);
     window.addEventListener('popstate', listener);
@@ -635,16 +726,27 @@ export default function App() {
       window.removeEventListener('popstate', listener);
     };
   }, []);
+  const restoreStockScroll = useCallback(() => {
+    const scroll = stockReturnScroll.current;
+    if (scroll === null) return;
+    stockReturnScroll.current = null;
+    window.requestAnimationFrame(() => window.scrollTo(0, scroll));
+  }, []);
   useEffect(() => {
-    if (questionFlow) window.scrollTo(0, 0);
-    else if (route.view === questionListContext.view)
+    if (detailFlow) window.scrollTo(0, 0);
+    if (stockReturnScroll.current !== null && !stockFlow) {
+      // A question page must finish loading before its previous scroll position fits.
+      if (route.view !== 'question' && route.view !== 'resolve') restoreStockScroll();
+    } else if (!detailFlow && route.view === questionListContext.view)
       window.requestAnimationFrame(() => window.scrollTo(0, questionListContext.scroll));
   }, [
     route.view,
     route.detailId,
-    questionFlow,
+    detailFlow,
+    stockFlow,
     questionListContext.scroll,
     questionListContext.view,
+    restoreStockScroll,
   ]);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)');
@@ -769,6 +871,42 @@ export default function App() {
     refresh,
   ]);
   useEffect(() => {
+    if (!user?.onboarding_completed_at || route.view !== 'stock' || !route.detailId) return;
+    const controller = new AbortController();
+    let inFlight = false;
+    const load = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      const version = stockMutationVersion.current;
+      try {
+        const { stock } = await api<{ stock: Stock }>(
+          `/api/v1/stocks/${encodeURIComponent(route.detailId!)}`,
+          { signal: controller.signal },
+        );
+        if (!controller.signal.aborted && version === stockMutationVersion.current) {
+          setOpenedStock(stock);
+          setStockError('');
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          if ((error as ApiError).status === 401) setUser(null);
+          if ([403, 404].includes((error as ApiError).status)) setOpenedStock(null);
+          setStockError(applicationError((error as Error).message));
+        }
+      } finally {
+        inFlight = false;
+      }
+    };
+    void load();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 5000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [user, route.view, route.detailId, refresh]);
+  useEffect(() => {
     if (!notice) return;
     const timeout = window.setTimeout(() => setNotice(null), 5000);
     return () => window.clearTimeout(timeout);
@@ -793,10 +931,8 @@ export default function App() {
           item.id === result.id ? { ...item, is_favorite: result.is_favorite } : item,
         ),
       );
-      setModal((current) =>
-        current?.type === 'stock' && current.stock.id === result.id
-          ? { ...current, stock: { ...current.stock, is_favorite: result.is_favorite } }
-          : current,
+      setOpenedStock((current) =>
+        current?.id === result.id ? { ...current, is_favorite: result.is_favorite } : current,
       );
     } finally {
       stockMutationVersion.current += 1;
@@ -815,10 +951,8 @@ export default function App() {
       setStocks((items) =>
         items.map((item) => (item.id === result.id ? { ...item, title: result.title } : item)),
       );
-      setModal((current) =>
-        current?.type === 'stock' && current.stock.id === result.id
-          ? { ...current, stock: { ...current.stock, title: result.title } }
-          : current,
+      setOpenedStock((current) =>
+        current?.id === result.id ? { ...current, title: result.title } : current,
       );
     } finally {
       stockMutationVersion.current += 1;
@@ -830,7 +964,7 @@ export default function App() {
       const { stock } = await api<{
         stock: Stock;
       }>(`/api/v1/articles/${encodeURIComponent(articleId)}`);
-      setModal({ type: 'stock', stock });
+      openStock(stock);
     } catch (e) {
       setError(applicationError((e as Error).message));
     }
@@ -895,16 +1029,30 @@ export default function App() {
   );
   const listLabel =
     questionListContext.view === 'pufus' ? t('ui.app.pufu') : t('ui.app.questions_insights');
-  const breadcrumbListLabel = route.view === 'pufu' ? t('ui.app.pufu') : listLabel;
-  const breadcrumbListHash =
-    route.view === 'pufu'
+  const breadcrumbListLabel = stockFlow
+    ? t('ui.app.stocks')
+    : route.view === 'pufu'
+      ? t('ui.app.pufu')
+      : listLabel;
+  const breadcrumbListHash = stockFlow
+    ? stockOrigin.projectId
+      ? `#project/${encodeURIComponent(stockOrigin.projectId)}`
+      : '#'
+    : route.view === 'pufu'
       ? `#pufus${questionListContext.projectId ? `/${encodeURIComponent(questionListContext.projectId)}` : ''}`
       : questionListContext.hash;
-  const questionListHeading = questionListProject
-    ? t('ui.app.value_in_value', { value0: questionListProject.name, value1: breadcrumbListLabel })
+  const breadcrumbProject = stockFlow
+    ? projects.find((project) => project.id === stockOrigin.projectId)
+    : questionListProject;
+  const breadcrumbListHeading = breadcrumbProject
+    ? t('ui.app.value_in_value', { value0: breadcrumbProject.name, value1: breadcrumbListLabel })
     : t('ui.app.all_value', { value0: breadcrumbListLabel });
-  const headerProjectId = questionFlow ? questionListContext.projectId : route.projectId;
-  const headerProject = questionFlow ? questionListProject : selected;
+  const headerProjectId = stockFlow
+    ? stockOrigin.projectId
+    : questionFlow
+      ? questionListContext.projectId
+      : route.projectId;
+  const headerProject = projects.find((project) => project.id === headerProjectId);
   const headerLabel = headerProjectId
     ? headerLabels()[route.view]
     : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
@@ -1129,9 +1277,9 @@ export default function App() {
                 <span aria-hidden="true">/</span>{' '}
               </>
             )}
-            {questionFlow ? (
+            {detailFlow ? (
               <>
-                <a href={breadcrumbListHash} title={questionListHeading}>
+                <a href={breadcrumbListHash} title={breadcrumbListHeading}>
                   {headerProjectId
                     ? breadcrumbListLabel
                     : t('ui.app.all_value', { value0: breadcrumbListLabel })}
@@ -1162,7 +1310,7 @@ export default function App() {
           </div>
         )}
         <div className="page-body">
-          {!questionFlow && (
+          {!detailFlow && (
             <header className="page-header">
               <div>
                 <h1>{heading}</h1>
@@ -1329,14 +1477,23 @@ export default function App() {
             </div>
           )}
           {(route.view === 'questions' ||
-            (questionFlow && questionListContext.view === 'questions')) && (
+            (questionFlow && questionListContext.view === 'questions') ||
+            (stockFlow &&
+              (stockOrigin.hash.startsWith('#questions') ||
+                stockOrigin.hash.startsWith('#question/')))) && (
             <div hidden={route.view !== 'questions'}>
               <Questions
                 projects={projects}
                 onAdd={() => setModal({ type: projects.length ? 'question' : 'project' })}
-                key={`${(questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}-${questionCreation}`}
+                key={`${(stockFlow ? stockOrigin.projectId : questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}-${questionCreation}`}
                 active={route.view === 'questions'}
-                projectId={questionFlow ? questionListContext.scope : listProjectId}
+                projectId={
+                  stockFlow
+                    ? stockOrigin.scope
+                    : questionFlow
+                      ? questionListContext.scope
+                      : listProjectId
+                }
                 refresh={refresh}
                 onQuestion={openQuestion}
                 onScope={(id) => {
@@ -1347,7 +1504,7 @@ export default function App() {
                   const { stock } = await api<{
                     stock: Stock;
                   }>(`/api/v1/stocks/${id}`);
-                  setModal({ type: 'stock', stock, tab: 'question' });
+                  openStock(stock, 'question');
                 }}
               />
             </div>
@@ -1363,7 +1520,54 @@ export default function App() {
               />
             </div>
           )}
-          {questionFlow ? (
+          {stockFlow ? (
+            <section className="stock-detail-page" aria-label={t('stock.detail_title')}>
+              <button className="back-link" onClick={backFromStock}>
+                <ArrowLeft size={16} aria-hidden="true" />
+                {t('stock.back')}
+              </button>
+              <header className="page-header">
+                <div>
+                  <h1>{t('stock.detail_title')}</h1>
+                  <p>{t('stock.detail_description')}</p>
+                </div>
+              </header>
+              {stockError && (
+                <p className="form-error" role="alert">
+                  {stockError}
+                  <button className="button text-button" onClick={reload}>
+                    {t('ui.app.reload')}
+                  </button>
+                </p>
+              )}
+              {openedStock && openedStock.id === route.detailId ? (
+                <div className="stock-detail-card">
+                  <StockDetail
+                    key={openedStock.id}
+                    stock={openedStock}
+                    projects={projects}
+                    initialTab={stockOrigin.tab}
+                    onDone={completed}
+                    onQuestion={openQuestion}
+                    onDeleted={(message) => {
+                      completed(message);
+                      backFromStock();
+                    }}
+                    favoriteBusy={savingStockFavorites.includes(openedStock.id)}
+                    onFavorite={toggleStockFavorite}
+                    onRename={renameStock}
+                  />
+                </div>
+              ) : (
+                !stockError && (
+                  <p className="content-loading">
+                    <Spinner />
+                    {t('ui.app.loading_articles')}
+                  </p>
+                )
+              )}
+            </section>
+          ) : questionFlow ? (
             route.view === 'pufu' ? (
               <PufuPage
                 key={route.detailId}
@@ -1395,6 +1599,7 @@ export default function App() {
                 projects={projects}
                 resolve={route.view === 'resolve'}
                 onUpdated={reload}
+                onLoaded={restoreStockScroll}
                 backLabel={t('ui.app.back_to_value_list', { value0: listLabel })}
                 onBack={() => {
                   if (route.view === 'resolve') navigateDetail('question', route.detailId!);
@@ -1411,7 +1616,7 @@ export default function App() {
                   const { stock } = await api<{
                     stock: Stock;
                   }>(`/api/v1/stocks/${encodeURIComponent(id)}`);
-                  setModal({ type: 'stock', stock });
+                  openStock(stock);
                 }}
               />
             )
@@ -1575,7 +1780,7 @@ export default function App() {
                       <ArticleCard
                         key={stock.id}
                         stock={stock}
-                        onOpen={() => setModal({ type: 'stock', stock })}
+                        onOpen={() => openStock(stock)}
                         favoriteBusy={savingStockFavorites.includes(stock.id)}
                         onFavorite={() => {
                           void toggleStockFavorite(stock).catch((e: Error) =>
@@ -1695,21 +1900,6 @@ export default function App() {
             onDone={openPufu}
           />
         </PufuModal>
-      )}
-      {modal?.type === 'stock' && (
-        <Modal title={t('ui.app.source_articles')} wide onClose={() => setModal(null)}>
-          <StockDetail
-            key={modal.stock.id}
-            stock={stocks.find((stock) => stock.id === modal.stock.id) ?? modal.stock}
-            projects={projects}
-            initialTab={modal.tab ?? 'summary'}
-            onDone={completed}
-            onQuestion={openQuestion}
-            favoriteBusy={savingStockFavorites.includes(modal.stock.id)}
-            onFavorite={toggleStockFavorite}
-            onRename={renameStock}
-          />
-        </Modal>
       )}
       {modal?.type === 'token' && (
         <Modal
@@ -2535,6 +2725,7 @@ function StockDetail({
   projects,
   initialTab,
   onDone,
+  onDeleted,
   onQuestion,
   onFavorite,
   favoriteBusy,
@@ -2544,6 +2735,7 @@ function StockDetail({
   projects: Project[];
   initialTab: 'summary' | 'question';
   onDone: (message: string) => void;
+  onDeleted: (message: string) => void;
   onQuestion: (id: string) => void;
   onFavorite: (stock: Stock) => Promise<void>;
   favoriteBusy: boolean;
@@ -2581,6 +2773,9 @@ function StockDetail({
     window.requestAnimationFrame(() => titleButton.current?.focus());
   };
   useEffect(() => {
+    setContent(undefined);
+  }, [stock.id, stock.status]);
+  useEffect(() => {
     let active = true;
     if (tab === 'content' && content === undefined)
       void api<{
@@ -2595,7 +2790,7 @@ function StockDetail({
     return () => {
       active = false;
     };
-  }, [tab, content, stock.id]);
+  }, [tab, content, stock.id, stock.status]);
   return (
     <div className="stock-detail">
       <div className="detail-domain">
@@ -2808,11 +3003,13 @@ function StockDetail({
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);
+                  setError('');
                   try {
                     await send(
                       `/api/v1/stocks/${stock.id}/retry`,
                       supplemental.trim() ? { supplemental_text: supplemental } : {},
                     );
+                    setContent(undefined);
                     onDone(
                       stock.source_type === 'text'
                         ? t('ui.app.summary_retry_accepted')
@@ -2820,6 +3017,7 @@ function StockDetail({
                     );
                   } catch (e) {
                     setError(applicationError((e as Error).message));
+                  } finally {
                     setBusy(false);
                   }
                 }}
@@ -2866,6 +3064,7 @@ function StockDetail({
               );
             } catch (e) {
               setError(applicationError((e as Error).message));
+            } finally {
               setBusy(false);
             }
           }}
@@ -2926,7 +3125,7 @@ function StockDetail({
         disabled={busy || favoriteBusy}
         onDelete={async () => {
           await api(`/api/v1/stocks/${stock.id}`, { method: 'DELETE' });
-          onDone(t('ui.app.article_deleted_and_memory_update_accepted'));
+          onDeleted(t('ui.app.article_deleted_and_memory_update_accepted'));
         }}
       >
         <p className="delete-target">{displayTitle}</p>
