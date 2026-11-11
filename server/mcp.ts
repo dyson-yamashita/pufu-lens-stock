@@ -1,3 +1,4 @@
+import { logDiagnosticError } from './diagnostics';
 import { allowedProjectIds, canAccessProject } from './project-access';
 import { getMcpConnectionSettings } from './mcp-connection-settings';
 import {
@@ -256,7 +257,7 @@ function createServer(env: Env, ctx: McpContext, principal: Principal) {
       const error =
         caught instanceof HTTPException ? new ToolError(caught.message, caught.status) : caught;
       if (!(error instanceof ToolError)) {
-        console.error('mcp_tool_failed');
+        logDiagnosticError('mcp_tool', error);
         return { ...result({ error: t('処理に失敗しました。'), status: 500 }), isError: true };
       }
       return {
