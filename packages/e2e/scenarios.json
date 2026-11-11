@@ -1,5 +1,15 @@
 [
   {
+    "id": "THEME-001",
+    "title": "トップページのライト・ダーク選択と保持",
+    "sources": ["src/App.tsx", "src/ThemeToggle.tsx", "src/theme.ts"],
+    "aspects": [
+      "システムのダーク設定を初期表示に反映し、太陽・月を内蔵したスイッチで明示的に切替。状態をaria-checkedで通知し、Space・Enterでも操作可能",
+      "ライト・ダークの再読込後の保持、明示選択後はシステム設定が変わっても維持、英語への言語変更後の保持と切替",
+      "desktopとphoneでライト・ダークのトップページを撮影"
+    ]
+  },
+  {
     "id": "STOCK-001",
     "title": "テキストの保存と再表示",
     "sources": [

@@ -29,6 +29,8 @@ beforeEach(() => {
     },
     scrollTo: { configurable: true, value() {} },
   });
+  const theme = { preference: 'system', theme: 'light' } as const;
+  window.pufuTheme = { getSnapshot: () => theme, subscribe: () => () => {}, setPreference() {} };
   user = { id: 'user', name: '', bio: '', avatar_url: null, onboarding_completed_at: null };
   requested = [];
   vi.mocked(send).mockReset();
