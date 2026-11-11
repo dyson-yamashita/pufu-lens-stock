@@ -1,3 +1,4 @@
+import { observeOperation } from './diagnostics';
 import { projectListFilter } from './project-access';
 import type { Env } from './env';
 import { embedSearchText, SearchError, searchTimeout } from './search-ai';
@@ -77,26 +78,28 @@ async function keyword(env: Env, options: StockSearch) {
   const { where, params } = filter(options);
   const direction = options.order === 'asc' ? 'ASC' : 'DESC';
   const bound = [...params, ...queryParams(options.q)];
-  const [rows, totals] = await env.DB.batch<Record<string, unknown>>([
-    env.DB.prepare(
-      'SELECT ' +
-        columns(options.detail) +
-        ' FROM ' +
-        joins +
-        ' WHERE ' +
-        where +
-        ' AND ' +
-        match +
-        ' ORDER BY s.created_at ' +
-        direction +
-        ',s.id ' +
-        direction +
-        ' LIMIT ? OFFSET ?',
-    ).bind(...bound, options.limit, (options.page - 1) * options.limit),
-    env.DB.prepare(
-      'SELECT COUNT(*) AS count FROM ' + joins + ' WHERE ' + where + ' AND ' + match,
-    ).bind(...bound),
-  ]);
+  const [rows, totals] = await observeOperation('d1', 'stocks_keyword', () =>
+    env.DB.batch<Record<string, unknown>>([
+      env.DB.prepare(
+        'SELECT ' +
+          columns(options.detail) +
+          ' FROM ' +
+          joins +
+          ' WHERE ' +
+          where +
+          ' AND ' +
+          match +
+          ' ORDER BY s.created_at ' +
+          direction +
+          ',s.id ' +
+          direction +
+          ' LIMIT ? OFFSET ?',
+      ).bind(...bound, options.limit, (options.page - 1) * options.limit),
+      env.DB.prepare(
+        'SELECT COUNT(*) AS count FROM ' + joins + ' WHERE ' + where + ' AND ' + match,
+      ).bind(...bound),
+    ]),
+  );
   const total = Number(totals.results[0].count);
   return {
     stocks: rows.results.map((row) => serialize(row, options.detail)),

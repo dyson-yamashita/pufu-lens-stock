@@ -1,3 +1,4 @@
+import { requestDiagnostics, logDiagnosticError, observeOperation } from './diagnostics';
 import {
   listMemoryVersions,
   readMemoryVersion,
@@ -139,6 +140,7 @@ async function ownedProject(env: Env, userId: string, id: string) {
 // OAuth検証済みユーザーによるプロセス内MCP呼び出しでのみprincipalを指定する。
 export function createApp(trustedPrincipal?: Principal) {
   const app = new Hono<AppEnv>();
+  app.use('*', requestDiagnostics('api'));
   app.use(
     '/api/*',
     (c, next) =>
@@ -202,7 +204,9 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/auth/google/callback', googleCallback);
   app.post('/api/auth/demo', async (c) => {
     const response = await demoLogin(c);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return response;
   });
   app.use('/api/v1/*', async (c, next) => {
@@ -331,7 +335,10 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(principal.user.id)
       .first<User>();
     if (!user) throw new HTTPException(401);
-    if (registered[1].meta.changes) c.executionCtx.waitUntil(dispatchJobs(c.env));
+    if (registered[1].meta.changes)
+      c.executionCtx.waitUntil(
+        observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+      );
     return c.json({ user, redirect_to: await consumeMcpLogin(c) });
   });
   app.patch('/api/v1/me', async (c) => {
@@ -348,7 +355,10 @@ export function createApp(trustedPrincipal?: Principal) {
     ]);
     const user = updated.results[0];
     if (!user) throw new HTTPException(401, { message: 'ログインが必要です。' });
-    if (queued.meta.changes) c.executionCtx.waitUntil(dispatchJobs(c.env));
+    if (queued.meta.changes)
+      c.executionCtx.waitUntil(
+        observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+      );
     return c.json({ user });
   });
   app.post('/api/v1/logout', logout);
@@ -399,7 +409,9 @@ export function createApp(trustedPrincipal?: Principal) {
       ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ id }, 201);
   });
   app.patch('/api/v1/projects/:id', async (c) => {
@@ -427,7 +439,9 @@ export function createApp(trustedPrincipal?: Principal) {
       ...(memoryChanged ? dirtyMemoryStatements(c.env, user.id, [id]) : []),
     ]);
     if (memoryChanged || data.auto_generate_questions === true)
-      c.executionCtx.waitUntil(dispatchJobs(c.env));
+      c.executionCtx.waitUntil(
+        observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+      );
     return c.json({ ok: true });
   });
   app.delete('/api/v1/projects/:id', async (c) => {
@@ -442,8 +456,12 @@ export function createApp(trustedPrincipal?: Principal) {
       ...orphanCleanupStatements(c.env, user.id),
       ...dirtyMemoryStatements(c.env, user.id, []),
     ]);
-    c.executionCtx.waitUntil(cleanupStockImages(c.env));
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'cleanup_stock_images', () => cleanupStockImages(c.env)),
+    );
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true });
   });
   app.get('/api/v1/stocks', async (c) => {
@@ -625,7 +643,9 @@ export function createApp(trustedPrincipal?: Principal) {
       .bind(user.id, projects[0].id, canonical)
       .first<{ id: string; status: string }>();
     const created = stockInsertIndexes.some((index) => result[index].meta.changes > 0);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json(
       { id: stock!.id, status: stock!.status, duplicate: !created },
       created ? 202 : 200,
@@ -700,7 +720,9 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(question.id, c.get('principal').user.id, question.project_id)
       .all<PufuSummary>();
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ question, pufus: pufus.results });
   });
   app.patch('/api/v1/questions/:id', async (c) => {
@@ -813,13 +835,17 @@ export function createApp(trustedPrincipal?: Principal) {
       data,
       question,
     );
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ id: result.id, status: result.status }, result.created ? 202 : 200);
   });
   app.post('/api/v1/projects/:id/pufus/generate', async (c) => {
     const data = await body(c, createPufuSchema);
     const result = await createGeneratedPufu(c.env, c.get('principal'), c.req.param('id'), data);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ id: result.id, status: result.status }, result.created ? 202 : 200);
   });
   app.post('/api/v1/pufus', async (c) => {
@@ -846,7 +872,9 @@ export function createApp(trustedPrincipal?: Principal) {
     if (!row) throw new HTTPException(404, { message: 'プ譜が見つかりません。' });
     const { score_json, input_json, ...pufu } = row;
     const phaseRows = phases.results as (Omit<PufuPhase, 'score'> & { score_json: string })[];
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({
       pufu: {
         ...pufu,
@@ -1067,7 +1095,9 @@ export function createApp(trustedPrincipal?: Principal) {
       ).bind(now(), pufu.id, c.get('principal').user.id, pufu.generation),
       queuePufuJob(c.env, pufu.id),
     ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true }, 202);
   });
   app.get('/api/v1/questions', async (c) => {
@@ -1101,15 +1131,19 @@ export function createApp(trustedPrincipal?: Principal) {
       source,
       source,
     ];
-    const [rows, totals] = await c.env.DB.batch<Record<string, unknown>>([
-      c.env.DB.prepare(
-        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT 24 OFFSET ?`,
-      ).bind(...params, (page - 1) * 24),
-      c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${questionJoins} WHERE ${where}`).bind(
-        ...params,
-      ),
-    ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    const [rows, totals] = await observeOperation('d1', 'questions_list', () =>
+      c.env.DB.batch<Record<string, unknown>>([
+        c.env.DB.prepare(
+          `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT 24 OFFSET ?`,
+        ).bind(...params, (page - 1) * 24),
+        c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${questionJoins} WHERE ${where}`).bind(
+          ...params,
+        ),
+      ]),
+    );
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({
       questions: rows.results.map(withRelations),
       total: totals.results[0].count,
@@ -1239,7 +1273,9 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .all<Question>();
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({
       question: rows.results[0]
         ? withRelations(
@@ -1269,7 +1305,9 @@ export function createApp(trustedPrincipal?: Principal) {
       ).bind(now(), stock.id, question.generation),
       ...queueQuestionStatements(c.env, stock.id),
     ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true }, 202);
   });
   app.get('/api/v1/stocks/:id/content', async (c) => {
@@ -1316,7 +1354,9 @@ export function createApp(trustedPrincipal?: Principal) {
         ? dirtyMemoryStatements(c.env, user.id, [...new Set([stock.project_id, data.project_id])])
         : []),
     ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true });
   });
   app.delete('/api/v1/stocks/:id', async (c) => {
@@ -1329,8 +1369,12 @@ export function createApp(trustedPrincipal?: Principal) {
         ? dirtyMemoryStatements(c.env, user.id, [stock.project_id])
         : []),
     ]);
-    c.executionCtx.waitUntil(cleanupStockImages(c.env));
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'cleanup_stock_images', () => cleanupStockImages(c.env)),
+    );
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true });
   });
   app.post('/api/v1/stocks/:id/retry', async (c) => {
@@ -1379,7 +1423,9 @@ export function createApp(trustedPrincipal?: Principal) {
         "UPDATE questions SET status = 'queued', error = NULL, updated_at = ? WHERE source = 'ai' AND status = 'failed' AND stock_id IN (SELECT s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE a.id = ? AND s.user_id = ? AND a.status = 'queued')",
       ).bind(now(), stock.article_id, c.get('principal').user.id),
     ]);
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true }, 202);
   });
   app.get('/api/v1/memory/history', async (c) => {
@@ -1538,7 +1584,9 @@ export function createApp(trustedPrincipal?: Principal) {
           message: '同じリクエストIDで異なる保存先または更新方法が送信されました。',
         });
     }
-    c.executionCtx.waitUntil(dispatchJobs(c.env));
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
     return c.json({ ok: true }, 202);
   });
   app.get('/api/v1/tokens', async (c) => {
@@ -1636,7 +1684,7 @@ export function createApp(trustedPrincipal?: Principal) {
     }
     if (error instanceof HTTPException)
       return c.json({ error: error.message || 'リクエストを確認してください。' }, error.status);
-    console.error('api_request_failed');
+    logDiagnosticError('api_request', error);
     return c.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, 500);
   });
   return app;

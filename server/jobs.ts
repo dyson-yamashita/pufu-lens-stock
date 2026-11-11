@@ -1,3 +1,4 @@
+import { observeOperation, logDiagnosticError } from './diagnostics';
 import { cleanupMemoryHistory } from './memory-history';
 import type { Env, Job } from './env';
 import { admitJob, retryAt } from './usage';
@@ -11,22 +12,28 @@ import { cleanupStockImages } from './stock-images';
 
 export async function dispatchJobs(env: Env): Promise<void> {
   // 未開始の古い世代だけを集約する。最新の要求は上限時もpendingのまま残す。
-  await env.DB.prepare(
-    `UPDATE processing_jobs SET status='done', updated_at=? WHERE status='pending'
+  await observeOperation('d1', 'dispatch_superseded', () =>
+    env.DB.prepare(
+      `UPDATE processing_jobs SET status='done', updated_at=? WHERE status='pending'
     AND ((kind='user_memory' AND revision < (SELECT memory_revision FROM users WHERE id=target_id))
       OR (kind='project_memory' AND revision < (SELECT memory_revision FROM projects WHERE id=target_id)))`,
-  )
-    .bind(now())
-    .run();
-  const expired = await env.DB.prepare(
-    "SELECT j.* FROM processing_jobs j LEFT JOIN job_dispatch_attempts a ON a.job_id=j.id WHERE j.status IN ('pending','dispatched') AND ((j.status='pending' AND COALESCE(a.attempts,0)>=?) OR j.created_at<=?)",
-  )
-    .bind(MAX_ATTEMPTS, new Date(Date.now() - MAX_WAIT_MS).toISOString())
-    .all<Job>();
+    )
+      .bind(now())
+      .run(),
+  );
+  const expired = await observeOperation('d1', 'dispatch_expired', () =>
+    env.DB.prepare(
+      "SELECT j.* FROM processing_jobs j LEFT JOIN job_dispatch_attempts a ON a.job_id=j.id WHERE j.status IN ('pending','dispatched') AND ((j.status='pending' AND COALESCE(a.attempts,0)>=?) OR j.created_at<=?)",
+    )
+      .bind(MAX_ATTEMPTS, new Date(Date.now() - MAX_WAIT_MS).toISOString())
+      .all<Job>(),
+  );
   for (const job of expired.results) await stopWaitingJob(env, job);
-  const pending = await env.DB.prepare(
-    "SELECT * FROM processing_jobs WHERE status = 'pending' AND NOT (kind = 'question' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id = s.project_id WHERE s.id = processing_jobs.target_id AND p.auto_generate_questions = 0)) AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')) ORDER BY CASE kind WHEN 'article' THEN 0 WHEN 'cleanup' THEN 1 WHEN 'question' THEN 2 ELSE 3 END, created_at LIMIT 20",
-  ).all<Job>();
+  const pending = await observeOperation('d1', 'dispatch_pending', () =>
+    env.DB.prepare(
+      "SELECT * FROM processing_jobs WHERE status = 'pending' AND NOT (kind = 'question' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id = s.project_id WHERE s.id = processing_jobs.target_id AND p.auto_generate_questions = 0)) AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')) ORDER BY CASE kind WHEN 'article' THEN 0 WHEN 'cleanup' THEN 1 WHEN 'question' THEN 2 ELSE 3 END, created_at LIMIT 20",
+    ).all<Job>(),
+  );
   for (const job of pending.results) {
     // Workflow起動前に取得権を確定する。起動直後のpending/doneを上書きしない。
     const claimedAt = now();
@@ -59,7 +66,8 @@ export async function dispatchJobs(env: Env): Promise<void> {
         const state = await existing.status();
         if (['complete', 'errored', 'terminated'].includes(state.status)) await existing.restart();
       }
-    } catch {
+    } catch (error) {
+      logDiagnosticError('workflow_dispatch', error);
       await deferJob(
         env,
         job,
@@ -67,7 +75,6 @@ export async function dispatchJobs(env: Env): Promise<void> {
         '処理を起動できなかったため、再試行を待っています。',
         { status: 'dispatched', updatedAt: claimedAt },
       );
-      console.error('workflow_dispatch_pending', { jobId: job.id });
     }
   }
 }
@@ -79,16 +86,16 @@ export async function scheduledMaintenance(env: Env): Promise<void> {
   // 検索索引の障害で既存の生成ジョブの保守を止めない。
   try {
     await syncSearchIndex(env);
-  } catch {
-    console.error('search_index_maintenance_pending');
+  } catch (error) {
+    logDiagnosticError('search_index_maintenance', error);
   }
   await cleanupDeletedAccounts(env);
   await cleanupMemoryHistory(env);
   await cleanupStockImages(env);
   try {
     await cleanupExpiredPufuImageLinks(env);
-  } catch {
-    console.error('pufu_image_link_cleanup_pending');
+  } catch (error) {
+    logDiagnosticError('pufu_image_link_cleanup', error);
   }
   // 結果の保存前にWorkerが終了した場合、同じAIを再発行せず失敗として回復する。
   // 実行中Workflowの枠は期限だけで解放しない。終端状態も確認する。
