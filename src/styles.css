@@ -2508,9 +2508,9 @@ p {
 }
 .theme-toggle-track {
   position: relative;
-  width: 52px;
+  width: 60px;
   height: 28px;
-  border: 1px solid var(--field-border);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--wash);
   transition: background 0.16s;
@@ -2538,14 +2538,13 @@ p {
   right: 6px;
 }
 .theme-toggle[aria-checked='true'] .theme-toggle-track {
-  border-color: var(--primary);
   background: var(--selected);
 }
 .theme-toggle[aria-checked='true'] .theme-toggle-thumb {
-  transform: translateX(24px);
+  transform: translateX(32px);
 }
 .theme-toggle:hover .theme-toggle-track {
-  border-color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
 }
 .theme-toggle[aria-checked='false'] .theme-toggle-light,
 .theme-toggle[aria-checked='true'] .theme-toggle-dark {
