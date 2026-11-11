@@ -338,7 +338,7 @@ MCPで生成したPNGだけを非公開R2のユーザー配下に一時保存し
 
 互換用に `/api/v1/questions/:question_id/pufu` と `/api/v1/questions/:question_id/pufu/image`、MCPの `pufu_id` 省略も残します。省略時は既存の一覧順（作成日時の降順、同時刻はID降順）で最新の完成済みプ譜を選びます。完成済みがない場合は、JSON取得が `projectScore: null`、画像取得が `status: "not_created"` となり、画像を生成しません。
 
-PNGはresvg WASM、日本語フォントは同梱の静的アセットを使います。文章合計30,000 UTF-16コード単位、600万画素、PNG 2MiBが上限です。上限超過は413、描画できない制御文字等は422、WASM/フォントの一時障害は503を返し、黙って切り詰めません。保存JSONの破損は既存のJSON取得と同じく500です。画像生成に失敗しても保存済みのプ譜は維持し、次のリクエストで再生成できます。Workers AIの利用枠は消費しません。画像生成ライブラリは [packages/pufu-image](../packages/pufu-image/README.md) にあります。
+PNGはresvg WASM、日本語フォントは同梱の静的アセットを使います。文章合計30,000 UTF-16コード単位、出力600万画素、PNG 2MiBが上限です。600万画素を超えるレイアウトは、内容と縦横比を保って上限以内へ自動縮小します。縮小率の下限は50%で、通常サイズは変更しません。それでも上限を超える場合は413、描画できない制御文字等は422、WASM/フォントの一時障害は503を返し、黙って切り詰めません。保存JSONの破損は既存のJSON取得と同じく500です。画像生成に失敗しても保存済みのプ譜は維持し、次のリクエストで再生成できます。Workers AIの利用枠は消費しません。画像生成ライブラリは [packages/pufu-image](../packages/pufu-image/README.md) にあります。
 
 Worker更新前に `0025_pufu_image_links.sql` を適用してください。追加のSecretやbindingは不要です。既存の非公開 `CONTENT` R2とD1を使います。ViteビルドしたWorkerと静的アセット（`fonts/pufu-jp.otf` を含む）を一緒に反映してください。`ASSETS` bindingは設定済みです。
 

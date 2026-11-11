@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
+import scalable from '../../../tests/fixtures/pufu-scalable.ts';
 
 test('PUFU-002 JSONから作成し局面への取込を保存して再読込する', async ({
   app,
@@ -12,18 +13,11 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
 }) => {
   const scratch = await mkdtemp(join(tmpdir(), 'pufu-json-e2e-'));
   try {
-    const score = JSON.parse(
-      await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
-    );
+    const score = structuredClone(scalable);
     score.gainingGoal.text = 'JSON取込の目標';
     score.winCondition.comment.text = 'JSON取込のコメント';
     score.purposes[0].measures[0].color = 'red';
     score.purposes[0].measures[0].progress = 65;
-    score.purposes[0].measures = Array.from({ length: 13 }, (_, i) => ({
-      ...score.purposes[0].measures[0],
-      uuid: `measure-${i}`,
-      text: `取込施策${i + 1}`,
-    }));
     const original = join(scratch, 'original.json');
     const invalid = join(scratch, 'invalid.json');
     const changed = structuredClone(score);
@@ -116,6 +110,14 @@ test('PUFU-002 JSONから作成し局面への取込を保存して再読込す�
       screen.getByRole('button', 'JSON', { exact: true }).click(),
     );
     expect(JSON.parse(await readFile(download.absolutePath, 'utf8'))).toEqual(score);
+    await screen.getByRole('button', 'ダウンロード', { exact: true }).click();
+    const pngDownload = await browser.waitForDownload(() =>
+      screen.getByRole('button', '画像（PNG）', { exact: true }).click(),
+    );
+    const png = await readFile(pngDownload.absolutePath);
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(png.readUInt32BE(16)).toBeLessThan(1760);
+    expect(png.readUInt32BE(16) * png.readUInt32BE(20)).toBeLessThanOrEqual(6000000);
     await app.open('/#pufus');
     await screen.getByRole('button', 'プ譜を追加').click();
     await browser.locator('#pufu-project').selectOption({ value: fixture.projectId });

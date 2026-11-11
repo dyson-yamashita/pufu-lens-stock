@@ -6,6 +6,7 @@ import { pufuImageLabels } from '../shared/pufu-image-labels';
 import sparse from './fixtures/pufu-sparse.json';
 import many from './fixtures/pufu-many-measures.json';
 import long from './fixtures/pufu-long-text.json';
+import scalable from './fixtures/pufu-scalable';
 import { parseHTML } from 'linkedom';
 let font: Uint8Array;
 beforeAll(async () => {
@@ -13,6 +14,33 @@ beforeAll(async () => {
   font = new Uint8Array(await readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url)));
 });
 describe('Pufu JSON -> SVG -> PNG (real WASM)', () => {
+  it.each([false, true])(
+    'scales a large layout without cropping nodes or comments (progress=%s)',
+    (showProgress) => {
+      const original = JSON.stringify(scalable);
+      const result = renderPufuPng(scalable, { font, showProgress });
+      const { document } = parseHTML(result.svg);
+      const svg = document.querySelector('svg')!;
+      const [, , layoutWidth, layoutHeight] = svg.getAttribute('viewBox')!.split(' ').map(Number);
+      expect(layoutWidth * layoutHeight).toBeGreaterThan(6000000);
+      expect(result.width).toBeLessThan(layoutWidth);
+      expect(result.width * result.height).toBeLessThanOrEqual(6000000);
+      expect(Math.abs(result.height - (result.width * layoutHeight) / layoutWidth)).toBeLessThan(2);
+      expect(Number(svg.getAttribute('width'))).toBe(result.width);
+      expect(Number(svg.getAttribute('height'))).toBe(result.height);
+      expect(Buffer.from(result.png).readUInt32BE(16)).toBe(result.width);
+      expect(Buffer.from(result.png).readUInt32BE(20)).toBe(result.height);
+      const nodes = scalable.purposes.flatMap((purpose) => [purpose, ...purpose.measures]);
+      for (const node of nodes) {
+        expect(document.querySelector(`[data-uuid="${node.uuid}"]`)).not.toBeNull();
+        const comment = document.querySelector(`[data-comment-of="${node.uuid}"]`)!;
+        expect([...comment.querySelectorAll('text')].map((text) => text.textContent).join('')).toBe(
+          node.comment.text,
+        );
+      }
+      expect(JSON.stringify(scalable)).toBe(original);
+    },
+  );
   it.each([
     ['sparse', sparse],
     ['many', many],

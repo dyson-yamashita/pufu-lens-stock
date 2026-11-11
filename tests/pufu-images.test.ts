@@ -4,6 +4,7 @@ import { testApp } from './helpers';
 import { PufuImageError } from '@pufu-lens/pufu-image';
 import * as renderer from '../server/pufu-renderer';
 import score from './fixtures/pufu-sparse.json';
+import scalable from './fixtures/pufu-scalable';
 
 const font = readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url));
 describe('プ譜画像をリクエスト時に生成する', () => {
@@ -170,6 +171,20 @@ describe('プ譜画像をリクエスト時に生成する', () => {
     });
     expect(render).not.toHaveBeenCalled();
     expect((await app.request(imagePath)).status).toBe(404);
+  });
+  it('大きいプ譜の画像を縮小して返し、保存済みプ譜を変更しない', async () => {
+    await app.env.DB.prepare('UPDATE pufu_scores SET score_json=? WHERE id=?')
+      .bind(JSON.stringify(scalable), 'image-pufu')
+      .run();
+    const before = await snapshot();
+    const response = await app.request(imagePath);
+    expect(response.status).toBe(200);
+    const png = Buffer.from(await response.arrayBuffer());
+    const width = png.readUInt32BE(16);
+    const height = png.readUInt32BE(20);
+    expect(width).toBeLessThan(1760);
+    expect(width * height).toBeLessThanOrEqual(6000000);
+    expect(await snapshot()).toEqual(before);
   });
   it('過大な画像は413を返し、保存済みプ譜を変更しない', async () => {
     const huge = structuredClone(score);
