@@ -1,7 +1,6 @@
 import { t, useLanguage } from './i18n';
 import { setThemePreference, useTheme, type ThemePreference } from './theme';
-import type { ReactNode } from 'react';
-export default function ThemeSettings({ children }: { children?: ReactNode }) {
+export default function ThemeSettings() {
   useLanguage();
   const { preference } = useTheme();
   const options: {
@@ -33,7 +32,6 @@ export default function ThemeSettings({ children }: { children?: ReactNode }) {
       <p id="theme-hint" className="field-hint">
         {t('ui.theme_settings.applied_immediately_this_setting_is_saved_in_this_browser')}
       </p>
-      {children}
     </section>
   );
 }

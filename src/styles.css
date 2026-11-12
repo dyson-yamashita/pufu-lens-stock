@@ -864,10 +864,8 @@ p {
 }
 .usage-card {
   margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
 }
-.usage-card h3 {
+.usage-card h2 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;

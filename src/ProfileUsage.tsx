@@ -48,8 +48,8 @@ export default function ProfileUsage({ userId }: { userId: string }) {
       day: 'numeric',
     });
   return (
-    <section className="usage-card" aria-labelledby="usage-heading">
-      <h3 id="usage-heading">{t('ui.usage.title')}</h3>
+    <section className="profile-card usage-card" aria-labelledby="usage-heading">
+      <h2 id="usage-heading">{t('ui.usage.title')}</h2>
       <fieldset className="usage-periods">
         <legend>{t('ui.usage.period')}</legend>
         {periods.map(({ value, label }) => (
