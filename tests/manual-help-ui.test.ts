@@ -91,3 +91,24 @@ it('can finish resolved guidance without saving an improvement report', async ()
   await press('会話を閉じる');
   expect(close).toHaveBeenCalledTimes(1);
 });
+
+it('keeps the beginning of a long answer concise and links to the full procedure', async () => {
+  const long = {
+    ...leaf,
+    text: 'トップページの「Googleでログイン」を押します。Googleアカウントを選びます。初回は利用規約を確認してください。',
+  };
+  vi.mocked(selectManualBranch).mockResolvedValue(long);
+  await enter('ログイン方法');
+  await act(async () =>
+    document
+      .querySelector('form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+  );
+  const answer = [...document.querySelectorAll('.pufi-message-pufi')].find((node) =>
+    node.textContent?.startsWith('トップページ'),
+  )!;
+  expect(answer.textContent).toBe(
+    'トップページの「Googleでログイン」を押します。Googleアカウントを選びます。…',
+  );
+  expect(document.querySelector('a')?.getAttribute('href')).toBe(long.href);
+});

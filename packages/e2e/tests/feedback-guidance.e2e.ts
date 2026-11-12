@@ -130,3 +130,65 @@ test('FEEDBACK-005 通常のプ譜表示・局面往復・機能開閉だけで�
   });
   await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
 });
+
+test('FEEDBACK-010 ログイン方法の短い質問に手順を直接回答する', async ({
+  app,
+  screen,
+  browser,
+  fixture,
+}) => {
+  await app.open('/manual');
+  const requests: { question: string; choices: { title: string; preview: string }[] }[] = [];
+  await browser.route(`${fixture.url}/api/v1/feedback/manual-search`, async (route) => {
+    const input = JSON.parse(route.request.postData ?? '{}');
+    requests.push(input);
+    // This fixture selects from the evidence actually sent, rather than assuming a branch index.
+    const selection = input.choices.findIndex((choice: { preview: string }) =>
+      choice.preview.includes('Googleでログイン'),
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ selection: selection < 0 ? null : selection, available: true }),
+    });
+  });
+  let reports = 0;
+  await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
+    reports++;
+    await route.abort();
+  });
+  await screen.getByRole('button', '何かお困りですか？', { exact: true }).click();
+  await screen.getByRole('button', '操作に迷いました', { exact: true }).click();
+  await screen.getByLabel('プフィへの返答').fill('ログイン方法');
+  await screen.getByRole('button', 'マニュアルを検索', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText(
+    'トップページの「Googleでログイン」を押し',
+  );
+  await expect(browser.locator('.pufi-thread')).toContainText('Googleアカウントを選びます');
+  await expect(browser.locator('.pufi-thread')).toContainText('お役に立ちましたか？');
+  await expect(browser.locator('.pufi-manual-link')).toHaveAttribute(
+    'href',
+    '/manual#manual-sign-in',
+  );
+  await expect(screen.getByRole('button', '記事をストックする', { exact: true })).toHaveCount(0);
+  expect(
+    await browser.evaluate(() => {
+      const thread = document.querySelector('.pufi-thread')!;
+      const answer = [...thread.querySelectorAll('.pufi-message-pufi')].find((node) =>
+        node.textContent?.startsWith('トップページの「Googleでログイン」'),
+      );
+      if (!answer) return false;
+      const rect = answer.getBoundingClientRect(),
+        visible = thread.getBoundingClientRect();
+      return rect.top >= visible.top - 1 && rect.bottom <= visible.bottom + 1;
+    }),
+  ).toBe(true);
+  expect(requests.length).toBe(2);
+  expect(requests[0].question).toBe('ログイン方法');
+  expect(requests[0].choices[0].preview).toContain('Googleでログイン');
+  expect(reports).toBe(0);
+  await app.screenshot('pufi-login-answer');
+  await screen.getByRole('button', '解決しました', { exact: true }).click();
+  await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
+  expect(reports).toBe(0);
+});

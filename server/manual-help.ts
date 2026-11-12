@@ -9,7 +9,11 @@ import { meteredOperation, observeAiUsage } from './ai-neurons';
 // Arguments follow the official System One schema; responses stay unknown until validated.
 type ClefInput = {
   model: 'clef' | 'clef-flash';
-  state: { question: string; language: 'ja' | 'en' };
+  state: {
+    question: string;
+    language: 'ja' | 'en';
+    sections: { id: string; title: string; preview: string }[];
+  };
   questions: Record<
     string,
     { type: 'choice'; instructions: string; criteria: Record<string, string> }
@@ -70,7 +74,7 @@ export default function manualHelpApp() {
     if (!reserved[1].meta.changes) return unavailable();
     try {
       const criteria = Object.fromEntries(
-        input.choices.map((choice, index) => [`n${index}`, `${choice.title}\n${choice.preview}`]),
+        input.choices.map((choice, index) => [`n${index}`, choice.title]),
       );
       criteria.none = '該当する項目がない、または質問だけでは選べない';
       // Clef uses System One typed decisions, not chat messages or generated JSON text.
@@ -81,7 +85,11 @@ export default function manualHelpApp() {
             model.data,
             {
               model: model.data === '@cf/cloudflare/clef' ? 'clef' : 'clef-flash',
-              state: { question: input.question, language: input.language },
+              state: {
+                question: input.question,
+                language: input.language,
+                sections: input.choices.map((choice, index) => ({ id: `n${index}`, ...choice })),
+              },
               questions: {
                 section: {
                   type: 'choice',

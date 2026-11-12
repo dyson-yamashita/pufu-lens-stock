@@ -57,9 +57,17 @@ export default function ManualHelp({
     setAnswer(node);
     setChoices([]);
     setStage('answer');
+    const excerpt = Array.from(
+      new Intl.Segmenter(language, { granularity: 'sentence' }).segment(node.text),
+      (part) => part.segment,
+    )
+      .slice(0, 2)
+      .join('')
+      .trim()
+      .slice(0, 180);
     setMessages((current) => [
       ...current,
-      { role: 'pufi', text: node.text.length > 280 ? `${node.text.slice(0, 280)}…` : node.text },
+      { role: 'pufi', text: excerpt.length < node.text.length ? `${excerpt}…` : excerpt },
       { role: 'pufi', text: t('feedback.help_confirm') },
     ]);
   };
