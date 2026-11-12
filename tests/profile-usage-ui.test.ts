@@ -103,6 +103,5 @@ it.each([
     await act(async () => root.render(createElement(ProfileUsage, { userId: 'alice' })));
     expect(document.querySelector('[data-metric="ai_neurons"] strong')?.textContent).toBe(value);
     expect(document.querySelector('[data-metric="ai_neurons"] span')?.textContent ?? '').toBe(unit);
-    expect(Boolean(document.querySelector('.usage-missing'))).toBe(missing > 0);
   },
 );

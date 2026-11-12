@@ -10,20 +10,14 @@ export const en: Record<string, string> = {
   'ui.usage.pufus': 'Pufus registered',
   'ui.usage.ai_neurons': 'AI usage',
   'ui.usage.unmeasured': 'Unmeasured',
-  'ui.usage.missing_note':
-    '{{count}} processing attempts could not be measured. The displayed value includes measured usage only.',
   'ui.usage.items_unit': 'items',
   'ui.usage.loading': 'Loading usage…',
   'ui.usage.failed': 'Could not load usage.',
   'ui.usage.retry': 'Reload',
-  'ui.usage.registration_note':
-    'Registrations are counted by creation date across all projects, excluding deleted items. Each pufu counts once, regardless of its phases.',
-  'ui.usage.ai_note':
-    'AI usage is an estimate in Neurons, converted from reported tokens using model-specific rates. It includes summaries, questions, pufus, memories and semantic search where usage is available, including measured failures and retries. History before measurement began, unavailable usage and external AI apps are excluded. This is not a billing amount.',
   'ui.usage.timezone_note':
     'Periods use Japan time. Weeks start on Monday; months start on the 1st.',
   'manual.usage':
-    'Open Usage in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage is an estimate in Neurons using model-specific rates and includes only available usage since measurement began. Unmeasured attempts are indicated. Periods start on Monday or the 1st of the month in Japan time.',
+    'Open Usage under Display settings in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage is an estimate in Neurons using model-specific rates and includes only available usage since measurement began. Periods start on Monday or the 1st of the month in Japan time.',
   'pufu.creation_method': 'Creation method',
   'pufu.create_with_ai': 'Create with AI',
   'pufu.create_from_json': 'Create from JSON',
