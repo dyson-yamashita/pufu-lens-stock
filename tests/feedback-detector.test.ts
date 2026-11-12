@@ -36,7 +36,7 @@ it('acknowledgment prevents rage clicks without clearing repeated validation; su
   }
   time += 1500;
   expect(detector.evaluate().total).toBe(0);
-  for (let i = 0; i < 4; i++) detector.validation('import');
+  for (let i = 0; i < 2; i++) detector.validation('import');
   expect(detector.evaluate().total).toBe(2);
   detector.acknowledge('import');
   expect(detector.evaluate().total).toBe(2);
@@ -57,6 +57,92 @@ it('normal phase navigation alone does not reach the display threshold; disablin
   for (const route of ['A', 'B', 'A', 'B', 'A', 'B']) detector.navigate(route);
   expect(detector.evaluate().total).toBe(2);
   detector.enable(false);
+  expect(detector.evaluate().total).toBe(0);
+});
+
+it('three validation errors on one action trigger alone without unbounded score inflation', () => {
+  const detector = new FeedbackDetector();
+  detector.enable(true);
+  detector.validation('import');
+  expect(detector.evaluate().total).toBe(0);
+  detector.validation('import');
+  expect(detector.evaluate().total).toBe(2);
+  detector.validation('import');
+  expect(detector.evaluate()).toEqual({
+    total: 3,
+    reasons: [{ type: 'validation_repeat', action: 'import' }],
+  });
+  for (let i = 0; i < 7; i++) detector.validation('import');
+  expect(detector.evaluate().total).toBe(3);
+  detector.progress('import');
+  expect(detector.evaluate().total).toBe(0);
+});
+
+it('counts only validation errors in the rolling sixty-second window', () => {
+  let time = 100000;
+  const detector = new FeedbackDetector(() => time);
+  detector.enable(true);
+  detector.validation('import');
+  time += 10000;
+  detector.validation('import');
+  time += 10000;
+  detector.validation('import');
+  expect(detector.evaluate().total).toBe(3);
+  time += 40000;
+  expect(detector.evaluate().total).toBe(2);
+  time += 10000;
+  expect(detector.evaluate().total).toBe(0);
+});
+
+it.each(['operation', 'network'] as const)(
+  'two acknowledged save failures trigger and preserve a distinct %s reason',
+  (kind) => {
+    const detector = new FeedbackDetector();
+    detector.enable(true);
+    for (let i = 0; i < 2; i++) {
+      detector.click('save');
+      detector.acknowledge('save');
+      detector.failure('save', kind);
+    }
+    expect(detector.evaluate()).toEqual({
+      total: 3,
+      reasons: [{ type: `${kind}_repeat`, action: 'save' }],
+    });
+    detector.progress('save');
+    expect(detector.evaluate().total).toBe(0);
+    detector.failure('save', kind);
+    expect(detector.evaluate().total).toBe(0);
+  },
+);
+
+it('success clears only the related action and identical failure types across actions are not double-scored', () => {
+  const detector = new FeedbackDetector();
+  detector.enable(true);
+  detector.validation('import');
+  detector.validation('import');
+  detector.validation('save');
+  detector.validation('save');
+  expect(detector.evaluate().total).toBe(2);
+  detector.validation('save');
+  expect(detector.evaluate().total).toBe(3);
+  detector.progress('save');
+  expect(detector.evaluate()).toEqual({
+    total: 2,
+    reasons: [{ type: 'validation_repeat', action: 'import' }],
+  });
+});
+
+it('failure events remain inactive before consent and expire after sixty seconds', () => {
+  let time = 100000;
+  const detector = new FeedbackDetector(() => time);
+  detector.failure('save', 'operation');
+  detector.failure('save', 'operation');
+  expect(detector.evaluate().total).toBe(0);
+  detector.enable(true);
+  detector.failure('save', 'operation');
+  detector.failure('save', 'operation');
+  expect(detector.evaluate().total).toBe(3);
+  time += 60000;
   expect(detector.evaluate().total).toBe(0);
 });
 

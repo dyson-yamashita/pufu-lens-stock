@@ -2,7 +2,13 @@ import { z } from 'zod';
 
 export const feedbackActions = ['save', 'import', 'download', 'phase', 'edit'] as const;
 export type FeedbackAction = (typeof feedbackActions)[number];
-export const feedbackReasons = ['rage_click', 'navigation_loop', 'validation_repeat'] as const;
+export const feedbackReasons = [
+  'rage_click',
+  'navigation_loop',
+  'validation_repeat',
+  'operation_repeat',
+  'network_repeat',
+] as const;
 export type FeedbackReason = (typeof feedbackReasons)[number];
 export const feedbackQuestionSchema = z.enum(['operation', 'expected', 'actual', 'steps']);
 export type FeedbackQuestion = z.infer<typeof feedbackQuestionSchema>;

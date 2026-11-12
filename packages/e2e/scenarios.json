@@ -297,10 +297,38 @@
       "src/PufuJsonImport.tsx"
     ],
     "aspects": [
-      "同意してから、実際の取込エラー反復と局面往復で自動表示する。入力中は避け、検知画面を両幅・light/darkで撮影",
+      "同意してから、同じJSON取込の入力エラーを60秒以内に3回起こすだけで自動表示する。局面往復は不要。入力中は避け、検知画面を両幅・light/darkで撮影",
       "短い選択肢とひとことの会話、追加質問を経て途中終了し、外部登録なしでD1に保存。会話画面を撮影。設定の保持と解除を確認",
       "検知ルール・応答除外・頻度・同意・再送/round CAS・所有者変更・会話/再現手順等のDB格納・AIなし/失敗・退会中の競合はVitestで確認",
       "短く丁寧な言い回しを使用。入力ありは「送信して終了」、追加質問への未入力時は「回答を終了」と表示し、実テーマ設定と遷移完了後に撮影して黒い輪など切替途中の表示を混入させない"
+    ]
+  },
+  {
+    "id": "FEEDBACK-002",
+    "title": "保存競合の反復によるプフィの案内",
+    "sources": [
+      "src/PufuEditor.tsx",
+      "src/feedback-detector.ts",
+      "src/PufiFeedback.tsx",
+      "shared/feedback.ts"
+    ],
+    "aspects": [
+      "実編集画面の保存APIにJSONの409/HTMLの503を返し、1回では出さず、同じ保存が2回失敗すると単独で案内。処理中抑止/成功解除/60秒失効はVitestでも確認",
+      "会話を通常APIに送信し、operation_repeat/network_repeatを区別して固定操作IDだけが保存されることを確認。実サービス障害は起こさず、ローカルのHTTP fixtureを使用"
+    ]
+  },
+  {
+    "id": "FEEDBACK-003",
+    "title": "通信失敗の反復によるプフィの案内",
+    "sources": [
+      "src/PufuEditor.tsx",
+      "src/feedback-detector.ts",
+      "src/PufiFeedback.tsx",
+      "shared/feedback.ts"
+    ],
+    "aspects": [
+      "実編集画面の保存APIにJSONの409/HTMLの503を返し、1回では出さず、同じ保存が2回失敗すると単独で案内。処理中抑止/成功解除/60秒失効はVitestでも確認",
+      "会話を通常APIに送信し、operation_repeat/network_repeatを区別して固定操作IDだけが保存されることを確認。実サービス障害は起こさず、ローカルのHTTP fixtureを使用"
     ]
   }
 ]

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
 import { pufuScoreSchema, type Pufu, type PufuPhase, type PufuScore } from '../shared/pufu';
-import { send } from './api';
+import { ApiError, send } from './api';
 import PufiFeedback from './PufiFeedback';
 import { FeedbackDetector } from './feedback-detector';
 import { feedbackActions, type FeedbackAction } from '../shared/feedback';
@@ -141,11 +141,13 @@ export default function PufuEditor({
     feedback.acknowledge('save');
     setError('');
     setNotice('');
+    let validationFailed = false;
     try {
       const json = editing ? getScoreJson(editorKey) : JSON.stringify(savedPhase.score);
       if (!json) throw new Error(t('ui.pufu_editor.could_not_read_the_edited_content'));
       const input = pufuScoreSchema.safeParse(JSON.parse(json));
       if (!input.success) {
+        validationFailed = true;
         feedback.validation('save');
         throw new Error(t('ui.pufu_editor.keep_each_text_within_1_200_characters_each_comment'));
       }
@@ -176,6 +178,17 @@ export default function PufuEditor({
           : t('ui.pufu_editor.pufu_saved'),
       );
     } catch (e) {
+      if (!validationFailed) {
+        if (e instanceof ApiError && [400, 422].includes(e.status)) feedback.validation('save');
+        else
+          feedback.failure(
+            'save',
+            e instanceof TypeError ||
+              (e instanceof ApiError && (e.status === 408 || e.status >= 500))
+              ? 'network'
+              : 'operation',
+          );
+      }
       setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);

@@ -31,14 +31,9 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   await screen.getByRole('button', '編集する', { exact: true }).click();
   await browser.locator('.pufu-json-import-panel summary').click();
   await screen.getByLabel('JSONを貼り付け').fill('{');
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     await screen.getByRole('button', 'JSONテキストを読み込む').click();
     await expect(screen.getByRole('alert')).toContainText('JSONとして読み込めません');
-  }
-  await screen.getByRole('button', '閉じる', { exact: true }).click();
-  for (let i = 0; i < 2; i++) {
-    await screen.getByRole('button', '前の局面へ').click();
-    await screen.getByRole('button', '次の局面へ').click();
   }
   await expect(browser.locator('.pufi-prompt')).toContainText('操作でお困りですか？');
   const capture = async (name: string) => {
@@ -84,6 +79,7 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   await screen.getByRole('button', '回答を終了').click();
   await expect(browser.locator('.pufi-thread')).toContainText('改善に役立てます');
   await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
+  await screen.getByRole('button', '閉じる', { exact: true }).click();
   await browser.reload();
   await open.click();
   await screen.getByRole('button', 'プフィの設定').click();
