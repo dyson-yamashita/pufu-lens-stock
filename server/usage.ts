@@ -2,6 +2,7 @@ import type { Env, Job } from './env';
 import type { WorkflowStep } from 'cloudflare:workers';
 import { MAX_ATTEMPTS, deferJob } from './job-retries';
 import { PufuFactValidationError } from './pufu-fact-validation';
+import { meteredOperation, observeAiUsage } from './ai-neurons';
 
 const windowStart = () => new Date(Date.now() - 86400000).toISOString();
 const setting = (value: string | undefined, fallback: number) =>
@@ -67,8 +68,11 @@ export async function invokeAi(
 ): Promise<unknown> {
   if (!env.AI) throw new Error('Workers AIが未設定です。');
   try {
-    return await env.AI.run(env.AI_MODEL, input);
+    const response = await env.AI.run(env.AI_MODEL, input);
+    observeAiUsage(env.AI_MODEL, response);
+    return response;
   } catch {
+    observeAiUsage(env.AI_MODEL, null);
     throw new AiInvocationError(
       'AI処理の応答を確認できませんでした。重複生成を防ぐため停止しました。再試行してください。',
     );
@@ -194,7 +198,7 @@ export async function aiStep<T extends object>(
         return { retryAt: await retryAt(env, job.user_id, 'calls'), json: null };
       let result: T;
       try {
-        result = await operation();
+        result = await meteredOperation(env, job.user_id, attempt, operation);
       } catch (error) {
         if (error instanceof PufuFactValidationError)
           console.error('pufu_fact_validation_failed', {

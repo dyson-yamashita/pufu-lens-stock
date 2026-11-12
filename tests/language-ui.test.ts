@@ -59,6 +59,7 @@ beforeEach(() => {
       return { user };
     }
     if (path === '/api/v1/projects') return { projects: [] };
+    if (path === '/api/v1/me/usage') return new Promise(() => {});
     if (path.startsWith('/api/v1/stocks')) return { stocks: [], total: 0 };
     if (path.startsWith('/api/v1/memory')) return { memory: null, pending: false, error: null };
     if (path.startsWith('/api/public/projects')) return { items: [], total: 0, has_more: false };
@@ -210,7 +211,7 @@ it('individual legacy components remain Japanese before an application locale is
   await act(async () =>
     root.render(createElement(Profile, { user: completed('ja'), onSave() {} })),
   );
-  expect(document.querySelector('.profile-card')?.getAttribute('aria-label')).toBe(
+  expect(document.querySelector('.profile-card[aria-label]')?.getAttribute('aria-label')).toBe(
     'プロフィールの編集',
   );
 });

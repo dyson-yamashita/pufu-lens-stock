@@ -6,6 +6,7 @@ import { Check, LoaderCircle, Trash2 } from 'lucide-react';
 import { profileSchema, type User } from '../shared/domain';
 import { send } from './api';
 import ThemeSettings from './ThemeSettings';
+import ProfileUsage from './ProfileUsage';
 export default function Profile({ user, onSave }: { user: User; onSave: (user: User) => void }) {
   useLanguage();
   const [language, chooseLanguage] = useState(resolveLanguage(user.language));
@@ -50,6 +51,7 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
   };
   return (
     <>
+      <ProfileUsage key={user.id} userId={user.id} />
       <section className="profile-card" aria-label={t('ui.profile.edit_profile')}>
         <div className="profile-identity">
           <div className="avatar profile-avatar" aria-hidden="true">

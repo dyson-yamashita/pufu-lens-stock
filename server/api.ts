@@ -58,6 +58,7 @@ import { dispatchJobs } from './jobs';
 import { consumeMcpLogin } from './mcp-login';
 import { cleanupAccount, requestAccountDeletion } from './account';
 import { reserveOperation, assertOperation, retryAt } from './usage';
+import { profileUsage } from './profile-usage';
 import { memoryCoverage, memoryId } from './memory';
 import {
   createPufuSchema,
@@ -310,6 +311,12 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/me', (c) =>
     c.json({ user: c.get('principal').user, demo: isDemoOrigin(c.env, new URL(c.req.url).origin) }),
   );
+  app.get('/api/v1/me/usage', async (c) => {
+    const principal = c.get('principal');
+    if (principal.kind !== 'session') throw new HTTPException(403);
+    c.header('Cache-Control', 'no-store');
+    return c.json(await profileUsage(c.env, principal.user.id));
+  });
   app.post('/api/v1/onboarding', async (c) => {
     const principal = c.get('principal');
     if (principal.kind !== 'session') throw new HTTPException(403);
