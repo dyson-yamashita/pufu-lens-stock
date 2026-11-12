@@ -119,6 +119,7 @@ const sections = (tr: typeof t) => [
           </details>
           <details>
             <summary>{tr('manual.pufu_edit_heading')}</summary>
+            <p>{tr('feedback.manual')}</p>
             <p>{tr('manual.pufu_titles')}</p>
             <p>{tr('ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or')}</p>
             <p>{tr('ui.user_manual.press_edit_at_the_image_s_lower_right_change')}</p>

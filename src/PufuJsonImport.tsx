@@ -9,11 +9,13 @@ export default function PufuJsonImport({
   onBusyChange,
   onImport,
   onError,
+  onPickerOpen,
 }: {
   disabled: boolean;
   onBusyChange: (busy: boolean) => void;
   onImport: (score: PufuScore, filename: string) => void;
   onError: (message: string) => void;
+  onPickerOpen?: () => void;
 }) {
   useLanguage();
   const input = useRef<HTMLInputElement>(null);
@@ -38,9 +40,13 @@ export default function PufuJsonImport({
     <div className="pufu-json-import">
       <button
         type="button"
+        data-feedback-action="import"
         className="button secondary"
         disabled={disabled}
-        onClick={() => input.current?.click()}
+        onClick={() => {
+          onPickerOpen?.();
+          input.current?.click();
+        }}
       >
         <Upload size={17} aria-hidden="true" />
         {t('pufu.import_file')}
@@ -70,6 +76,7 @@ export default function PufuJsonImport({
       />
       <button
         type="button"
+        data-feedback-action="import"
         className="button secondary"
         disabled={disabled || !text.trim()}
         onClick={() => load(() => parsePufuJson(text), t('pufu.import_text_source'))}

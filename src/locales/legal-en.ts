@@ -79,6 +79,7 @@ export const legalEn = {
         {
           type: 'list',
           items: [
+            'Pufi feedback: Automatic detection runs locally only with browser consent and never sends input values or raw interaction logs. Submitted answers, optional follow-up answers and screen/action IDs are stored with your account and assessed by Cloudflare AI for improvements. Improvement details may be published on GitHub and are visible to everyone for public repositories. Account deletion removes the answers from the Service but does not automatically remove published GitHub issues. Contact us to request removal.',
             "Google: Used for sign-in. See [Google's Privacy Policy](https://policies.google.com/privacy).",
             "Cloudflare: Delivers the Service, stores data and performs AI processing. See [Cloudflare's Privacy Policy](https://www.cloudflare.com/privacypolicy/) and [Workers AI data usage](https://developers.cloudflare.com/workers-ai/platform/data-usage/).",
             "YouTube: Lists load thumbnails from YouTube's delivery servers, sending information such as IP addresses and browser details to Google. Video details use the privacy-enhanced embedded player. Loading or playing the player connects the browser to YouTube and may send the IP address, browser details and referring-site information to Google. See [Google's Privacy Policy](https://policies.google.com/privacy).",

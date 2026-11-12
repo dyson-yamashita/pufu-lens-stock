@@ -1,4 +1,33 @@
 export const ja: Record<string, string> = {
+  'feedback.answer': '追加の回答（任意）',
+  'feedback.finish': 'ここまで送信して終える',
+
+  'feedback.title': 'プフィの気づきフィードバック',
+  'feedback.open': 'プフィに伝える・設定',
+  'feedback.close': 'フィードバックを閉じる',
+  'feedback.prompt': '操作でお困りですか？ よかったら教えてください！',
+  'feedback.tell': '伝える',
+  'feedback.fine': '大丈夫',
+  'feedback.explanation':
+    '自動案内を有効にすると、このブラウザー内でプ譜画面の連打・局面の往復・入力エラー反復を検知します。入力値や操作ログは送信しません。案内は1セッション・24時間に1回まで。「大丈夫」で7日間お休みします。いつでもここで解除できます。',
+  'feedback.enable': '操作で困ったときの自動案内を許可する',
+  'feedback.category': '困ったこと',
+  'feedback.unresponsive': 'ボタンが反応しない',
+  'feedback.navigation': 'どこを操作すればよいか迷った',
+  'feedback.input': '入力方法が分かりにくい',
+  'feedback.other': 'その他',
+  'feedback.detail': '詳しい内容（任意）',
+  'feedback.privacy':
+    '回答と検知理由（画面・操作IDのみ）を保存し、CloudflareのAIで確認します。具体的な改善内容はGitHub Issueとして公開される場合があります。個人情報・秘密情報やプ譜の内容は書かないでください。選択肢だけの回答は確認用に保留します。',
+  'feedback.publish_consent': '回答の保存・AI判定と、改善内容のGitHub掲載に同意する',
+  'feedback.send': '送信する',
+  'feedback.sending': '送信しています…',
+  'feedback.failed':
+    '送信を確認できませんでした。再送すると同じ回答を確認します。時間をおいてお試しください。',
+  'feedback.thanks': '教えてくれてありがとう！ 改善の参考にします。',
+  'feedback.manual':
+    'プ譜画面の右下にいるプフィから、困ったことを選んで送信できます。自動案内はプフィの設定で同意したブラウザーだけで動き、いつでも解除できます。送信前に保存・AI判定・GitHub掲載の範囲を確認してください。',
+
   'manual.language_heading': '表示言語と生成される内容',
   'manual.pufu_create_heading': 'AIで案をつくる',
   'manual.pufu_generation_heading': 'AIが参照する資料・生成の上限',

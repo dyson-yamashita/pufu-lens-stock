@@ -1,4 +1,34 @@
 export const en: Record<string, string> = {
+  'feedback.answer': 'Additional answer (optional)',
+  'feedback.finish': 'Finish with what I have sent',
+
+  'feedback.title': 'Pufi feedback',
+  'feedback.open': 'Pufi feedback and settings',
+  'feedback.close': 'Close feedback',
+  'feedback.prompt': 'Having trouble? Please let me know!',
+  'feedback.tell': 'Tell Pufi',
+  'feedback.fine': 'I’m okay',
+  'feedback.explanation':
+    'Enable gentle prompts to detect repeated clicks, phase switching and validation errors locally in this browser. Input values and interaction logs are never sent. Prompts appear at most once per session and 24 hours; “I’m okay” pauses them for 7 days. You can turn this off here anytime.',
+  'feedback.enable': 'Allow automatic help prompts',
+  'feedback.category': 'What was difficult?',
+  'feedback.unresponsive': 'A button did not respond',
+  'feedback.navigation': 'I could not find what to do',
+  'feedback.input': 'Input was confusing',
+  'feedback.other': 'Other',
+  'feedback.detail': 'Details (optional)',
+  'feedback.privacy':
+    'Your answer and detection reasons (screen and action IDs only) are saved and assessed by Cloudflare AI. Specific improvements may be published as GitHub issues. Do not include personal or confidential information or your pufu content. Category-only answers are held for review.',
+  'feedback.publish_consent':
+    'I agree to storage, AI assessment and publication of improvement details on GitHub',
+  'feedback.send': 'Send',
+  'feedback.sending': 'Sending…',
+  'feedback.failed':
+    'Could not confirm receipt. Retrying checks the same answer. Please try again later.',
+  'feedback.thanks': 'Thank you! Your feedback will help us improve.',
+  'feedback.manual':
+    'Use Pufi at the bottom right of a pufu page to send feedback. Automatic prompts work only in browsers where you opt in via Pufi settings and can be disabled anytime. Review storage, AI assessment and GitHub publication before sending.',
+
   'manual.language_heading': 'Display language and generated content',
   'manual.pufu_create_heading': 'Create a draft with AI',
   'manual.pufu_generation_heading': 'AI sources and generation limits',

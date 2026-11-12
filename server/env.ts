@@ -40,6 +40,8 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   AI_MODEL: string;
+  FEEDBACK_GITHUB_REPOSITORY?: string;
+  FEEDBACK_GITHUB_TOKEN?: string;
   AI_PUFU_MODEL?: string;
   AI_PUFU_PLAN_MODEL?: string;
   AI_PUFU_DAILY_LIMIT?: string;

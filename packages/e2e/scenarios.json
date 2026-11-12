@@ -285,5 +285,21 @@
       "問いの詳細画面で改行付きメモと関連ストックの追加・解除・選び直しを保存し、再読込後も保持",
       "本文と保存先は変更されず、通常APIでメモと関連ストックIDを照合。問いの本文編集機能は存在しないため対象外"
     ]
+  },
+  {
+    "id": "FEEDBACK-001",
+    "title": "プフィの気づきフィードバック",
+    "sources": [
+      "src/PufiFeedback.tsx",
+      "src/feedback-detector.ts",
+      "shared/feedback.ts",
+      "server/feedback.ts",
+      "src/PufuJsonImport.tsx"
+    ],
+    "aspects": [
+      "自動検知は初期無効で同意・解除を再読込後も保持。手動の選択式回答を実APIに送信し、保存後の完了表示を確認",
+      "編集モーダル内の右下アイコンから追加質問に回答し、同じ送信IDと次のroundを使用（AI/GitHubはローカルfixture）。light/darkと両幅のパネル収まりを撮影",
+      "検知ルール・正常応答除外・頻度制限・保留・重複・認可・再送・追加質問の最大2回はVitestで確認"
+    ]
   }
 ]

@@ -40,7 +40,7 @@ describe('アカウントの言語', () => {
       terms_accepted: true,
       privacy_accepted: true,
       terms_version: '2026-10-30',
-      privacy_version: '2026-11-07',
+      privacy_version: '2026-11-12',
     };
     expect(
       (

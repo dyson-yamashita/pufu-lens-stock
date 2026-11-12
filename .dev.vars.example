@@ -19,3 +19,9 @@ GOOGLE_CLIENT_SECRET=
 # X APIトークン保存用AES-256キー（64文字の16進数）。本番はWrangler Secretへ設定。
 # 値をGitへ追加しないでください。未設定時は登録を受け付けません。
 INTEGRATION_ENCRYPTION_KEY=
+
+# プフィのフィードバック連携。未設定でも回答はD1に保存（Issue起票は保留）。
+# owner/repo。認証トークンはIssues読み書き権限のみのFine-grained PATを推奨。
+FEEDBACK_GITHUB_REPOSITORY=
+# 本番のトークンはWrangler Secretへ設定し、Gitへ追加しないこと。
+FEEDBACK_GITHUB_TOKEN=

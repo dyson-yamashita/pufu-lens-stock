@@ -1,5 +1,80 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 
+.pufu-feedback-scope {
+  display: contents;
+}
+.pufi-feedback {
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 120;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+.pufi-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--wash);
+  box-shadow: 0 4px 16px #153b5526;
+}
+.pufi-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.pufi-panel {
+  width: min(340px, calc(100vw - 36px));
+  max-height: min(650px, calc(100dvh - 120px));
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  color: var(--text);
+  background: var(--card);
+  box-shadow: 0 6px 24px #153b5526;
+}
+.pufi-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 8px;
+}
+.pufi-panel h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+.pufi-panel form {
+  display: grid;
+  gap: 10px;
+}
+.pufi-panel textarea,
+.pufi-panel select {
+  width: 100%;
+  min-width: 0;
+}
+.pufi-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pufi-check {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 0.88rem;
+}
+.pufi-check input {
+  flex: 0 0 auto;
+  width: auto;
+  margin-top: 4px;
+}
+
 :root {
   font-family: 'DM Sans', 'Noto Sans JP', sans-serif;
   color: var(--text);
