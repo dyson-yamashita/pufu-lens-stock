@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { applyMigration, testApp } from './helpers';
+import { readdir } from 'node:fs/promises';
 import { createApp } from '../server/api';
+import { saveAiUsage } from '../server/ai-neurons';
 import type { User } from '../shared/domain';
 import type { ProfileUsage } from '../shared/profile-usage';
 
@@ -53,6 +55,15 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
         "INSERT INTO ai_attempts(id,user_id,created_at) VALUES (?,'alice',?)",
       ).bind(`attempt${index}`, date),
     ]);
+    if (index < 4)
+      await saveAiUsage(
+        app.env,
+        'alice',
+        `attempt${index}`,
+        'fixture-model',
+        (index + 1) * 1_000_000,
+        true,
+      );
   }
   await app.env.DB.batch([
     app.env.DB.prepare(
@@ -65,14 +76,36 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
       "INSERT INTO ai_attempts(id,user_id,created_at) VALUES ('bob-ai','bob',?)",
     ).bind(dates[4]),
   ]);
+  await saveAiUsage(app.env, 'bob', 'bob-ai', 'fixture-model', 7_000_000, true);
   const result = await usage();
   expect(result).toEqual({
     timezone: 'Asia/Tokyo',
     as_of: '2026-11-12T03:00:00.000Z',
     periods: {
-      week: { since: dates[3], stocks: 2, questions: 2, pufus: 2, ai_calls: 2 },
-      month: { since: dates[1], stocks: 4, questions: 4, pufus: 4, ai_calls: 4 },
-      all: { since: null, stocks: 5, questions: 5, pufus: 5, ai_calls: 5 },
+      week: {
+        since: dates[3],
+        stocks: 2,
+        questions: 2,
+        pufus: 2,
+        ai_neurons: 4,
+        ai_unmeasured_calls: 1,
+      },
+      month: {
+        since: dates[1],
+        stocks: 4,
+        questions: 4,
+        pufus: 4,
+        ai_neurons: 9,
+        ai_unmeasured_calls: 1,
+      },
+      all: {
+        since: null,
+        stocks: 5,
+        questions: 5,
+        pufus: 5,
+        ai_neurons: 10,
+        ai_unmeasured_calls: 1,
+      },
     },
   });
   expect((await usage('bob')).periods.all).toEqual({
@@ -80,7 +113,8 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
     stocks: 0,
     questions: 1,
     pufus: 0,
-    ai_calls: 1,
+    ai_neurons: 7,
+    ai_unmeasured_calls: 0,
   });
   await app.env.DB.batch([
     app.env.DB.prepare("DELETE FROM stocks WHERE id='s4'"),
@@ -93,7 +127,8 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
     stocks: 1,
     questions: 1,
     pufus: 1,
-    ai_calls: 2,
+    ai_neurons: 4,
+    ai_unmeasured_calls: 1,
   });
 });
 
@@ -110,12 +145,19 @@ it.each([
     stocks: 0,
     questions: 0,
     pufus: 0,
-    ai_calls: 0,
+    ai_neurons: 0,
+    ai_unmeasured_calls: 0,
   });
   expect(result.periods.month.since).toBe(month);
 });
 
-it('既存の試行履歴を移行し、再試行・意味検索を同じ日別回数に加算し、退会時に削除する', async () => {
+it('旧履歴は未計測として移行し、詳細削除後も履歴を保持し、退会時に削除する', async () => {
+  await app.dispose();
+  app = await testApp({
+    migrations: (await readdir(new URL('../migrations/', import.meta.url)))
+      .filter((name) => name.endsWith('.sql') && name < '0048_ai_neurons.sql')
+      .sort(),
+  });
   await app.env.DB.batch([
     app.env.DB.prepare('DROP TRIGGER record_ai_usage'),
     app.env.DB.prepare('DROP TABLE ai_usage_daily'),
@@ -137,8 +179,9 @@ it('既存の試行履歴を移行し、再試行・意味検索を同じ日別�
     { day: '2026-11-08', calls: 1 },
     { day: '2026-11-09', calls: 4 },
   ]);
+  await applyMigration(app.env.DB, '0048_ai_neurons.sql');
   await app.env.DB.prepare('DELETE FROM ai_attempts').run();
-  expect((await usage()).periods.all.ai_calls).toBe(5);
+  expect((await usage()).periods.all).toMatchObject({ ai_neurons: 0, ai_unmeasured_calls: 5 });
   expect((await app.request('/api/v1/me', { method: 'DELETE', body: {} })).status).toBe(200);
   expect((await app.env.DB.prepare('SELECT * FROM ai_usage_daily').all()).results).toEqual([]);
 });

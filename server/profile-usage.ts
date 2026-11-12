@@ -28,10 +28,13 @@ export async function profileUsage(env: Env, userId: string): Promise<ProfileUsa
     ),
   );
   const ai = await env.DB.prepare(
-    `SELECT COALESCE(SUM(CASE WHEN day>=? THEN calls ELSE 0 END),0) AS week,
-      COALESCE(SUM(CASE WHEN day>=? THEN calls ELSE 0 END),0) AS month,
-      COALESCE(SUM(calls),0) AS "all"
-    FROM ai_usage_daily WHERE user_id=? AND day<=?`,
+    `SELECT COALESCE(SUM(CASE WHEN day>=?1 THEN neurons_micros ELSE 0 END),0) AS week,
+      COALESCE(SUM(CASE WHEN day>=?2 THEN neurons_micros ELSE 0 END),0) AS month,
+      COALESCE(SUM(neurons_micros),0) AS "all",
+      COALESCE(SUM(CASE WHEN day>=?1 THEN calls-measured_calls ELSE 0 END),0) AS week_missing,
+      COALESCE(SUM(CASE WHEN day>=?2 THEN calls-measured_calls ELSE 0 END),0) AS month_missing,
+      COALESCE(SUM(calls-measured_calls),0) AS all_missing
+    FROM ai_usage_daily WHERE user_id=?3 AND day<=?4`,
   )
     .bind(
       new Date(Date.parse(week) + offset).toISOString().slice(0, 10),
@@ -39,12 +42,15 @@ export async function profileUsage(env: Env, userId: string): Promise<ProfileUsa
       userId,
       local.toISOString().slice(0, 10),
     )
-    .first<{ week: number; month: number; all: number }>();
+    .first<
+      Record<'week' | 'month' | 'all' | 'week_missing' | 'month_missing' | 'all_missing', number>
+    >();
   const counts = (period: 'week' | 'month' | 'all') => ({
     stocks: rows[0].results[0][period],
     questions: rows[1].results[0][period],
     pufus: rows[2].results[0][period],
-    ai_calls: ai![period],
+    ai_neurons: ai![period] / 1_000_000,
+    ai_unmeasured_calls: ai![`${period}_missing`],
   });
   return {
     timezone: 'Asia/Tokyo',

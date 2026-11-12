@@ -3,7 +3,8 @@ export type UsageCounts = {
   stocks: number;
   questions: number;
   pufus: number;
-  ai_calls: number;
+  ai_neurons: number;
+  ai_unmeasured_calls: number;
 };
 export type ProfileUsage = {
   timezone: 'Asia/Tokyo';

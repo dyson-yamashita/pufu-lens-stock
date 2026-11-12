@@ -1,5 +1,6 @@
 import type { Env, EmbeddingAI } from './env';
 import { limits } from './usage';
+import { neuronMicros, saveAiUsage } from './ai-neurons';
 
 export const embeddingModel = '@cf/baai/bge-m3' as const;
 export const embeddingDimensions = 1024;
@@ -83,12 +84,14 @@ export async function embedSearchText(
   ]);
   if (!reserved.meta.changes) throw new SearchError('rate_limited', 429);
   let success = false;
+  let micros: number | null = null;
   try {
     // 同じWorkers AI bindingでも、埋め込みモデルは生成モデルと入力形式が異なる。
     const ai = env.AI as unknown as EmbeddingAI;
     const result = await searchTimeout(
       ai.run(embeddingModel, { text: [text.slice(0, 8000)], truncate_inputs: true }),
     );
+    micros = neuronMicros(embeddingModel, result);
     const data = result && typeof result === 'object' && 'data' in result ? result.data : null;
     const vector: unknown = Array.isArray(data) ? data[0] : null;
     if (
@@ -104,6 +107,7 @@ export async function embedSearchText(
     if (error instanceof SearchError) throw error;
     throw new SearchError('service_error');
   } finally {
+    await saveAiUsage(env, userId, id, embeddingModel, micros, micros !== null);
     await env.DB.prepare('UPDATE ai_calls SET status=?,updated_at=? WHERE id=?')
       .bind(success ? 'done' : 'failed', new Date().toISOString(), id)
       .run();

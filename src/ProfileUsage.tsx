@@ -32,9 +32,14 @@ export default function ProfileUsage({ userId }: { userId: string }) {
     { key: 'stocks', label: t('ui.usage.stocks'), icon: Archive },
     { key: 'questions', label: t('ui.usage.questions'), icon: CircleHelp },
     { key: 'pufus', label: t('ui.usage.pufus'), icon: ListTree },
-    { key: 'ai_calls', label: t('ui.usage.ai_calls'), icon: Sparkles },
+    { key: 'ai_neurons', label: t('ui.usage.ai_neurons'), icon: Sparkles },
   ] as const;
   const selected = usage?.periods[period];
+  const unmeasured = selected && selected.ai_neurons === 0 && selected.ai_unmeasured_calls > 0;
+  const formatNeurons = (value: number) =>
+    value > 0 && value < 0.001
+      ? '<0.001'
+      : value.toLocaleString(intlLocale(), { maximumFractionDigits: 3 });
   const date = (value: string) =>
     new Date(value).toLocaleDateString(intlLocale(), {
       timeZone: 'Asia/Tokyo',
@@ -87,14 +92,27 @@ export default function ProfileUsage({ userId }: { userId: string }) {
                     {label}
                   </dt>
                   <dd>
-                    <strong>{selected[key].toLocaleString(intlLocale())}</strong>
-                    <span>
-                      {key === 'ai_calls' ? t('ui.usage.calls_unit') : t('ui.usage.items_unit')}
-                    </span>
+                    <strong>
+                      {key === 'ai_neurons'
+                        ? unmeasured
+                          ? t('ui.usage.unmeasured')
+                          : formatNeurons(selected[key])
+                        : selected[key].toLocaleString(intlLocale())}
+                    </strong>
+                    {!(key === 'ai_neurons' && unmeasured) && (
+                      <span>{key === 'ai_neurons' ? 'Neurons' : t('ui.usage.items_unit')}</span>
+                    )}
                   </dd>
                 </div>
               ))}
             </dl>
+            {selected.ai_unmeasured_calls > 0 && (
+              <p className="profile-hint usage-missing">
+                {t('ui.usage.missing_note', {
+                  count: selected.ai_unmeasured_calls.toLocaleString(intlLocale()),
+                })}
+              </p>
+            )}
           </>
         ) : (
           <p className="profile-hint">{t('ui.usage.loading')}</p>

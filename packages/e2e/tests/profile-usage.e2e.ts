@@ -37,19 +37,20 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   expect(expected.periods.all.stocks).toBe(before.periods.all.stocks + 1);
   expect(expected.periods.all.questions).toBe(before.periods.all.questions + 1);
   expect(expected.periods.all.pufus).toBe(before.periods.all.pufus + 1);
-  expect(expected.periods.all.ai_calls).toBe(0);
+  expect(expected.periods.all.ai_neurons).toBe(0);
   await browser.emulateMedia({ colorScheme: 'light' });
   await app.open('/#profile');
   await expect(screen.getByRole('heading', '利用状況', { exact: true })).toBeVisible();
   const check = async (period: UsagePeriod) => {
-    for (const key of ['stocks', 'questions', 'pufus', 'ai_calls'] as const) {
+    for (const key of ['stocks', 'questions', 'pufus', 'ai_neurons'] as const) {
       await expect(browser.locator(`.usage-metrics [data-metric="${key}"] strong`)).toHaveText(
-        expected.periods[period][key].toLocaleString('ja-JP'),
+        expected.periods[period][key].toLocaleString('ja-JP', { maximumFractionDigits: 3 }),
       );
     }
   };
   await expect(screen.getByRole('radio', '今週', { exact: true })).toBeChecked();
   await check('week');
+  await expect(browser.locator('[data-metric="ai_neurons"] dd')).toContainText('Neurons');
   await screen.getByRole('radio', '今月', { exact: true }).check();
   await check('month');
   await screen.getByRole('radio', '全体', { exact: true }).check();
