@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import {
   applicationError,
   t,
@@ -266,8 +267,7 @@ function Brand() {
   useLanguage();
   return (
     <a className="brand" href="#" aria-label={t('ui.app.pufu_lens_home')}>
-      <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
-      <span>Pufu Lens</span>
+      <BrandLogo />
     </a>
   );
 }
@@ -1250,16 +1250,8 @@ export default function App() {
             </button>
           )}
           <nav className="breadcrumb" aria-label={t('ui.app.breadcrumbs')}>
-            <a href="#">
-              {!sidebarOpen && (
-                <img
-                  className="brand-mark"
-                  src="/pufu-lens-logo.png"
-                  alt=""
-                  width="28"
-                  height="28"
-                />
-              )}
+            <a href="#" aria-label={t('ui.app.home')}>
+              {!sidebarOpen && <BrandLogo />}
               {t('ui.app.home')}
             </a>{' '}
             <span aria-hidden="true">/</span>{' '}

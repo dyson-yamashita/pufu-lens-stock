@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import { applicationError, t, useLanguage, setLanguage, legalHref } from './i18n';
 import LanguageSelect from './LanguageSelect';
 import { useState, type FormEvent } from 'react';
@@ -51,8 +52,7 @@ export default function Onboarding({
   return (
     <div className="onboarding-page">
       <a className="brand" href="/" aria-label={t('ui.app.pufu_lens_home')}>
-        <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
-        <span>Pufu Lens</span>
+        <BrandLogo />
       </a>
       <main className="onboarding-card" aria-labelledby="onboarding-title">
         <h1 id="onboarding-title">{t('ui.onboarding.welcome_to_pufu_lens')}</h1>

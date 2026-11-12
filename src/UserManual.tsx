@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import { t, useLanguage, legalHref, homeHref, translateUi } from './i18n';
 import { useEffect } from 'react';
 import { ArrowUp, BookOpen } from 'lucide-react';
@@ -309,8 +310,7 @@ export default function UserManual({ language: forced }: { language?: Language }
     <div className="public-page manual-page" lang={language}>
       <header className="public-header">
         <a href={home} className="brand">
-          <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
-          <span>Pufu Lens</span>
+          <BrandLogo />
         </a>
         <a href={home} className="text-link">
           {tr('ui.user_manual.back_to_home')}

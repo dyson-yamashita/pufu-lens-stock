@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=Nunito:wght@800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 
 :root {
   font-family: 'DM Sans', 'Noto Sans JP', sans-serif;
@@ -350,19 +350,13 @@ p {
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
-  width: max-content;
-  font-family: 'Nunito', ui-rounded, 'Arial Rounded MT Bold', 'DM Sans', sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.7px;
-}
-.brand-mark {
-  display: block;
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
+  width: max-content;
+}
+.brand-logo {
+  display: block;
+  width: 188px;
+  height: auto;
   object-fit: contain;
 }
 .boot {
@@ -374,14 +368,8 @@ p {
   flex-direction: column;
   gap: 24px;
 }
-.boot .brand {
-  gap: 14px;
-  font-size: 30px;
-}
-.boot .brand-mark {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+.boot .brand-logo {
+  width: 248px;
 }
 .boot p {
   font-size: 14px;
@@ -657,12 +645,19 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.breadcrumb .brand-mark {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+.breadcrumb .brand-logo {
+  width: 86px;
   margin-right: 8px;
-  border-radius: 8px;
+}
+@media (max-width: 760px) {
+  .breadcrumb .brand-logo {
+    width: 48px;
+  }
+}
+@media (max-width: 380px) {
+  .breadcrumb .brand-logo {
+    display: none;
+  }
 }
 .breadcrumb a:hover,
 .breadcrumb a:focus-visible {
@@ -2902,6 +2897,9 @@ p {
     padding-left: 15px;
     padding-right: 15px;
   }
+  .sidebar .brand-logo {
+    width: 160px;
+  }
   .workspace {
     margin-left: 248px;
   }
@@ -3224,8 +3222,8 @@ p {
     transform-origin: left center;
     min-height: 380px;
   }
-  .login-page .brand {
-    font-size: 20px;
+  .brand-logo {
+    width: 160px;
   }
   .login-caption {
     display: none;
@@ -4327,9 +4325,6 @@ article.pufu-list-item {
   }
   .public-header {
     padding: 14px 20px;
-  }
-  .public-header .brand {
-    font-size: 20px;
   }
   .public-main {
     padding: 30px 20px;

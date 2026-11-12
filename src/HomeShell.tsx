@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import { translateUi } from './i18n';
 import { homePath, legalPath, manualPath } from '../shared/site-paths';
 import type { Language } from '../shared/locale';
@@ -10,8 +11,7 @@ export default function HomeShell({ language }: { language: Language }) {
     <div className="public-page">
       <header className="public-header">
         <a href={homePath(language)} className="brand">
-          <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
-          <span>Pufu Lens</span>
+          <BrandLogo />
         </a>
         <nav className="legal-links" aria-label={language === 'en' ? 'Site links' : 'サイトリンク'}>
           <a href={manualPath(language)}>{tr('ui.app.manual')}</a>
