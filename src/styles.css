@@ -371,7 +371,7 @@ p {
 .brand-logo {
   display: block;
   flex-shrink: 0;
-  width: 140px;
+  width: 120px;
   height: auto;
   object-fit: contain;
 }
@@ -385,7 +385,7 @@ p {
   gap: 24px;
 }
 .boot .brand-logo {
-  width: 188px;
+  width: 160px;
 }
 .boot .brand-mark {
   width: 48px;
@@ -2914,7 +2914,7 @@ p {
     padding-right: 15px;
   }
   .sidebar .brand-logo {
-    width: 120px;
+    width: 100px;
   }
   .sidebar .brand-mark {
     width: 32px;
@@ -3247,7 +3247,7 @@ p {
     min-height: 380px;
   }
   .brand-logo {
-    width: 120px;
+    width: 100px;
   }
   .brand-mark {
     width: 32px;
