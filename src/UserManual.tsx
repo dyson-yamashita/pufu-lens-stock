@@ -1,6 +1,8 @@
+import { ManualFeedback } from './FeedbackSurface';
 import BrandLogo from './BrandLogo';
-import { t, useLanguage, legalHref, homeHref, translateUi } from './i18n';
-import { useEffect } from 'react';
+import { t, useLanguage, legalHref, homeHref, translateUi, manualHref } from './i18n';
+import { Children, cloneElement, isValidElement, useEffect, type ReactNode } from 'react';
+import type { ManualNode } from './manual-search';
 import { ArrowUp, BookOpen } from 'lucide-react';
 import type { Language } from '../shared/locale';
 import LegalLinks from './LegalLinks';
@@ -119,7 +121,6 @@ const sections = (tr: typeof t) => [
           </details>
           <details>
             <summary>{tr('manual.pufu_edit_heading')}</summary>
-            <p>{tr('feedback.manual')}</p>
             <p>{tr('manual.pufu_titles')}</p>
             <p>{tr('ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or')}</p>
             <p>{tr('ui.user_manual.press_edit_at_the_image_s_lower_right_change')}</p>
@@ -363,6 +364,7 @@ const sections = (tr: typeof t) => [
     title: tr('ui.user_manual.troubleshooting'),
     content: (
       <div className="manual-guide">
+        <p>{tr('feedback.manual')}</p>
         <div className="manual-topics">
           <details>
             <summary>{tr('ui.user_manual.article_retrieval_failed')}</summary>
@@ -377,6 +379,118 @@ const sections = (tr: typeof t) => [
     ),
   },
 ];
+const startContent = (
+  tr: (key: string, values?: Record<string, string | number>) => string,
+  language: Language,
+) => (
+  <>
+    <h2 id="manual-start-heading">
+      <BookOpen size={20} aria-hidden="true" />
+      {tr('ui.user_manual.start_here')}
+    </h2>
+    <ol>
+      <li>
+        {tr('manual.language.start')}{' '}
+        <a href={legalHref('terms', language)}>{tr('ui.legal_links.terms_of_service')}</a>
+        {tr('ui.user_manual.and')}
+        <a href={legalHref('privacy', language)}>{tr('ui.legal_links.privacy_policy')}</a>
+        {tr('ui.user_manual.review_both_documents_check_both_consent_boxes_and_press')}
+      </li>
+      <li>{tr('manual.language.profile')}</li>
+      <li>{tr('ui.user_manual.save_interesting_article_urls_or_your_own_text_as')}</li>
+      <li>{tr('ui.user_manual.choose_a_question_and_explore_solutions_with_pufu')}</li>
+    </ol>
+    <div className="manual-topics">
+      <details>
+        <summary>{tr('manual.language_heading')}</summary>
+        <p>{tr('manual.language.future')}</p>
+      </details>
+      <details>
+        <summary>{tr('ui.theme_settings.display_settings')}</summary>
+        <p>{tr('manual.theme')}</p>
+      </details>
+      <details>
+        <summary>{tr('ui.usage.title')}</summary>
+        <p>{tr('manual.usage')}</p>
+      </details>
+    </div>
+  </>
+);
+// This index is built from the same React content rendered below, never a second answer corpus.
+const manualText = (value: ReactNode): string => {
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return value.map(manualText).join(' ');
+  if (isValidElement<{ children?: ReactNode }>(value)) return manualText(value.props.children);
+  return '';
+};
+function manualContent(language: Language) {
+  const tr = (key: string, values?: Record<string, string | number>) =>
+    translateUi(language, key, values);
+  return [
+    {
+      id: 'manual-start-guide',
+      title: tr('ui.user_manual.start_here'),
+      content: startContent(tr, language),
+    },
+    ...sections(tr),
+  ].map((section) => {
+    let serial = 0;
+    const decorate = (value: ReactNode): ReactNode =>
+      Children.map(value, (child) => {
+        if (!isValidElement<{ children?: ReactNode; id?: string }>(child)) return child;
+        const id = child.props.id ?? `manual-${section.id}-${++serial}`;
+        return cloneElement(child, { id, children: decorate(child.props.children) });
+      });
+    return { ...section, content: decorate(section.content) };
+  });
+}
+export function getManualTree(language: Language): ManualNode[] {
+  const read = (value: ReactNode): ManualNode[] => {
+    const result: ManualNode[] = [];
+    let heading: ManualNode | null = null;
+    for (const child of Children.toArray(value)) {
+      if (!isValidElement<{ children?: ReactNode; id?: string }>(child)) continue;
+      const type = child.type,
+        children = Children.toArray(child.props.children);
+      const text = manualText(child).replace(/\s+/g, ' ').trim();
+      const node: ManualNode = {
+        id: child.props.id ?? '',
+        title: text.slice(0, 100),
+        text,
+        href: `${manualHref(language)}#${child.props.id}`,
+        children: [],
+      };
+      if (type === 'details') {
+        const summary = children.find((c) => isValidElement(c) && c.type === 'summary');
+        node.title = manualText(summary).trim();
+        node.text = '';
+        node.children = read(children.filter((c) => c !== summary));
+        result.push(node);
+        heading = null;
+      } else if (type === 'h3') {
+        node.text = '';
+        node.children = [];
+        result.push(node);
+        heading = node;
+      } else if (['p', 'ol', 'ul', 'pre'].includes(String(type)) && text) {
+        if (heading) heading.children.push(node);
+        else result.push(node);
+      } else if (type !== 'summary') {
+        result.push(...read(child.props.children));
+        heading = null;
+      }
+    }
+    return result;
+  };
+  return manualContent(language).map((section) => ({
+    id: section.id,
+    title: section.title,
+    text: '',
+    href: `${manualHref(language)}#${section.id}`,
+    children: read(section.content),
+  }));
+}
+
 export default function UserManual({ language: forced }: { language?: Language }) {
   const current = useLanguage();
   const language = forced ?? current.language;
@@ -386,14 +500,22 @@ export default function UserManual({ language: forced }: { language?: Language }
     const previousTitle = document.title;
     document.title = tr('ui.user_manual.user_manual_pufu_lens');
     // Reactの描画後にも、直リンクで指定された節を表示する。
-    document.getElementById(window.location.hash.slice(1))?.scrollIntoView?.();
+    const target = document.getElementById(window.location.hash.slice(1));
+    let detail = target?.closest('details');
+    while (detail) {
+      detail.open = true;
+      detail = detail.parentElement?.closest('details') ?? null;
+    }
+    target?.scrollIntoView?.();
     return () => {
       document.title = previousTitle;
     };
   }, [language]);
   const home = homeHref(language);
+  const [start, ...manual] = manualContent(language);
   return (
     <div className="public-page manual-page" lang={language}>
+      <ManualFeedback language={language} />
       <header className="public-header">
         <a href={home} className="brand">
           <BrandLogo />
@@ -419,46 +541,17 @@ export default function UserManual({ language: forced }: { language?: Language }
             </nav>
           </div>
         </header>
-        <section className="manual-start" aria-labelledby="manual-start-heading">
-          <h2 id="manual-start-heading">
-            <BookOpen size={20} aria-hidden="true" />
-            {tr('ui.user_manual.start_here')}
-          </h2>
-          <ol>
-            <li>
-              {tr('manual.language.start')}{' '}
-              <a href={legalHref('terms', language)}>{tr('ui.legal_links.terms_of_service')}</a>
-              {tr('ui.user_manual.and')}
-              <a href={legalHref('privacy', language)}>{tr('ui.legal_links.privacy_policy')}</a>
-              {tr('ui.user_manual.review_both_documents_check_both_consent_boxes_and_press')}
-            </li>
-            <li>{tr('manual.language.profile')}</li>
-            <li>{tr('ui.user_manual.save_interesting_article_urls_or_your_own_text_as')}</li>
-            <li>{tr('ui.user_manual.choose_a_question_and_explore_solutions_with_pufu')}</li>
-          </ol>
-          <div className="manual-topics">
-            <details>
-              <summary>{tr('manual.language_heading')}</summary>
-              <p>{tr('manual.language.future')}</p>
-            </details>
-            <details>
-              <summary>{tr('ui.theme_settings.display_settings')}</summary>
-              <p>{tr('manual.theme')}</p>
-            </details>
-            <details>
-              <summary>{tr('ui.usage.title')}</summary>
-              <p>{tr('manual.usage')}</p>
-            </details>
-          </div>
+        <section className="manual-start" id={start.id} aria-labelledby="manual-start-heading">
+          {start.content}
         </section>
         <nav className="manual-toc" aria-label={tr('ui.user_manual.manual_contents')}>
-          {sections(tr).map((section) => (
+          {manual.map((section) => (
             <a key={section.id} href={`#${section.id}`}>
               {section.title}
             </a>
           ))}
         </nav>
-        {sections(tr).map((section) => (
+        {manual.map((section) => (
           <section
             className="manual-section"
             key={section.id}

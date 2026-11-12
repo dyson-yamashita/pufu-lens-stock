@@ -1,145 +1,88 @@
-import type { FeedbackAction, FeedbackReason, FeedbackInput } from '../shared/feedback';
+import type { FeedbackAction, FeedbackInput } from '../shared/feedback';
 
 type FailureReason = 'validation_repeat' | 'operation_repeat' | 'network_repeat';
-type ExplorationAction = Extract<FeedbackAction, 'edit' | 'import' | 'download'>;
-type ScoredSignal = { type: FeedbackReason; action: FeedbackAction; time: number; score: number };
-const scores: Record<FeedbackReason, number> = {
-  rage_click: 3,
-  navigation_loop: 2,
-  validation_repeat: 2,
-  operation_repeat: 3,
-  network_repeat: 3,
-  exploration_repeat: 2,
+type Signal = {
+  type: 'rage_click' | FailureReason;
+  action: FeedbackAction;
+  time: number;
+  score: number;
 };
-// All state stays in memory. Values, error messages and DOM text are never retained.
+// Local, bounded bookkeeping only. Keys are ephemeral control IDs or normalized API operation IDs.
 export class FeedbackDetector {
   private enabled = false;
-  private clicks = new Map<FeedbackAction, number[]>();
+  private clicks = new Map<string, { action: FeedbackAction; times: number[] }>();
   private failures = new Map<
     string,
-    { type: FailureReason; action: FeedbackAction; times: number[] }
+    { type: FailureReason; action: FeedbackAction; key: string; times: number[] }
   >();
-  private routes: { screen: string; time: number }[] = [];
-  private opened = new Set<ExplorationAction>();
-  private abandoned = new Map<ExplorationAction, number[]>();
-  private signals = new Map<string, ScoredSignal>();
+  private signals = new Map<string, Signal>();
   constructor(private clock = Date.now) {}
-  enable(enabled: boolean) {
-    this.enabled = enabled;
+  enable(value: boolean) {
+    this.enabled = value;
     this.reset();
   }
   reset() {
     this.clicks.clear();
     this.failures.clear();
-    this.routes = [];
-    this.opened.clear();
-    this.abandoned.clear();
     this.signals.clear();
   }
-  click(action: FeedbackAction) {
+  private bound<T>(map: Map<string, T>) {
+    while (map.size > 200) map.delete(map.keys().next().value!);
+  }
+  click(action: FeedbackAction, key: string = action) {
     if (!this.enabled) return;
     const time = this.clock();
-    this.clicks.set(
+    this.clicks.set(key, {
       action,
-      [...(this.clicks.get(action) ?? []).filter((t) => time - t < 8000), time].slice(-4),
-    );
+      times: [...(this.clicks.get(key)?.times ?? []).filter((t) => time - t < 8000), time].slice(
+        -4,
+      ),
+    });
+    this.bound(this.clicks);
   }
-  acknowledge(action: FeedbackAction) {
-    this.clicks.delete(action);
-    this.signals.delete(`rage_click:${action}`);
+  acknowledge(_action: FeedbackAction, key: string = _action) {
+    this.clicks.delete(key);
+    this.signals.delete(key);
   }
-  progress(action: FeedbackAction) {
-    this.clicks.delete(action);
-    for (const [key, failure] of this.failures)
-      if (failure.action === action) this.failures.delete(key);
-    for (const [key, signal] of this.signals)
-      if (signal.action === action) this.signals.delete(key);
-    // Input or a completed operation is progress; comparison/searching has stopped.
-    this.routes = [];
-    this.opened.clear();
-    this.abandoned.clear();
+  progress(action: FeedbackAction, key: string = action) {
+    this.acknowledge(action, key);
+    for (const [id, failure] of this.failures) if (failure.key === key) this.failures.delete(id);
   }
-  open(action: ExplorationAction) {
+  validation(action: FeedbackAction, key: string = action) {
+    this.record(action, 'validation_repeat', key);
+  }
+  failure(action: FeedbackAction, kind: 'operation' | 'network', key: string = action) {
+    this.record(action, kind === 'network' ? 'network_repeat' : 'operation_repeat', key);
+  }
+  private record(action: FeedbackAction, type: FailureReason, key: string) {
     if (!this.enabled) return;
-    this.acknowledge(action);
-    this.opened.add(action);
-  }
-  close(action: ExplorationAction) {
-    if (!this.enabled || !this.opened.delete(action)) return;
-    const time = this.clock();
-    this.abandoned.set(
-      action,
-      [...(this.abandoned.get(action) ?? []).filter((t) => time - t < 60000), time].slice(-3),
-    );
-  }
-  validation(action: FeedbackAction) {
-    this.recordFailure(action, 'validation_repeat');
-  }
-  failure(action: FeedbackAction, kind: 'operation' | 'network') {
-    this.recordFailure(action, kind === 'network' ? 'network_repeat' : 'operation_repeat');
-  }
-  private recordFailure(action: FeedbackAction, type: FailureReason) {
-    if (!this.enabled) return;
-    this.acknowledge(action);
-    const time = this.clock();
-    const key = `${type}:${action}`;
+    this.acknowledge(action, key);
+    const time = this.clock(),
+      id = `${type}:${key}`;
     const times = [
-      ...(this.failures.get(key)?.times ?? []).filter((t) => time - t < 60000),
+      ...(this.failures.get(id)?.times ?? []).filter((t) => time - t < 60000),
       time,
     ].slice(type === 'validation_repeat' ? -3 : -2);
-    this.failures.set(key, { type, action, times });
-  }
-  navigate(screen: string) {
-    if (!this.enabled) return;
-    const time = this.clock();
-    if (this.routes.at(-1)?.screen === screen) return;
-    this.acknowledge('phase');
-    this.routes = [...this.routes.filter((r) => time - r.time < 60000), { screen, time }].slice(-6);
+    this.failures.set(id, { type, action, key, times });
+    this.bound(this.failures);
   }
   evaluate(): { total: number; reasons: FeedbackInput['reasons'] } {
     const time = this.clock();
-    for (const [action, clicks] of this.clicks) {
-      if (clicks.length === 4 && time - clicks[3] >= 1000 && time - clicks[3] < 60000) {
-        this.signals.set(`rage_click:${action}`, {
-          type: 'rage_click',
-          action,
-          time: clicks[3],
-          score: 3,
-        });
-        this.clicks.delete(action);
-      } else if (time - clicks.at(-1)! >= 60000) this.clicks.delete(action);
+    for (const [key, clicks] of this.clicks) {
+      const last = clicks.times.at(-1)!;
+      if (clicks.times.length === 4 && time - last >= 1000 && time - last < 60000) {
+        this.signals.set(key, { type: 'rage_click', action: clicks.action, time: last, score: 3 });
+        this.clicks.delete(key);
+        this.bound(this.signals);
+      } else if (time - last >= 60000) this.clicks.delete(key);
     }
     for (const [key, signal] of this.signals)
       if (time - signal.time >= 60000) this.signals.delete(key);
     const signals = [...this.signals.values()];
-    this.routes = this.routes.filter((r) => time - r.time < 60000);
-    const alternating = (routes: typeof this.routes) =>
-      routes.length >= 4 && routes.every((r, i) => i < 2 || r.screen === routes[i - 2].screen);
-    if (alternating(this.routes.slice(-4)))
-      signals.push({
-        type: 'navigation_loop',
-        action: 'phase',
-        time: this.routes.at(-1)!.time,
-        score: this.routes.length === 6 && alternating(this.routes) ? 3 : 2,
-      });
-    for (const [action, times] of this.abandoned) {
-      const recent = times.filter((t) => time - t < 60000);
-      if (!recent.length) this.abandoned.delete(action);
-      else {
-        this.abandoned.set(action, recent);
-        if (recent.length >= 2)
-          signals.push({
-            type: 'exploration_repeat',
-            action,
-            time: recent.at(-1)!,
-            score: recent.length >= 3 ? 3 : 2,
-          });
-      }
-    }
-    for (const [key, failure] of this.failures) {
+    for (const [id, failure] of this.failures) {
       failure.times = failure.times.filter((t) => time - t < 60000);
       if (!failure.times.length) {
-        this.failures.delete(key);
+        this.failures.delete(id);
         continue;
       }
       if (failure.times.length >= 2)
@@ -147,14 +90,10 @@ export class FeedbackDetector {
           type: failure.type,
           action: failure.action,
           time: failure.times.at(-1)!,
-          score:
-            failure.type === 'validation_repeat' && failure.times.length >= 3
-              ? 3
-              : scores[failure.type],
+          score: failure.type === 'validation_repeat' && failure.times.length < 3 ? 2 : 3,
         });
     }
-    // One score per reason; retain per-action histories so a success clears only related trouble.
-    const unique = new Map<FeedbackReason, ScoredSignal>();
+    const unique = new Map<Signal['type'], Signal>();
     for (const signal of signals) {
       const previous = unique.get(signal.type);
       if (
@@ -165,7 +104,7 @@ export class FeedbackDetector {
         unique.set(signal.type, signal);
     }
     return {
-      total: [...unique.values()].reduce((sum, signal) => sum + signal.score, 0),
+      total: [...unique.values()].reduce((sum, s) => sum + s.score, 0),
       reasons: [...unique.values()].map(({ type, action }) => ({ type, action })),
     };
   }

@@ -1,4 +1,17 @@
 export const en: Record<string, string> = {
+  'feedback.help_question': 'Which action would you like help with?',
+  'feedback.help_confirm': 'Did this help?',
+  'feedback.help_choose': 'Please choose the relevant topic.',
+  'feedback.help_solved': 'That solved it',
+  'feedback.help_not_solved': 'That did not solve it',
+  'feedback.help_hearing': 'Which part is still unresolved?',
+  'feedback.help_glad': 'I’m glad that helped.',
+  'feedback.help_search': 'Search the manual',
+  'feedback.help_ai_hint': 'AI checks your question to find the manual section.',
+  'feedback.help_original': 'Original question',
+  'feedback.help_manual': 'Manual guidance',
+  'feedback.help_unresolved': 'Unresolved part',
+  'feedback.help_open_manual': 'Open this manual section',
   'feedback.title': 'Pufi',
   'feedback.open': 'Talk to Pufi',
   'feedback.invitation': 'May I help?',
@@ -22,14 +35,10 @@ export const en: Record<string, string> = {
   'feedback.done': 'Close conversation',
   'feedback.listening': 'Reviewing your message…',
   'feedback.conversation': 'Conversation with Pufi',
-  'feedback.settings': 'Pufi settings',
-  'feedback.setting_question': 'May I offer help when you seem stuck?',
-  'feedback.enable': 'Receive help prompts',
   'feedback.details': 'About saving our conversation',
-  'feedback.back': 'Back to the conversation',
   'feedback.privacy_link': 'Privacy policy',
   'feedback.explanation':
-    'Your messages and screen/action IDs are saved, organized by AI and reviewed by maintenance staff. Input values and raw interaction logs are never sent. Please do not include personal information. Help prompts are limited to once per session and 24 hours; “No, thank you” pauses them for 7 days. You can turn them off anytime.',
+    'Repeated interactions are detected locally while signed in. Input values and raw interaction logs are never sent automatically. AI checks manual-search questions. Submitted conversations are saved, organized by AI and reviewed by maintenance staff. Please avoid personal information. Automatic prompts appear at most once per session and 24 hours; “No, thank you” pauses them for 7 days.',
   'feedback.question_operation': 'Which action were you having trouble with?',
   'feedback.question_expected': 'What did you expect to happen?',
   'feedback.question_actual': 'What happened at that point?',
@@ -40,7 +49,7 @@ export const en: Record<string, string> = {
   'feedback.session_changed':
     'Your login has changed. Please close the conversation and open it again.',
   'feedback.manual':
-    'Select “May I help?” or Pufi at the bottom right of a pufu page to share anything confusing or difficult. Choose “Finish answering” to stop additional questions, or “Send and finish” to save an unsent reply and finish. Messages are saved for improvements, organized by AI and reviewed by maintenance staff. Automatic help prompts work only in browsers where you opt in. They respond to repeated failures, switching between phases, or opening and closing features without progress, rather than time spent reading or thinking. You can disable them anytime.',
+    'When signed in, you can talk to Pufi at the bottom right of the manual. On other pages, prompts appear only after repeated unresponsive clicks, input errors or operation failures. Choose “I could not find what to do” to have AI follow manual headings to the relevant text. If that does not help, Pufi asks which part remains unresolved. Submitted conversations are saved and organized by AI for maintenance review. Choose “Finish answering” or “Send and finish” to end.',
 
   'manual.pufu_create_heading': 'Create a draft with AI',
   'manual.pufu_generation_heading': 'AI sources and generation limits',
@@ -1233,6 +1242,7 @@ export const en: Record<string, string> = {
   'ui.api.retry_around_value': ' Retry around: {{value0}}',
   'ui.pufu-download.could_not_load_the_image_font_please_try_again':
     'Could not load the image font. Please try again.',
+  'manual.language_heading': 'Display language',
   'manual.language.start':
     'Sign in with Google, enter a nickname (display name) and choose your language. Review the ',
   'manual.language.profile':

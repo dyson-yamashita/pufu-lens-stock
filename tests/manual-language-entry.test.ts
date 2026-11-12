@@ -95,6 +95,21 @@ it.each([
         'a[href="https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills"]',
       ),
     ).not.toBeNull();
-    expect(api).not.toHaveBeenCalled();
+    expect(api).toHaveBeenCalledWith(
+      '/api/v1/me',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(document.querySelector('.pufi-invitation')?.textContent).toBe(
+      pathname === '/manual' ? '何かお困りですか？' : 'May I help?',
+    );
   },
 );
+
+it('keeps the manual public without showing a feedback entry when signed out', async () => {
+  vi.mocked(api).mockRejectedValue(new Error('Unauthorized'));
+  await act(async () => {
+    await import('../src/main');
+  });
+  expect(document.querySelector('h1')?.textContent).toBe('ユーザーマニュアル');
+  expect(document.querySelector('.pufi-feedback')).toBeNull();
+});

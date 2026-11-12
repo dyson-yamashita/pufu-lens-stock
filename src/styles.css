@@ -3,8 +3,8 @@
 .pufu-feedback-scope {
   display: contents;
 }
-.pufu-page,
-.dialog.pufu-modal:has(.pufi-feedback) {
+.manual-page:has(.pufi-feedback) .manual-main,
+dialog.dialog:has(.pufi-feedback) {
   padding-bottom: calc(110px + env(safe-area-inset-bottom));
 }
 .pufi-feedback {
@@ -62,8 +62,16 @@
   background: var(--card);
   box-shadow: 0 6px 24px #153b5526;
 }
+.pufi-feedback:has(.pufi-prompt) {
+  display: flex;
+  align-items: flex-end;
+}
 .pufi-prompt {
-  width: min(260px, calc(100vw - 36px));
+  width: min(260px, calc(100vw - 110px));
+}
+.pufi-manual-link {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
 }
 .pufi-panel-head,
 .pufi-name,

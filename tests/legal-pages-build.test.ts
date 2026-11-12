@@ -174,7 +174,7 @@ it('トップページの共有メタ情報をマニュアルや規約ページ�
   }
 });
 
-it('マニュアルの日英静的HTMLに本文・HowTo/FAQ JSON-LDを含める', () => {
+it('マニュアルの日英HTMLに本文・HowTo/FAQとログイン済み案内用のmoduleを含める', () => {
   for (const [file, lang, title] of [
     ['manual/index.html', 'ja', 'ユーザーマニュアル'],
     ['en/manual/index.html', 'en', 'User manual'],
@@ -188,7 +188,7 @@ it('マニュアルの日英静的HTMLに本文・HowTo/FAQ JSON-LDを含める'
         .map((node) => node.textContent)
         .join('\n'),
     ).toMatch(/HowTo|FAQPage/);
-    expect(document.querySelector('script[type="module"]')).toBeNull();
+    expect(document.querySelector('script[type="module"]')).not.toBeNull();
   }
 });
 

@@ -1,4 +1,17 @@
 export const ja: Record<string, string> = {
+  'feedback.help_question': 'お知りになりたい操作を教えてください。',
+  'feedback.help_confirm': 'お役に立ちましたか？',
+  'feedback.help_choose': '該当する項目をお選びください。',
+  'feedback.help_solved': '解決しました',
+  'feedback.help_not_solved': '解決しませんでした',
+  'feedback.help_hearing': 'どの部分が解決しませんでしたか？',
+  'feedback.help_glad': 'お役に立ててよかったです。',
+  'feedback.help_search': 'マニュアルを検索',
+  'feedback.help_ai_hint': '質問をAIで確認し、マニュアルをご案内します。',
+  'feedback.help_original': '最初のご質問',
+  'feedback.help_manual': 'ご案内したマニュアル',
+  'feedback.help_unresolved': '解決しなかった点',
+  'feedback.help_open_manual': 'マニュアルを開く',
   'feedback.title': 'プフィ',
   'feedback.open': 'プフィと話す',
   'feedback.invitation': '何かお困りですか？',
@@ -22,14 +35,10 @@ export const ja: Record<string, string> = {
   'feedback.done': '会話を閉じる',
   'feedback.listening': '内容を確認しています…',
   'feedback.conversation': 'プフィとの会話',
-  'feedback.settings': 'プフィの設定',
-  'feedback.setting_question': 'お困りのときに、ご案内してもよいですか？',
-  'feedback.enable': '声かけを受け取る',
   'feedback.details': '会話の保存について',
-  'feedback.back': '会話に戻る',
   'feedback.privacy_link': 'プライバシーポリシー',
   'feedback.explanation':
-    '会話と画面・操作IDを保存し、AIで整理して保守担当が確認します。入力値や生の操作ログは送信しません。個人情報の記入はお控えください。自動案内は1セッション・24時間に1回まで。「大丈夫です」で7日間休止します。いつでも解除できます。',
+    'ログイン中の操作の反復をブラウザー内で検知します。入力値や生の操作ログは自動送信しません。マニュアル検索の質問はAIで確認します。会話を送信すると保存・AI整理し、保守担当が確認します。個人情報の記入はお控えください。自動案内は1セッション・24時間に1回まで。「大丈夫です」で7日間休止します。',
   'feedback.question_operation': 'どの操作でお困りでしたか？',
   'feedback.question_expected': 'どのような動きを期待されていましたか？',
   'feedback.question_actual': 'そのとき、どのような状態になりましたか？',
@@ -38,7 +47,7 @@ export const ja: Record<string, string> = {
   'feedback.wait_retry': 'まだ整理中です。少し待って、もう一度お試しください。',
   'feedback.session_changed': 'ログインが変更されました。会話を閉じて、もう一度開いてください。',
   'feedback.manual':
-    'プ譜画面右下の「何かお困りですか？」またはプフィを押すと、操作に迷ったことやお困りのことを短く伝えられます。「回答を終了」で追加質問への回答を終えられます。未送信の内容がある場合は「送信して終了」で保存して終えられます。会話は改善のために保存し、AIで整理して保守担当が確認します。自動案内はプフィの設定で同意したブラウザーだけで動き、操作の失敗や、局面の行き来・機能の開閉の繰り返しをきっかけに声をかけます。読む・考えるために止まっているだけでは表示せず、いつでも解除できます。',
+    'ログイン済みのマニュアルページでは右下のプフィから相談できます。それ以外の画面では、無反応クリック・入力エラー・操作失敗が繰り返されたときに案内します。「操作に迷いました」では質問をAIで確認し、見出しから該当するマニュアル本文をご案内します。役立たなかった場合は、解決しなかった部分をお伺いします。会話は送信時に保存し、AIで整理して保守担当が確認します。「回答を終了」または「送信して終了」で終了できます。',
 
   'manual.pufu_create_heading': 'AIで案をつくる',
   'manual.pufu_generation_heading': 'AIが参照する資料・生成の上限',
@@ -1216,6 +1225,7 @@ export const ja: Record<string, string> = {
   'ui.api.retry_around_value': ' 再試行目安: {{value0}}',
   'ui.pufu-download.could_not_load_the_image_font_please_try_again':
     '画像用フォントを取得できませんでした。再度お試しください。',
+  'manual.language_heading': '表示言語',
   'manual.language.start': 'Googleでログインし、ニックネーム（表示名）と表示言語を選びます。',
   'manual.language.profile':
     'サイドメニューからプロジェクトを追加します。ニックネームと表示言語は「プロフィール」で変更し、「保存する」で確定できます。',

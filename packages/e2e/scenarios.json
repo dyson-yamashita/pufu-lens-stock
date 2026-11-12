@@ -297,7 +297,7 @@
       "src/PufuJsonImport.tsx"
     ],
     "aspects": [
-      "同意してから、同じJSON取込の入力エラーを60秒以内に3回起こすだけで自動表示する。局面往復は不要。入力中は避け、検知画面を両幅・light/darkで撮影",
+      "設定不要で、同じJSON取込の入力エラーを60秒以内に3回起こすだけで自動表示する。局面往復は不要。入力中は避け、検知画面を両幅・light/darkで撮影",
       "短い選択肢とひとことの会話、追加質問を経て途中終了し、外部登録なしでD1に保存。会話画面を撮影。設定の保持と解除を確認",
       "検知ルール・応答除外・頻度・同意・再送/round CAS・所有者変更・会話/再現手順等のDB格納・AIなし/失敗・退会中の競合はVitestで確認",
       "短く丁寧な言い回しを使用。入力ありは「送信して終了」、追加質問への未入力時は「回答を終了」と表示し、実テーマ設定と遷移完了後に撮影して黒い輪など切替途中の表示を混入させない"
@@ -333,22 +333,27 @@
   },
   {
     "id": "FEEDBACK-004",
-    "title": "常設の案内と機能の開閉による迷いの検知",
+    "title": "ログイン済みマニュアルの入口と見出し案内・未解決ヒアリング",
     "sources": [
       "src/PufiFeedback.tsx",
       "src/feedback-detector.ts",
       "src/PufuEditor.tsx",
-      "shared/feedback.ts"
+      "shared/feedback.ts",
+      "src/ManualHelp.tsx",
+      "src/manual-search.ts",
+      "src/UserManual.tsx",
+      "server/manual-help.ts"
     ],
     "aspects": [
-      "アイコン左の短い案内をlight/dark・両幅で撮影し、同意OFFでも文字から手動会話を開ける。会話中は重複文を隠す",
-      "実ダウンロード画面を開閉。2回は未発火、保存成功で解除し、再び3回の開閉で単独発火。会話を開いて入力するだけでは送信しない。固定迷い理由のDB保存はVitestの実API/SQLiteで検証",
-      "画面下部の操作に案内が重ならない余白を確保し、削除欄の開閉が通常クリックで可能なことを両幅で確認"
+      "ログイン済みマニュアルだけに常設文とアイコン。設定UIなし、両幅・明暗で左右配置を撮影。未ログインは009で確認",
+      "モデルの選択結果だけをHTTP fixtureに置き換えて、実際のマニュアル本文・リンク・役立ったかの確認を表示。未解決後は検索回数が増えず、具体的な未解決内容をヒアリング",
+      "初回検索は会話保存なし。ヒアリングの送信はHTTP fixtureでscreenと内容を確認し、D1実保存はVitest。デモ利用者の日次3会話制限を変更・迂回しない",
+      "配信用マニュアルHTMLのmodule起動後に本人を確認し、常設入口から会話できる"
     ]
   },
   {
     "id": "FEEDBACK-005",
-    "title": "局面を探す往復による迷いの検知",
+    "title": "通常のプ譜表示・局面往復・機能開閉で非表示",
     "sources": [
       "src/PufiFeedback.tsx",
       "src/feedback-detector.ts",
@@ -356,8 +361,58 @@
       "shared/feedback.ts"
     ],
     "aspects": [
-      "実画面の2局面切替で4回は未発火、60秒以内の6回交互切替でエラーなしでも案内。拒否後も手動の入口は表示",
-      "待機だけの非発火、入力・成功による解除、60秒窓の再計算、同意/頻度/入力中抑止はVitestで確認"
+      "閲覧だけではアイコン・文を含め非表示。6回の局面交互切替と3回のダウンロード開閉でも表示しない",
+      "3秒の抑止解除後まで待って非発火を確認。正常な画面反応は無反応クリックに数えない"
+    ]
+  },
+  {
+    "id": "FEEDBACK-006",
+    "title": "全画面の操作失敗とモーダル内の案内",
+    "sources": [
+      "src/FeedbackSurface.tsx",
+      "src/feedback-monitor.ts",
+      "src/feedback-events.ts",
+      "src/PufiFeedback.tsx"
+    ],
+    "aspects": [
+      "プ譜以外のストック保存409を2回繰り返して案内。通常時と1回目は全体非表示、ネイティブdialog内でも案内を操作できる"
+    ]
+  },
+  {
+    "id": "FEEDBACK-007",
+    "title": "全画面の無反応クリック",
+    "sources": [
+      "src/FeedbackSurface.tsx",
+      "src/feedback-monitor.ts",
+      "src/feedback-events.ts",
+      "src/PufiFeedback.tsx"
+    ],
+    "aspects": ["ローカルだけに無反応ボタンを追加し4回クリックで案内。実サービス障害や外部通信なし"]
+  },
+  {
+    "id": "FEEDBACK-008",
+    "title": "全画面のネイティブ入力エラー",
+    "sources": [
+      "src/FeedbackSurface.tsx",
+      "src/feedback-monitor.ts",
+      "src/feedback-events.ts",
+      "src/PufiFeedback.tsx"
+    ],
+    "aspects": [
+      "実フォームのネイティブ入力エラー3回を捕捉。フォーカスが入力欄にある間は抑止、離れてから表示"
+    ]
+  },
+  {
+    "id": "FEEDBACK-009",
+    "title": "未ログインの公開マニュアル",
+    "sources": [
+      "src/FeedbackSurface.tsx",
+      "src/feedback-monitor.ts",
+      "src/feedback-events.ts",
+      "src/PufiFeedback.tsx"
+    ],
+    "aspects": [
+      "認証用拡張fixtureから独立したbase testで未ログインのマニュアルを閲覧。実/meの401を確認し、本文は読めるがプフィは非表示"
     ]
   }
 ]

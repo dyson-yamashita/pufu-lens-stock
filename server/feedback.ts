@@ -1,3 +1,4 @@
+import manualHelpApp from './manual-help';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
@@ -35,6 +36,7 @@ type FeedbackRecord = {
   round: number;
   follow_up: FeedbackQuestion | null;
   category: FeedbackInput['category'];
+  screen: FeedbackInput['screen'];
   detail: string;
   reasons: string;
   conversation: string;
@@ -118,7 +120,7 @@ async function assessFeedback(env: Env, row: FeedbackRecord, finish: boolean) {
             {
               role: 'user',
               content: JSON.stringify({
-                screen: 'pufu-editor',
+                screen: row.screen,
                 category: row.category,
                 reasons: JSON.parse(row.reasons),
                 conversation: JSON.parse(row.conversation),
@@ -171,6 +173,7 @@ async function assessFeedback(env: Env, row: FeedbackRecord, finish: boolean) {
 
 export function feedbackApp() {
   const app = new Hono<AppEnv>();
+  app.route('/manual-search', manualHelpApp());
   app.post('/', async (c) => {
     const principal = c.get('principal');
     if (principal.kind !== 'session') throw new HTTPException(403);
@@ -238,9 +241,18 @@ export function feedbackApp() {
     const id = crypto.randomUUID();
     const date = timestamp();
     const start = new Date(Date.now() - 86400000).toISOString();
-    const language = resolveLanguage(principal.user.language);
+    const language = resolveLanguage(input.language ?? principal.user.language);
     const conversation: FeedbackMessage[] = [
       { role: 'user', text: input.category },
+      ...(input.manual_context
+        ? [
+            { role: 'user' as const, text: input.manual_context.question },
+            {
+              role: 'pufi' as const,
+              text: `${input.manual_context.topic} (#${input.manual_context.section})`,
+            },
+          ]
+        : []),
       ...(input.detail ? [{ role: 'user' as const, text: input.detail }] : []),
     ];
     const title = {
@@ -252,13 +264,14 @@ export function feedbackApp() {
     const reservations = await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM feedback_global_usage WHERE created_at<=?').bind(start),
       c.env.DB.prepare(
-        `INSERT OR IGNORE INTO usability_feedback(id,user_id,request_id,language,category,detail,reasons,conversation,title,summary,created_at,updated_at)
-       SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM usability_feedback WHERE user_id=? AND created_at>?)<3
+        `INSERT OR IGNORE INTO usability_feedback(id,user_id,request_id,screen,language,category,detail,reasons,conversation,title,summary,created_at,updated_at)
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM usability_feedback WHERE user_id=? AND created_at>?)<3
        AND (SELECT COUNT(*) FROM feedback_global_usage WHERE created_at>?)<60`,
       ).bind(
         id,
         userId,
         input.request_id,
+        input.screen,
         language,
         input.category,
         input.detail,

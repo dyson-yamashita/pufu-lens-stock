@@ -1,10 +1,111 @@
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { expect } from 'e2e';
-import { test, type Fixture } from '../src/fixtures.ts';
+import { test } from '../src/fixtures.ts';
 import type { ThemePreference } from '../../../src/theme';
 
-async function createPufu(fixture: Fixture) {
+test('FEEDBACK-004 ログイン済みマニュアルから案内し、未解決の部分をヒアリングする', async ({
+  app,
+  screen,
+  browser,
+  fixture,
+}) => {
+  await app.open('/manual');
+  const invitation = screen.getByRole('button', '何かお困りですか？', { exact: true });
+  await expect(invitation).toBeVisible();
+  for (const theme of ['light', 'dark']) {
+    await browser.evaluate(async (value) => {
+      window.pufuTheme.setPreference(value as ThemePreference);
+      void document.documentElement.offsetWidth;
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
+          .map((a) => a.finished.catch(() => undefined)),
+      );
+      return null;
+    }, theme);
+    expect(
+      await browser.evaluate(() => {
+        const label = document.querySelector('.pufi-invitation')!.getBoundingClientRect(),
+          icon = document.querySelector('.pufi-avatar')!.getBoundingClientRect();
+        return (
+          label.left >= 0 &&
+          label.right < icon.left &&
+          icon.right <= innerWidth &&
+          icon.bottom <= innerHeight
+        );
+      }),
+    ).toBe(true);
+    await app.screenshot(`pufi-manual-entry-${theme}`);
+  }
+  let searches = 0;
+  await browser.route(`${fixture.url}/api/v1/feedback/manual-search`, async (route) => {
+    searches++;
+    const { choices } = JSON.parse(route.request.postData ?? '{}') as {
+      choices: { title: string }[];
+    };
+    let selection = choices.findIndex((c) => c.title.includes('JSON・画像'));
+    if (selection < 0) selection = choices.findIndex((c) => c.title.includes('ダウンロード'));
+    if (selection < 0) selection = choices.findIndex((c) => c.title.includes('プ譜'));
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ selection: Math.max(0, selection), available: true }),
+    });
+  });
+  const reports: {
+    screen: string;
+    detail: string;
+    manual_context: { question: string; section: string };
+  }[] = [];
+  // The production D1 contract is covered by Vitest; do not exceed the real demo account's daily report quota.
+  await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
+    reports.push(JSON.parse(route.request.postData ?? '{}'));
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ received: true, round: 0, follow_up: null, pending: false }),
+    });
+  });
+  await invitation.click();
+  await expect(screen.getByRole('button', 'プフィの設定')).toHaveCount(0);
+  await expect(screen.getByLabel('声かけを受け取る')).toHaveCount(0);
+  await screen.getByRole('button', '操作に迷いました', { exact: true }).click();
+  await screen
+    .getByLabel('プフィへの返答')
+    .fill('プ譜を画像でダウンロードする方法を教えてください');
+  await screen.getByRole('button', 'マニュアルを検索', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('お役に立ちましたか？');
+  await expect(browser.locator('.pufi-manual-link')).toHaveAttribute(
+    'href',
+    /\/manual#manual-pufu-/,
+  );
+  expect(searches).toBeGreaterThanOrEqual(2);
+  expect(reports).toHaveLength(0);
+  const before = searches;
+  await screen.getByRole('button', '解決しませんでした', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('どの部分が解決しませんでしたか？');
+  expect(searches).toBe(before);
+  await screen.getByLabel('プフィへの返答').fill('画像を選んだ後、保存先がどこか分かりません');
+  await screen.getByRole('button', '送信', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('改善に役立てます');
+  expect(searches).toBe(before);
+  expect(reports).toHaveLength(1);
+  expect(reports[0].screen).toBe('manual');
+  expect(reports[0].detail).toContain('保存先がどこか');
+  expect(reports[0].manual_context.question).toContain('画像でダウンロード');
+  expect(reports[0].manual_context.section).toMatch(/^manual-pufu-/);
+  await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
+  await expect(invitation).toBeVisible();
+});
+
+test('FEEDBACK-005 通常のプ譜表示・局面往復・機能開閉だけでは表示しない', async ({
+  app,
+  screen,
+  browser,
+  fixture,
+}) => {
   const score = JSON.parse(
     await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
   );
@@ -13,112 +114,19 @@ async function createPufu(fixture: Fixture) {
     request_id: randomUUID(),
     score,
   })) as { pufu: { id: string } };
-  return pufu;
-}
-
-test('FEEDBACK-004 常設の案内から会話し、進捗のない開閉で迷いを確認する', async ({
-  app,
-  screen,
-  browser,
-  fixture,
-}) => {
-  const pufu = await createPufu(fixture);
-  await app.open(`/#pufu/${pufu.id}`);
-  const invitation = screen.getByRole('button', '何かお困りですか？', { exact: true });
-  await expect(invitation).toBeVisible();
-  for (const theme of ['light', 'dark']) {
-    await browser.evaluate(async (theme) => {
-      window.pufuTheme.setPreference(theme as ThemePreference);
-      void document.documentElement.offsetWidth;
-      await Promise.all(
-        document
-          .getAnimations()
-          .filter((animation) => Number.isFinite(animation.effect?.getComputedTiming().endTime))
-          .map((animation) => animation.finished.catch(() => undefined)),
-      );
-      return null;
-    }, theme);
-    expect(
-      await browser.evaluate(() => {
-        const text = document.querySelector('.pufi-invitation')!.getBoundingClientRect();
-        const icon = document.querySelector('.pufi-avatar')!.getBoundingClientRect();
-        return (
-          text.left >= 0 &&
-          text.right < icon.left &&
-          icon.right <= innerWidth &&
-          icon.bottom <= innerHeight
-        );
-      }),
-    ).toBe(true);
-    await app.screenshot(`pufi-invitation-${theme}`);
-  }
-  await invitation.click();
-  await expect(browser.locator('.pufi-thread')).toContainText('お困りのことを教えてください。');
-  await expect(invitation).toHaveCount(0);
-  await screen.getByRole('button', 'プフィの設定').click();
-  await expect(screen.getByLabel('声かけを受け取る')).not.toBeChecked();
-  await screen.getByLabel('声かけを受け取る').check();
-  await screen.getByRole('button', 'プフィとの会話を閉じる').click();
-  const abandonDownload = async () => {
-    await screen.getByRole('button', 'ダウンロード', { exact: true }).click();
-    await screen.getByRole('button', '閉じる', { exact: true }).click();
-  };
-  await abandonDownload();
-  await abandonDownload();
-  await expect(browser.locator('.pufi-prompt')).toHaveCount(0);
-  // A real successful save resets the earlier exploration history.
-  await screen.getByRole('button', '編集する', { exact: true }).click();
-  expect(
-    await browser.evaluate(() =>
-      parseFloat(getComputedStyle(document.querySelector('.dialog.pufu-modal')!).paddingBottom),
-    ),
-  ).toBeGreaterThanOrEqual(110);
-  await screen.getByRole('button', '保存', { exact: true }).click();
-  await expect(browser.locator('.toast')).toContainText('プ譜を保存しました。');
-  await screen.getByRole('button', '閉じる', { exact: true }).click();
-  await abandonDownload();
-  await abandonDownload();
-  await expect(browser.locator('.pufi-prompt')).toHaveCount(0);
-  await abandonDownload();
-  await expect(browser.locator('.pufi-prompt')).toContainText('操作でお困りですか？');
-  // This case checks guidance and an unsent reply; the DB contract is exercised by Vitest.
-  // Keep end-to-end submissions within the real per-account daily limit.
-  const posts: string[] = [];
-  await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
-    posts.push(route.request.postData ?? '');
-    await route.continue();
-  });
-  await screen.getByRole('button', 'はい', { exact: true }).click();
-  await screen.getByRole('button', '操作に迷いました', { exact: true }).click();
-  await screen.getByLabel('プフィへの返答').fill('ダウンロードの形式をどれにするか迷いました。');
-  await screen.getByRole('button', 'プフィとの会話を閉じる', { exact: true }).click();
-  expect(posts).toHaveLength(0);
-  await expect(invitation).toBeVisible();
-  await browser.locator('.delete-action summary').click();
-  await expect(screen.getByRole('button', 'プ譜を削除', { exact: true })).toBeVisible();
-  await browser.locator('.delete-action summary').click();
-});
-
-test('FEEDBACK-005 エラーがなくても局面を繰り返し探す操作で案内する', async ({
-  app,
-  screen,
-  browser,
-  fixture,
-}) => {
-  const pufu = await createPufu(fixture);
   await app.open(`/#pufu/${pufu.id}`);
   await screen.getByRole('button', '局面を追加', { exact: true }).click();
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
-  await screen.getByRole('button', '何かお困りですか？', { exact: true }).click();
-  await screen.getByRole('button', 'プフィの設定').click();
-  await screen.getByLabel('声かけを受け取る').check();
-  await screen.getByRole('button', 'プフィとの会話を閉じる').click();
+  await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
   for (let i = 0; i < 3; i++) {
     await screen.getByRole('button', '前の局面へ', { exact: true }).click();
     await screen.getByRole('button', '次の局面へ', { exact: true }).click();
-    if (i < 2) await expect(browser.locator('.pufi-prompt')).toHaveCount(0);
+    await screen.getByRole('button', 'ダウンロード', { exact: true }).click();
+    await screen.getByRole('button', '閉じる', { exact: true }).click();
   }
-  await expect(browser.locator('.pufi-prompt')).toContainText('操作でお困りですか？');
-  await screen.getByRole('button', '大丈夫です', { exact: true }).click();
-  await expect(screen.getByRole('button', '何かお困りですか？', { exact: true })).toBeVisible();
+  await browser.evaluate(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 3500));
+    return null;
+  });
+  await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
 });

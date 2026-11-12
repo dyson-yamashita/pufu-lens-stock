@@ -21,13 +21,7 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   await app.open(`/#pufu/${pufu.id}`);
   await screen.getByRole('button', '局面を追加', { exact: true }).click();
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
-  const open = screen.getByRole('button', 'プフィと話す');
-  await open.click();
-  await screen.getByRole('button', 'プフィの設定').click();
-  const enable = screen.getByLabel('声かけを受け取る');
-  await expect(enable).not.toBeChecked();
-  await enable.check();
-  await screen.getByRole('button', 'プフィとの会話を閉じる').click();
+  await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
   await screen.getByRole('button', '編集する', { exact: true }).click();
   await browser.locator('.pufu-json-import-panel summary').click();
   await screen.getByLabel('JSONを貼り付け').fill('{');
@@ -81,9 +75,6 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
   await screen.getByRole('button', '閉じる', { exact: true }).click();
   await browser.reload();
-  await open.click();
-  await screen.getByRole('button', 'プフィの設定').click();
-  await expect(enable).toBeChecked();
-  await enable.uncheck();
-  await screen.getByRole('button', 'プフィとの会話を閉じる').click();
+  await expect(screen.getByRole('button', '編集する', { exact: true })).toBeVisible();
+  await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
 });

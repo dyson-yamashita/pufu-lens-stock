@@ -59,6 +59,31 @@ const rows = () =>
     round: number;
   }>();
 
+it('preserves the entire unresolved reply and separately saves manual context in the displayed language', async () => {
+  delete app.env.AI;
+  const detail = '未解決'.repeat(333);
+  const context = { question: '質問'.repeat(500), topic: '画像の保存', section: 'manual-pufu-10' };
+  const response = await app.request('/api/v1/feedback', {
+    method: 'POST',
+    body: {
+      ...input(),
+      screen: 'manual',
+      language: 'en',
+      category: 'navigation',
+      detail,
+      manual_context: context,
+      finish: true,
+    },
+  });
+  expect(response.status).toBe(201);
+  const saved = await app.env.DB.prepare(
+    'SELECT screen,language,detail,conversation FROM usability_feedback',
+  ).first<{ screen: string; language: string; detail: string; conversation: string }>();
+  expect(saved).toMatchObject({ screen: 'manual', language: 'en', detail });
+  expect(JSON.parse(saved!.conversation)).toContainEqual({ role: 'user', text: context.question });
+  expect(JSON.parse(saved!.conversation)).toContainEqual({ role: 'user', text: detail });
+});
+
 it('stores fixed confusion metadata with the conversation without requiring AI', async () => {
   delete app.env.AI;
   const reasons = [
