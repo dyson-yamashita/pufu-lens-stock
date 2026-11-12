@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import { publicHref, publicHash, publicPathPattern } from '../shared/public-route';
 import { pufuDisplayTitle } from '../shared/pufu';
 import { applicationError, t, intlLocale, useLanguage, manualHref } from './i18n';
@@ -151,8 +152,7 @@ function PublicBrand() {
   useLanguage();
   return (
     <a href="/" className="brand">
-      <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
-      <span>Pufu Lens</span>
+      <BrandLogo />
     </a>
   );
 }

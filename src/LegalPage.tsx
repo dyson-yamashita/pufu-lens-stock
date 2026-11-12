@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import { legalEn } from './locales/legal-en';
 import { useLanguage, legalHref, homeHref, translateUi } from './i18n';
 import { languages, type Language } from '../shared/locale';
@@ -511,8 +512,7 @@ export default function LegalPage({
     <div className="public-page legal-page" lang={language}>
       <header className="public-header">
         <a href={home} className="brand">
-          <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />
-          <span>Pufu Lens</span>
+          <BrandLogo />
         </a>
         <a href={home} className="text-link">
           {english ? 'Back to home' : 'トップへ戻る'}
