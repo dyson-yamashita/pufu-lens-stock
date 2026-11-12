@@ -31,7 +31,8 @@
     "e2e:record": "node scripts/e2e/run.ts --mode record",
     "e2e:bootstrap": "node scripts/e2e/run.ts --mode bootstrap",
     "e2e:related": "node scripts/e2e/run.ts --mode ci --related",
-    "e2e:report": "node scripts/e2e/report-cli.ts"
+    "e2e:report": "node scripts/e2e/report-cli.ts",
+    "feedback:review": "node scripts/feedback-review.ts"
   },
   "dependencies": {
     "@cloudflare/playwright": "^1.3.6",

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
 
-test('FEEDBACK-001 プフィの設定・任意回答・追加質問・編集画面内の表示', async ({
+test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDBへ保存する', async ({
   app,
   screen,
   browser,
@@ -18,68 +18,57 @@ test('FEEDBACK-001 プフィの設定・任意回答・追加質問・編集画�
     score,
   })) as { pufu: { id: string } };
   await app.open(`/#pufu/${pufu.id}`);
-  const open = screen.getByRole('button', 'プフィに伝える・設定');
+  await screen.getByRole('button', '局面を追加', { exact: true }).click();
+  await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
+  const open = screen.getByRole('button', 'プフィと話す');
   await open.click();
-  const enable = screen.getByLabel('操作で困ったときの自動案内を許可する');
+  await screen.getByRole('button', 'プフィの設定').click();
+  const enable = screen.getByLabel('声をかけてもらう');
   await expect(enable).not.toBeChecked();
   await enable.check();
-  await screen.getByRole('button', '伝える', { exact: true }).click();
-  await expect(screen.getByRole('button', '送信する', { exact: true })).toBeDisabled();
-  await screen.getByLabel('回答の保存・AI判定と、改善内容のGitHub掲載に同意する').check();
-  await screen.getByRole('button', '送信する', { exact: true }).click();
-  await expect(
-    screen.getByRole('status').filter({ hasText: '教えてくれてありがとう' }),
-  ).toBeVisible();
-  await screen.getByRole('button', 'フィードバックを閉じる').click();
-  await browser.reload();
+  await screen.getByRole('button', 'プフィとの会話を閉じる').click();
   await screen.getByRole('button', '編集する', { exact: true }).click();
+  await browser.locator('.pufu-json-import-panel summary').click();
+  await screen.getByLabel('JSONを貼り付け').fill('{');
+  for (let i = 0; i < 2; i++) {
+    await screen.getByRole('button', 'JSONテキストを読み込む').click();
+    await expect(screen.getByRole('alert')).toContainText('JSONとして読み込めません');
+  }
+  await screen.getByRole('button', '閉じる', { exact: true }).click();
+  for (let i = 0; i < 2; i++) {
+    await screen.getByRole('button', '前の局面へ').click();
+    await screen.getByRole('button', '次の局面へ').click();
+  }
+  await expect(browser.locator('.pufi-prompt')).toContainText('ちょっと困った？');
+  const capture = async (name: string) => {
+    for (const theme of ['light', 'dark']) {
+      await browser.evaluate((theme) => (document.documentElement.dataset.theme = theme), theme);
+      expect(
+        await browser.evaluate(() => {
+          const p = document.querySelector('.pufi-panel')!.getBoundingClientRect();
+          return p.left >= 0 && p.right <= innerWidth && p.top >= 0 && p.bottom <= innerHeight;
+        }),
+      ).toBe(true);
+      await app.screenshot(`${name}-${theme}`);
+    }
+  };
+  await capture('pufi-detected');
+  await screen.getByRole('button', 'うん', { exact: true }).click();
+  await screen.getByRole('button', '反応しない', { exact: true }).click();
+  await screen.getByLabel('プフィへの返事').fill('保存を押しても、内容が戻っちゃう');
+  await screen.getByRole('button', '送る', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('どう動いてほしかった？');
+  await screen.getByLabel('プフィへの返事').fill('保存した内容を、そのまま残してほしいな');
+  await capture('pufi-conversation');
+  await screen.getByRole('button', '送る', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('その前は、何をしていた？');
+  await screen.getByRole('button', 'ここまでにする').click();
+  await expect(browser.locator('.pufi-thread')).toContainText('改善のヒントにするね');
+  await screen.getByRole('button', 'またね', { exact: true }).click();
+  await browser.reload();
   await open.click();
+  await screen.getByRole('button', 'プフィの設定').click();
   await expect(enable).toBeChecked();
   await enable.uncheck();
-  await screen.getByRole('button', '伝える', { exact: true }).click();
-  // Exercise the UI conversation without external AI or GitHub traffic.
-  const requests: { request_id: string; round: number; answer?: string }[] = [];
-  await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
-    const input = JSON.parse(route.request.postData ?? '{}');
-    requests.push(input);
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        received: true,
-        round: input.round,
-        follow_up: input.round === 0 ? 'どの操作で困りましたか？' : null,
-      }),
-    });
-  });
-  await screen.getByLabel('回答の保存・AI判定と、改善内容のGitHub掲載に同意する').check();
-  await screen.getByRole('button', '送信する', { exact: true }).click();
-  await expect(
-    screen.getByRole('status').filter({ hasText: 'どの操作で困りましたか？' }),
-  ).toBeVisible();
-  await screen.getByLabel('追加の回答（任意）').fill('保存を押すと内容が戻りました');
-  for (const theme of ['light', 'dark']) {
-    await browser.evaluate((theme) => (document.documentElement.dataset.theme = theme), theme);
-    expect(
-      await browser.evaluate(() => {
-        const panel = document.querySelector('.pufi-panel')!.getBoundingClientRect();
-        return (
-          panel.left >= 0 &&
-          panel.right <= innerWidth &&
-          panel.bottom <= innerHeight &&
-          panel.top >= 0
-        );
-      }),
-    ).toBe(true);
-    await app.screenshot(`pufi-feedback-${theme}`);
-  }
-  await screen.getByRole('button', '送信する', { exact: true }).click();
-  await expect(
-    screen.getByRole('status').filter({ hasText: '教えてくれてありがとう' }),
-  ).toBeVisible();
-  expect(requests).toHaveLength(2);
-  expect(requests[0].request_id).toBe(requests[1].request_id);
-  expect(requests[1]).toMatchObject({ round: 1, answer: '保存を押すと内容が戻りました' });
-  await screen.getByRole('button', 'フィードバックを閉じる').click();
-  await screen.getByRole('button', '閉じる', { exact: true }).click();
+  await screen.getByRole('button', 'プフィとの会話を閉じる').click();
 });

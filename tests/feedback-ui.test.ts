@@ -4,9 +4,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PufiFeedback from '../src/PufiFeedback';
 import { FeedbackDetector } from '../src/feedback-detector';
-import { send } from '../src/api';
+import { api, send } from '../src/api';
 
-vi.mock('../src/api', () => ({ send: vi.fn(), createRequestId: () => crypto.randomUUID() }));
+vi.mock('../src/api', () => ({
+  api: vi.fn(),
+  send: vi.fn(),
+  createRequestId: () => crypto.randomUUID(),
+}));
 let root: Root;
 let document: Document;
 let detector: FeedbackDetector;
@@ -17,6 +21,8 @@ const storage = (values: Map<string, string>) => ({
 });
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.mocked(api).mockResolvedValue({ user: { id: 'alice' } });
+  vi.mocked(send).mockResolvedValue({ received: true, round: 0, follow_up: null, pending: false });
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
   document = dom.document as unknown as Document;
   vi.stubGlobal('window', dom.window);
@@ -51,7 +57,7 @@ it('displays a gentle prompt after unacknowledged clicks and dismisses it for se
   await render();
   clicks();
   await advance();
-  expect(document.querySelector('.pufi-panel')?.textContent).toContain('操作でお困りですか');
+  expect(document.querySelector('.pufi-panel')?.textContent).toContain('ちょっと困った？');
   expect(send).not.toHaveBeenCalled();
   await act(async () =>
     [...document.querySelectorAll('button')]
@@ -77,7 +83,7 @@ it('suppresses automatic prompts while busy or focused in an input, then waits u
   expect(document.querySelector('.pufi-panel')).toBeNull();
   Object.defineProperty(document, 'activeElement', { configurable: true, value: null });
   await advance();
-  expect(document.querySelector('.pufi-panel')?.textContent).toContain('操作でお困りですか');
+  expect(document.querySelector('.pufi-panel')?.textContent).toContain('ちょっと困った？');
 });
 
 it('starts with detection off without consent and reacts to opt-out in another tab', async () => {
