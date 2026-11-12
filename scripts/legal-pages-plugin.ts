@@ -168,6 +168,7 @@ export function legalPagesPlugin(): Plugin {
             hreflang: manualHreflang(site),
             jsonLd: manualJsonLd(language, site),
             body: manualBody,
+            keepModule: true,
           }),
         });
 

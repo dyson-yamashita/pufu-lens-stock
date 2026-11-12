@@ -27,6 +27,15 @@ it('モデル・入出力・キャッシュを反映し、推論トークンを�
   expect(neuronMicros('@cf/baai/bge-m3', { usage: { total_tokens: 1000 } })).toBe(1_075_000);
   expect(neuronMicros(gemma, { usage: { prompt_tokens: 0, completion_tokens: 0 } })).toBe(0);
 });
+it('meters Clef typed-decision input tokens without assuming generated output tokens', () => {
+  expect(
+    neuronMicros('@cf/cloudflare/clef', { usage: { input_tokens: 1000, output_tokens: 0 } }),
+  ).toBe(21_818_000);
+  expect(
+    neuronMicros('@cf/cloudflare/clef-flash', { usage: { input_tokens: 1000, output_tokens: 0 } }),
+  ).toBe(3_455_000);
+  expect(neuronMicros('@cf/cloudflare/clef', { usage: { output_tokens: 0 } })).toBeNull();
+});
 it.each([
   ['unknown-model', response],
   [gemma, { response: 'answer' }],

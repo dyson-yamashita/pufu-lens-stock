@@ -1,3 +1,5 @@
+import FeedbackSurface from './FeedbackSurface';
+import { feedbackScreens, type FeedbackScreen } from '../shared/feedback';
 import BrandLogo, { BrandMark } from './BrandLogo';
 import {
   applicationError,
@@ -1057,6 +1059,12 @@ export default function App() {
     ? headerLabels()[route.view]
     : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
   const listedProjects = projects.filter((project) => project.show_in_all_lists !== false);
+  const feedbackScreen: FeedbackScreen =
+    route.view === 'pufu'
+      ? 'pufu-editor'
+      : feedbackScreens.includes(route.view as FeedbackScreen)
+        ? (route.view as FeedbackScreen)
+        : 'app';
   const allCount = listedProjects.reduce((count, project) => count + project.count, 0);
   const allQuestionCount = listedProjects.reduce(
     (count, project) => count + project.question_count,
@@ -1065,6 +1073,7 @@ export default function App() {
   const allPufuCount = listedProjects.reduce((count, project) => count + project.pufu_count, 0);
   return (
     <div className={`app-shell ${!isMobile && desktopNavCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <FeedbackSurface key={user.id} screen={feedbackScreen} />
       {isMobile && mobileNav && (
         <button
           className="nav-scrim"

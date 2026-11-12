@@ -1,35 +1,51 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUp, Settings, X } from 'lucide-react';
+import { ArrowUp, X } from 'lucide-react';
 import {
   feedbackCategories,
   type FeedbackInput,
   type FeedbackReceipt,
   type FeedbackQuestion,
   type FeedbackMessage,
+  type FeedbackScreen,
 } from '../shared/feedback';
 import { FeedbackDetector, FeedbackFrequency } from './feedback-detector';
 import { api, ApiError, createRequestId, send } from './api';
-import { t, useLanguage, legalHref } from './i18n';
+import { useLanguage, translateUi, legalHref } from './i18n';
+import type { Language } from '../shared/locale';
+import ManualHelp from './ManualHelp';
 
 export default function PufiFeedback({
   detector,
   host,
   blocked,
+  screen = 'pufu-editor',
+  alwaysVisible = false,
+  language: forcedLanguage,
 }: {
   detector: FeedbackDetector;
   host: HTMLElement | null;
   blocked: boolean;
+  screen?: FeedbackScreen;
+  alwaysVisible?: boolean;
+  language?: Language;
 }) {
-  useLanguage();
-  const [consent, setConsent] = useState(() => {
-    try {
-      return localStorage.getItem('pufi-detection-consent') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [panel, setPanel] = useState<'closed' | 'settings' | 'prompt' | 'conversation'>('closed');
+  const current = useLanguage();
+  const language = forcedLanguage ?? current.language;
+  const t = (key: string, values?: Record<string, string | number>) =>
+    translateUi(language, key, values);
+  // Move one stable portal root so native dialog changes never reset a conversation.
+  const [portal] = useState(() => document.createElement('div'));
+  useLayoutEffect(() => {
+    portal.style.display = 'contents';
+    (host ?? document.body).appendChild(portal);
+    return () => {
+      portal.remove();
+    };
+  }, [host, portal]);
+  const [panel, setPanel] = useState<'closed' | 'prompt' | 'conversation'>('closed');
+  const [helpEscalated, setHelpEscalated] = useState(false);
+  const [helpBusy, setHelpBusy] = useState(false);
   const [reasons, setReasons] = useState<FeedbackInput['reasons']>([]);
   const [category, setCategory] = useState<FeedbackInput['category'] | null>(null);
   const [messages, setMessages] = useState<FeedbackMessage[]>([]);
@@ -55,21 +71,6 @@ export default function PufiFeedback({
     [],
   );
   useEffect(() => {
-    const sync = (event: StorageEvent) => {
-      if (event.key === 'pufi-detection-consent' || event.key === null) {
-        const enabled = event.key !== null && event.newValue === 'true';
-        setConsent(enabled);
-        if (!enabled) setPanel((current) => (current === 'prompt' ? 'closed' : current));
-      }
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
-  useEffect(() => {
-    detector.enable(consent);
-    return () => detector.enable(false);
-  }, [consent, detector]);
-  useEffect(() => {
     try {
       frequency.current = new FeedbackFrequency(localStorage, sessionStorage);
     } catch {
@@ -77,13 +78,13 @@ export default function PufiFeedback({
     }
   }, []);
   useEffect(() => {
-    if (panel === 'conversation' || panel === 'settings') heading.current?.focus();
+    if (panel === 'conversation') heading.current?.focus();
   }, [panel]);
   useEffect(() => {
     if (thread.current) thread.current.scrollTop = thread.current.scrollHeight;
   }, [messages, busy]);
   useEffect(() => {
-    if (!consent || blocked || panel !== 'closed') return;
+    if (blocked || alwaysVisible || panel !== 'closed') return;
     let lastInput = Date.now();
     const input = () => {
       lastInput = Date.now();
@@ -108,17 +109,9 @@ export default function PufiFeedback({
       window.clearInterval(timer);
       document.removeEventListener('input', input);
     };
-  }, [consent, blocked, panel, detector]);
-  function changeConsent(value: boolean) {
-    setConsent(value);
-    try {
-      localStorage.setItem('pufi-detection-consent', String(value));
-    } catch {
-      /* in-memory only */
-    }
-  }
+  }, [blocked, panel, detector, alwaysVisible]);
   function close() {
-    if (sending.current) return;
+    if (sending.current || helpBusy) return;
     generation.current++;
     if (panel === 'prompt') frequency.current?.markShown(true);
     setPanel('closed');
@@ -128,6 +121,8 @@ export default function PufiFeedback({
     requestId.current = createRequestId();
     frozen.current = null;
     setCategory(null);
+    setHelpEscalated(false);
+    setHelpBusy(false);
     setDraft('');
     setRound(0);
     setFollowUp(null);
@@ -145,15 +140,20 @@ export default function PufiFeedback({
       if (generation.current === version) setError(t('feedback.failed'));
     }
   }
-  async function submit(finish = false) {
+  async function submit(
+    finish = false,
+    helpDetail?: Pick<FeedbackInput, 'detail' | 'manual_context'>,
+  ) {
     if (!category || !owner || sending.current || invalidSession || done) return;
     if (!finish && followUp && !draft.trim() && !frozen.current) return;
     if (!frozen.current) {
-      const text = draft.trim();
+      const text = helpDetail?.detail ?? draft.trim();
       frozen.current = {
         owner_id: owner,
         request_id: requestId.current,
-        screen: 'pufu-editor',
+        screen,
+        language,
+        ...(helpDetail?.manual_context ? { manual_context: helpDetail.manual_context } : {}),
         category,
         detail: followUp ? '' : text,
         reasons,
@@ -162,7 +162,7 @@ export default function PufiFeedback({
         round: followUp && (text || !finish) ? round + 1 : round,
         ...(followUp && text ? { answer: text } : {}),
       };
-      if (text) setMessages((current) => [...current, { role: 'user', text }]);
+      if (text && !helpDetail) setMessages((current) => [...current, { role: 'user', text }]);
     }
     sending.current = true;
     setBusy(true);
@@ -198,10 +198,11 @@ export default function PufiFeedback({
       setBusy(false);
     }
   }
-  if (blocked) return null;
+  if (panel === 'closed' && !alwaysVisible) return null;
   return createPortal(
     <aside
       className="pufi-feedback"
+      style={{ display: blocked ? 'none' : undefined }}
       aria-label={t('feedback.title')}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && panel !== 'closed') {
@@ -224,22 +225,10 @@ export default function PufiFeedback({
               </h2>
             </div>
             <div className="pufi-head-actions">
-              {panel !== 'prompt' && (
-                <button
-                  className="icon-button"
-                  aria-label={t('feedback.settings')}
-                  disabled={busy}
-                  onClick={() =>
-                    setPanel((current) => (current === 'settings' ? 'conversation' : 'settings'))
-                  }
-                >
-                  <Settings size={17} />
-                </button>
-              )}
               <button
                 className="icon-button"
                 aria-label={t('feedback.close')}
-                disabled={busy}
+                disabled={busy || helpBusy}
                 onClick={close}
               >
                 <X size={18} />
@@ -261,48 +250,46 @@ export default function PufiFeedback({
               </div>
             </>
           )}
-          {panel === 'settings' && (
-            <>
-              <p className="pufi-greeting">{t('feedback.setting_question')}</p>
-              <label className="pufi-check">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => changeConsent(e.currentTarget.checked)}
-                />
-                {t('feedback.enable')}
-              </label>
-              <details className="pufi-details">
-                <summary>{t('feedback.details')}</summary>
-                <p>{t('feedback.explanation')}</p>
-                <a href={legalHref('privacy')} target="_blank" rel="noreferrer">
-                  {t('feedback.privacy_link')}
-                </a>
-              </details>
-              <button className="button secondary" onClick={() => setPanel('conversation')}>
-                {t('feedback.back')}
-              </button>
-            </>
-          )}
           {panel === 'conversation' && (
             <>
-              <div
-                className="pufi-thread"
-                ref={thread}
-                role="log"
-                aria-label={t('feedback.conversation')}
-                aria-live="polite"
-              >
-                <p className="pufi-message pufi-message-pufi">{t('feedback.hello')}</p>
-                {messages.map((message, index) => (
-                  <p key={index} className={`pufi-message pufi-message-${message.role}`}>
-                    {message.text}
-                  </p>
-                ))}
-                {busy && (
-                  <p className="pufi-message pufi-message-pufi">{t('feedback.listening')}</p>
-                )}
-              </div>
+              {category === 'navigation' && !helpEscalated ? (
+                <ManualHelp
+                  owner={owner}
+                  language={language}
+                  initialMessages={messages}
+                  onBusy={setHelpBusy}
+                  onClose={close}
+                  onInvalidSession={() => {
+                    setInvalidSession(true);
+                    setError(t('feedback.session_changed'));
+                  }}
+                  onEscalate={(detail, history) => {
+                    setHelpEscalated(true);
+                    setMessages(history);
+                    void submit(false, detail);
+                  }}
+                />
+              ) : (
+                <>
+                  <div
+                    className="pufi-thread"
+                    ref={thread}
+                    role="log"
+                    aria-label={t('feedback.conversation')}
+                    aria-live="polite"
+                  >
+                    <p className="pufi-message pufi-message-pufi">{t('feedback.hello')}</p>
+                    {messages.map((message, index) => (
+                      <p key={index} className={`pufi-message pufi-message-${message.role}`}>
+                        {message.text}
+                      </p>
+                    ))}
+                    {busy && (
+                      <p className="pufi-message pufi-message-pufi">{t('feedback.listening')}</p>
+                    )}
+                  </div>
+                </>
+              )}
               {!category && (
                 <div className="pufi-choices">
                   {feedbackCategories.map((value) => (
@@ -314,7 +301,14 @@ export default function PufiFeedback({
                         setCategory(value);
                         setMessages([
                           { role: 'user', text: t(`feedback.${value}`) },
-                          { role: 'pufi', text: t('feedback.ask_detail') },
+                          {
+                            role: 'pufi',
+                            text: t(
+                              value === 'navigation'
+                                ? 'feedback.help_question'
+                                : 'feedback.ask_detail',
+                            ),
+                          },
                         ]);
                       }}
                     >
@@ -323,7 +317,7 @@ export default function PufiFeedback({
                   ))}
                 </div>
               )}
-              {category && !done && (
+              {category && !done && (category !== 'navigation' || helpEscalated) && (
                 <form
                   onSubmit={(event) => {
                     event.preventDefault();
@@ -368,6 +362,13 @@ export default function PufiFeedback({
                   {t('feedback.done')}
                 </button>
               )}
+              <details className="pufi-details">
+                <summary>{t('feedback.details')}</summary>
+                <p>{t('feedback.explanation')}</p>
+                <a href={legalHref('privacy', language)} target="_blank" rel="noreferrer">
+                  {t('feedback.privacy_link')}
+                </a>
+              </details>
               {error && (
                 <p className="form-error" role="alert">
                   {error}
@@ -392,13 +393,13 @@ export default function PufiFeedback({
           className="pufi-avatar"
           aria-label={t('feedback.open')}
           aria-expanded={panel !== 'closed'}
-          disabled={busy}
+          disabled={busy || helpBusy}
           onClick={() => (panel === 'closed' ? void startConversation(true) : close())}
         >
           <img src="/pufi-feedback.png" alt="" width="64" height="64" />
         </button>
       </div>
     </aside>,
-    host ?? document.body,
+    portal,
   );
 }

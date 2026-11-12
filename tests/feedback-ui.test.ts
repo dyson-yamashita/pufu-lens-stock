@@ -4,9 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PufiFeedback from '../src/PufiFeedback';
 import { FeedbackDetector } from '../src/feedback-detector';
+import { manualTree, selectManualBranch } from '../src/manual-search';
 import { api, send } from '../src/api';
 
-vi.mock('../src/api', () => ({
+vi.mock('../src/manual-search', () => ({ manualTree: vi.fn(), selectManualBranch: vi.fn() }));
+vi.mock('../src/api', async (original) => ({
+  ...(await original<typeof import('../src/api')>()),
   api: vi.fn(),
   send: vi.fn(),
   createRequestId: () => crypto.randomUUID(),
@@ -41,84 +44,116 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-const render = async (blocked = false) =>
+const render = async (blocked = false, alwaysVisible = false, host: HTMLElement | null = null) =>
   act(async () => {
-    root.render(createElement(PufiFeedback, { detector, host: null, blocked }));
+    root.render(createElement(PufiFeedback, { detector, host, blocked, alwaysVisible }));
   });
 const advance = async () =>
   act(async () => {
     vi.advanceTimersByTime(4000);
   });
 const clicks = () => {
-  for (let i = 0; i < 4; i++) detector.click('save');
+  for (let i = 0; i < 4; i++) detector.click('control', 'same');
 };
 
-it('shows a short invitation beside the icon, and opens manual chat without detection consent or cooldown', async () => {
-  local.clear();
-  local.set('pufi-until', String(Date.now() + 7 * 86400000));
+it('keeps normal pages hidden until repeated trouble; declining hides the whole entry for seven days', async () => {
+  detector.enable(true);
   await render();
-  const invitation = document.querySelector<HTMLButtonElement>('.pufi-invitation');
-  expect(invitation?.textContent).toBe('何かお困りですか？');
-  expect(document.querySelector('.pufi-panel')).toBeNull();
-  await act(async () => invitation!.click());
+  expect(document.querySelector('.pufi-feedback')).toBeNull();
+  clicks();
+  await advance();
+  expect(document.querySelector('.pufi-prompt')?.textContent).toContain('操作でお困りですか？');
+  expect(send).not.toHaveBeenCalled();
+  await act(async () =>
+    [...document.querySelectorAll('button')].find((b) => b.textContent === '大丈夫です')!.click(),
+  );
+  expect(document.querySelector('.pufi-feedback')).toBeNull();
+  expect(Number(local.get('pufi-until')) - Date.now()).toBe(7 * 86400000);
+});
+it('shows the manual entry during cooldown, without any settings or detection consent', async () => {
+  local.set('pufi-detection-consent', 'false');
+  local.set('pufi-until', String(Date.now() + 7 * 86400000));
+  await render(false, true);
+  expect(document.querySelector('.pufi-invitation')?.textContent).toBe('何かお困りですか？');
+  await act(async () => document.querySelector<HTMLButtonElement>('.pufi-invitation')!.click());
   expect(document.querySelector('.pufi-thread')?.textContent).toContain(
     'お困りのことを教えてください',
   );
-  expect(document.querySelector('.pufi-invitation')).toBeNull();
+  expect(document.querySelector('[aria-label="プフィの設定"]')).toBeNull();
+  expect(document.body.textContent).not.toContain('声かけを受け取る');
   expect(send).not.toHaveBeenCalled();
-  expect(local.get('pufi-detection-consent')).toBeUndefined();
 });
-
-it('displays a gentle prompt after unacknowledged clicks and dismisses it for seven days without sending logs', async () => {
-  await render();
-  clicks();
-  await advance();
-  expect(document.querySelector('.pufi-panel')?.textContent).toContain('操作でお困りですか？');
-  expect(send).not.toHaveBeenCalled();
-  await act(async () =>
-    [...document.querySelectorAll('button')]
-      .find((button) => button.textContent === '大丈夫です')!
-      .click(),
-  );
-  expect(Number(local.get('pufi-until')) - Date.now()).toBe(7 * 86400000);
-  clicks();
-  await advance();
-  expect(document.querySelector('.pufi-panel')).toBeNull();
-});
-
-it('suppresses automatic prompts while busy or focused in an input, then waits until the user is free', async () => {
+it('suppresses new automatic prompts while busy or focused in an input', async () => {
+  detector.enable(true);
   await render(true);
   clicks();
   await advance();
-  expect(document.querySelector('.pufi-panel')).toBeNull();
+  expect(document.querySelector('.pufi-feedback')).toBeNull();
   const input = document.createElement('textarea');
   document.body.appendChild(input);
   Object.defineProperty(document, 'activeElement', { configurable: true, value: input });
   await render();
   await advance();
-  expect(document.querySelector('.pufi-panel')).toBeNull();
+  expect(document.querySelector('.pufi-feedback')).toBeNull();
   Object.defineProperty(document, 'activeElement', { configurable: true, value: null });
   await advance();
-  expect(document.querySelector('.pufi-panel')?.textContent).toContain('操作でお困りですか？');
+  expect(document.querySelector('.pufi-prompt')).not.toBeNull();
 });
 
-it('starts with detection off without consent and reacts to opt-out in another tab', async () => {
-  local.clear();
-  await render();
-  clicks();
-  await advance();
-  expect(document.querySelector('.pufi-panel')).toBeNull();
-  const enable = new window.Event('storage');
-  Object.assign(enable, { key: 'pufi-detection-consent', newValue: 'true' });
-  await act(async () => window.dispatchEvent(enable));
-  clicks();
-  await advance();
-  expect(document.querySelector('.pufi-panel')).not.toBeNull();
-  const disable = new window.Event('storage');
-  Object.assign(disable, { key: 'pufi-detection-consent', newValue: 'false' });
-  await act(async () => window.dispatchEvent(disable));
-  expect(document.querySelector('.pufi-panel')).toBeNull();
-  clicks();
-  await advance();
-  expect(document.querySelector('.pufi-panel')).toBeNull();
+it('preserves manual search and unresolved drafts when dialog hosts and busy state change', async () => {
+  const leaf = {
+    id: 'manual-pufu-1',
+    title: '画像の保存',
+    text: '画像を選び保存します。',
+    href: '/manual#manual-pufu-1',
+    children: [],
+  };
+  vi.mocked(manualTree).mockResolvedValue([leaf, { ...leaf, id: 'manual-pufu-2' }]);
+  let resolve!: (node: typeof leaf) => void;
+  vi.mocked(selectManualBranch).mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const press = async (label: string) =>
+    act(async () => {
+      [...document.querySelectorAll('button')]
+        .find((b) => b.textContent === label || b.getAttribute('aria-label') === label)!
+        .click();
+    });
+  const enter = async (text: string) =>
+    act(async () => {
+      const field = document.querySelector('textarea')!;
+      field.value = text;
+      field.dispatchEvent(new window.Event('input', { bubbles: true }));
+    });
+  await render(false, true);
+  await press('何かお困りですか？');
+  await press('操作に迷いました');
+  await enter('画像を保存したい');
+  await act(async () => {
+    document
+      .querySelector('form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  });
+  const thread = document.querySelector('.pufi-thread');
+  const dialog = document.createElement('dialog');
+  document.body.appendChild(dialog);
+  await render(true, true, dialog);
+  expect(dialog.querySelector('.pufi-thread')).toBe(thread);
+  await act(async () => resolve(leaf));
+  await render(false, true);
+  expect(document.querySelector('.pufi-thread')).toBe(thread);
+  expect(thread?.textContent).toContain('お役に立ちましたか？');
+  await press('解決しませんでした');
+  await enter('保存先が分かりません');
+  await render(true, true, dialog);
+  await render(false, true);
+  expect(document.querySelector('textarea')?.value).toBe('保存先が分かりません');
+  expect(
+    document.querySelector<HTMLButtonElement>('[aria-label="プフィとの会話を閉じる"]')?.disabled,
+  ).toBe(false);
+  expect(selectManualBranch).toHaveBeenCalledTimes(1);
+  expect(send).not.toHaveBeenCalled();
 });

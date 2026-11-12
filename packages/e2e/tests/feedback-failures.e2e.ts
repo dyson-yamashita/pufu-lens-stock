@@ -29,10 +29,7 @@ for (const scenario of [
       score,
     })) as { pufu: { id: string } };
     await app.open(`/#pufu/${pufu.id}`);
-    await screen.getByRole('button', 'プフィと話す').click();
-    await screen.getByRole('button', 'プフィの設定').click();
-    await screen.getByLabel('声かけを受け取る').check();
-    await screen.getByRole('button', 'プフィとの会話を閉じる').click();
+    await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
     await screen.getByRole('button', '編集する', { exact: true }).click();
     await browser.route(`${fixture.url}/api/v1/pufus/${pufu.id}`, async (route) => {
       if (route.request.method !== 'PATCH') {
