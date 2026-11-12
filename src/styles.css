@@ -862,6 +862,99 @@ p {
 .appearance-settings {
   margin-top: 24px;
 }
+.usage-card {
+  margin-bottom: 24px;
+}
+.usage-card h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.usage-periods {
+  display: flex;
+  gap: 4px;
+  margin: 20px 0 12px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--wash);
+}
+.usage-periods label {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  cursor: pointer;
+}
+.usage-periods legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.usage-periods input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.usage-periods span {
+  display: grid;
+  min-height: 40px;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.usage-periods input:checked + span {
+  background: var(--card);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 1px 4px #0001;
+}
+.usage-periods input:focus-visible + span {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.usage-range {
+  margin-bottom: 14px;
+}
+.usage-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+}
+.usage-metrics > div {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.usage-metrics dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.usage-metrics dd {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.usage-metrics strong {
+  font-size: clamp(22px, 4vw, 30px);
+  overflow-wrap: anywhere;
+}
+.usage-metrics dd span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.usage-error {
+  margin-bottom: 20px;
+}
 .appearance-settings h2 {
   font-size: 18px;
   font-weight: 600;

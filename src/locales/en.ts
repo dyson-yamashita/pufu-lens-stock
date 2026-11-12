@@ -1,4 +1,27 @@
 export const en: Record<string, string> = {
+  'ui.usage.title': 'Usage',
+  'ui.usage.period': 'Reporting period',
+  'ui.usage.week': 'This week',
+  'ui.usage.month': 'This month',
+  'ui.usage.all': 'All time',
+  'ui.usage.all_time': 'All time',
+  'ui.usage.stocks': 'Stocks registered',
+  'ui.usage.questions': 'Questions registered',
+  'ui.usage.pufus': 'Pufus registered',
+  'ui.usage.ai_calls': 'AI usage',
+  'ui.usage.calls_unit': 'calls',
+  'ui.usage.items_unit': 'items',
+  'ui.usage.loading': 'Loading usage…',
+  'ui.usage.failed': 'Could not load usage.',
+  'ui.usage.retry': 'Reload',
+  'ui.usage.registration_note':
+    'Registrations are counted by creation date across all projects, excluding deleted items. Each pufu counts once, regardless of its phases.',
+  'ui.usage.ai_note':
+    'AI usage counts calls within Pufu Lens for summaries, questions, pufus, memories and semantic search, including retries and failures. External AI apps are excluded. Totals start with the available history and do not represent tokens or charges.',
+  'ui.usage.timezone_note':
+    'Periods use Japan time. Weeks start on Monday; months start on the 1st.',
+  'manual.usage':
+    'Open Usage in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage counts calls from the available history, including failures and retries. Periods start on Monday or the 1st of the month in Japan time.',
   'pufu.creation_method': 'Creation method',
   'pufu.create_with_ai': 'Create with AI',
   'pufu.create_from_json': 'Create from JSON',

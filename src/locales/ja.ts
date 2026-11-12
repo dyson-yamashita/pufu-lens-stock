@@ -1,4 +1,26 @@
 export const ja: Record<string, string> = {
+  'ui.usage.title': '利用状況',
+  'ui.usage.period': '集計期間',
+  'ui.usage.week': '今週',
+  'ui.usage.month': '今月',
+  'ui.usage.all': '全体',
+  'ui.usage.all_time': '全期間',
+  'ui.usage.stocks': 'ストック登録数',
+  'ui.usage.questions': '問い登録数',
+  'ui.usage.pufus': 'プ譜登録数',
+  'ui.usage.ai_calls': 'AI使用量',
+  'ui.usage.calls_unit': '回',
+  'ui.usage.items_unit': '件',
+  'ui.usage.loading': '利用状況を読み込んでいます…',
+  'ui.usage.failed': '利用状況を取得できませんでした。',
+  'ui.usage.retry': '再読み込み',
+  'ui.usage.registration_note':
+    '登録数は全プロジェクトの保存中のデータを登録日で集計します。削除済みは含まず、プ譜は局面が増えても1件です。',
+  'ui.usage.ai_note':
+    'AI使用量はPufu Lens内のAI処理の呼び出し回数です。要約・問い・プ譜・メモリの生成と意味検索の処理を含み、再試行や失敗も数えます。外部AIアプリの使用量は含みません。記録が残っている分からの累計で、トークン数や料金ではありません。',
+  'ui.usage.timezone_note': '日本時間で集計します。今週は月曜、今月は1日からです。',
+  'manual.usage':
+    '「プロフィール」の「利用状況」で、今週・今月・全体のストック・問い・プ譜の登録数とAI使用量を確認できます。登録数は削除済みを除き、AI使用量は記録が残っている分からの呼び出し回数（失敗・再試行を含む）です。日本時間の月曜・月初を区切りに集計します。',
   'pufu.creation_method': '作成方法',
   'pufu.create_with_ai': 'AIで作成',
   'pufu.create_from_json': 'JSONから作成',

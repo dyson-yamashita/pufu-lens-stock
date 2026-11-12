@@ -1,5 +1,21 @@
 [
   {
+    "id": "USAGE-001",
+    "title": "プロフィールの利用状況",
+    "sources": [
+      "src/ProfileUsage.tsx",
+      "server/profile-usage.ts",
+      "shared/profile-usage.ts",
+      "src/Profile.tsx",
+      "src/UserManual.tsx"
+    ],
+    "aspects": [
+      "今週・今月・全体の切替、一覧非表示のプロジェクトを含むストック・問い・プ譜の登録数とAI呼び出し回数の表示、再読込後の再取得",
+      "desktopとphoneのlight/darkで利用状況とマニュアルを撮影し、横はみ出しがないことを確認",
+      "日本時間の週月年境界・所有者分離・局面の重複除外・削除の反映・AI履歴の移行と詳細削除後の累計・退会時の削除・連携トークン拒否はVitestで確認"
+    ]
+  },
+  {
     "id": "THEME-001",
     "title": "トップページのライト・ダーク選択と保持",
     "sources": ["src/App.tsx", "src/ThemeToggle.tsx", "src/theme.ts"],

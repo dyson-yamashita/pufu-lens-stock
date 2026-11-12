@@ -352,6 +352,7 @@ export default function UserManual({ language: forced }: { language?: Language }
           </ol>
           <p className="manual-note">{tr('manual.language.future')}</p>
           <p className="manual-note">{tr('manual.theme')}</p>
+          <p className="manual-note">{tr('manual.usage')}</p>
         </section>
         <nav className="manual-toc" aria-label={tr('ui.user_manual.manual_contents')}>
           {sections(tr).map((section) => (
