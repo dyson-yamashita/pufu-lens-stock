@@ -72,10 +72,62 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await screen.getByRole('radio', '全体', { exact: true }).check();
   await check('all');
   await app.open('/manual');
-  await expect(browser.locator('.manual-start')).toContainText(
+  await browser.locator('.manual-start summary').getByText('利用状況', { exact: true }).click();
+  await expect(browser.locator('.manual-start details[open] p')).toContainText(
     '「プロフィール」で「表示設定」の下にある「利用状況」',
   );
   await app.screenshot('manual-usage-dark');
   await browser.emulateMedia({ colorScheme: 'light' });
   await app.screenshot('manual-usage-light');
+
+  // Basic steps stay visible; supplementary topics open independently with native keyboard support.
+  for (const path of ['/manual', '/en/manual']) {
+    await app.open(path);
+    await expect(browser.locator('.manual-topics details[open]')).toHaveCount(0);
+    await browser.locator('.manual-toc a[href="#pufu"]').click();
+    await expect(browser.locator('#pufu h3').first()).toBeVisible();
+    const checkPufuAnchor = async () => {
+      expect(
+        await browser.evaluate(() => {
+          const top = document.getElementById('pufu')!.getBoundingClientRect().top;
+          return { hash: window.location.hash, inView: top >= 0 && top <= 80 };
+        }),
+      ).toEqual({ hash: '#pufu', inView: true });
+    };
+    await checkPufuAnchor();
+    await expect(browser.locator('#pufu > .manual-guide > ol')).toBeVisible();
+    const sources = browser.locator('#pufu details:nth-child(1) > p').first();
+    const editor = browser.locator('#pufu details:nth-child(2) > p').first();
+    await expect(sources).toBeHidden();
+    await browser.locator('#pufu details:nth-child(1) > summary').click();
+    await expect(sources).toBeVisible();
+    await expect(editor).toBeHidden();
+    await browser.locator('#pufu details:nth-child(2) > summary').click();
+    await expect(editor).toBeVisible();
+    await browser.keyboard.press('Enter');
+    await expect(editor).toBeHidden();
+    await browser.keyboard.press('Space');
+    await expect(editor).toBeVisible();
+    await expect(sources).toBeVisible();
+    for (const theme of ['light', 'dark'] as const) {
+      await browser.emulateMedia({ colorScheme: theme });
+      await expect(browser.locator('html')).toHaveAttribute('data-theme', theme);
+      expect(
+        await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await app.screenshot(`manual-pufu-${path === '/manual' ? 'ja' : 'en'}-${theme}`);
+    }
+    // Short chapters keep their privacy note visible while optional instructions stay collapsed.
+    await expect(browser.locator('#sharing > .manual-guide > .manual-note')).toBeVisible();
+    await expect(browser.locator('#skills > .manual-guide > .manual-note')).toBeVisible();
+    for (const section of ['comments', 'memory', 'sharing', 'integrations', 'skills', 'help']) {
+      const content = browser.locator(`#${section} details:first-child > :is(p, ol)`).first();
+      await expect(content).toBeHidden();
+      await browser.locator(`#${section} details:first-child > summary`).click();
+      await expect(content).toBeVisible();
+    }
+    await app.open(`${path}#pufu`);
+    await expect(browser.locator('#pufu h3').first()).toBeVisible();
+    await checkPufuAnchor();
+  }
 });

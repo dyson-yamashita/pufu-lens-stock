@@ -1,4 +1,44 @@
 export const en: Record<string, string> = {
+  'manual.language_heading': 'Display language and generated content',
+  'manual.pufu_create_heading': 'Create a draft with AI',
+  'manual.pufu_generation_heading': 'AI sources and generation limits',
+  'manual.pufu_edit_heading': 'Edit the title and content or zoom in',
+  'manual.pufu_phase_heading': 'Add a phase and reflect',
+  'manual.pufu_json_heading': 'Download JSON or images and import JSON',
+  'manual.pufu_json_create_heading': 'Create a new pufu from JSON',
+  'manual.pufu_json_edit_heading': 'Import into a saved phase',
+  'manual.pufu_organize_heading': 'Favorites and linked questions and stocks',
+  'manual.pufu_delete_heading': 'Delete a pufu',
+  'manual.comments_integration_heading': 'Read and add comments from ChatGPT or other apps',
+  'manual.memory_sources_heading': 'Memory sources and excluding a project',
+  'manual.sharing_view_heading': 'Public page navigation and visible information',
+  'manual.sharing_search_heading': 'Allow search engine indexing',
+  'manual.integrations_intro':
+    'Use Integrations to connect the iPhone share menu or AI apps such as ChatGPT. Open the instructions for the connection you need.',
+  'manual.integration_connect_heading': 'Connect ChatGPT or other apps and change permissions',
+  'manual.integration_project_heading': 'Find a project ID',
+  'manual.integration_memory_heading': 'Read project memory from a connected app',
+  'manual.integration_pufu_create_heading': 'Create and edit pufus in a connected app',
+  'manual.integration_pufu_view_heading': 'View pufus in a connected app',
+  'manual.integration_search_heading': 'Find related stocks with MCP',
+  'manual.integration_iphone_heading': 'Save from the iPhone share menu',
+  'manual.integration_disconnect_heading': 'Disconnect an app',
+  'manual.skills_intro':
+    'Use a skill-compatible AI client to explore questions from your material or develop a pufu through conversation. Start with “Install and connect through MCP” if this is your first time.',
+  'manual.skills_install_heading': 'Install and connect through MCP',
+  'manual.skills_cost_heading': 'AI usage allowances and search',
+  'manual.skills_update_heading': 'Update installed skills',
+  'manual.pufu_sources':
+    'The selected stock takes priority. Otherwise, a single stock linked to the question is included automatically; choose one if several are linked. Summaries, notes and available article bodies are used, with excerpts for long sources.',
+  'manual.pufu_ai_usage':
+    'A typical generation uses four AI calls from your allowance. If the win condition needs correction, it is regenerated once using two additional calls. Error retries also use your allowance.',
+  'manual.pufu_import_edit':
+    'To edit, open the phase and choose “Edit” → “Import JSON”, select a file or load JSON text, then choose “Save”. This replaces the entire selected phase and leaves other phases unchanged.',
+  'manual.pufu_import_limits':
+    'JSON must be within 256 KiB, each text within 1,200 characters, and each comment within 600 characters. There is no limit on the number of purposes or measures.',
+  'manual.memory_history_storage':
+    'Completed updates are recorded automatically. Versions from before recording began cannot be recovered; the existing memory is preserved on its next update. Historical summaries may retain information from stocks you later delete. History is private and is deleted when you delete its project or your account.',
+
   'ui.usage.title': 'Usage',
   'ui.usage.period': 'Reporting period',
   'ui.usage.week': 'This week',
@@ -37,7 +77,7 @@ export const en: Record<string, string> = {
   'pufu.import_replace_confirm': 'Replace your unsaved edits with the JSON content?',
   'pufu.import_edit_notice': 'JSON loaded. Choose “Save” to apply it to this phase.',
   'manual.pufu_import':
-    'To create from JSON, select “Create from JSON” under “Creation method”, choose a pufu editor JSON file or paste JSON and select “Load JSON text”, then choose “Create Pufu”. No questions or stocks are linked when creating from JSON. To edit, open the phase and choose “Edit” → “Import JSON”, select a file or load JSON text, then choose “Save”. This replaces the entire selected phase and leaves other phases unchanged. JSON must be within 256 KiB, each text within 1,200 characters, and each comment within 600 characters. There is no limit on the number of purposes or measures.',
+    'To create from JSON, select “Create from JSON” under “Creation method”, choose a pufu editor JSON file or paste JSON and select “Load JSON text”, then choose “Create Pufu”. No questions or stocks are linked when creating from JSON.',
   'first_steps.title': 'Your first 3 steps',
   'first_steps.start_project': 'Create your first project',
   'first_steps.project_intro':
@@ -94,7 +134,7 @@ export const en: Record<string, string> = {
   'error.memory_history_unavailable': 'Could not load memory history. Please try again later.',
 
   'manual.memory_history':
-    'Open “Memory history” on the memory page and select a date and revision to read an earlier version. Select “Latest memory” to return. Completed updates are recorded automatically. Versions from before recording began cannot be recovered; the existing memory is preserved on its next update. Historical summaries may retain information from stocks you later delete. History is private and is deleted when you delete its project or your account.',
+    'Open “Memory history” on the memory page and select a date and revision to read an earlier version. Select “Latest memory” to return.',
 
   'ui.memory_history.title': 'Memory history',
   'ui.memory_history.caption':
@@ -1015,7 +1055,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     'Choose Add Pufu in the Pufu list and select a destination project. To start from a question, open its Pufu tab and choose Explore this question or insight.',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    'Choose up to one question or insight and one stock. The selected stock takes priority; otherwise, a single stock linked to the question is included automatically. If several are linked, choose one. Summaries, notes and available bodies are used (long sources are excerpted). Enter a gaining goal to use it unchanged, or leave it blank for AI to infer one. Optionally describe the eight planning factors and planned measures. Conditions are summarized from the article body; missing conditions and measures without evidence stay blank. New activities, comments and reference notes are not added. Choose Create Pufu to generate a draft. A typical generation uses four AI calls from your allowance. If the win condition needs correction, it is regenerated once, using two additional calls. Error retries also use your allowance.',
+    'Choose up to one question or insight and one stock. Optionally enter a gaining goal to use unchanged, or leave it blank for AI to infer one. Add planning factors and planned measures if needed, then choose Create Pufu.',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'Press the Pufu image to enlarge it. Pinch or use + and − to zoom, and drag to move.',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':

@@ -119,6 +119,7 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
   await fixture.request(`/projects/${second.id}`, 'DELETE');
   await screen.getByRole('link', 'スキルのインストール方法').click();
   await expect(browser.locator('#skills')).toBeVisible();
+  await screen.getByText('インストールとMCP接続', { exact: true }).click();
   await expect(browser.locator('#skills pre').first()).toContainText(
     'npx skills add https://github.com/dyson-yamashita/pufu-lens-stock/tree/main/skills --skill deepen-questions -g',
   );
