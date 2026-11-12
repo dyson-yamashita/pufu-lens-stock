@@ -1,9 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340">
   <style>
     .lettering { fill: #072e54; }
-    @media (prefers-color-scheme: dark) {
-      .lettering { fill: #e7f3fa; }
-    }
   </style>
   <defs>
     <linearGradient id="swoosh" x1="0" y1="0" x2="1" y2="0">

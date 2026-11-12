@@ -17,14 +17,18 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   await browser.emulateMedia({ colorScheme: 'dark' });
   await app.open('/');
   const html = browser.locator('html');
-  const logo = browser.locator('.login-page .brand-logo');
+  const logo = browser.locator('.login-page .brand-logo:visible');
   const toggle = screen.getByRole('switch', 'ダークモード', { exact: true });
   const checkLogo = async (theme: 'light' | 'dark') => {
     await expect(logo).toBeVisible();
     await expect(logo).toHaveAttribute('alt', 'Pufu Lens');
+    await expect(screen.getByRole('img', 'Pufu Lens', { exact: true })).toHaveCount(1);
     expect(
       await browser.evaluate(async (theme) => {
-        const image = document.querySelector<HTMLImageElement>('.login-page .brand-logo')!;
+        const images = [...document.querySelectorAll<HTMLImageElement>('.login-page .brand-logo')];
+        // 画像へ親のcolor-schemeが伝わらない環境でも、ページ側のテーマで選ぶ画像は見える。
+        for (const image of images) image.style.colorScheme = 'light';
+        const image = images.find((image) => image.getClientRects().length > 0)!;
         const mark = document.querySelector<HTMLImageElement>('.login-page .brand-mark')!;
         await Promise.all([image.decode(), mark.decode()]);
         const bounds = image.getBoundingClientRect();
@@ -78,7 +82,7 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   });
   try {
     await browser.reload();
-    await expect(browser.locator('.boot .brand-logo')).toBeVisible();
+    await expect(browser.locator('.boot .brand-logo:visible')).toBeVisible();
     await expect(html).toHaveAttribute('data-theme', 'dark');
     await browser.emulateMedia({ colorScheme: 'light' });
     await expect(html).toHaveAttribute('data-theme', 'dark');
