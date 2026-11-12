@@ -274,7 +274,7 @@ async function projectPage(c: Context<AppEnv>) {
   const assets = await c.env.ASSETS.fetch(new Request(new URL('/', c.env.APP_URL)));
   if (!assets.ok) throw new Error('Public HTML template unavailable');
   const template = await assets.text();
-  const body = `<div class="public-page"><header class="public-header"><a href="/" class="brand"><img class="brand-logo" src="/pufu-lens-wordmark.svg" alt="Pufu Lens" width="1200" height="340"></a></header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')}</nav>${content}</main></div>`;
+  const body = `<div class="public-page"><header class="public-header"><a href="/" class="brand"><span class="brand-lockup"><img class="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38"><img class="brand-logo" src="/pufu-lens-wordmark.svg" alt="Pufu Lens" width="1200" height="340"></span></a></header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')}</nav>${content}</main></div>`;
   // Built home HTML may already carry canonical/hreflang/JSON-LD; remove those nodes
   // via DOM and set page-specific title/description/meta (avoids regex HTML sanitization).
   const document = assemblePublicDocument(template, {

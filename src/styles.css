@@ -353,9 +353,25 @@ p {
   flex-shrink: 0;
   width: max-content;
 }
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  vertical-align: middle;
+}
+.brand-mark {
+  display: block;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  object-fit: contain;
+}
 .brand-logo {
   display: block;
-  width: 188px;
+  flex-shrink: 0;
+  width: 140px;
   height: auto;
   object-fit: contain;
 }
@@ -369,7 +385,15 @@ p {
   gap: 24px;
 }
 .boot .brand-logo {
-  width: 248px;
+  width: 188px;
+}
+.boot .brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+.boot .brand-lockup {
+  gap: 12px;
 }
 .boot p {
   font-size: 14px;
@@ -645,19 +669,11 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.breadcrumb .brand-logo {
-  width: 86px;
+.breadcrumb .brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   margin-right: 8px;
-}
-@media (max-width: 760px) {
-  .breadcrumb .brand-logo {
-    width: 48px;
-  }
-}
-@media (max-width: 380px) {
-  .breadcrumb .brand-logo {
-    display: none;
-  }
 }
 .breadcrumb a:hover,
 .breadcrumb a:focus-visible {
@@ -2898,7 +2914,15 @@ p {
     padding-right: 15px;
   }
   .sidebar .brand-logo {
-    width: 160px;
+    width: 120px;
+  }
+  .sidebar .brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+  .sidebar .brand-lockup {
+    gap: 8px;
   }
   .workspace {
     margin-left: 248px;
@@ -3223,7 +3247,15 @@ p {
     min-height: 380px;
   }
   .brand-logo {
-    width: 160px;
+    width: 120px;
+  }
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+  .brand-lockup {
+    gap: 8px;
   }
   .login-caption {
     display: none;

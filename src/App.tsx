@@ -1,4 +1,4 @@
-import BrandLogo from './BrandLogo';
+import BrandLogo, { BrandMark } from './BrandLogo';
 import {
   applicationError,
   t,
@@ -1251,7 +1251,7 @@ export default function App() {
           )}
           <nav className="breadcrumb" aria-label={t('ui.app.breadcrumbs')}>
             <a href="#" aria-label={t('ui.app.home')}>
-              {!sidebarOpen && <BrandLogo />}
+              {!sidebarOpen && <BrandMark />}
               {t('ui.app.home')}
             </a>{' '}
             <span aria-hidden="true">/</span>{' '}

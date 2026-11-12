@@ -24,8 +24,10 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
     expect(
       await browser.evaluate(async (theme) => {
         const image = document.querySelector<HTMLImageElement>('.login-page .brand-logo')!;
-        await image.decode();
+        const mark = document.querySelector<HTMLImageElement>('.login-page .brand-mark')!;
+        await Promise.all([image.decode(), mark.decode()]);
         const bounds = image.getBoundingClientRect();
+        const markBounds = mark.getBoundingClientRect();
         const canvas = document.createElement('canvas');
         canvas.width = image.naturalWidth;
         canvas.height = image.naturalHeight;
@@ -37,6 +39,9 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
         return (
           alpha === 255 &&
           (theme === 'dark' ? brightness > 200 : brightness < 100) &&
+          markBounds.width >= 32 &&
+          markBounds.left >= 0 &&
+          markBounds.right < bounds.left &&
           bounds.width > bounds.height * 3 &&
           bounds.left >= 0 &&
           bounds.right <= window.innerWidth &&
