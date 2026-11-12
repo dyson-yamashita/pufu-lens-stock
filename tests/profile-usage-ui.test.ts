@@ -74,18 +74,18 @@ it('通信失敗を0件と表示せず、再読み込み後に選択中の期間
     }),
   );
   expect(document.querySelector('[data-metric="stocks"] strong')?.textContent).toBe('1,200');
-  expect(document.querySelector('[data-metric="ai_neurons"] dd')?.textContent).toBe(
-    '21.235Neurons',
-  );
+  expect(document.querySelector('[data-metric="ai_neurons"] dd')?.textContent).toBe('21Neurons');
   expect(document.querySelector('.usage-range')?.textContent).toContain('2026/11/1');
 });
 
 it.each([
   [0, 1, '未計測', ''],
-  [0.00001, 0, '<0.001', 'Neurons'],
-  [12.3456, 1, '12.346', 'Neurons'],
+  [0.00001, 0, '0', 'Neurons'],
+  [695.078, 1, '695', 'Neurons'],
+  [695.5, 0, '696', 'Neurons'],
+  [999.5, 0, '1,000', 'Neurons'],
 ])(
-  '未計測・微小値・部分計測を表示する: %s Neurons, 未計測%s回',
+  '未計測と四捨五入した整数を表示する: %s Neurons, 未計測%s回',
   async (neurons, missing, value, unit) => {
     const counts = {
       since: null,

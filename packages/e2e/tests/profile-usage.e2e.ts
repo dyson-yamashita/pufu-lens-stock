@@ -45,7 +45,7 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   const check = async (period: UsagePeriod) => {
     for (const key of ['stocks', 'questions', 'pufus', 'ai_neurons'] as const) {
       await expect(browser.locator(`.usage-metrics [data-metric="${key}"] strong`)).toHaveText(
-        expected.periods[period][key].toLocaleString('ja-JP', { maximumFractionDigits: 3 }),
+        expected.periods[period][key].toLocaleString('ja-JP', { maximumFractionDigits: 0 }),
       );
     }
   };

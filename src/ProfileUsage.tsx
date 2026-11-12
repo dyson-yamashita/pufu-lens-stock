@@ -37,9 +37,7 @@ export default function ProfileUsage({ userId }: { userId: string }) {
   const selected = usage?.periods[period];
   const unmeasured = selected && selected.ai_neurons === 0 && selected.ai_unmeasured_calls > 0;
   const formatNeurons = (value: number) =>
-    value > 0 && value < 0.001
-      ? '<0.001'
-      : value.toLocaleString(intlLocale(), { maximumFractionDigits: 3 });
+    value.toLocaleString(intlLocale(), { maximumFractionDigits: 0 });
   const date = (value: string) =>
     new Date(value).toLocaleDateString(intlLocale(), {
       timeZone: 'Asia/Tokyo',
