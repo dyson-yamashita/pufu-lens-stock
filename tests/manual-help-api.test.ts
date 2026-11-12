@@ -53,6 +53,30 @@ it('selects only a supplied branch, meters the call and never saves questions as
   expect(await (await post(input)).json()).toEqual({ selection: null, available: false });
   expect(run).toHaveBeenCalledTimes(1);
 });
+it('puts the question and section evidence in Clef state, with short choice labels', async () => {
+  const run = model();
+  const input = body();
+  await post(input);
+  expect(run.mock.calls[0]).toEqual([
+    '@cf/cloudflare/clef',
+    expect.objectContaining({
+      state: {
+        question: input.question,
+        language: input.language,
+        sections: input.choices.map((choice, index) => ({ id: `n${index}`, ...choice })),
+      },
+      questions: {
+        section: expect.objectContaining({
+          criteria: {
+            n0: input.choices[0].title,
+            n1: input.choices[1].title,
+            none: expect.any(String),
+          },
+        }),
+      },
+    }),
+  ]);
+});
 it.each([
   decision('n9'),
   decision('n1', 0.3),

@@ -11,6 +11,13 @@ export async function manualTree(language: Language): Promise<ManualNode[]> {
   const { getManualTree } = await import('./UserManual');
   return getManualTree(language);
 }
+// Non-leaf titles can be abstract. Give every direct child a share of the existing
+// preview budget so early paragraphs cannot hide later topics from the decision model.
+function branchPreview(node: ManualNode) {
+  if (!node.children.length) return node.text.slice(0, 240);
+  const share = Math.floor((240 - node.children.length + 1) / node.children.length);
+  return node.children.map((child) => (child.title || child.text).slice(0, share)).join('\n');
+}
 export async function selectManualBranch(
   owner: string,
   question: string,
@@ -30,7 +37,7 @@ export async function selectManualBranch(
         language,
         choices: nodes.map((node) => ({
           title: node.title.slice(0, 160),
-          preview: node.text.slice(0, 240),
+          preview: branchPreview(node),
         })),
       }),
     },

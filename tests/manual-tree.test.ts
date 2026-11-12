@@ -37,3 +37,14 @@ it.each(['ja', 'en'] as const)(
       expect(text).toContain(translateUi(language, key));
   },
 );
+
+it.each(['ja', 'en'] as const)(
+  'keeps the %s login procedure separate from unrelated quick-start tasks',
+  (language) => {
+    const start = getManualTree(language).find((node) => node.id === 'manual-start-guide')!;
+    const login = start.children.find((node) => node.id === 'manual-sign-in');
+    expect(login).toBeDefined();
+    expect(login!.text).toContain(language === 'ja' ? 'トップページ' : 'home page');
+    expect(login!.text).not.toContain(language === 'ja' ? 'プロジェクトを追加' : 'Add a project');
+  },
+);

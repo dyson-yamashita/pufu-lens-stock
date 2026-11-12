@@ -388,8 +388,8 @@ const startContent = (
       <BookOpen size={20} aria-hidden="true" />
       {tr('ui.user_manual.start_here')}
     </h2>
-    <ol>
-      <li>
+    <ol data-manual-topics="">
+      <li id="manual-sign-in">
         {tr('manual.language.start')}{' '}
         <a href={legalHref('terms', language)}>{tr('ui.legal_links.terms_of_service')}</a>
         {tr('ui.user_manual.and')}
@@ -449,7 +449,10 @@ export function getManualTree(language: Language): ManualNode[] {
     const result: ManualNode[] = [];
     let heading: ManualNode | null = null;
     for (const child of Children.toArray(value)) {
-      if (!isValidElement<{ children?: ReactNode; id?: string }>(child)) continue;
+      if (
+        !isValidElement<{ children?: ReactNode; id?: string; 'data-manual-topics'?: string }>(child)
+      )
+        continue;
       const type = child.type,
         children = Children.toArray(child.props.children);
       const text = manualText(child).replace(/\s+/g, ' ').trim();
@@ -472,7 +475,9 @@ export function getManualTree(language: Language): ManualNode[] {
         node.children = [];
         result.push(node);
         heading = node;
-      } else if (['p', 'ol', 'ul', 'pre'].includes(String(type)) && text) {
+      } else if (type === 'ol' && child.props['data-manual-topics'] !== undefined) {
+        result.push(...read(child.props.children));
+      } else if (['p', 'ol', 'ul', 'pre', 'li'].includes(String(type)) && text) {
         if (heading) heading.children.push(node);
         else result.push(node);
       } else if (type !== 'summary') {

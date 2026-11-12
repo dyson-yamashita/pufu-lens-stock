@@ -414,5 +414,18 @@
     "aspects": [
       "認証用拡張fixtureから独立したbase testで未ログインのマニュアルを閲覧。実/meの401を確認し、本文は読めるがプフィは非表示"
     ]
+  },
+  {
+    "id": "FEEDBACK-010",
+    "title": "ログイン方法の短い質問への直接回答",
+    "sources": [
+      "src/manual-search.ts",
+      "src/UserManual.tsx",
+      "src/ManualHelp.tsx",
+      "server/manual-help.ts"
+    ],
+    "aspects": [
+      "実際の本文から作る補足を元に見出しからログイン手順へ自動で辿り、短い「ログイン方法」に本文・該当リンク・解決確認を返す。全見出しを選ばせず、検索だけではレポート送信なし。判定は受信本文に依存するHTTP fixture、実Clef契約はVitestと開発時の実推論で別途確認"
+    ]
   }
 ]

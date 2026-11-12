@@ -1226,7 +1226,8 @@ export const ja: Record<string, string> = {
   'ui.pufu-download.could_not_load_the_image_font_please_try_again':
     '画像用フォントを取得できませんでした。再度お試しください。',
   'manual.language_heading': '表示言語',
-  'manual.language.start': 'Googleでログインし、ニックネーム（表示名）と表示言語を選びます。',
+  'manual.language.start':
+    'トップページの「Googleでログイン」を押し、Googleアカウントを選びます。初回はニックネーム（表示名）と表示言語を選びます。',
   'manual.language.profile':
     'サイドメニューからプロジェクトを追加します。ニックネームと表示言語は「プロフィール」で変更し、「保存する」で確定できます。',
   'manual.language.future':

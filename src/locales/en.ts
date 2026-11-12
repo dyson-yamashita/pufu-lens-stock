@@ -1244,7 +1244,7 @@ export const en: Record<string, string> = {
     'Could not load the image font. Please try again.',
   'manual.language_heading': 'Display language',
   'manual.language.start':
-    'Sign in with Google, enter a nickname (display name) and choose your language. Review the ',
+    'Choose Sign in with Google on the home page and select your Google account. On your first visit, choose a nickname and language. Review the ',
   'manual.language.profile':
     'Add a project from the side menu. Change your nickname and language in Profile, then choose Save.',
   'manual.language.future':
