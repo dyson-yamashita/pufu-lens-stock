@@ -17,10 +17,11 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   await browser.emulateMedia({ colorScheme: 'dark' });
   await app.open('/');
   const html = browser.locator('html');
-  const logo = screen.getByRole('img', 'Pufu Lens', { exact: true });
+  const logo = browser.locator('.login-page .brand-logo');
   const toggle = screen.getByRole('switch', 'ダークモード', { exact: true });
   const checkLogo = async (theme: 'light' | 'dark') => {
     await expect(logo).toBeVisible();
+    await expect(logo).toHaveAttribute('alt', 'Pufu Lens');
     expect(
       await browser.evaluate(async (theme) => {
         const image = document.querySelector<HTMLImageElement>('.login-page .brand-logo')!;
@@ -66,10 +67,24 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
   await checkLogo('dark');
   await app.screenshot('home-theme-dark');
-  await browser.reload();
-  await expect(html).toHaveAttribute('data-theme', 'dark');
-  await browser.emulateMedia({ colorScheme: 'light' });
-  await expect(html).toHaveAttribute('data-theme', 'dark');
+  // 設定の応答を保留して起動画面を経由させ、起動中の同名ロゴを検証対象にしない。
+  let resumeConfig!: () => void;
+  const configGate = new Promise<void>((resolve) => {
+    resumeConfig = resolve;
+  });
+  await browser.route(new URL('/api/config', address).href, async (route) => {
+    await configGate;
+    await route.continue();
+  });
+  try {
+    await browser.reload();
+    await expect(browser.locator('.boot .brand-logo')).toBeVisible();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await browser.emulateMedia({ colorScheme: 'light' });
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+  } finally {
+    resumeConfig();
+  }
   await checkLogo('dark');
   await browser.locator('#site-language').selectOption({ value: 'en' });
   await expect(html).toHaveAttribute('lang', 'en');
