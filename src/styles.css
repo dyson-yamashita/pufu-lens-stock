@@ -3,6 +3,10 @@
 .pufu-feedback-scope {
   display: contents;
 }
+.pufu-page,
+.dialog.pufu-modal:has(.pufi-feedback) {
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+}
 .pufi-feedback {
   position: fixed;
   bottom: max(18px, env(safe-area-inset-bottom));
@@ -12,7 +16,27 @@
   justify-items: end;
   gap: 10px;
 }
+.pufi-launcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 36px);
+}
+.pufi-invitation {
+  max-width: calc(100vw - 110px);
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 4px 16px;
+  padding: 9px 12px;
+  color: var(--text);
+  background: var(--card);
+  box-shadow: 0 4px 16px #153b551a;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
 .pufi-avatar {
+  flex-shrink: 0;
   width: 64px;
   height: 64px;
   border-radius: 50%;

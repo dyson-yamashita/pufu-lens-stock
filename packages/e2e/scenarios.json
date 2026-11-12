@@ -330,5 +330,34 @@
       "実編集画面の保存APIにJSONの409/HTMLの503を返し、1回では出さず、同じ保存が2回失敗すると単独で案内。処理中抑止/成功解除/60秒失効はVitestでも確認",
       "会話を通常APIに送信し、operation_repeat/network_repeatを区別して固定操作IDだけが保存されることを確認。実サービス障害は起こさず、ローカルのHTTP fixtureを使用"
     ]
+  },
+  {
+    "id": "FEEDBACK-004",
+    "title": "常設の案内と機能の開閉による迷いの検知",
+    "sources": [
+      "src/PufiFeedback.tsx",
+      "src/feedback-detector.ts",
+      "src/PufuEditor.tsx",
+      "shared/feedback.ts"
+    ],
+    "aspects": [
+      "アイコン左の短い案内をlight/dark・両幅で撮影し、同意OFFでも文字から手動会話を開ける。会話中は重複文を隠す",
+      "実ダウンロード画面を開閉。2回は未発火、保存成功で解除し、再び3回の開閉で単独発火。会話を開いて入力するだけでは送信しない。固定迷い理由のDB保存はVitestの実API/SQLiteで検証",
+      "画面下部の操作に案内が重ならない余白を確保し、削除欄の開閉が通常クリックで可能なことを両幅で確認"
+    ]
+  },
+  {
+    "id": "FEEDBACK-005",
+    "title": "局面を探す往復による迷いの検知",
+    "sources": [
+      "src/PufiFeedback.tsx",
+      "src/feedback-detector.ts",
+      "src/PufuEditor.tsx",
+      "shared/feedback.ts"
+    ],
+    "aspects": [
+      "実画面の2局面切替で4回は未発火、60秒以内の6回交互切替でエラーなしでも案内。拒否後も手動の入口は表示",
+      "待機だけの非発火、入力・成功による解除、60秒窓の再計算、同意/頻度/入力中抑止はVitestで確認"
+    ]
   }
 ]

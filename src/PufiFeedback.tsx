@@ -377,16 +377,27 @@ export default function PufiFeedback({
           )}
         </section>
       )}
-      <button
-        type="button"
-        className="pufi-avatar"
-        aria-label={t('feedback.open')}
-        aria-expanded={panel !== 'closed'}
-        disabled={busy}
-        onClick={() => (panel === 'closed' ? void startConversation(true) : close())}
-      >
-        <img src="/pufi-feedback.png" alt="" width="64" height="64" />
-      </button>
+      <div className="pufi-launcher">
+        {panel === 'closed' && (
+          <button
+            type="button"
+            className="pufi-invitation"
+            onClick={() => void startConversation(true)}
+          >
+            {t('feedback.invitation')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="pufi-avatar"
+          aria-label={t('feedback.open')}
+          aria-expanded={panel !== 'closed'}
+          disabled={busy}
+          onClick={() => (panel === 'closed' ? void startConversation(true) : close())}
+        >
+          <img src="/pufi-feedback.png" alt="" width="64" height="64" />
+        </button>
+      </div>
     </aside>,
     host ?? document.body,
   );
