@@ -1,8 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { pufuViewerPlugin } from './scripts/pufu-viewer-plugin';
+import { socialImagePath } from './scripts/social-image';
 
 export default defineConfig({
+  define: { __PUFU_SOCIAL_IMAGE_PATH__: JSON.stringify(socialImagePath) },
   plugins: [pufuViewerPlugin()],
   resolve: {
     alias: {

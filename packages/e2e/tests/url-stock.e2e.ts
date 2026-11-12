@@ -61,8 +61,10 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
   await screen.getByRole('button', 'この本文で再試行', { exact: true }).click();
   await expect(screen.getByRole('dialog')).toHaveCount(0);
   await expect(browser.locator('.stock-detail-page')).toBeVisible();
+  // Retry completion is asynchronous; allow the next 5s detail poll plus request latency.
   await expect(browser.locator('.detail-summary')).toContainText(
     '同じストックで再試行し、重複保存しません。',
+    { timeout: 15000 },
   );
   await screen.getByRole('button', '取得した本文', { exact: true }).click();
   await expect(browser.locator('.article-body')).toHaveText(supplemental);

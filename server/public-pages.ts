@@ -20,6 +20,8 @@ import { publicDocumentAssetPaths } from '../shared/public-document-routes';
 import { homePath, legalPath, manualPath, siteOrigin } from '../shared/site-paths';
 import { textLinks } from '../shared/text-links';
 
+declare const __PUFU_SOCIAL_IMAGE_PATH__: string;
+
 const publicApi = publicProjectsApp();
 const sitemapSize = 1000;
 const escape = (value: unknown) =>
@@ -282,7 +284,7 @@ async function projectPage(c: Context<AppEnv>) {
     robots,
     canonical,
     ogType: kind ? 'article' : 'website',
-    ogImage: new URL('/pufu-lens-logo.png', c.env.APP_URL).href,
+    ogImage: new URL(__PUFU_SOCIAL_IMAGE_PATH__, c.env.APP_URL).href,
     jsonLd,
   });
   c.header('X-Robots-Tag', robots);

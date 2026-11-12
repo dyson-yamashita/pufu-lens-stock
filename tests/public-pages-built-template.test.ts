@@ -7,6 +7,7 @@ import { parseHTML } from 'linkedom';
 import { legalPagesPlugin } from '../scripts/legal-pages-plugin';
 import worker from '../server/index';
 import { testApp } from './helpers';
+import { socialImagePath } from '../scripts/social-image';
 
 let root: string;
 let builtHome: string;
@@ -82,7 +83,7 @@ it('ビルド済みホームHTMLをテンプレートにしても公開ページ
     'og:title': '実践の問い？ | Alice project | Pufu Lens',
     'og:description': '実践の問い？',
     'og:url': canonical,
-    'og:image': `${app.env.APP_URL}/pufu-lens-logo.png`,
+    'og:image': `${app.env.APP_URL}${socialImagePath}`,
   })) {
     const tags = document.querySelectorAll(`meta[property="${property}"]`);
     expect(tags).toHaveLength(1);

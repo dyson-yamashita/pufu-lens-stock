@@ -5,6 +5,7 @@ import prefixSelector from 'postcss-prefix-selector';
 import { pufuViewerPlugin } from './scripts/pufu-viewer-plugin';
 import { pdfCmapsPlugin } from './scripts/pdf-cmaps-plugin';
 import { legalPagesPlugin } from './scripts/legal-pages-plugin';
+import { socialImagePath } from './scripts/social-image';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import {
@@ -14,6 +15,7 @@ import {
 } from './scripts/production-config';
 
 export default defineConfig(({ command }) => ({
+  define: { __PUFU_SOCIAL_IMAGE_PATH__: JSON.stringify(socialImagePath) },
   plugins: [
     react(),
     pufuViewerPlugin(),

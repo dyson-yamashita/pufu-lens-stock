@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { expect } from 'e2e';
 import { test, requestId } from '../src/fixtures.ts';
@@ -559,7 +560,24 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   expect(initialHtml.status).toBe(200);
   expect(initialHtml.headers.get('Cache-Control')).toBe('no-store');
   expect(initialHtml.headers.get('X-Robots-Tag')).toBe('index, follow');
-  expect(await initialHtml.text()).toContain('E2Eの公開プ譜・次の局面');
+  const publicHtml = await initialHtml.text();
+  expect(publicHtml).toContain('E2Eの公開プ譜・次の局面');
+  const ogImage = await browser.evaluate(
+    (html) =>
+      new DOMParser()
+        .parseFromString(html, 'text/html')
+        .querySelector('meta[property="og:image"]')
+        ?.getAttribute('content') ?? null,
+    publicHtml,
+  );
+  const logo = await readFile(new URL('../../../public/pufu-lens-logo.png', import.meta.url));
+  const logoVersion = createHash('sha256').update(logo).digest('hex').slice(0, 16);
+  const logoUrl = `${fixture.url}/pufu-lens-logo.png?v=${logoVersion}`;
+  expect(ogImage).toBe(logoUrl);
+  const logoResponse = await fetch(logoUrl);
+  expect(logoResponse.status).toBe(200);
+  expect(logoResponse.headers.get('Content-Type')).toContain('image/png');
+  expect(Buffer.from(await logoResponse.arrayBuffer()).equals(logo)).toBe(true);
   expect(await (await fetch(`${fixture.url}/sitemaps/${publicId}/pufus-1.xml`)).text()).toContain(
     `/p/${publicId}/pufus/${pufu.id}`,
   );
