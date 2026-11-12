@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { getScoreJson } from '@goto-lab/pufu-editor';
 import { Check, Download, LoaderCircle, Plus, Save, Triangle } from 'lucide-react';
 import { pufuScoreSchema, type Pufu, type PufuPhase, type PufuScore } from '../shared/pufu';
-import { send } from './api';
+import { ApiError, send } from './api';
+import PufiFeedback from './PufiFeedback';
+import { FeedbackDetector } from './feedback-detector';
+import { feedbackActions, type FeedbackAction } from '../shared/feedback';
 import { useTheme } from './theme';
 // 開いたままの詳細画面から旧デプロイのダウンロード用JSを要求しないよう、詳細と一緒に読み込む。
 import { createPufuPng } from './pufu-download';
@@ -33,6 +36,8 @@ export default function PufuEditor({
   onSaved?: (revision: number, saved?: PufuPhase, currentPhase?: number) => void;
 }) {
   const { language } = useLanguage();
+  const [feedback] = useState(() => new FeedbackDetector());
+  const [feedbackHost, setFeedbackHost] = useState<HTMLDivElement | null>(null);
   const { theme } = useTheme();
   const [revision, setRevision] = useState(pufu.revision);
   const [phases, setPhases] = useState(pufu.phases);
@@ -92,6 +97,7 @@ export default function PufuEditor({
     setError('');
     setNotice('');
     setEditing(true);
+    feedback.progress('edit');
   }
   function importScore(score: PufuScore) {
     if (hasChanges() && !window.confirm(t('pufu.import_replace_confirm'))) return;
@@ -100,6 +106,7 @@ export default function PufuEditor({
     setImportVersion((current) => current + 1);
     setDirty(canonical(JSON.stringify(score)) !== baseline.current);
     setNotice(t('pufu.import_edit_notice'));
+    feedback.progress('import');
   }
   function closeEditor() {
     if (busy) return;
@@ -123,6 +130,7 @@ export default function PufuEditor({
     const phase = phases.find((phase) => phase.number === number)!;
     baseline.current = canonical(JSON.stringify(phase.score));
     setEditor(structuredClone(phase));
+    feedback.navigate(String(number));
     setDirty(false);
     setError('');
     setNotice('');
@@ -130,14 +138,19 @@ export default function PufuEditor({
   async function save(append = false) {
     if (busy || (append && !isLatest)) return;
     setBusy(true);
+    feedback.acknowledge('save');
     setError('');
     setNotice('');
+    let validationFailed = false;
     try {
       const json = editing ? getScoreJson(editorKey) : JSON.stringify(savedPhase.score);
       if (!json) throw new Error(t('ui.pufu_editor.could_not_read_the_edited_content'));
       const input = pufuScoreSchema.safeParse(JSON.parse(json));
-      if (!input.success)
+      if (!input.success) {
+        validationFailed = true;
+        feedback.validation('save');
         throw new Error(t('ui.pufu_editor.keep_each_text_within_1_200_characters_each_comment'));
+      }
       const result = await send<{
         revision: number;
         current_phase: number;
@@ -157,6 +170,7 @@ export default function PufuEditor({
       setRevision(result.revision);
       onSaved?.(result.revision, saved, result.current_phase);
       setDirty(false);
+      feedback.progress('save');
       if (append) setEditor(structuredClone(next));
       setNotice(
         append
@@ -164,6 +178,17 @@ export default function PufuEditor({
           : t('ui.pufu_editor.pufu_saved'),
       );
     } catch (e) {
+      if (!validationFailed) {
+        if (e instanceof ApiError && [400, 422].includes(e.status)) feedback.validation('save');
+        else
+          feedback.failure(
+            'save',
+            e instanceof TypeError ||
+              (e instanceof ApiError && (e.status === 408 || e.status >= 500))
+              ? 'network'
+              : 'operation',
+          );
+      }
       setError(applicationError((e as Error).message));
     } finally {
       setBusy(false);
@@ -187,6 +212,7 @@ export default function PufuEditor({
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setDownloadOpen(false);
+      feedback.progress('download');
     } catch (e) {
       setError(applicationError((e as Error).message));
     } finally {
@@ -194,7 +220,16 @@ export default function PufuEditor({
     }
   }
   return (
-    <>
+    <div
+      className="pufu-feedback-scope"
+      onClickCapture={(event) => {
+        const element = (event.target as Element).closest<HTMLElement>('[data-feedback-action]');
+        const action = element?.dataset.feedbackAction;
+        if (action && feedbackActions.includes(action as FeedbackAction))
+          feedback.click(action as FeedbackAction);
+      }}
+    >
+      <PufiFeedback detector={feedback} host={feedbackHost} blocked={busy || downloadOpen} />
       {pufu.model === 'local-pufu-template' && (
         <p className="pufu-demo-note">
           {t('ui.pufu_editor.local_demo_without_ai_a_template_proposal_is_created')}
@@ -209,6 +244,7 @@ export default function PufuEditor({
           {editor.number > 1 && (
             <button
               className="icon-button pufu-phase-previous"
+              data-feedback-action="phase"
               aria-label={t('ui.pufu_editor.previous_phase')}
               disabled={busy}
               onClick={() => selectPhase(editor.number - 1)}
@@ -222,6 +258,7 @@ export default function PufuEditor({
           {editor.number < currentPhase && (
             <button
               className="icon-button pufu-phase-next"
+              data-feedback-action="phase"
               aria-label={t('ui.pufu_editor.next_phase')}
               disabled={busy}
               onClick={() => selectPhase(editor.number + 1)}
@@ -235,17 +272,24 @@ export default function PufuEditor({
         <div>
           <button
             className="button secondary"
+            data-feedback-action="download"
             disabled={busy}
             onClick={() => {
               setError('');
               setDownloadOpen(true);
+              feedback.progress('download');
             }}
           >
             <Download size={16} aria-hidden="true" />
             {t('ui.pufu_editor.download')}
           </button>
           {isLatest && (
-            <button className="button secondary" disabled={busy} onClick={() => save(true)}>
+            <button
+              className="button secondary"
+              disabled={busy}
+              data-feedback-action="save"
+              onClick={() => save(true)}
+            >
               <Plus size={17} aria-hidden="true" />
               {t('ui.pufu_editor.add_phase')}
             </button>
@@ -309,7 +353,12 @@ export default function PufuEditor({
               {dirty ? t('ui.pufu_editor.unsaved_changes') : t('ui.pufu_editor.saved')}
             </span>
             <div>
-              <button className="button primary" disabled={busy} onClick={() => save()}>
+              <button
+                className="button primary"
+                disabled={busy}
+                data-feedback-action="save"
+                onClick={() => save()}
+              >
                 {busy ? (
                   <LoaderCircle className="spin" size={17} aria-hidden="true" />
                 ) : (
@@ -323,8 +372,13 @@ export default function PufuEditor({
             <summary>{t('pufu.import_json')}</summary>
             <PufuJsonImport
               disabled={busy}
-              onBusyChange={setBusy}
+              onPickerOpen={() => feedback.acknowledge('import')}
+              onBusyChange={(value) => {
+                setBusy(value);
+                if (value) feedback.acknowledge('import');
+              }}
               onError={(message) => {
+                if (message) feedback.validation('import');
                 setError(message);
                 setNotice('');
               }}
@@ -342,6 +396,7 @@ export default function PufuEditor({
               {notice}
             </p>
           )}
+          <div ref={setFeedbackHost} />
           <div className="pufu-editor-shell" inert={busy} aria-busy={busy}>
             <ResponsivePufuScore
               key={`${editorKey}-${importVersion}`}
@@ -379,6 +434,6 @@ export default function PufuEditor({
           BSD-3-Clause
         </a>
       </p>
-    </>
+    </div>
   );
 }

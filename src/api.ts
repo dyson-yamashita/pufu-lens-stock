@@ -13,22 +13,19 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     ...options,
     headers: { 'Content-Type': 'application/json', ...options.headers },
   });
-  const data = (await response.json()) as {
-    error?: string;
-    retry_at?: string;
-  };
+  const data: unknown = await response.json().catch((error: unknown) => {
+    if (response.ok) throw error;
+    return null;
+  });
+  const errorData = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
   if (!response.ok)
     throw new ApiError(
-      ((
-        data as {
-          error?: string;
-        }
-      ).error
-        ? applicationError(data.error)
+      (typeof errorData.error === 'string' && errorData.error
+        ? applicationError(errorData.error)
         : t('ui.api.the_operation_failed')) +
-        (response.status === 429 && data.retry_at
+        (response.status === 429 && typeof errorData.retry_at === 'string' && errorData.retry_at
           ? t('ui.api.retry_around_value', {
-              value0: new Date(data.retry_at).toLocaleString(intlLocale()),
+              value0: new Date(errorData.retry_at).toLocaleString(intlLocale()),
             })
           : ''),
       response.status,

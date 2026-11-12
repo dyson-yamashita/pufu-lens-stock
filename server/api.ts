@@ -1,4 +1,5 @@
 import { requestDiagnostics, logDiagnosticError, observeOperation } from './diagnostics';
+import { feedbackApp } from './feedback';
 import {
   listMemoryVersions,
   readMemoryVersion,
@@ -252,6 +253,7 @@ export function createApp(trustedPrincipal?: Principal) {
     await next();
   });
   app.route('/api/v1/projects', publicationApp());
+  app.route('/api/v1/feedback', feedbackApp());
   app.route('/api/v1/stocks/:id/images', stockImagesApp());
   app.get('/api/v1/comments', async (c) => {
     const query = c.req.query();

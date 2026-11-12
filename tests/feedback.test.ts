@@ -1,0 +1,272 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { testApp } from './helpers';
+
+let app: Awaited<ReturnType<typeof testApp>>;
+const input = () => ({
+  request_id: crypto.randomUUID(),
+  owner_id: 'alice',
+  round: 0,
+  screen: 'pufu-editor',
+  category: 'unresponsive',
+  detail: '第2局面で保存成功の表示が出ても、再読込すると内容が戻る。',
+  reasons: [{ type: 'rage_click', action: 'save' }],
+  consent: true,
+  finish: false,
+});
+const verdict = (overrides = {}) => ({
+  concrete: true,
+  actionable: true,
+  contains_private_information: false,
+  title: '保存結果を保持する',
+  summary: '再読込すると保存内容が戻る。',
+  reproduction_steps: '第2局面で保存後に再読込する',
+  expected_behavior: '保存内容が残る',
+  actual_behavior: '保存内容が戻る',
+  follow_up: null,
+  ...overrides,
+});
+beforeEach(async () => {
+  app = await testApp();
+});
+afterEach(async () => {
+  vi.unstubAllGlobals();
+  await app.dispose();
+});
+function configure(assessment = verdict()) {
+  const ai = vi.fn(async () => ({
+    response: JSON.stringify(assessment),
+    usage: { prompt_tokens: 10, completion_tokens: 5 },
+  }));
+  app.env.AI = { run: ai };
+  const fetcher = vi.fn(() => {
+    throw new Error('No external HTTP is permitted');
+  });
+  vi.stubGlobal('fetch', fetcher);
+  return { ai, fetcher };
+}
+const rows = () =>
+  app.env.DB.prepare('SELECT * FROM usability_feedback').all<{
+    status: string;
+    review_status: string;
+    hold_reason: string;
+    detail: string;
+    conversation: string;
+    title: string;
+    summary: string;
+    reproduction_steps: string;
+    expected_behavior: string;
+    actual_behavior: string;
+    round: number;
+  }>();
+
+it('stores an issue-equivalent maintenance report in D1 without GitHub or external HTTP and deduplicates replays', async () => {
+  const { fetcher, ai } = configure();
+  const body = input();
+  expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(201);
+  expect((await rows()).results[0]).toMatchObject({
+    status: 'awaiting_review',
+    review_status: 'unreviewed',
+    title: '保存結果を保持する',
+    reproduction_steps: '第2局面で保存後に再読込する',
+    expected_behavior: '保存内容が残る',
+    actual_behavior: '保存内容が戻る',
+  });
+  expect(fetcher).not.toHaveBeenCalled();
+  expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(200);
+  expect(ai).toHaveBeenCalledTimes(1);
+  expect(
+    await app.env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM ai_attempts WHERE user_id='alice' AND usage_model IS NOT NULL",
+    ).first(),
+  ).toEqual({ count: 1 });
+  expect((await rows()).results).toHaveLength(1);
+});
+
+it.each([
+  [verdict({ concrete: false, actionable: false }), 'awaiting_review', 'needs_review'],
+  [verdict({ contains_private_information: true }), 'held', 'private_information'],
+])(
+  'preserves incomplete or sensitive reports for maintenance',
+  async (assessment, status, hold_reason) => {
+    configure(assessment);
+    await app.request('/api/v1/feedback', { method: 'POST', body: input() });
+    expect((await rows()).results[0]).toMatchObject({
+      status,
+      hold_reason,
+      review_status: 'unreviewed',
+    });
+  },
+);
+
+it('saves without AI configuration, asks briefly, and lets the user finish immediately', async () => {
+  const body = input();
+  const initial = await app.request('/api/v1/feedback', { method: 'POST', body });
+  expect(await initial.json()).toMatchObject({ round: 0, follow_up: 'expected' });
+  const finish = { ...body, finish: true };
+  expect(
+    await (await app.request('/api/v1/feedback', { method: 'POST', body: finish })).json(),
+  ).toMatchObject({ follow_up: null });
+  await app.request('/api/v1/feedback', { method: 'POST', body: finish });
+  expect((await rows()).results).toHaveLength(1);
+  expect((await rows()).results[0]).toMatchObject({
+    status: 'awaiting_review',
+    detail: body.detail,
+    hold_reason: 'ai_unconfigured',
+  });
+});
+
+it('asks at most two questions and saves a complete conversation with idempotent replies', async () => {
+  const { ai, fetcher } = configure(verdict({ concrete: false, follow_up: 'operation' }));
+  const body = input();
+  expect(
+    await (await app.request('/api/v1/feedback', { method: 'POST', body })).json(),
+  ).toMatchObject({ round: 0, follow_up: 'operation' });
+  const reply = { ...body, round: 1, answer: '保存ボタンです' };
+  await app.request('/api/v1/feedback', { method: 'POST', body: reply });
+  await app.request('/api/v1/feedback', { method: 'POST', body: reply });
+  expect(ai).toHaveBeenCalledTimes(2);
+  await app.request('/api/v1/feedback', {
+    method: 'POST',
+    body: { ...body, round: 2, answer: '再読込後に戻る' },
+  });
+  const row = (await rows()).results[0];
+  expect(row).toMatchObject({
+    status: 'awaiting_review',
+    round: 2,
+    detail: expect.stringContaining('再読込後に戻る'),
+  });
+  expect(JSON.parse(row.conversation)).toContainEqual({
+    role: 'pufi',
+    text: 'どの操作でお困りでしたか？',
+  });
+  expect(JSON.parse(row.conversation)).toContainEqual({ role: 'user', text: '保存ボタンです' });
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it('saves the final reply when finishing, even when AI would ask another question', async () => {
+  configure(verdict({ concrete: false, follow_up: 'steps' }));
+  const body = input();
+  await app.request('/api/v1/feedback', { method: 'POST', body });
+  const result = await app.request('/api/v1/feedback', {
+    method: 'POST',
+    body: { ...body, round: 1, answer: '第2局面です', finish: true },
+  });
+  expect(await result.json()).toMatchObject({ follow_up: null, round: 1 });
+  expect((await rows()).results[0]).toMatchObject({
+    status: 'awaiting_review',
+    detail: expect.stringContaining('第2局面です'),
+  });
+});
+
+it('keeps raw conversations when AI fails or returns an arbitrary question', async () => {
+  const { ai } = configure(verdict({ follow_up: 'arbitrary text' }));
+  await app.request('/api/v1/feedback', { method: 'POST', body: input() });
+  expect((await rows()).results[0]).toMatchObject({
+    status: 'awaiting_review',
+    hold_reason: 'assessment_failed',
+  });
+  ai.mockRejectedValue(new Error('timeout'));
+  await app.request('/api/v1/feedback', { method: 'POST', body: input() });
+  expect((await rows()).results[1]).toMatchObject({
+    status: 'awaiting_review',
+    hold_reason: 'assessment_failed',
+  });
+});
+
+it('does not resurrect a deleted account or its conversation after delayed AI processing', async () => {
+  const { ai } = configure();
+  let started!: () => void;
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const proceed = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  ai.mockImplementation(async () => {
+    started();
+    await proceed;
+    return {
+      response: JSON.stringify(verdict()),
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    };
+  });
+  const pending = app.request('/api/v1/feedback', { method: 'POST', body: input() });
+  await waiting;
+  try {
+    await app.env.DB.prepare("DELETE FROM users WHERE id='alice'").run();
+  } finally {
+    release();
+  }
+  expect((await pending).status).toBe(410);
+  expect((await rows()).results).toHaveLength(0);
+});
+
+it('rejects drafts and frozen retries after a different account signs in', async () => {
+  configure();
+  const body = input();
+  await app.request('/api/v1/feedback', { method: 'POST', body });
+  expect(
+    (await app.request('/api/v1/feedback', { method: 'POST', body, user: 'bob' })).status,
+  ).toBe(409);
+  expect((await rows()).results).toHaveLength(1);
+});
+
+it('keeps the global 24-hour quota consumed after deleting an account', async () => {
+  const { ai } = configure();
+  await app.env.DB.batch(
+    Array.from({ length: 57 }, (_, i) =>
+      app.env.DB.prepare('INSERT INTO feedback_global_usage(id,created_at) VALUES(?,?)').bind(
+        `anonymous-${i}`,
+        new Date().toISOString(),
+      ),
+    ),
+  );
+  for (let i = 0; i < 3; i++)
+    await app.request('/api/v1/feedback', { method: 'POST', body: input() });
+  await app.env.DB.prepare("DELETE FROM users WHERE id='alice'").run();
+  expect((await rows()).results).toHaveLength(0);
+  expect(
+    (
+      await app.request('/api/v1/feedback', {
+        method: 'POST',
+        body: { ...input(), owner_id: 'bob' },
+        user: 'bob',
+      })
+    ).status,
+  ).toBe(429);
+  expect(ai).toHaveBeenCalledTimes(3);
+});
+
+it('enforces consent, fixed metadata, ownership, authentication, quotas and cascade deletion', async () => {
+  expect(
+    (await app.request('/api/v1/feedback', { method: 'POST', body: input(), user: 'unknown' }))
+      .status,
+  ).toBe(401);
+  for (const body of [
+    { ...input(), consent: false },
+    { ...input(), url: '/private' },
+    { ...input(), reasons: [{ type: 'rage_click', action: 'private-name' }] },
+  ])
+    expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(400);
+  const body = input();
+  for (let i = 0; i < 3; i++)
+    expect(
+      (await app.request('/api/v1/feedback', { method: 'POST', body: i ? input() : body })).status,
+    ).toBe(201);
+  expect((await app.request('/api/v1/feedback', { method: 'POST', body: input() })).status).toBe(
+    429,
+  );
+  expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(200);
+  expect(
+    (
+      await app.request('/api/v1/feedback', {
+        method: 'POST',
+        body: { ...body, owner_id: 'bob' },
+        user: 'bob',
+      })
+    ).status,
+  ).toBe(201);
+  await app.env.DB.prepare("DELETE FROM users WHERE id='alice'").run();
+  expect((await rows()).results).toHaveLength(1);
+});

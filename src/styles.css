@@ -1,5 +1,180 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 
+.pufu-feedback-scope {
+  display: contents;
+}
+.pufi-feedback {
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 120;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+.pufi-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--wash);
+  box-shadow: 0 4px 16px #153b5526;
+}
+.pufi-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.pufi-panel {
+  width: min(328px, calc(100vw - 36px));
+  max-height: calc(100dvh - 120px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  color: var(--text);
+  background: var(--card);
+  box-shadow: 0 6px 24px #153b5526;
+}
+.pufi-prompt {
+  width: min(260px, calc(100vw - 36px));
+}
+.pufi-panel-head,
+.pufi-name,
+.pufi-head-actions {
+  display: flex;
+  align-items: center;
+}
+.pufi-panel-head {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.pufi-name {
+  gap: 8px;
+}
+.pufi-panel h2 {
+  font-size: 0.93rem;
+  margin: 0;
+}
+.pufi-greeting {
+  font-size: 1rem;
+  margin: 12px 0 18px;
+}
+.pufi-actions {
+  display: flex;
+  gap: 10px;
+}
+.pufi-actions .button {
+  min-width: 84px;
+}
+.pufi-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+.pufi-check input {
+  width: auto;
+}
+.pufi-details {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 14px 0;
+}
+.pufi-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(260px, 36dvh);
+  overflow: auto;
+  padding: 2px 2px 8px;
+}
+.pufi-message {
+  font-size: 0.93rem;
+  line-height: 1.6;
+  padding: 9px 12px;
+  border-radius: 15px;
+  margin: 0;
+  max-width: 92%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pufi-message-pufi {
+  align-self: flex-start;
+  background: var(--wash);
+  border-bottom-left-radius: 4px;
+}
+.pufi-message-user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.pufi-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+}
+.pufi-chip {
+  background: var(--card);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 9px 12px;
+  border-radius: 20px;
+  font-size: 0.88rem;
+}
+.pufi-chip:hover {
+  background: var(--wash);
+}
+.pufi-compose {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin-top: 10px;
+}
+.pufi-compose textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  max-height: 110px;
+  font-size: 0.95rem;
+  border-radius: 15px;
+  padding: 10px;
+}
+.pufi-send {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+}
+.pufi-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pufi-footer span {
+  font-size: 0.66rem;
+  color: var(--muted);
+}
+.pufi-finish {
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-decoration: underline;
+}
+
 :root {
   font-family: 'DM Sans', 'Noto Sans JP', sans-serif;
   color: var(--text);
@@ -4891,4 +5066,13 @@ article.pufu-list-item {
   .stock-detail-card {
     padding: 22px;
   }
+}
+
+.pufi-avatar img,
+.pufi-name img {
+  clip-path: circle(45%);
+}
+
+.pufi-avatar[aria-expanded='true'] {
+  border-color: var(--primary);
 }
