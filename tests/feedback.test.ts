@@ -59,6 +59,27 @@ const rows = () =>
     round: number;
   }>();
 
+it('stores fixed confusion metadata with the conversation without requiring AI', async () => {
+  delete app.env.AI;
+  const reasons = [
+    { type: 'exploration_repeat', action: 'download' },
+    { type: 'navigation_loop', action: 'phase' },
+  ];
+  const body = {
+    ...input(),
+    category: 'navigation',
+    detail: 'どの操作を選ぶか迷いました。',
+    reasons,
+    finish: true,
+  };
+  expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(201);
+  const saved = await app.env.DB.prepare(
+    'SELECT reasons, category, status FROM usability_feedback',
+  ).first<{ reasons: string; category: string; status: string }>();
+  expect(JSON.parse(saved!.reasons)).toEqual(reasons);
+  expect(saved).toMatchObject({ category: 'navigation', status: 'awaiting_review' });
+});
+
 it('stores an issue-equivalent maintenance report in D1 without GitHub or external HTTP and deduplicates replays', async () => {
   const { fetcher, ai } = configure();
   const body = input();

@@ -8,6 +8,7 @@ export const feedbackReasons = [
   'validation_repeat',
   'operation_repeat',
   'network_repeat',
+  'exploration_repeat',
 ] as const;
 export type FeedbackReason = (typeof feedbackReasons)[number];
 export const feedbackQuestionSchema = z.enum(['operation', 'expected', 'actual', 'steps']);
@@ -30,7 +31,7 @@ export const feedbackSchema = z.strictObject({
   detail: z.string().trim().max(1000),
   reasons: z
     .array(z.strictObject({ type: z.enum(feedbackReasons), action: z.enum(feedbackActions) }))
-    .max(5),
+    .max(feedbackReasons.length),
   consent: z.literal(true),
 });
 export type FeedbackInput = z.infer<typeof feedbackSchema>;

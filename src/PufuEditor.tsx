@@ -97,7 +97,7 @@ export default function PufuEditor({
     setError('');
     setNotice('');
     setEditing(true);
-    feedback.progress('edit');
+    feedback.open('edit');
   }
   function importScore(score: PufuScore) {
     if (hasChanges() && !window.confirm(t('pufu.import_replace_confirm'))) return;
@@ -116,6 +116,7 @@ export default function PufuEditor({
     )
       return;
     setEditing(false);
+    feedback.close('edit');
     setEditor(structuredClone(savedPhase));
     baseline.current = canonical(JSON.stringify(savedPhase.score));
     setDirty(false);
@@ -222,6 +223,7 @@ export default function PufuEditor({
   return (
     <div
       className="pufu-feedback-scope"
+      onInputCapture={() => feedback.progress('edit')}
       onClickCapture={(event) => {
         const element = (event.target as Element).closest<HTMLElement>('[data-feedback-action]');
         const action = element?.dataset.feedbackAction;
@@ -277,7 +279,7 @@ export default function PufuEditor({
             onClick={() => {
               setError('');
               setDownloadOpen(true);
-              feedback.progress('download');
+              feedback.open('download');
             }}
           >
             <Download size={16} aria-hidden="true" />
@@ -319,7 +321,10 @@ export default function PufuEditor({
           title={t('ui.pufu_editor.choose_download_format')}
           wide={false}
           busy={busy}
-          onClose={() => setDownloadOpen(false)}
+          onClose={() => {
+            feedback.close('download');
+            setDownloadOpen(false);
+          }}
         >
           <div className="pufu-download-options" aria-busy={busy}>
             <button className="button secondary" disabled={busy} onClick={() => download('json')}>
@@ -368,7 +373,13 @@ export default function PufuEditor({
               </button>
             </div>
           </div>
-          <details className="pufu-json-import-panel">
+          <details
+            className="pufu-json-import-panel"
+            onToggle={(event) => {
+              if (event.currentTarget.open) feedback.open('import');
+              else feedback.close('import');
+            }}
+          >
             <summary>{t('pufu.import_json')}</summary>
             <PufuJsonImport
               disabled={busy}

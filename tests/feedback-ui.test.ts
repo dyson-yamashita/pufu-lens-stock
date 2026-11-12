@@ -53,6 +53,22 @@ const clicks = () => {
   for (let i = 0; i < 4; i++) detector.click('save');
 };
 
+it('shows a short invitation beside the icon, and opens manual chat without detection consent or cooldown', async () => {
+  local.clear();
+  local.set('pufi-until', String(Date.now() + 7 * 86400000));
+  await render();
+  const invitation = document.querySelector<HTMLButtonElement>('.pufi-invitation');
+  expect(invitation?.textContent).toBe('何かお困りですか？');
+  expect(document.querySelector('.pufi-panel')).toBeNull();
+  await act(async () => invitation!.click());
+  expect(document.querySelector('.pufi-thread')?.textContent).toContain(
+    'お困りのことを教えてください',
+  );
+  expect(document.querySelector('.pufi-invitation')).toBeNull();
+  expect(send).not.toHaveBeenCalled();
+  expect(local.get('pufi-detection-consent')).toBeUndefined();
+});
+
 it('displays a gentle prompt after unacknowledged clicks and dismisses it for seven days without sending logs', async () => {
   await render();
   clicks();

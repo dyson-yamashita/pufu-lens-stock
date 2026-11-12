@@ -1,6 +1,7 @@
 export const en: Record<string, string> = {
   'feedback.title': 'Pufi',
   'feedback.open': 'Talk to Pufi',
+  'feedback.invitation': 'May I help?',
   'feedback.close': 'Close Pufi chat',
   'feedback.prompt': 'Are you having any trouble?',
   'feedback.yes': 'Yes',
@@ -39,7 +40,7 @@ export const en: Record<string, string> = {
   'feedback.session_changed':
     'Your login has changed. Please close the conversation and open it again.',
   'feedback.manual':
-    'Talk briefly with Pufi at the bottom right of a pufu page about anything difficult. Choose “Finish answering” to stop additional questions, or “Send and finish” to save an unsent reply and finish. Messages are saved for improvements, organized by AI and reviewed by maintenance staff. Automatic help prompts work only in browsers where you opt in and can be disabled anytime.',
+    'Select “May I help?” or Pufi at the bottom right of a pufu page to share anything confusing or difficult. Choose “Finish answering” to stop additional questions, or “Send and finish” to save an unsent reply and finish. Messages are saved for improvements, organized by AI and reviewed by maintenance staff. Automatic help prompts work only in browsers where you opt in. They respond to repeated failures, switching between phases, or opening and closing features without progress, rather than time spent reading or thinking. You can disable them anytime.',
 
   'manual.pufu_create_heading': 'Create a draft with AI',
   'manual.pufu_generation_heading': 'AI sources and generation limits',

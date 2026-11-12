@@ -1,6 +1,7 @@
 import type { FeedbackAction, FeedbackReason, FeedbackInput } from '../shared/feedback';
 
 type FailureReason = 'validation_repeat' | 'operation_repeat' | 'network_repeat';
+type ExplorationAction = Extract<FeedbackAction, 'edit' | 'import' | 'download'>;
 type ScoredSignal = { type: FeedbackReason; action: FeedbackAction; time: number; score: number };
 const scores: Record<FeedbackReason, number> = {
   rage_click: 3,
@@ -8,6 +9,7 @@ const scores: Record<FeedbackReason, number> = {
   validation_repeat: 2,
   operation_repeat: 3,
   network_repeat: 3,
+  exploration_repeat: 2,
 };
 // All state stays in memory. Values, error messages and DOM text are never retained.
 export class FeedbackDetector {
@@ -18,6 +20,8 @@ export class FeedbackDetector {
     { type: FailureReason; action: FeedbackAction; times: number[] }
   >();
   private routes: { screen: string; time: number }[] = [];
+  private opened = new Set<ExplorationAction>();
+  private abandoned = new Map<ExplorationAction, number[]>();
   private signals = new Map<string, ScoredSignal>();
   constructor(private clock = Date.now) {}
   enable(enabled: boolean) {
@@ -28,6 +32,8 @@ export class FeedbackDetector {
     this.clicks.clear();
     this.failures.clear();
     this.routes = [];
+    this.opened.clear();
+    this.abandoned.clear();
     this.signals.clear();
   }
   click(action: FeedbackAction) {
@@ -48,6 +54,23 @@ export class FeedbackDetector {
       if (failure.action === action) this.failures.delete(key);
     for (const [key, signal] of this.signals)
       if (signal.action === action) this.signals.delete(key);
+    // Input or a completed operation is progress; comparison/searching has stopped.
+    this.routes = [];
+    this.opened.clear();
+    this.abandoned.clear();
+  }
+  open(action: ExplorationAction) {
+    if (!this.enabled) return;
+    this.acknowledge(action);
+    this.opened.add(action);
+  }
+  close(action: ExplorationAction) {
+    if (!this.enabled || !this.opened.delete(action)) return;
+    const time = this.clock();
+    this.abandoned.set(
+      action,
+      [...(this.abandoned.get(action) ?? []).filter((t) => time - t < 60000), time].slice(-3),
+    );
   }
   validation(action: FeedbackAction) {
     this.recordFailure(action, 'validation_repeat');
@@ -70,16 +93,8 @@ export class FeedbackDetector {
     if (!this.enabled) return;
     const time = this.clock();
     if (this.routes.at(-1)?.screen === screen) return;
-    this.progress('phase');
-    this.routes = [...this.routes.filter((r) => time - r.time < 60000), { screen, time }].slice(-4);
-    const [a, b, c, d] = this.routes;
-    if (d && a.screen === c.screen && b.screen === d.screen && a.screen !== b.screen)
-      this.signals.set('navigation_loop:phase', {
-        type: 'navigation_loop',
-        action: 'phase',
-        time,
-        score: 2,
-      });
+    this.acknowledge('phase');
+    this.routes = [...this.routes.filter((r) => time - r.time < 60000), { screen, time }].slice(-6);
   }
   evaluate(): { total: number; reasons: FeedbackInput['reasons'] } {
     const time = this.clock();
@@ -97,6 +112,30 @@ export class FeedbackDetector {
     for (const [key, signal] of this.signals)
       if (time - signal.time >= 60000) this.signals.delete(key);
     const signals = [...this.signals.values()];
+    this.routes = this.routes.filter((r) => time - r.time < 60000);
+    const alternating = (routes: typeof this.routes) =>
+      routes.length >= 4 && routes.every((r, i) => i < 2 || r.screen === routes[i - 2].screen);
+    if (alternating(this.routes.slice(-4)))
+      signals.push({
+        type: 'navigation_loop',
+        action: 'phase',
+        time: this.routes.at(-1)!.time,
+        score: this.routes.length === 6 && alternating(this.routes) ? 3 : 2,
+      });
+    for (const [action, times] of this.abandoned) {
+      const recent = times.filter((t) => time - t < 60000);
+      if (!recent.length) this.abandoned.delete(action);
+      else {
+        this.abandoned.set(action, recent);
+        if (recent.length >= 2)
+          signals.push({
+            type: 'exploration_repeat',
+            action,
+            time: recent.at(-1)!,
+            score: recent.length >= 3 ? 3 : 2,
+          });
+      }
+    }
     for (const [key, failure] of this.failures) {
       failure.times = failure.times.filter((t) => time - t < 60000);
       if (!failure.times.length) {
