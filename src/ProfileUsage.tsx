@@ -106,20 +106,11 @@ export default function ProfileUsage({ userId }: { userId: string }) {
                 </div>
               ))}
             </dl>
-            {selected.ai_unmeasured_calls > 0 && (
-              <p className="profile-hint usage-missing">
-                {t('ui.usage.missing_note', {
-                  count: selected.ai_unmeasured_calls.toLocaleString(intlLocale()),
-                })}
-              </p>
-            )}
           </>
         ) : (
           <p className="profile-hint">{t('ui.usage.loading')}</p>
         )}
       </div>
-      <p className="profile-hint">{t('ui.usage.registration_note')}</p>
-      <p className="profile-hint">{t('ui.usage.ai_note')}</p>
       <p className="profile-hint">{t('ui.usage.timezone_note')}</p>
     </section>
   );

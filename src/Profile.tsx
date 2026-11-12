@@ -51,7 +51,6 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
   };
   return (
     <>
-      <ProfileUsage key={user.id} userId={user.id} />
       <section className="profile-card" aria-label={t('ui.profile.edit_profile')}>
         <div className="profile-identity">
           <div className="avatar profile-avatar" aria-hidden="true">
@@ -168,6 +167,7 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
         </details>
       </section>
       <ThemeSettings />
+      <ProfileUsage key={user.id} userId={user.id} />
       {confirmDelete && <AccountDeleteDialog onCancel={() => setConfirmDelete(false)} />}
     </>
   );
