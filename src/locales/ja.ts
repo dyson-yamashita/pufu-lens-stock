@@ -1,4 +1,44 @@
 export const ja: Record<string, string> = {
+  'manual.language_heading': '表示言語と生成される内容',
+  'manual.pufu_create_heading': 'AIで案をつくる',
+  'manual.pufu_generation_heading': 'AIが参照する資料・生成の上限',
+  'manual.pufu_edit_heading': 'タイトル・内容を編集する／拡大する',
+  'manual.pufu_phase_heading': '局面を追加して振り返る',
+  'manual.pufu_json_heading': 'JSON・画像を保存する／JSONを取り込む',
+  'manual.pufu_json_create_heading': 'JSONから新しく作成する',
+  'manual.pufu_json_edit_heading': '保存済みの局面に取り込む',
+  'manual.pufu_organize_heading': 'お気に入り・関連する問いとストック',
+  'manual.pufu_delete_heading': 'プ譜を削除する',
+  'manual.comments_integration_heading': 'ChatGPTなどからコメントを読む・追加する',
+  'manual.memory_sources_heading': 'メモリに含まれる情報・対象から外す設定',
+  'manual.sharing_view_heading': '公開ページの表示と公開される情報',
+  'manual.sharing_search_heading': '検索エンジンへの掲載を許可する',
+  'manual.integrations_intro':
+    '「外部連携」から、iPhoneの共有メニューやChatGPTなどのAIアプリを接続できます。使いたい連携の手順を開いてください。',
+  'manual.integration_connect_heading': 'ChatGPTなどを接続する・権限を変える',
+  'manual.integration_project_heading': 'プロジェクトIDを確認する',
+  'manual.integration_memory_heading': '連携先からプロジェクトのメモリを読む',
+  'manual.integration_pufu_create_heading': '連携先でプ譜を作成・編集する',
+  'manual.integration_pufu_view_heading': '連携先でプ譜を表示する',
+  'manual.integration_search_heading': 'MCPで関連するストックを探す',
+  'manual.integration_iphone_heading': 'iPhoneの共有メニューから保存する',
+  'manual.integration_disconnect_heading': '接続をやめる',
+  'manual.skills_intro':
+    'スキル対応のAIクライアントで、資料から問いを深めたり、対話しながらプ譜をつくったりできます。初めて使う場合は「インストールとMCP接続」を開いてください。',
+  'manual.skills_install_heading': 'インストールとMCP接続',
+  'manual.skills_cost_heading': 'AIの利用枠と検索',
+  'manual.skills_update_heading': 'スキルを更新する',
+  'manual.pufu_sources':
+    '選択したストックを優先し、未選択なら問いの関連ストック1件を自動参照します。関連ストックが複数あれば1件を選んでください。要約・メモと取得済み本文を使い、長い資料は一部を参照します。',
+  'manual.pufu_ai_usage':
+    '通常は1件の生成にAI呼び出し枠を4回分使います。勝利条件の確認で修正が必要な場合は1回だけ作り直し、追加で2回分使います。エラーの再試行も利用枠を使います。',
+  'manual.pufu_import_edit':
+    '編集時は、対象の局面で「編集する」→「JSONをインポート」を開き、ファイル選択またはテキストの読み込み後に「保存」を押します。選択中の局面全体が置き換わり、他の局面は変わりません。',
+  'manual.pufu_import_limits':
+    'JSONは256KiB以内、本文は各1,200文字、コメントは各600文字以内です。中間目的・施策の件数制限はありません。',
+  'manual.memory_history_storage':
+    '更新後のメモリを自動で記録します。保存開始前の版は復元できませんが、開始時に残っているメモリは次回更新で保管します。過去の要約には、後から削除したストックの情報が残る場合があります。履歴は公開されず、プロジェクト削除・退会で削除されます。',
+
   'ui.usage.title': '利用状況',
   'ui.usage.period': '集計期間',
   'ui.usage.week': '今週',
@@ -37,7 +77,7 @@ export const ja: Record<string, string> = {
   'pufu.import_replace_confirm': '編集中の未保存の内容を、JSONの内容に置き換えますか？',
   'pufu.import_edit_notice': 'JSONを読み込みました。「保存」でこの局面に反映します。',
   'manual.pufu_import':
-    'JSONから作成するには、作成画面の「作成方法」で「JSONから作成」を選び、pufu editorのJSONファイルを選択するか、JSONを貼り付けて「JSONテキストを読み込む」→「プ譜を作成」を押します。問い・ストックは紐付けずに作成します。編集時は、対象の局面で「編集する」→「JSONをインポート」を開き、ファイル選択またはテキストの読み込み後に「保存」を押します。選択中の局面全体が置き換わり、他の局面は変わりません。JSONは256KiB以内、本文は各1,200文字、コメントは各600文字以内です。中間目的・施策の件数制限はありません。',
+    'JSONから作成するには、作成画面の「作成方法」で「JSONから作成」を選び、pufu editorのJSONファイルを選択するか、JSONを貼り付けて「JSONテキストを読み込む」→「プ譜を作成」を押します。問い・ストックは紐付けずに作成します。',
   'first_steps.title': 'はじめの3ステップ',
   'first_steps.start_project': '最初のプロジェクトをつくりましょう',
   'first_steps.project_intro':
@@ -95,7 +135,7 @@ export const ja: Record<string, string> = {
     'メモリ履歴を読み込めませんでした。時間をおいて再試行してください。',
 
   'manual.memory_history':
-    'メモリ画面の「メモリの履歴」を開き、日時と版番号から過去の内容を選べます。「最新のメモリ」で現在の内容へ戻れます。更新後のメモリを自動で記録します。保存開始前の版は復元できませんが、開始時に残っているメモリは次回更新で保管します。過去の要約には、後から削除したストックの情報が残る場合があります。履歴は公開されず、プロジェクト削除・退会で削除されます。',
+    'メモリ画面の「メモリの履歴」を開き、日時と版番号から過去の内容を選べます。「最新のメモリ」で現在の内容へ戻れます。',
 
   'ui.memory_history.title': 'メモリの履歴',
   'ui.memory_history.caption': '保存した時点の関心・知識・問いを振り返れます。',
@@ -1001,7 +1041,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.choose_add_pufu_in_the_pufu_list_and_select':
     '「プ譜」一覧の「プ譜を追加」を押し、保存先のプロジェクトを選びます。問いから作る場合は、問いの詳細の「プ譜」タブで「問い・気づきから考える」を選びます。',
   'ui.user_manual.write_your_desired_state_as_the_gaining_goal_optionally':
-    '参照する問い・気づきとストックは、それぞれ1件まで選べます。選択したストックを優先し、未選択なら問いの関連ストック1件を自動参照します。関連ストックが複数あれば1件を選択してください。要約・メモと取得済み本文を使います（長い資料は一部を参照）。獲得目標を入力するとそのまま使い、空欄なら参照資料からAIが推測します。「廟算八要素・取り組む予定の施策」も任意で入力できます。条件は記事本文から短く整理し、不明な項目と根拠のない施策は空欄にします。新しい活動やコメント・参考情報の注記は自動で追加しません。「プ譜を作成」で案を生成します。通常は1件の生成にAI呼び出し枠を4回分使用します。勝利条件の確認で修正が必要な場合は、1回だけ作り直し、追加で2回分使用します。エラーの再試行も利用枠を使います。',
+    '問い・気づきとストックをそれぞれ1件まで選びます。獲得目標は任意で、入力するとそのまま使い、空欄ならAIが資料から推測します。必要なら「廟算八要素・取り組む予定の施策」を補足し、「プ譜を作成」を押します。',
   'ui.user_manual.press_the_pufu_image_to_enlarge_it_pinch_or':
     'プ譜の画像を押すと、拡大表示できます。ピンチや＋・−で拡大縮小し、ドラッグで移動します。',
   'ui.user_manual.press_edit_at_the_image_s_lower_right_change':
