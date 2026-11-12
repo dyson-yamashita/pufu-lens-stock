@@ -358,7 +358,7 @@ export default function PufiFeedback({
                       disabled={busy || invalidSession || !!frozen.current}
                       onClick={() => submit(true)}
                     >
-                      {t('feedback.finish')}
+                      {t(draft.trim() || !followUp ? 'feedback.finish_send' : 'feedback.finish')}
                     </button>
                   </div>
                 </form>

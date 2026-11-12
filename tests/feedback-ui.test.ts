@@ -57,11 +57,11 @@ it('displays a gentle prompt after unacknowledged clicks and dismisses it for se
   await render();
   clicks();
   await advance();
-  expect(document.querySelector('.pufi-panel')?.textContent).toContain('ちょっと困った？');
+  expect(document.querySelector('.pufi-panel')?.textContent).toContain('操作でお困りですか？');
   expect(send).not.toHaveBeenCalled();
   await act(async () =>
     [...document.querySelectorAll('button')]
-      .find((button) => button.textContent === '大丈夫')!
+      .find((button) => button.textContent === '大丈夫です')!
       .click(),
   );
   expect(Number(local.get('pufi-until')) - Date.now()).toBe(7 * 86400000);
@@ -83,7 +83,7 @@ it('suppresses automatic prompts while busy or focused in an input, then waits u
   expect(document.querySelector('.pufi-panel')).toBeNull();
   Object.defineProperty(document, 'activeElement', { configurable: true, value: null });
   await advance();
-  expect(document.querySelector('.pufi-panel')?.textContent).toContain('ちょっと困った？');
+  expect(document.querySelector('.pufi-panel')?.textContent).toContain('操作でお困りですか？');
 });
 
 it('starts with detection off without consent and reacts to opt-out in another tab', async () => {

@@ -53,10 +53,10 @@ const receipt = (row: FeedbackRecord | null): FeedbackReceipt => {
 const questionText = (question: FeedbackQuestion, language: Language) =>
   language === 'en'
     ? {
-        operation: 'Which action was it?',
-        expected: 'What did you want to happen?',
-        actual: 'What happened then?',
-        steps: 'What did you do just before that?',
+        operation: 'Which action were you having trouble with?',
+        expected: 'What did you expect to happen?',
+        actual: 'What happened at that point?',
+        steps: 'Could you describe what you did just before that?',
       }[question]
     : feedbackQuestions[question];
 

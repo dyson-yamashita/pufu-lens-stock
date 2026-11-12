@@ -7,10 +7,10 @@ export type FeedbackReason = (typeof feedbackReasons)[number];
 export const feedbackQuestionSchema = z.enum(['operation', 'expected', 'actual', 'steps']);
 export type FeedbackQuestion = z.infer<typeof feedbackQuestionSchema>;
 export const feedbackQuestions = {
-  operation: 'どの操作だった？',
-  expected: 'どう動いてほしかった？',
-  actual: 'そのとき、どうなった？',
-  steps: 'その前は、何をしていた？',
+  operation: 'どの操作でお困りでしたか？',
+  expected: 'どのような動きを期待されていましたか？',
+  actual: 'そのとき、どのような状態になりましたか？',
+  steps: '直前に行っていた操作を教えていただけますか？',
 } as const;
 export const feedbackCategories = ['unresponsive', 'navigation', 'input', 'other'] as const;
 export const feedbackSchema = z.strictObject({

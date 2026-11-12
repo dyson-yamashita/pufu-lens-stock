@@ -5072,3 +5072,7 @@ article.pufu-list-item {
 .pufi-name img {
   clip-path: circle(45%);
 }
+
+.pufi-avatar[aria-expanded='true'] {
+  border-color: var(--primary);
+}

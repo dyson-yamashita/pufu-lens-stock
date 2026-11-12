@@ -135,7 +135,10 @@ it('asks at most two questions and saves a complete conversation with idempotent
     round: 2,
     detail: expect.stringContaining('再読込後に戻る'),
   });
-  expect(JSON.parse(row.conversation)).toContainEqual({ role: 'pufi', text: 'どの操作だった？' });
+  expect(JSON.parse(row.conversation)).toContainEqual({
+    role: 'pufi',
+    text: 'どの操作でお困りでしたか？',
+  });
   expect(JSON.parse(row.conversation)).toContainEqual({ role: 'user', text: '保存ボタンです' });
   expect(fetcher).not.toHaveBeenCalled();
 });
