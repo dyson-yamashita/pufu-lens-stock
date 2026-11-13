@@ -46,19 +46,68 @@ it('requires three repeated validation errors on one input, without adding the s
 });
 
 it.each(['operation', 'network'] as const)(
-  'counts repeated %s failures and expires in sixty seconds',
+  'counts repeated %s failures and expires in 120 seconds',
   (kind) => {
     let time = 100000;
     const d = new FeedbackDetector(() => time);
     d.enable(true);
     d.failure('request', kind, 'same');
-    time += 10000;
+    time += 90000;
     d.failure('request', kind, 'same');
     expect(d.evaluate().reasons).toEqual([{ type: `${kind}_repeat`, action: 'request' }]);
-    time += 50000;
+    time += 29999;
+    expect(d.evaluate().total).toBe(3);
+    time += 1;
     expect(d.evaluate().total).toBe(0);
   },
 );
+
+it('counts three validation errors over 90 seconds and expires the first at 120 seconds', () => {
+  let time = 100000;
+  const d = new FeedbackDetector(() => time);
+  d.enable(true);
+  d.validation('input', 'same');
+  time += 45000;
+  d.validation('input', 'same');
+  time += 45000;
+  d.validation('input', 'same');
+  expect(d.evaluate().total).toBe(3);
+  time += 29999;
+  expect(d.evaluate().total).toBe(3);
+  time += 1;
+  expect(d.evaluate().total).toBe(2);
+});
+
+it.each([
+  { span: 15999, detected: true },
+  { span: 16000, detected: false },
+])('counts four clicks only within 16 seconds: $span ms', ({ span, detected }) => {
+  let time = 100000;
+  const d = new FeedbackDetector(() => time);
+  d.enable(true);
+  d.click('control', 'same');
+  time += span / 3;
+  d.click('control', 'same');
+  time += span / 3;
+  d.click('control', 'same');
+  time = 100000 + span;
+  d.click('control', 'same');
+  time += 1000;
+  expect(d.evaluate().total).toBe(detected ? 3 : 0);
+});
+
+it('retains an unacknowledged click signal for 120 seconds after the last click', () => {
+  let time = 100000;
+  const d = new FeedbackDetector(() => time);
+  d.enable(true);
+  for (let i = 0; i < 4; i++) d.click('control', 'same');
+  time += 90000;
+  expect(d.evaluate().total).toBe(3);
+  time += 29999;
+  expect(d.evaluate().total).toBe(3);
+  time += 1;
+  expect(d.evaluate().total).toBe(0);
+});
 
 it('does not infer trouble from waiting, normal clicks, or a disabled session', () => {
   let time = 100000;

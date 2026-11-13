@@ -48,18 +48,38 @@ test('FEEDBACK-007 無反応のコントロールを全画面共通で検知す�
   fixture,
 }) => {
   await app.open(`/#project/${fixture.projectId}`);
-  // A local fixture creates a truly inert button; no production service is broken.
-  await browser.evaluate(() => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = 'E2E 無反応の操作';
-    document.querySelector('main')!.prepend(button);
-    return null;
+  await expect(screen.getByRole('heading', fixture.projectName, { exact: true })).toBeVisible();
+  // Hold background refreshes: their DOM updates acknowledge clicks as normal responses.
+  let releaseRefresh!: () => void;
+  const refresh = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
   });
-  for (let i = 0; i < 4; i++)
+  await browser.route(`${fixture.url}/api/v1/projects`, async (route) => {
+    await refresh;
+    await route.continue();
+  });
+  try {
+    // A local fixture creates a truly inert button; no production service is broken.
+    await browser.evaluate(() => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = 'E2E 無反応の操作';
+      document.querySelector('main')!.prepend(button);
+      return null;
+    });
+    for (let i = 0; i < 3; i++)
+      await screen.getByRole('button', 'E2E 無反応の操作', { exact: true }).click();
+    await expect(browser.locator('.pufi-prompt')).toHaveCount(0);
+    // The fourth click is outside the former 8-second window, within the new 16-second window.
+    await browser.evaluate(
+      () => new Promise<null>((resolve) => setTimeout(() => resolve(null), 9000)),
+    );
     await screen.getByRole('button', 'E2E 無反応の操作', { exact: true }).click();
-  await expect(browser.locator('.pufi-prompt')).toContainText('操作でお困りですか？');
-  await screen.getByRole('button', '大丈夫です', { exact: true }).click();
+    await expect(browser.locator('.pufi-prompt')).toContainText('操作でお困りですか？');
+    await screen.getByRole('button', '大丈夫です', { exact: true }).click();
+  } finally {
+    releaseRefresh();
+  }
 });
 
 test('FEEDBACK-008 ネイティブ入力エラーの反復を検知し入力欄から離れてから案内する', async ({

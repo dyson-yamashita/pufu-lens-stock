@@ -34,7 +34,7 @@ export class FeedbackDetector {
     const time = this.clock();
     this.clicks.set(key, {
       action,
-      times: [...(this.clicks.get(key)?.times ?? []).filter((t) => time - t < 8000), time].slice(
+      times: [...(this.clicks.get(key)?.times ?? []).filter((t) => time - t < 16000), time].slice(
         -4,
       ),
     });
@@ -60,7 +60,7 @@ export class FeedbackDetector {
     const time = this.clock(),
       id = `${type}:${key}`;
     const times = [
-      ...(this.failures.get(id)?.times ?? []).filter((t) => time - t < 60000),
+      ...(this.failures.get(id)?.times ?? []).filter((t) => time - t < 120000),
       time,
     ].slice(type === 'validation_repeat' ? -3 : -2);
     this.failures.set(id, { type, action, key, times });
@@ -70,17 +70,17 @@ export class FeedbackDetector {
     const time = this.clock();
     for (const [key, clicks] of this.clicks) {
       const last = clicks.times.at(-1)!;
-      if (clicks.times.length === 4 && time - last >= 1000 && time - last < 60000) {
+      if (clicks.times.length === 4 && time - last >= 1000 && time - last < 120000) {
         this.signals.set(key, { type: 'rage_click', action: clicks.action, time: last, score: 3 });
         this.clicks.delete(key);
         this.bound(this.signals);
-      } else if (time - last >= 60000) this.clicks.delete(key);
+      } else if (time - last >= 120000) this.clicks.delete(key);
     }
     for (const [key, signal] of this.signals)
-      if (time - signal.time >= 60000) this.signals.delete(key);
+      if (time - signal.time >= 120000) this.signals.delete(key);
     const signals = [...this.signals.values()];
     for (const [id, failure] of this.failures) {
-      failure.times = failure.times.filter((t) => time - t < 60000);
+      failure.times = failure.times.filter((t) => time - t < 120000);
       if (!failure.times.length) {
         this.failures.delete(id);
         continue;
