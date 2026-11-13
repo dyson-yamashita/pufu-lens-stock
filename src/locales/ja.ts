@@ -292,6 +292,7 @@ export const ja: Record<string, string> = {
   'ui.app.grow_your_interests_and_knowledge': '関心と知識が、少しずつ育つ。',
   'ui.app.organize_themes_and_questions_from_saved_articles':
     '保存した記事から、テーマと論点を整理。',
+  'ui.app.project_heading_suffix': 'の{{value0}}',
   'ui.app.settings_for_value': '{{value0}}の設定',
   'ui.app.project_settings': 'プロジェクト設定',
   'ui.app.questions_insights_in_value': '{{value0}}の問い・気づき',

@@ -296,6 +296,7 @@ export const en: Record<string, string> = {
   'ui.app.grow_your_interests_and_knowledge': 'Grow your interests and knowledge.',
   'ui.app.organize_themes_and_questions_from_saved_articles':
     'Organize themes and questions from saved articles.',
+  'ui.app.project_heading_suffix': ' — {{value0}}',
   'ui.app.settings_for_value': 'Settings for {{value0}}',
   'ui.app.project_settings': 'Project settings',
   'ui.app.questions_insights_in_value': 'Questions & insights in {{value0}}',
