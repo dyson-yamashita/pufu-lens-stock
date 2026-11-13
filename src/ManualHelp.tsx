@@ -4,6 +4,7 @@ import type { FeedbackMessage, FeedbackInput } from '../shared/feedback';
 import type { Language } from '../shared/locale';
 import { translateUi } from './i18n';
 import { ApiError } from './api';
+import { revealManualSection } from './manual-navigation';
 import { manualTree, selectManualBranch, type ManualNode } from './manual-search';
 
 type HelpMessage = FeedbackMessage & { truncated?: boolean };
@@ -16,6 +17,7 @@ export default function ManualHelp({
   onClose,
   onEscalate,
   onInvalidSession,
+  onManualNavigate,
 }: {
   owner: string;
   language: Language;
@@ -27,6 +29,7 @@ export default function ManualHelp({
     history: FeedbackMessage[],
   ) => void;
   onInvalidSession: () => void;
+  onManualNavigate?: () => void;
 }) {
   const t = (key: string) => translateUi(language, key);
   const [messages, setMessages] = useState<HelpMessage[]>(initialMessages);
@@ -46,11 +49,13 @@ export default function ManualHelp({
   }, [messages, busy]);
   const query = useRef('');
   const controller = useRef<AbortController | null>(null);
+  const navigationCleanup = useRef<(() => void) | null>(null);
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
       controller.current?.abort();
+      navigationCleanup.current?.();
     };
   }, []);
   const working = (value: boolean) => {
@@ -205,7 +210,29 @@ export default function ManualHelp({
           </p>
         ))}
         {answer && (
-          <a className="pufi-manual-link" href={answer.href} target="_blank" rel="noreferrer">
+          <a
+            className="pufi-manual-link"
+            href={answer.href}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(event) => {
+              if (
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey ||
+                event.defaultPrevented
+              )
+                return;
+              navigationCleanup.current?.();
+              navigationCleanup.current = revealManualSection(answer.href);
+              if (navigationCleanup.current) {
+                event.preventDefault();
+                onManualNavigate?.();
+              }
+            }}
+          >
             {t('feedback.help_open_manual')}
           </a>
         )}

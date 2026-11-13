@@ -342,13 +342,15 @@
       "src/ManualHelp.tsx",
       "src/manual-search.ts",
       "src/UserManual.tsx",
-      "server/manual-help.ts"
+      "server/manual-help.ts",
+      "src/manual-navigation.ts"
     ],
     "aspects": [
       "ログイン済みマニュアルだけに常設文とアイコン。設定UIなし、両幅・明暗で左右配置を撮影。未ログインは009で確認",
       "モデルの選択結果だけをHTTP fixtureに置き換えて、実際のマニュアル本文・リンク・役立ったかの確認を表示。未解決後は検索回数が増えず、具体的な未解決内容をヒアリング",
       "初回検索は会話保存なし。ヒアリングの送信はHTTP fixtureでscreenと内容を確認し、D1実保存はVitest。デモ利用者の日次3会話制限を変更・迂回しない",
-      "配信用マニュアルHTMLのmodule起動後に本人を確認し、常設入口から会話できる"
+      "配信用マニュアルHTMLのmodule起動後に本人を確認し、常設入口から会話できる",
+      "マニュアル内の該当リンクは同じdocumentのままスクロール・折りたたみ節を開き一時強調。会話をたたんで読み、「会話に戻る」で同じ案内と解決確認を再開。追加検索なし"
     ]
   },
   {
