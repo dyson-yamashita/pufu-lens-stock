@@ -1,9 +1,43 @@
-import { buildPushPayload } from '@block65/webcrypto-web-push';
+import { encryptNotification, vapidHeaders } from '@block65/webcrypto-web-push';
 import { announcementHref } from '../shared/announcements';
 import { notificationAnnouncements, readAnnouncement, type AnnouncementRow } from './announcements';
 import { resolveLanguage } from '../shared/locale';
 import type { Env } from './env';
 import { allowedPushEndpoint, pushConfigured } from './push';
+
+// Only fixed labels may cross the exception -> log boundary. Never stringify errors,
+// inspect messages/stacks/causes, or trust a custom name (including throwing getters).
+function safeErrorClass(error: unknown): string {
+  try {
+    const name = error && typeof error === 'object' && 'name' in error ? error.name : undefined;
+    switch (name) {
+      case 'Error':
+      case 'TypeError':
+      case 'RangeError':
+      case 'SyntaxError':
+      case 'InvalidCharacterError':
+      case 'DataError':
+      case 'InvalidAccessError':
+      case 'NotSupportedError':
+      case 'OperationError':
+      case 'AbortError':
+      case 'TimeoutError':
+        return name;
+      default:
+        return 'UnknownError';
+    }
+  } catch {
+    return 'UnknownError';
+  }
+}
+
+type PushFailureStage =
+  | 'endpoint_validation'
+  | 'vapid_signing'
+  | 'payload_encryption'
+  | 'subscription_recheck'
+  | 'fetch'
+  | 'response_cleanup';
 
 /** Bound fan-out and send work so existing maintenance retains its time budget. */
 export async function deliverAnnouncements(env: Env): Promise<void> {
@@ -72,30 +106,47 @@ export async function deliverAnnouncements(env: Env): Promise<void> {
         .first<{ attempts: number }>();
       if (!claim) return;
       let status = 0;
+      let stage: PushFailureStage = 'endpoint_validation';
       try {
         if (!allowedPushEndpoint(row.endpoint)) throw new Error('Invalid endpoint');
+        const subscription = {
+          endpoint: row.endpoint,
+          expirationTime: null,
+          keys: { p256dh: row.p256dh, auth: row.auth },
+        };
+        // Use the library's public primitives in the same order as buildPushPayload,
+        // so signing and encryption failures can be distinguished without exposing data.
+        stage = 'vapid_signing';
+        const { headers } = await vapidHeaders(subscription, {
+          publicKey: env.VAPID_PUBLIC_KEY!,
+          privateKey: env.VAPID_PRIVATE_KEY!,
+          subject: env.VAPID_SUBJECT!,
+        });
+        stage = 'payload_encryption';
         const text = item[resolveLanguage(row.language)];
-        const payload = await buildPushPayload(
-          {
-            data: JSON.stringify({
+        const body = await encryptNotification(
+          subscription,
+          new TextEncoder().encode(
+            JSON.stringify({
               title: text.title,
               body: text.summary,
               tag: `announcement-${item.id}`,
               url: announcementHref(item.id),
             }),
-            options: { ttl: 86400 },
-          },
-          {
-            endpoint: row.endpoint,
-            expirationTime: null,
-            keys: { p256dh: row.p256dh, auth: row.auth },
-          },
-          {
-            publicKey: env.VAPID_PUBLIC_KEY!,
-            privateKey: env.VAPID_PRIVATE_KEY!,
-            subject: env.VAPID_SUBJECT!,
-          },
+          ),
         );
+        const payload = {
+          method: 'post',
+          headers: {
+            ...headers,
+            ttl: '86400',
+            'content-encoding': 'aes128gcm',
+            'content-length': body.byteLength.toString(),
+            'content-type': 'application/octet-stream',
+          },
+          body,
+        };
+        stage = 'subscription_recheck';
         // Check consent again immediately before the external request (unsubscribe/logout may have raced).
         const valid = await env.DB.prepare(
           'SELECT p.id FROM push_subscriptions p JOIN sessions s ON s.token_hash=p.session_hash JOIN announcements a ON a.id=? WHERE p.id=? AND s.expires_at>? AND a.notify=1 AND a.notify_at=? AND a.published_at<=?',
@@ -109,16 +160,27 @@ export async function deliverAnnouncements(env: Env): Promise<void> {
           )
           .first();
         if (!valid) return;
+        stage = 'fetch';
         const response = await fetch(row.endpoint, {
           ...payload,
           redirect: 'error',
           signal: AbortSignal.timeout(10000),
         });
         status = response.status;
+        stage = 'response_cleanup';
         await response.body?.cancel();
-      } catch {
-        // Never log endpoint, credentials, provider body or encrypted payload.
-        console.warn('announcement_push_transport_failed');
+      } catch (error) {
+        // Preserve status (including a response received before cleanup failed) and retry semantics.
+        // Never log endpoint, user/subscription IDs, credentials, provider body or payload.
+        console.warn(
+          JSON.stringify({
+            event: 'announcement_push_transport_failed',
+            stage,
+            error_class: safeErrorClass(error),
+            status,
+            attempt: claim.attempts,
+          }),
+        );
       }
       if (status === 404 || status === 410) {
         await env.DB.prepare('DELETE FROM push_subscriptions WHERE id=?')
