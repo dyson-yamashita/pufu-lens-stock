@@ -48,7 +48,9 @@ test('FEEDBACK-007 無反応のコントロールを全画面共通で検知す�
   fixture,
 }) => {
   await app.open(`/#project/${fixture.projectId}`);
-  await expect(screen.getByRole('heading', fixture.projectName, { exact: true })).toBeVisible();
+  await expect(
+    screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
+  ).toBeVisible();
   // Hold background refreshes: their DOM updates acknowledge clicks as normal responses.
   let releaseRefresh!: () => void;
   const refresh = new Promise<void>((resolve) => {

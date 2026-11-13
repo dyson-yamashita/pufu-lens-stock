@@ -1002,30 +1002,27 @@ export default function App() {
         onLogout={() => setUser(null)}
       />
     );
+  const projectHeading =
+    selected && ['stocks', 'questions', 'pufus', 'memory', 'settings'].includes(route.view);
+  const HeadingIcon =
+    (
+      {
+        stocks: Layers,
+        questions: CircleHelp,
+        pufus: Network,
+        memory: Sparkles,
+        settings: Settings,
+        profile: UserRound,
+        mcp: Layers,
+        shortcuts: KeyRound,
+      } as Partial<Record<Route['view'], typeof Layers>>
+    )[route.view] ?? BookOpen;
   const heading =
     route.view === 'settings'
-      ? selected
-        ? t('ui.app.settings_for_value', { value0: selected.name })
-        : t('ui.app.project_settings')
-      : route.view === 'questions'
-        ? selected
-          ? t('ui.app.questions_insights_in_value', { value0: selected.name })
-          : t('ui.app.all_questions_insights')
-        : route.view === 'pufus'
-          ? selected
-            ? t('ui.app.pufu_in_value', { value0: selected.name })
-            : t('ui.app.all_pufu')
-          : route.view === 'profile'
-            ? t('ui.app.profile')
-            : route.view === 'mcp'
-              ? t('ui.app.integrations')
-              : route.view === 'shortcuts'
-                ? t('ui.app.shortcut_integration')
-                : route.view === 'memory'
-                  ? selected
-                    ? t('ui.app.memory_for_value', { value0: selected.name })
-                    : t('ui.app.your_memory')
-                  : (selected?.name ?? t('ui.app.all_stocks'));
+      ? t('ui.app.project_settings')
+      : route.view === 'shortcuts'
+        ? t('ui.app.shortcut_integration')
+        : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
   const questionListProject = projects.find(
     (project) => project.id === questionListContext.projectId,
   );
@@ -1314,7 +1311,39 @@ export default function App() {
           {!detailFlow && (
             <header className="page-header">
               <div>
-                <h1>{heading}</h1>
+                <h1
+                  className="section-heading"
+                  aria-label={
+                    projectHeading
+                      ? `${selected.name}${t('ui.app.project_heading_suffix', { value0: headerLabels()[route.view] })}`
+                      : undefined
+                  }
+                >
+                  {!projectHeading && (
+                    <HeadingIcon
+                      className={
+                        route.view === 'pufus'
+                          ? 'section-heading-icon pufu-icon'
+                          : 'section-heading-icon'
+                      }
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="section-heading-text">
+                    {projectHeading ? (
+                      <>
+                        <span>{selected.name}</span>
+                        <span className="section-heading-suffix">
+                          {t('ui.app.project_heading_suffix', {
+                            value0: headerLabels()[route.view],
+                          })}
+                        </span>
+                      </>
+                    ) : (
+                      heading
+                    )}
+                  </span>
+                </h1>
                 {route.view !== 'profile' && (
                   <p>
                     {route.view === 'questions'
@@ -1406,7 +1435,7 @@ export default function App() {
                 aria-pressed={route.view === 'stocks'}
                 onClick={() => navigate('stocks', route.projectId)}
               >
-                <Bookmark size={16} aria-hidden="true" />
+                <Layers size={16} aria-hidden="true" />
                 {t('ui.app.stocks')}
               </button>
               <button
