@@ -1311,7 +1311,14 @@ export default function App() {
           {!detailFlow && (
             <header className="page-header">
               <div>
-                <h1 className="section-heading">
+                <h1
+                  className="section-heading"
+                  aria-label={
+                    projectHeading
+                      ? `${selected.name}${t('ui.app.project_heading_suffix', { value0: headerLabels()[route.view] })}`
+                      : undefined
+                  }
+                >
                   <HeadingIcon
                     className={
                       route.view === 'pufus'
