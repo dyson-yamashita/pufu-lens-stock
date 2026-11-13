@@ -14,6 +14,7 @@ import { api, ApiError, createRequestId, send } from './api';
 import { useLanguage, translateUi, legalHref } from './i18n';
 import type { Language } from '../shared/locale';
 import ManualHelp from './ManualHelp';
+import { feedbackClosingTopic } from './feedback-closing';
 
 export default function PufiFeedback({
   detector,
@@ -60,6 +61,7 @@ export default function PufiFeedback({
   const [error, setError] = useState('');
   const requestId = useRef('');
   const frozen = useRef<FeedbackInput | null>(null);
+  const submittedMessages = useRef<string[]>([]);
   const sending = useRef(false);
   const generation = useRef(0);
   const frequency = useRef<FeedbackFrequency | null>(null);
@@ -122,6 +124,7 @@ export default function PufiFeedback({
     const version = ++generation.current;
     requestId.current = createRequestId();
     frozen.current = null;
+    submittedMessages.current = [];
     setCategory(null);
     setHelpEscalated(false);
     setManualReading(false);
@@ -178,6 +181,13 @@ export default function PufiFeedback({
         setError(t('feedback.wait_retry'));
         return;
       }
+      submittedMessages.current.push(
+        ...[
+          frozen.current.manual_context?.question,
+          frozen.current.detail,
+          frozen.current.answer,
+        ].filter((text): text is string => Boolean(text)),
+      );
       frozen.current = null;
       setDraft('');
       setRound(result.round);
@@ -189,7 +199,11 @@ export default function PufiFeedback({
         ]);
       } else {
         setDone(true);
-        setMessages((current) => [...current, { role: 'pufi', text: t('feedback.thanks') }]);
+        const topic = feedbackClosingTopic(submittedMessages.current);
+        const thanks = topic
+          ? t('feedback.thanks_topic', { topic: t(`feedback.topic_${topic}`) })
+          : t('feedback.thanks');
+        setMessages((current) => [...current, { role: 'pufi', text: thanks }]);
       }
     } catch (error) {
       const changed = error instanceof ApiError && [401, 409, 410].includes(error.status);
