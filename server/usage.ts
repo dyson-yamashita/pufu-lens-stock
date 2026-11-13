@@ -31,6 +31,8 @@ export function reserveOperation(
   return env.DB.prepare(
     `INSERT OR IGNORE INTO ai_operations (id,user_id,kind)
     SELECT ?,?,? WHERE
+    EXISTS (SELECT 1 FROM users WHERE id=? AND onboarding_completed_at IS NOT NULL)
+    AND
     (SELECT COUNT(*) FROM ai_operations WHERE user_id=? AND kind=? AND created_at>?) < ?
     AND (SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
       WHERE o.user_id=? AND j.status NOT IN ('done','failed')
@@ -42,6 +44,7 @@ export function reserveOperation(
     job.id,
     job.user_id,
     kind,
+    job.user_id,
     job.user_id,
     kind,
     windowStart(),
@@ -124,7 +127,8 @@ export async function admitJob(env: Env, job: Job): Promise<boolean> {
   await env.DB.batch([reserveOperation(env, job)]);
   return Boolean(
     await env.DB.prepare(
-      `SELECT id FROM ai_operations WHERE id=? AND (? != 'question' OR (
+      `SELECT o.id FROM ai_operations o JOIN users u ON u.id=o.user_id
+        WHERE o.id=? AND u.onboarding_completed_at IS NOT NULL AND (? != 'question' OR (
         SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
         WHERE o.user_id=? AND j.id!=? AND j.status NOT IN ('done','failed')
         AND NOT (j.kind='question' AND j.status='pending')) < ?)`,

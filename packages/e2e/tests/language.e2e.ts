@@ -45,6 +45,15 @@ test('LANG-001 初回言語選択と再読込・別ブラウザー状態・設�
   await browser.locator('.demo-login').click();
   await expect(browser.locator('#onboarding-language')).toHaveValue('en');
   await expect(browser.locator('html')).toHaveAttribute('lang', 'en');
+  const pendingCookies = await browser.cookies();
+  const pendingCookie = pendingCookies.map(({ name, value }) => `${name}=${value}`).join('; ');
+  const pendingIdentity = await fetch(`${url}/api/v1/me`, { headers: { Cookie: pendingCookie } });
+  expect(pendingIdentity.status).toBe(200);
+  expect(await pendingIdentity.json()).toMatchObject({ user: { onboarding_completed_at: null } });
+  for (const path of ['/api/v1/projects', '/api/v1/stocks?q=test&mode=semantic']) {
+    const denied = await fetch(`${url}${path}`, { headers: { Cookie: pendingCookie } });
+    expect(denied.status).toBe(403);
+  }
   await browser.locator('#onboarding-name').fill('Language test user');
   await browser.locator('#onboarding-terms').check();
   await browser.locator('#onboarding-privacy').check();

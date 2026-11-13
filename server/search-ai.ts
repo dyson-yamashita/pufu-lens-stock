@@ -1,6 +1,7 @@
 import type { Env, EmbeddingAI } from './env';
 import { limits } from './usage';
 import { neuronMicros, saveAiUsage } from './ai-neurons';
+import { requireRegisteredAiUser } from './ai-access';
 
 export const embeddingModel = '@cf/baai/bge-m3' as const;
 export const embeddingDimensions = 1024;
@@ -46,6 +47,7 @@ export async function embedSearchText(
   kind: 'query' | 'index',
 ): Promise<number[]> {
   if (!env.AI) throw new SearchError('not_configured');
+  await requireRegisteredAiUser(env, userId);
   const id = 'embedding-' + crypto.randomUUID();
   const category = 'search-' + kind;
   const window = new Date(Date.now() - 86400000).toISOString();
@@ -57,7 +59,7 @@ export async function embedSearchText(
   const [reserved] = await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO ai_calls(id,job_id,user_id,status)
-      SELECT ?,?,?,'running' WHERE EXISTS(SELECT 1 FROM users WHERE id=?)
+      SELECT ?,?,?,'running' WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND onboarding_completed_at IS NOT NULL)
       AND (SELECT COUNT(*) FROM ai_attempts WHERE user_id=? AND created_at>?)<?
       AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running')<?
       AND (SELECT COUNT(*) FROM ai_calls c JOIN ai_attempts a ON a.id=c.id
