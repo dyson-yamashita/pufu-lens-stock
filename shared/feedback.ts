@@ -46,6 +46,24 @@ export const feedbackScreens = [
 ] as const;
 export type FeedbackScreen = (typeof feedbackScreens)[number];
 export const feedbackSchema = z.strictObject({
+  // Accept older clients, but store only a bounded path without query/hash.
+  page_path: z
+    .string()
+    .max(4096)
+    .transform((value) => value.split(/[?#]/, 1)[0])
+    .pipe(
+      z
+        .string()
+        .max(2048)
+        .regex(/^\/(?![/\\])[^\\\s]*$/),
+    )
+    .nullable()
+    .optional(),
+  viewport: z
+    .string()
+    .regex(/^[1-9]\d{0,4}x[1-9]\d{0,4}$/)
+    .nullable()
+    .optional(),
   request_id: z.uuid(),
   owner_id: z.string().min(1).max(100),
   round: z.number().int().min(0).max(2).default(0),

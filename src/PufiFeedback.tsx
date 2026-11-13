@@ -155,6 +155,8 @@ export default function PufiFeedback({
         owner_id: owner,
         request_id: requestId.current,
         screen,
+        page_path: window.location.pathname,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
         language,
         ...(helpDetail?.manual_context ? { manual_context: helpDetail.manual_context } : {}),
         category,

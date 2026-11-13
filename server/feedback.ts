@@ -18,6 +18,14 @@ import { reasoningOptions, structuredOutput } from './ai-model';
 import { meteredOperation } from './ai-neurons';
 import { resolveLanguage, type Language } from '../shared/locale';
 
+// UA is used only in memory; desktop-mode iPads cannot reliably be distinguished from Macs.
+function deviceType(ua: string | undefined): 'desktop' | 'mobile' | 'tablet' | null {
+  if (!ua?.trim()) return null;
+  if (/iPad|Tablet|Kindle|Silk|PlayBook/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua)))
+    return 'tablet';
+  return /Mobi|iPhone|iPod|Android|Windows Phone/i.test(ua) ? 'mobile' : 'desktop';
+}
+
 const assessmentSchema = z.strictObject({
   follow_up: feedbackQuestionSchema.nullable(),
   concrete: z.boolean(),
@@ -261,11 +269,12 @@ export function feedbackApp() {
       input: '入力しづらい',
       other: '操作についての相談',
     }[input.category];
+    const country = c.req.raw.cf?.country;
     const reservations = await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM feedback_global_usage WHERE created_at<=?').bind(start),
       c.env.DB.prepare(
-        `INSERT OR IGNORE INTO usability_feedback(id,user_id,request_id,screen,language,category,detail,reasons,conversation,title,summary,created_at,updated_at)
-       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM usability_feedback WHERE user_id=? AND created_at>?)<3
+        `INSERT OR IGNORE INTO usability_feedback(id,user_id,request_id,screen,language,category,detail,reasons,conversation,title,summary,created_at,updated_at,page_path,device_type,country,viewport)
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM usability_feedback WHERE user_id=? AND created_at>?)<3
        AND (SELECT COUNT(*) FROM feedback_global_usage WHERE created_at>?)<60`,
       ).bind(
         id,
@@ -281,6 +290,12 @@ export function feedbackApp() {
         input.detail,
         date,
         date,
+        input.page_path ?? null,
+        deviceType(c.req.header('User-Agent')),
+        typeof country === 'string' && /^[A-Z]{2}$/.test(country) && country !== 'XX'
+          ? country
+          : null,
+        input.viewport ?? null,
         userId,
         start,
         start,

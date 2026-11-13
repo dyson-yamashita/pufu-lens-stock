@@ -203,23 +203,30 @@ export async function testApp(
       headers?: Record<string, string>;
       user?: string;
       host?: string;
+      cf?: { country: string };
     } = {},
   ) => {
-    const response = await app.request(
-      `${options.host ?? env.APP_URL}${path}`,
-      {
-        method: options.method ?? 'GET',
-        headers: {
-          Cookie: `stock_session=${options.user ?? 'alice'}-session`,
-          Origin: env.APP_URL,
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    const req = new Request(`${options.host ?? env.APP_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers: {
+        Cookie: `stock_session=${options.user ?? 'alice'}-session`,
+        Origin: env.APP_URL,
+        'Content-Type': 'application/json',
+        // Browser JSON requests carry Content-Length. Avoid Node's Request clone
+        // dropping the synthetic Workers cf metadata in Hono's streaming body limiter.
+        ...(options.cf && options.body !== undefined
+          ? {
+              'Content-Length': String(
+                new TextEncoder().encode(JSON.stringify(options.body)).length,
+              ),
+            }
+          : {}),
+        ...options.headers,
       },
-      env,
-      ctx,
-    );
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+    if (options.cf) Object.defineProperty(req, 'cf', { value: options.cf });
+    const response = await app.fetch(req, env, ctx);
     await drain();
     return response;
   };
