@@ -78,7 +78,8 @@ export async function syncSearchIndex(env: Env): Promise<void> {
   const entries = await env.DB.prepare(
     `SELECT id,stock_id,user_id,current,touched,write_pending FROM stock_search_entries e
     WHERE (e.current=0 OR (e.ready=0 AND EXISTS(SELECT 1 FROM stocks s JOIN articles a ON a.id=s.article_id
-      WHERE s.id=e.stock_id AND s.user_id=e.user_id AND a.status IN ('ready','failed'))))
+      JOIN users u ON u.id=s.user_id
+      WHERE s.id=e.stock_id AND s.user_id=e.user_id AND u.onboarding_completed_at IS NOT NULL AND a.status IN ('ready','failed'))))
     AND next_attempt_at<=? AND (lease_until IS NULL OR lease_until<=?)
     ORDER BY current,created_at,id LIMIT 10`,
   )
@@ -89,7 +90,9 @@ export async function syncSearchIndex(env: Env): Promise<void> {
     const lease = new Date(Date.now() + 120000).toISOString();
     const claim = await env.DB.prepare(
       `UPDATE stock_search_entries SET lease_until=? WHERE id=?
-      AND (current=0 OR ready=0) AND next_attempt_at<=? AND (lease_until IS NULL OR lease_until<=?) RETURNING current,touched,write_pending`,
+      AND (current=0 OR (ready=0 AND EXISTS(SELECT 1 FROM users u
+        WHERE u.id=stock_search_entries.user_id AND u.onboarding_completed_at IS NOT NULL)))
+      AND next_attempt_at<=? AND (lease_until IS NULL OR lease_until<=?) RETURNING current,touched,write_pending`,
     )
       .bind(lease, entry.id, at, at)
       .first<Pick<Entry, 'current' | 'touched' | 'write_pending'>>();

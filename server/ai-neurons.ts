@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
 import type { Env } from './env';
+import { requireRegisteredAiUser } from './ai-access';
 
 // Neurons per million tokens, from the official pricing table on 2026-11-12.
 // https://developers.cloudflare.com/workers-ai/platform/pricing/
@@ -78,12 +79,14 @@ export async function saveAiUsage(
     console.error('ai_usage_persistence_failed', { attempt });
   }
 }
-export function meteredOperation<T>(
+export async function meteredOperation<T>(
   env: Env,
   userId: string,
   attempt: string,
   operation: () => Promise<T>,
 ): Promise<T> {
+  // Workflow再開・HTTPの認証後も、実行する本人の最新の登録状態を確認する。
+  await requireRegisteredAiUser(env, userId);
   const meter: Meter = { micros: 0, complete: true, models: new Set() };
   return meters.run(meter, async () => {
     try {

@@ -9,7 +9,10 @@ it('実際のWorkersランタイムで非同期の計測コンテキストを隔
       contents: `import { meteredOperation, observeAiUsage } from './server/ai-neurons';
         export default { async fetch() {
           const rows = [];
-          const env = { DB: { prepare: () => ({ bind: (...values) => ({ run: async () => rows.push(values) }) }) } };
+          const env = { DB: { prepare: () => ({ bind: (...values) => ({
+            first: async () => ({ id: values[0] }),
+            run: async () => rows.push(values),
+          }) }) } };
           const model = '@cf/google/gemma-4-26b-a4b-it';
           const run = (id, tokens) => meteredOperation(env, id, id, async () => {
             await new Promise(resolve => setTimeout(resolve, id === 'alice' ? 5 : 1));
