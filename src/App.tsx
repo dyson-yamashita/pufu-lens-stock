@@ -1319,14 +1319,16 @@ export default function App() {
                       : undefined
                   }
                 >
-                  <HeadingIcon
-                    className={
-                      route.view === 'pufus'
-                        ? 'section-heading-icon pufu-icon'
-                        : 'section-heading-icon'
-                    }
-                    aria-hidden="true"
-                  />
+                  {!projectHeading && (
+                    <HeadingIcon
+                      className={
+                        route.view === 'pufus'
+                          ? 'section-heading-icon pufu-icon'
+                          : 'section-heading-icon'
+                      }
+                      aria-hidden="true"
+                    />
+                  )}
                   <span className="section-heading-text">
                     {projectHeading ? (
                       <>
