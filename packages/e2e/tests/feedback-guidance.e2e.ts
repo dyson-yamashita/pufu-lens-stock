@@ -188,6 +188,44 @@ test('FEEDBACK-010 ログイン方法の短い質問に手順を直接回答す�
   expect(requests[0].choices[0].preview).toContain('Googleでログイン');
   expect(reports).toBe(0);
   await app.screenshot('pufi-login-answer');
+  const showAnswer = screen.getByRole('button', '回答を表示する', { exact: true });
+  await expect(showAnswer).toHaveAttribute('aria-expanded', 'false');
+  await showAnswer.click();
+  await expect(browser.locator('.pufi-thread')).toContainText(
+    '完了するまでは、再度ログインしても登録画面が表示されます。',
+  );
+  await expect(screen.getByRole('button', '折りたたむ', { exact: true })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  expect(
+    await browser.evaluate(() => {
+      const thread = document.querySelector('.pufi-thread')!;
+      const answer = [...thread.querySelectorAll('.pufi-message-pufi')].find((node) =>
+        node.textContent?.startsWith('トップページの「Googleでログイン」'),
+      )!;
+      return answer.getBoundingClientRect().top >= thread.getBoundingClientRect().top - 1;
+    }),
+  ).toBe(true);
+  expect(requests.length).toBe(2);
+  expect(reports).toBe(0);
+  for (const theme of ['light', 'dark']) {
+    await browser.evaluate(async (value) => {
+      window.pufuTheme.setPreference(value as ThemePreference);
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => Number.isFinite(animation.effect?.getComputedTiming().endTime))
+          .map((animation) => animation.finished.catch(() => undefined)),
+      );
+      return null;
+    }, theme);
+    await app.screenshot(`pufi-full-answer-${theme}`);
+  }
+
+  await screen.getByRole('button', '折りたたむ', { exact: true }).click();
+  await expect(showAnswer).toHaveAttribute('aria-expanded', 'false');
+
   await screen.getByRole('button', '解決しました', { exact: true }).click();
   await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
   expect(reports).toBe(0);

@@ -63,6 +63,11 @@ it('shows actual manual text and a link, then hears the unresolved part without 
       .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
   );
   expect(document.body.textContent).toContain(leaf.text);
+  expect(
+    [...document.querySelectorAll('button')].some(
+      (button) => button.textContent === '回答を表示する',
+    ),
+  ).toBe(false);
   expect(document.querySelector('a')?.getAttribute('href')).toBe(leaf.href);
   expect(document.body.textContent).toContain('お役に立ちましたか？');
   await press('解決しませんでした');
@@ -107,8 +112,25 @@ it('keeps the beginning of a long answer concise and links to the full procedure
   const answer = [...document.querySelectorAll('.pufi-message-pufi')].find((node) =>
     node.textContent?.startsWith('トップページ'),
   )!;
-  expect(answer.textContent).toBe(
+  expect(answer.textContent).toContain(
     'トップページの「Googleでログイン」を押します。Googleアカウントを選びます。…',
   );
+  await press('回答を表示する');
+  expect(answer.textContent).toContain(long.text);
+  expect(document.querySelector('button[aria-expanded="true"]')?.textContent).toBe('折りたたむ');
+  await press('折りたたむ');
+  expect(answer.textContent).not.toContain('初回は利用規約を確認してください。');
+  await press('回答を表示する');
+  await press('解決しませんでした');
+  expect(answer.textContent).toContain(long.text);
+  expect(selectManualBranch).toHaveBeenCalledTimes(1);
+  expect(escalate).not.toHaveBeenCalled();
+  await enter('まだ解決していません');
+  await act(async () =>
+    document
+      .querySelector('form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })),
+  );
+  expect(escalate.mock.calls[0][1]).toContainEqual({ role: 'pufi', text: long.text });
   expect(document.querySelector('a')?.getAttribute('href')).toBe(long.href);
 });
