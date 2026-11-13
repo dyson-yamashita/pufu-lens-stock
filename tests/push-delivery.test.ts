@@ -1,11 +1,15 @@
+import * as webPush from '@block65/webcrypto-web-push';
 import { afterEach, expect, it, vi } from 'vitest';
 import { testApp } from './helpers';
 import { deliverAnnouncements } from '../server/push-delivery';
 import { announcementSchema, type Announcement } from '../shared/announcements';
 import { testAnnouncement, saveAnnouncement } from './announcement-fixture';
 
+vi.mock('@block65/webcrypto-web-push', { spy: true });
+
 let app: Awaited<ReturnType<typeof testApp>>;
 afterEach(async () => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await app?.dispose();
   app = undefined!;
@@ -143,4 +147,137 @@ it('10件を超える通知でも完了済みの記事が後続記事の配信�
   expect(outgoing).toHaveBeenCalledTimes(10);
   await deliverAnnouncements(app.env);
   expect(outgoing).toHaveBeenCalledTimes(11);
+});
+
+const sensitive = 'https://web.push.apple.com/secret-user-token private-key secret-body';
+
+it.each([
+  ['endpoint_validation', 'Error'],
+  ['vapid_signing', 'DataError'],
+  ['payload_encryption', 'OperationError'],
+  ['subscription_recheck', 'Error'],
+  ['fetch', 'TimeoutError'],
+  ['response_cleanup', 'TypeError'],
+] as const)('%sの失敗を安全に記録し、既存の配信状態を維持する', async (stage, errorName) => {
+  await setup();
+  const error = Object.assign(new Error(sensitive), { name: errorName });
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const outgoing = vi.fn(async () => new Response(null, { status: 201 }));
+  vi.stubGlobal('fetch', outgoing);
+  if (stage === 'endpoint_validation') {
+    await app.env.DB.prepare('UPDATE push_subscriptions SET endpoint=?')
+      .bind('https://example.com/secret')
+      .run();
+  } else if (stage === 'vapid_signing') {
+    vi.spyOn(webPush, 'vapidHeaders').mockRejectedValueOnce(error);
+  } else if (stage === 'payload_encryption') {
+    vi.spyOn(webPush, 'encryptNotification').mockRejectedValueOnce(error);
+  } else if (stage === 'subscription_recheck') {
+    const db = app.env.DB;
+    app.env.DB = new Proxy(db, {
+      get(target, key) {
+        if (key === 'prepare')
+          return (sql: string) => {
+            if (sql.startsWith('SELECT p.id FROM push_subscriptions')) throw error;
+            return db.prepare(sql);
+          };
+        return Reflect.get(target, key);
+      },
+    });
+  } else if (stage === 'fetch') {
+    outgoing.mockRejectedValueOnce(error);
+  } else {
+    outgoing.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream({
+          cancel() {
+            throw error;
+          },
+        }),
+        { status: 201 },
+      ),
+    );
+  }
+  await deliverAnnouncements(app.env);
+  expect(warning.mock.calls).toEqual([
+    [
+      JSON.stringify({
+        event: 'announcement_push_transport_failed',
+        stage,
+        error_class: errorName,
+        status: stage === 'response_cleanup' ? 201 : 0,
+        attempt: 1,
+      }),
+    ],
+  ]);
+  expect(outgoing).toHaveBeenCalledTimes(['fetch', 'response_cleanup'].includes(stage) ? 1 : 0);
+  expect(
+    await app.env.DB.prepare(
+      'SELECT status,last_status,attempts,lease FROM push_deliveries',
+    ).first(),
+  ).toEqual({
+    status: stage === 'response_cleanup' ? 'sent' : 'pending',
+    last_status: stage === 'response_cleanup' ? 201 : 0,
+    attempts: 1,
+    lease: null,
+  });
+});
+
+it.each([
+  new TypeError(sensitive),
+  new DOMException(sensitive, 'AbortError'),
+  Object.assign(new Error(sensitive), { name: sensitive }),
+  sensitive,
+  null,
+  {
+    get name() {
+      throw new Error(sensitive);
+    },
+  },
+  {
+    name: {
+      toString() {
+        throw new Error(sensitive);
+      },
+    },
+  },
+])('例外の任意の値やアクセサーをログへ漏らさない: %#', async (error) => {
+  await setup();
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(error));
+  await deliverAnnouncements(app.env);
+  expect(warning.mock.calls).toEqual([
+    [
+      JSON.stringify({
+        event: 'announcement_push_transport_failed',
+        stage: 'fetch',
+        error_class:
+          error instanceof TypeError
+            ? 'TypeError'
+            : error instanceof DOMException
+              ? 'AbortError'
+              : 'UnknownError',
+        status: 0,
+        attempt: 1,
+      }),
+    ],
+  ]);
+});
+
+it('例外でも5回で再試行を終了する', async () => {
+  await setup();
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const outgoing = vi.fn().mockRejectedValue(new Error(sensitive));
+  vi.stubGlobal('fetch', outgoing);
+  for (let i = 0; i < 5; i++) {
+    await deliverAnnouncements(app.env);
+    await app.env.DB.prepare(
+      "UPDATE push_deliveries SET next_attempt_at='2000-01-01T00:00:00.000Z'",
+    ).run();
+  }
+  await deliverAnnouncements(app.env);
+  expect(outgoing).toHaveBeenCalledTimes(5);
+  expect(
+    await app.env.DB.prepare('SELECT status,last_status,attempts FROM push_deliveries').first(),
+  ).toEqual({ status: 'failed', last_status: 0, attempts: 5 });
 });
