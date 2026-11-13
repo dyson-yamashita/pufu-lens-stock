@@ -86,139 +86,143 @@ export default function McpConnections() {
             </p>
           )}
           <p>{t('ui.mcp_connections.ask_the_connected_app_to_find_stocks_in_a')}</p>
-        </div>
-        {error && (
-          <p className="error-box" role="alert">
-            {error}
-          </p>
-        )}
-        {notice && <p role="status">{notice}</p>}
-        <section className="token-section">
-          <div className="section-head">
-            <h3 className="section-title">{t('ui.mcp_connections.connected_services')}</h3>
-          </div>
-          {loading ? (
-            <p>
-              <LoaderCircle className="spin" size={17} aria-hidden="true" />
-              {t('ui.mcp_connections.loading')}
+          {error && (
+            <p className="error-box" role="alert">
+              {error}
             </p>
-          ) : enabled === null ? (
-            <p className="token-empty">
-              {t('ui.mcp_connections.could_not_load_connected_services')}
-            </p>
-          ) : enabled === false ? (
-            <p className="token-empty">
-              {t('ui.mcp_connections.connected_services_will_appear_here_once_mcp_integration_is')}
-            </p>
-          ) : !connections.length ? (
-            <p className="token-empty">
-              {t('ui.mcp_connections.no_connections_yet_register_the_url_above_in_the')}
-            </p>
-          ) : (
-            <ul className="token-list mcp-connections">
-              {connections.map((connection) => (
-                <li className="token-row" key={connection.id}>
-                  <Layers size={19} aria-hidden="true" />
-                  <div className="mcp-connection-details">
-                    <strong>{connection.client_name}</strong>
-                    <p>
-                      {connection.project_ids
-                        ? (
-                            connection.projects ??
-                            connection.project_ids.map((id) => ({ id, name: id }))
-                          )
-                            .map((project) => project.name)
-                            .join(t('ui.comments.separator'))
-                        : (connection.project_name ?? t('ui.app.all_projects'))}
-                    </p>
-                    <p>
-                      {connection.scopes
-                        .map((scope) =>
-                          Object.hasOwn(mcpScopes, scope)
-                            ? translate(language, mcpScopes[scope as keyof typeof mcpScopes])
-                            : scope,
-                        )
-                        .join(t('ui.comments.separator'))}
-                    </p>
-                    <small>
-                      {t('ui.mcp_connections.connected')}
-                      {new Date(connection.created_at).toLocaleDateString(intlLocale())}
-                      {connection.expires_at &&
-                        t('ui.mcp_connections.expires_value', {
-                          value0: new Date(connection.expires_at).toLocaleDateString(intlLocale()),
-                        })}
-                    </small>
-                  </div>
-                  {editing === connection.id ? (
-                    <McpConnectionEditor
-                      connection={connection}
-                      onCancel={() => setEditing(null)}
-                      onSave={(updated) => {
-                        setConnections((items) =>
-                          items.map((item) => (item.id === updated.id ? updated : item)),
-                        );
-                        setEditing(null);
-                        setNotice(t('ui.mcp_connections.saved'));
-                      }}
-                    />
-                  ) : (
-                    <div className="mcp-connection-actions">
-                      <button
-                        className="button secondary"
-                        disabled={busy !== null || editing !== null}
-                        onClick={() => {
-                          setEditing(connection.id);
-                          setNotice('');
-                          setError('');
-                        }}
-                      >
-                        <Pencil size={16} aria-hidden="true" />
-                        {t('ui.mcp_connections.edit')}
-                      </button>
-                      <button
-                        className="button danger"
-                        disabled={busy !== null || editing !== null}
-                        onClick={async () => {
-                          if (
-                            !window.confirm(
-                              t('ui.mcp_connections.disconnect_value', {
-                                value0: connection.client_name,
-                              }),
-                            )
-                          )
-                            return;
-                          setBusy(connection.id);
-                          setError('');
-                          try {
-                            await api(
-                              `/api/v1/mcp/connections/${encodeURIComponent(connection.id)}`,
-                              {
-                                method: 'DELETE',
-                              },
-                            );
-                            setConnections((items) =>
-                              items.filter((item) => item.id !== connection.id),
-                            );
-                            setNotice(t('ui.mcp_connections.integration_disconnected'));
-                          } catch (error) {
-                            setError(applicationError((error as Error).message));
-                          } finally {
-                            setBusy(null);
-                          }
-                        }}
-                      >
-                        <Trash2 size={16} aria-hidden="true" />
-                        {busy === connection.id
-                          ? t('ui.mcp_connections.disconnecting')
-                          : t('ui.mcp_connections.disconnect')}
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
           )}
-        </section>
+          {notice && <p role="status">{notice}</p>}
+          <section className="token-section">
+            <div className="section-head">
+              <h3 className="section-title">{t('ui.mcp_connections.connected_services')}</h3>
+            </div>
+            {loading ? (
+              <p>
+                <LoaderCircle className="spin" size={17} aria-hidden="true" />
+                {t('ui.mcp_connections.loading')}
+              </p>
+            ) : enabled === null ? (
+              <p className="token-empty">
+                {t('ui.mcp_connections.could_not_load_connected_services')}
+              </p>
+            ) : enabled === false ? (
+              <p className="token-empty">
+                {t(
+                  'ui.mcp_connections.connected_services_will_appear_here_once_mcp_integration_is',
+                )}
+              </p>
+            ) : !connections.length ? (
+              <p className="token-empty">
+                {t('ui.mcp_connections.no_connections_yet_register_the_url_above_in_the')}
+              </p>
+            ) : (
+              <ul className="token-list mcp-connections">
+                {connections.map((connection) => (
+                  <li className="token-row" key={connection.id}>
+                    <Layers size={19} aria-hidden="true" />
+                    <div className="mcp-connection-details">
+                      <strong>{connection.client_name}</strong>
+                      <p>
+                        {connection.project_ids
+                          ? (
+                              connection.projects ??
+                              connection.project_ids.map((id) => ({ id, name: id }))
+                            )
+                              .map((project) => project.name)
+                              .join(t('ui.comments.separator'))
+                          : (connection.project_name ?? t('ui.app.all_projects'))}
+                      </p>
+                      <p>
+                        {connection.scopes
+                          .map((scope) =>
+                            Object.hasOwn(mcpScopes, scope)
+                              ? translate(language, mcpScopes[scope as keyof typeof mcpScopes])
+                              : scope,
+                          )
+                          .join(t('ui.comments.separator'))}
+                      </p>
+                      <small>
+                        {t('ui.mcp_connections.connected')}
+                        {new Date(connection.created_at).toLocaleDateString(intlLocale())}
+                        {connection.expires_at &&
+                          t('ui.mcp_connections.expires_value', {
+                            value0: new Date(connection.expires_at).toLocaleDateString(
+                              intlLocale(),
+                            ),
+                          })}
+                      </small>
+                    </div>
+                    {editing === connection.id ? (
+                      <McpConnectionEditor
+                        connection={connection}
+                        onCancel={() => setEditing(null)}
+                        onSave={(updated) => {
+                          setConnections((items) =>
+                            items.map((item) => (item.id === updated.id ? updated : item)),
+                          );
+                          setEditing(null);
+                          setNotice(t('ui.mcp_connections.saved'));
+                        }}
+                      />
+                    ) : (
+                      <div className="mcp-connection-actions">
+                        <button
+                          className="button secondary"
+                          disabled={busy !== null || editing !== null}
+                          onClick={() => {
+                            setEditing(connection.id);
+                            setNotice('');
+                            setError('');
+                          }}
+                        >
+                          <Pencil size={16} aria-hidden="true" />
+                          {t('ui.mcp_connections.edit')}
+                        </button>
+                        <button
+                          className="button danger"
+                          disabled={busy !== null || editing !== null}
+                          onClick={async () => {
+                            if (
+                              !window.confirm(
+                                t('ui.mcp_connections.disconnect_value', {
+                                  value0: connection.client_name,
+                                }),
+                              )
+                            )
+                              return;
+                            setBusy(connection.id);
+                            setError('');
+                            try {
+                              await api(
+                                `/api/v1/mcp/connections/${encodeURIComponent(connection.id)}`,
+                                {
+                                  method: 'DELETE',
+                                },
+                              );
+                              setConnections((items) =>
+                                items.filter((item) => item.id !== connection.id),
+                              );
+                              setNotice(t('ui.mcp_connections.integration_disconnected'));
+                            } catch (error) {
+                              setError(applicationError((error as Error).message));
+                            } finally {
+                              setBusy(null);
+                            }
+                          }}
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                          {busy === connection.id
+                            ? t('ui.mcp_connections.disconnecting')
+                            : t('ui.mcp_connections.disconnect')}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </section>
       <h2 className="integration-heading">{t('skills.title')}</h2>
       <section className="connect-guide" aria-label={t('skills.title')}>
