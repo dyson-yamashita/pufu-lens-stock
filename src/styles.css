@@ -69,6 +69,19 @@ dialog.dialog:has(.pufi-feedback) {
 .pufi-prompt {
   width: min(260px, calc(100vw - 110px));
 }
+.pufi-expand {
+  display: block;
+  min-height: 32px;
+  margin-top: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .pufi-manual-link {
   font-size: 0.85rem;
   overflow-wrap: anywhere;
@@ -116,6 +129,7 @@ dialog.dialog:has(.pufi-feedback) {
   margin: 14px 0;
 }
 .pufi-thread {
+  overflow-anchor: none;
   display: flex;
   flex-direction: column;
   gap: 10px;

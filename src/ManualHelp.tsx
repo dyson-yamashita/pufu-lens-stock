@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
 import type { FeedbackMessage, FeedbackInput } from '../shared/feedback';
 import type { Language } from '../shared/locale';
 import { translateUi } from './i18n';
 import { ApiError } from './api';
 import { manualTree, selectManualBranch, type ManualNode } from './manual-search';
+
+type HelpMessage = FeedbackMessage & { truncated?: boolean };
 
 export default function ManualHelp({
   owner,
@@ -27,7 +29,9 @@ export default function ManualHelp({
   onInvalidSession: () => void;
 }) {
   const t = (key: string) => translateUi(language, key);
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState<HelpMessage[]>(initialMessages);
+  const [answerExpanded, setAnswerExpanded] = useState(false);
+  const answerId = useId();
   const [draft, setDraft] = useState('');
   const [stage, setStage] = useState<
     'question' | 'choose' | 'answer' | 'hearing' | 'done' | 'invalid'
@@ -55,6 +59,7 @@ export default function ManualHelp({
   };
   const showAnswer = (node: ManualNode) => {
     setAnswer(node);
+    setAnswerExpanded(false);
     setChoices([]);
     setStage('answer');
     const excerpt = Array.from(
@@ -67,7 +72,11 @@ export default function ManualHelp({
       .slice(0, 180);
     setMessages((current) => [
       ...current,
-      { role: 'pufi', text: excerpt.length < node.text.length ? `${excerpt}…` : excerpt },
+      {
+        role: 'pufi',
+        text: excerpt.length < node.text.length ? `${excerpt}…` : excerpt,
+        truncated: excerpt.length < node.text.length,
+      },
       { role: 'pufi', text: t('feedback.help_confirm') },
     ]);
   };
@@ -135,7 +144,7 @@ export default function ManualHelp({
   const submit = async () => {
     const text = draft.trim();
     if (!text || busy) return;
-    const history = [...messages, { role: 'user' as const, text }];
+    const history: HelpMessage[] = [...messages, { role: 'user' as const, text }];
     setMessages(history);
     setDraft('');
     if (stage === 'hearing') {
@@ -148,7 +157,10 @@ export default function ManualHelp({
             section: answer!.id,
           },
         },
-        history,
+        history.map(({ role, text, truncated }) => ({
+          role,
+          text: truncated && answer ? answer.text : text,
+        })),
       );
       return;
     }
@@ -174,7 +186,22 @@ export default function ManualHelp({
         <p className="pufi-message pufi-message-pufi">{t('feedback.hello')}</p>
         {messages.map((message, index) => (
           <p key={index} className={`pufi-message pufi-message-${message.role}`}>
-            {message.text}
+            {message.truncated && answer ? (
+              <>
+                <span id={answerId}>{answerExpanded ? answer.text : message.text}</span>
+                <button
+                  type="button"
+                  className="pufi-expand"
+                  aria-expanded={answerExpanded}
+                  aria-controls={answerId}
+                  onClick={() => setAnswerExpanded((value) => !value)}
+                >
+                  {t(answerExpanded ? 'feedback.help_show_less' : 'feedback.help_show_all')}
+                </button>
+              </>
+            ) : (
+              message.text
+            )}
           </p>
         ))}
         {answer && (
