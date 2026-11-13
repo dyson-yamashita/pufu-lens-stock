@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import { testApp } from './helpers';
+import { testApp, applyMigration } from './helpers';
 import { testAnnouncement, saveAnnouncement } from './announcement-fixture';
 let app: Awaited<ReturnType<typeof testApp>>;
 afterEach(async () => {
@@ -61,4 +61,18 @@ it('管理者の登録SQLは引用符を含む本文をそのまま保存し、�
       'notify',
     ),
   ).toBe(0);
+});
+
+it('初回記事の入口訂正を再適用しても運営の編集と通知指定を維持する', async () => {
+  app = await testApp();
+  await app.env.DB.prepare(
+    "UPDATE announcements SET ja_json=json_set(ja_json,'$.paragraphs[1]','運営が編集した案内'),notify=1,notify_at=published_at WHERE id='2026-11-announcements'",
+  ).run();
+  await applyMigration(app.env.DB, '0052_notification_profile_entry.sql');
+  const row = await app.env.DB.prepare(
+    "SELECT json_extract(ja_json,'$.paragraphs[1]') AS paragraph,notify,notify_at,published_at FROM announcements WHERE id='2026-11-announcements'",
+  ).first<{ paragraph: string; notify: number; notify_at: string; published_at: string }>();
+  expect(row?.paragraph).toBe('運営が編集した案内');
+  expect(row?.notify).toBe(1);
+  expect(row?.notify_at).toBe(row?.published_at);
 });

@@ -167,9 +167,9 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
           </button>
         </details>
       </section>
-      <PushSettings />
-      <ThemeSettings />
       <ProfileUsage key={user.id} userId={user.id} />
+      <ThemeSettings />
+      <PushSettings />
       {confirmDelete && <AccountDeleteDialog onCancel={() => setConfirmDelete(false)} />}
     </>
   );

@@ -12,13 +12,7 @@ test('NEWS-001 お知らせの閲覧と通知設定の入口を確認する', as
   if (await menu.isVisible()) await menu.click();
   await screen.getByRole('button', 'お知らせ', { exact: true }).click();
   await expect(screen.getByRole('heading', 'お知らせ', { exact: true })).toBeVisible();
-  await expect(screen.getByRole('heading', '通知', { exact: true })).toBeVisible();
-  await expect(screen.getByRole('switch', '通知', { exact: true })).toBeDisabled();
-  expect(
-    await browser.evaluate(() =>
-      document.querySelector('.push-settings-help')!.hasAttribute('open'),
-    ),
-  ).toBe(false);
+  await expect(screen.getByRole('switch', '通知設定', { exact: true })).toHaveCount(0);
   await screen.getByRole('link', 'お知らせページを追加しました', { exact: true }).click();
   await expect(
     screen.getByRole('heading', 'お知らせページを追加しました', { exact: true }),
@@ -39,7 +33,16 @@ test('NEWS-001 お知らせの閲覧と通知設定の入口を確認する', as
     ).toBe(true);
   }
   await app.open('/#profile');
-  await expect(screen.getByRole('heading', '通知', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('heading', '通知設定', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('switch', '通知設定', { exact: true })).toBeDisabled();
+  expect(
+    await browser.evaluate(() =>
+      document.querySelector('.push-settings-help')!.hasAttribute('open'),
+    ),
+  ).toBe(false);
+  await expect(
+    browser.locator('.profile-card + .usage-card + .appearance-settings + .push-settings'),
+  ).toBeVisible();
   await app.open('/manual#announcements');
   await expect(screen.getByRole('heading', 'お知らせ', { exact: true })).toBeVisible();
 });

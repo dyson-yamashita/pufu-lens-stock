@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from './api';
 import { intlLocale, t, useLanguage } from './i18n';
 import { announcementHref, type Announcement } from '../shared/announcements';
-import PushSettings from './PushSettings';
 
 export default function Announcements({ id }: { id?: string }) {
   const { language } = useLanguage();
@@ -34,7 +33,6 @@ export default function Announcements({ id }: { id?: string }) {
   const item = items?.find((item) => item.id === id);
   return (
     <div className="announcements-page">
-      <PushSettings />
       {error ? (
         <p role="alert">
           {t('announcements.error')}{' '}

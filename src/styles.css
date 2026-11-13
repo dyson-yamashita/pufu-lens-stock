@@ -5190,6 +5190,9 @@ article.pufu-list-item {
   cursor: pointer;
 }
 
+.push-settings {
+  margin-top: 24px;
+}
 .push-settings-row {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 52px;

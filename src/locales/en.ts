@@ -11,7 +11,7 @@ export const en: Record<string, string> = {
   'announcements.not_found': 'This announcement could not be found.',
   'announcements.error': 'Could not load announcements.',
   'push.about': 'About notifications',
-  'push.title': 'Notifications',
+  'push.title': 'Notification settings',
   'push.description': 'Receive new features and important updates',
   'push.device_hint':
     'This setting applies to this device and browser. Delivery stops when you sign out or your session expires. Enable notifications again after signing back in.',
@@ -26,9 +26,9 @@ export const en: Record<string, string> = {
   'manual.announcements':
     'Open Announcements in the side menu to read about new features and maintenance. Select a heading to open the full announcement.',
   'manual.push_enable':
-    'In Announcements or Profile, turn on the Notifications switch, then allow notifications on your device. Notifications start off and contain only operator announcements, never your personal stocks or questions.',
+    'In Profile, turn on the switch under Notification settings, then allow notifications on your device. Notifications start off and contain only operator announcements, never your personal stocks or questions.',
   'manual.push_disable':
-    'Turn off the Notifications switch to stop delivery. Notifications are optional; all announcements remain available without them.',
+    'Turn off the switch under Notification settings to stop delivery. Notifications are optional; all announcements remain available without them.',
 
   'feedback.help_question': 'Which action would you like help with?',
   'feedback.help_confirm': 'Did this help?',
@@ -152,7 +152,7 @@ export const en: Record<string, string> = {
   'ui.usage.timezone_note':
     'Periods use Japan time. Weeks start on Monday; months start on the 1st.',
   'manual.usage':
-    'Open the Usage card below Display settings in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage is an estimate in Neurons using model-specific rates and includes only available usage since measurement began. Periods start on Monday or the 1st of the month in Japan time.',
+    'Open the Usage card in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage is an estimate in Neurons using model-specific rates and includes only available usage since measurement began. Periods start on Monday or the 1st of the month in Japan time.',
   'pufu.creation_method': 'Creation method',
   'pufu.create_with_ai': 'Create with AI',
   'pufu.create_from_json': 'Create from JSON',

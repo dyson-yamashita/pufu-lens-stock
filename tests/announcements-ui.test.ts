@@ -5,7 +5,6 @@ import { parseHTML } from 'linkedom';
 import Announcements from '../src/Announcements';
 import { api, ApiError } from '../src/api';
 import { testAnnouncement } from './announcement-fixture';
-vi.mock('../src/PushSettings', () => ({ default: () => null }));
 vi.mock('../src/api', async (original) => ({
   ...(await original<typeof import('../src/api')>()),
   api: vi.fn(),
