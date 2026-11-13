@@ -45,6 +45,7 @@ export default function PufiFeedback({
   }, [host, portal]);
   const [panel, setPanel] = useState<'closed' | 'prompt' | 'conversation'>('closed');
   const [helpEscalated, setHelpEscalated] = useState(false);
+  const [manualReading, setManualReading] = useState(false);
   const [helpBusy, setHelpBusy] = useState(false);
   const [reasons, setReasons] = useState<FeedbackInput['reasons']>([]);
   const [category, setCategory] = useState<FeedbackInput['category'] | null>(null);
@@ -78,8 +79,8 @@ export default function PufiFeedback({
     }
   }, []);
   useEffect(() => {
-    if (panel === 'conversation') heading.current?.focus();
-  }, [panel]);
+    if (panel === 'conversation' && !manualReading) heading.current?.focus();
+  }, [panel, manualReading]);
   useEffect(() => {
     if (thread.current) thread.current.scrollTop = thread.current.scrollHeight;
   }, [messages, busy]);
@@ -115,6 +116,7 @@ export default function PufiFeedback({
     generation.current++;
     if (panel === 'prompt') frequency.current?.markShown(true);
     setPanel('closed');
+    setManualReading(false);
   }
   async function startConversation(manual = false) {
     const version = ++generation.current;
@@ -122,6 +124,7 @@ export default function PufiFeedback({
     frozen.current = null;
     setCategory(null);
     setHelpEscalated(false);
+    setManualReading(false);
     setHelpBusy(false);
     setDraft('');
     setRound(0);
@@ -216,6 +219,7 @@ export default function PufiFeedback({
         <section
           className={`pufi-panel${panel === 'prompt' ? ' pufi-prompt' : ''}`}
           aria-labelledby="pufi-panel-title"
+          hidden={manualReading}
         >
           <div className="pufi-panel-head">
             <div className="pufi-name">
@@ -259,6 +263,7 @@ export default function PufiFeedback({
                   initialMessages={messages}
                   onBusy={setHelpBusy}
                   onClose={close}
+                  onManualNavigate={() => setManualReading(true)}
                   onInvalidSession={() => {
                     setInvalidSession(true);
                     setError(t('feedback.session_changed'));
@@ -379,22 +384,28 @@ export default function PufiFeedback({
         </section>
       )}
       <div className="pufi-launcher">
-        {panel === 'closed' && (
+        {(panel === 'closed' || manualReading) && (
           <button
             type="button"
             className="pufi-invitation"
-            onClick={() => void startConversation(true)}
+            onClick={() => (manualReading ? setManualReading(false) : void startConversation(true))}
           >
-            {t('feedback.invitation')}
+            {t(manualReading ? 'feedback.resume' : 'feedback.invitation')}
           </button>
         )}
         <button
           type="button"
           className="pufi-avatar"
           aria-label={t('feedback.open')}
-          aria-expanded={panel !== 'closed'}
+          aria-expanded={panel !== 'closed' && !manualReading}
           disabled={busy || helpBusy}
-          onClick={() => (panel === 'closed' ? void startConversation(true) : close())}
+          onClick={() =>
+            manualReading
+              ? setManualReading(false)
+              : panel === 'closed'
+                ? void startConversation(true)
+                : close()
+          }
         >
           <img src="/pufi-feedback.png" alt="" width="64" height="64" />
         </button>

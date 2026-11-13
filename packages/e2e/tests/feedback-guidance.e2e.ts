@@ -84,6 +84,37 @@ test('FEEDBACK-004 ログイン済みマニュアルから案内し、未解決�
   expect(searches).toBeGreaterThanOrEqual(2);
   expect(reports).toHaveLength(0);
   const before = searches;
+  const documentCreatedAt = await browser.evaluate(() => performance.timeOrigin);
+  await browser.locator('.pufi-manual-link').click();
+  await expect(screen.getByRole('button', '会話に戻る', { exact: true })).toBeVisible();
+  await expect(browser.locator('.pufi-panel')).toHaveAttribute('hidden', '');
+  expect(
+    await browser.evaluate(async () => {
+      const target = document.querySelector<HTMLElement>('.manual-target-highlight');
+      if (!target) return false;
+      const until = performance.now() + 2500;
+      await new Promise<void>((resolve) => {
+        const ready = () => {
+          const top = target.getBoundingClientRect().top;
+          if ((top >= 0 && top < innerHeight / 2) || performance.now() > until) resolve();
+          else requestAnimationFrame(ready);
+        };
+        ready();
+      });
+      return (
+        target.getBoundingClientRect().top >= 0 &&
+        target.getBoundingClientRect().top < innerHeight / 2 &&
+        Boolean(target.closest('details[open]')) &&
+        document.activeElement === target
+      );
+    }),
+  ).toBe(true);
+  expect(await browser.evaluate(() => performance.timeOrigin)).toBe(documentCreatedAt);
+  await app.screenshot('pufi-manual-location');
+  await screen.getByRole('button', '会話に戻る', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('お役に立ちましたか？');
+  expect(searches).toBe(before);
+
   await screen.getByRole('button', '解決しませんでした', { exact: true }).click();
   await expect(browser.locator('.pufi-thread')).toContainText('どの部分が解決しませんでしたか？');
   expect(searches).toBe(before);

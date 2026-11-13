@@ -5122,3 +5122,12 @@ article.pufu-list-item {
 .pufi-avatar[aria-expanded='true'] {
   border-color: var(--primary);
 }
+
+.manual-main .manual-target-highlight {
+  scroll-margin-top: 24px;
+  outline: 2px solid var(--primary);
+  outline-offset: 6px;
+  border-radius: 6px;
+  background: var(--wash);
+  box-shadow: 0 0 0 6px var(--wash);
+}

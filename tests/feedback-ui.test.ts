@@ -157,3 +157,65 @@ it('preserves manual search and unresolved drafts when dialog hosts and busy sta
   expect(selectManualBranch).toHaveBeenCalledTimes(1);
   expect(send).not.toHaveBeenCalled();
 });
+
+it('reveals the manual section without navigation and resumes the same conversation', async () => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { href: 'https://pufu.test/manual', pathname: '/manual' },
+  });
+  const page = document.createElement('div');
+  page.className = 'manual-page';
+  page.innerHTML =
+    '<main class="manual-main"><details><summary>案内</summary><p id="manual-pufu-1">画像を選び保存します。</p></details></main>';
+  document.body.appendChild(page);
+  const target = document.getElementById('manual-pufu-1')!;
+  target.scrollIntoView = vi.fn();
+  target.focus = vi.fn();
+  const leaf = {
+    id: 'manual-pufu-1',
+    title: '画像の保存',
+    text: '画像を選び保存します。',
+    href: '/manual#manual-pufu-1',
+    children: [],
+  };
+  vi.mocked(manualTree).mockResolvedValue([leaf, { ...leaf, id: 'other' }]);
+  vi.mocked(selectManualBranch).mockResolvedValue(leaf);
+  const press = async (label: string) =>
+    act(async () => {
+      [...document.querySelectorAll('button')]
+        .find((button) => button.textContent === label)!
+        .click();
+    });
+  await render(false, true);
+  await press('何かお困りですか？');
+  await press('操作に迷いました');
+  await act(async () => {
+    const field = document.querySelector('textarea')!;
+    field.value = '画像を保存したい';
+    field.dispatchEvent(new window.Event('input', { bubbles: true }));
+  });
+  await act(async () => {
+    document
+      .querySelector('form')!
+      .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  });
+  const thread = document.querySelector('.pufi-thread');
+  const event = new window.Event('click', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'button', { value: 0 });
+  await act(async () => document.querySelector('.pufi-manual-link')!.dispatchEvent(event));
+  expect(event.defaultPrevented).toBe(true);
+  expect(target.scrollIntoView).toHaveBeenCalled();
+  expect(page.querySelector('details')!.hasAttribute('open')).toBe(true);
+  expect(target.classList.contains('manual-target-highlight')).toBe(true);
+  expect(document.querySelector<HTMLElement>('.pufi-panel')?.hidden).toBe(true);
+  await act(async () => vi.advanceTimersByTime(4000));
+  expect(target.classList.contains('manual-target-highlight')).toBe(false);
+  expect(target.hasAttribute('tabindex')).toBe(false);
+  await press('会話に戻る');
+  expect(document.querySelector('.pufi-thread')).toBe(thread);
+  expect(thread?.textContent).toContain('画像を保存したい');
+  expect(document.querySelector<HTMLElement>('.pufi-panel')?.hidden).toBe(false);
+  expect(selectManualBranch).toHaveBeenCalledTimes(1);
+  expect(api).toHaveBeenCalledTimes(1);
+  expect(send).not.toHaveBeenCalled();
+});

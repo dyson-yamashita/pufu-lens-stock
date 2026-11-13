@@ -13,6 +13,7 @@ export const en: Record<string, string> = {
   'feedback.help_unresolved': 'Unresolved part',
   'feedback.help_show_all': 'Show full answer',
   'feedback.help_show_less': 'Show less',
+  'feedback.resume': 'Back to conversation',
   'feedback.help_open_manual': 'Open this manual section',
   'feedback.title': 'Pufi',
   'feedback.open': 'Talk to Pufi',
@@ -51,7 +52,7 @@ export const en: Record<string, string> = {
   'feedback.session_changed':
     'Your login has changed. Please close the conversation and open it again.',
   'feedback.manual':
-    'When signed in, you can talk to Pufi at the bottom right of the manual. On other pages, prompts appear only after repeated unresponsive clicks, input errors or operation failures. Choose “I could not find what to do” to have AI follow manual headings to the relevant text. If an answer is shortened, choose “Show full answer” to read it in the conversation. If that does not help, Pufi asks which part remains unresolved. Submitted conversations are saved and organized by AI for maintenance review. Choose “Finish answering” or “Send and finish” to end.',
+    'When signed in, you can talk to Pufi at the bottom right of the manual. On other pages, prompts appear only after repeated unresponsive clicks, input errors or operation failures. Choose “I could not find what to do” to have AI follow manual headings to the relevant text. If an answer is shortened, choose “Show full answer” to read it in the conversation. On the manual page, the link scrolls to and briefly highlights the relevant section. Choose “Back to conversation” to resume. If that does not help, Pufi asks which part remains unresolved. Submitted conversations are saved and organized by AI for maintenance review. Choose “Finish answering” or “Send and finish” to end.',
 
   'manual.pufu_create_heading': 'Create a draft with AI',
   'manual.pufu_generation_heading': 'AI sources and generation limits',
