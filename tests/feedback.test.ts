@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { testApp } from './helpers';
+import { applyMigration, testApp } from './helpers';
 
 let app: Awaited<ReturnType<typeof testApp>>;
 const input = () => ({
@@ -315,4 +315,100 @@ it('enforces consent, fixed metadata, ownership, authentication, quotas and casc
   ).toBe(201);
   await app.env.DB.prepare("DELETE FROM users WHERE id='alice'").run();
   expect((await rows()).results).toHaveLength(1);
+});
+
+it.each([
+  ['Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'desktop'],
+  ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile', 'mobile'],
+  ['Mozilla/5.0 (Linux; Android 14; Pixel) Mobile', 'mobile'],
+  ['Mozilla/5.0 (iPad; CPU OS 18_0) Mobile', 'tablet'],
+  ['Mozilla/5.0 (Linux; Android 14; Tablet)', 'tablet'],
+  ['Mozilla/5.0 (Linux; Android 14; SM-X700)', 'tablet'],
+])(
+  'saves bounded analytics context for %s and preserves initial context on replies',
+  async (ua, device) => {
+    const body = { ...input(), page_path: '/p/test?secret=hidden#fragment', viewport: '390x844' };
+    const response = await app.request('/api/v1/feedback', {
+      method: 'POST',
+      body,
+      headers: { 'User-Agent': ua, 'CF-Connecting-IP': '192.0.2.1' },
+      cf: { country: 'JP' },
+    });
+    expect(response.status).toBe(201);
+    await app.request('/api/v1/feedback', {
+      method: 'POST',
+      body: {
+        ...body,
+        round: 1,
+        answer: '保存されること',
+        page_path: '/elsewhere',
+        viewport: '800x600',
+      },
+      headers: { 'User-Agent': 'Other' },
+      cf: { country: 'US' },
+    });
+    const saved = (await rows()).results[0];
+    expect(saved).toMatchObject({
+      page_path: '/p/test',
+      viewport: '390x844',
+      device_type: device,
+      country: 'JP',
+    });
+    for (const value of ['secret=hidden', '#fragment', ua, '192.0.2.1'])
+      expect(JSON.stringify(saved)).not.toContain(value);
+  },
+);
+
+it('accepts old clients and does not trust country headers', async () => {
+  expect(
+    (
+      await app.request('/api/v1/feedback', {
+        method: 'POST',
+        body: input(),
+        headers: { 'CF-IPCountry': 'JP' },
+      })
+    ).status,
+  ).toBe(201);
+  expect((await rows()).results[0]).toMatchObject({
+    page_path: null,
+    viewport: null,
+    device_type: null,
+    country: null,
+  });
+});
+
+it.each([
+  { page_path: 'https://example.com/private' },
+  { page_path: '//example.com/private' },
+  { page_path: '/a\\b' },
+  { viewport: '0x844' },
+  { viewport: '390x844?secret' },
+  { device_type: 'mobile' },
+  { country: 'JP' },
+])('rejects invalid or client-forged context %j', async (context) => {
+  expect(
+    (await app.request('/api/v1/feedback', { method: 'POST', body: { ...input(), ...context } }))
+      .status,
+  ).toBe(400);
+  expect((await rows()).results).toHaveLength(0);
+});
+
+it('adds nullable columns without changing existing reports or cascade deletion', async () => {
+  for (const column of ['page_path', 'device_type', 'country', 'viewport'])
+    await app.env.DB.prepare(`ALTER TABLE usability_feedback DROP COLUMN ${column}`).run();
+  await app.env.DB.prepare(
+    `INSERT INTO usability_feedback
+    (id,user_id,request_id,category,detail,reasons,created_at,updated_at)
+    VALUES('historical','alice','historical','other','old report','[]','2026-01-01','2026-01-01')`,
+  ).run();
+  await applyMigration(app.env.DB, '0051_feedback_analytics_context.sql');
+  expect((await rows()).results[0]).toMatchObject({
+    detail: 'old report',
+    page_path: null,
+    device_type: null,
+    country: null,
+    viewport: null,
+  });
+  await app.env.DB.prepare("DELETE FROM users WHERE id='alice'").run();
+  expect((await rows()).results).toHaveLength(0);
 });

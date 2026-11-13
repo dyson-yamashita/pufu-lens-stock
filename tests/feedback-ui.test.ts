@@ -30,6 +30,9 @@ beforeEach(() => {
   document = dom.document as unknown as Document;
   vi.stubGlobal('window', dom.window);
   vi.stubGlobal('document', document);
+  vi.stubGlobal('location', new URL('https://example.com/p/test?private=value#fragment'));
+  vi.stubGlobal('innerWidth', 390);
+  vi.stubGlobal('innerHeight', 844);
   vi.stubGlobal('navigator', { onLine: true });
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   local = new Map([['pufi-detection-consent', 'true']]);

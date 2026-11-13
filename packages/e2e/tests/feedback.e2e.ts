@@ -10,6 +10,11 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   browser,
   fixture,
 }) => {
+  const reports: { page_path: string; viewport: string }[] = [];
+  await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
+    reports.push(JSON.parse(route.request.postData ?? '{}'));
+    await route.continue();
+  });
   const score = JSON.parse(
     await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
   );
@@ -18,7 +23,7 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
     request_id: randomUUID(),
     score,
   })) as { pufu: { id: string } };
-  await app.open(`/#pufu/${pufu.id}`);
+  await app.open(`/?feedback_test=private#pufu/${pufu.id}`);
   await screen.getByRole('button', '局面を追加', { exact: true }).click();
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
   await expect(browser.locator('.pufi-feedback')).toHaveCount(0);
@@ -72,6 +77,9 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   );
   await screen.getByRole('button', '回答を終了').click();
   await expect(browser.locator('.pufi-thread')).toContainText('改善に役立てます');
+  expect(reports.length).toBeGreaterThan(0);
+  const viewport = await browser.evaluate(() => `${innerWidth}x${innerHeight}`);
+  expect(reports[0]).toMatchObject({ page_path: '/', viewport });
   await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
   await screen.getByRole('button', '閉じる', { exact: true }).click();
   await browser.reload();
