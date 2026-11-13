@@ -1004,6 +1004,9 @@ p {
 }
 .project-settings {
   max-width: 680px;
+}
+.project-settings > form,
+.project-settings > .publication-settings {
   padding: clamp(22px, 4vw, 32px);
   background: var(--card);
   border: 1px solid var(--border);
@@ -4323,9 +4326,7 @@ article.pufu-list-item {
   text-align: center;
 }
 .publication-settings {
-  border-top: 1px solid var(--border);
-  margin-top: 32px;
-  padding-top: 28px;
+  margin-top: 24px;
 }
 .publication-settings h2 {
   font-size: 20px;
