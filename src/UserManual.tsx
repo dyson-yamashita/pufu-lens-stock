@@ -382,15 +382,47 @@ const sections = (tr: typeof t) => [
     title: tr('ui.user_manual.troubleshooting'),
     content: (
       <div className="manual-guide">
-        <p>{tr('feedback.manual')}</p>
+        <p>{tr('feedback.manual_intro')}</p>
+        <h3>{tr('feedback.manual_consult_heading')}</h3>
+        <ul>
+          <li>{tr('feedback.manual_entry')}</li>
+          <li>{tr('feedback.manual_automatic_guidance')}</li>
+          <li>{tr('feedback.manual_question')}</li>
+        </ul>
         <div className="manual-topics">
           <details>
+            <summary>{tr('feedback.manual_guide_heading')}</summary>
+            <ul>
+              <li>{tr('feedback.manual_full_answer')}</li>
+              <li>{tr('feedback.manual_link')}</li>
+              <li>{tr('feedback.manual_return')}</li>
+            </ul>
+          </details>
+          <details>
+            <summary>{tr('feedback.manual_unresolved_heading')}</summary>
+            <ul>
+              <li>{tr('feedback.manual_unresolved')}</li>
+              <li>{tr('feedback.manual_save')}</li>
+              <li>{tr('feedback.manual_finish')}</li>
+            </ul>
+          </details>
+          <details>
             <summary>{tr('ui.user_manual.article_retrieval_failed')}</summary>
-            <p>{tr('ui.user_manual.open_the_stock_details_and_use_retry_retrieval_under')}</p>
+            <ul>
+              <li>{tr('manual.help_retry_retrieval')}</li>
+              <li>{tr('manual.help_paste_text')}</li>
+              <li>{tr('manual.help_pdf_limits')}</li>
+              <li>{tr('manual.help_access_settings')}</li>
+              <li>{tr('manual.help_youtube_retrieval')}</li>
+              <li>{tr('manual.help_youtube_playback')}</li>
+            </ul>
           </details>
           <details>
             <summary>{tr('ui.user_manual.a_summary_or_pufu_has_not_appeared_yet')}</summary>
-            <p>{tr('ui.user_manual.processing_after_a_save_can_take_time_check_the')}</p>
+            <ul>
+              <li>{tr('manual.help_processing')}</li>
+              <li>{tr('manual.help_retry_processing')}</li>
+            </ul>
           </details>
         </div>
       </div>
