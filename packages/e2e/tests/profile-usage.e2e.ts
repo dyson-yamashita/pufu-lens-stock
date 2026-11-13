@@ -120,11 +120,52 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
     // Short chapters keep their privacy note visible while optional instructions stay collapsed.
     await expect(browser.locator('#sharing > .manual-guide > .manual-note')).toBeVisible();
     await expect(browser.locator('#skills > .manual-guide > .manual-note')).toBeVisible();
-    for (const section of ['comments', 'memory', 'sharing', 'integrations', 'skills', 'help']) {
+    for (const section of ['comments', 'memory', 'sharing', 'integrations', 'skills']) {
       const content = browser.locator(`#${section} details:first-child > :is(p, ol)`).first();
       await expect(content).toBeHidden();
       await browser.locator(`#${section} details:first-child > summary`).click();
       await expect(content).toBeVisible();
+    }
+    await app.open(`${path}#help`);
+    const intro = browser.locator('#help > .manual-guide > p');
+    const consult = browser.locator('#help > .manual-guide > h3');
+    const entry = browser.locator('#help > .manual-guide > ul');
+    await expect(intro).toBeVisible();
+    await expect(consult).toHaveText(path === '/manual' ? 'プフィに相談する' : 'Talk to Pufi');
+    await expect(consult).toBeVisible();
+    await expect(entry).toBeVisible();
+    await expect(browser.locator('#help details')).toHaveCount(4);
+    await expect(browser.locator('#help details[open]')).toHaveCount(0);
+    for (const theme of ['light', 'dark'] as const) {
+      await browser.emulateMedia({ colorScheme: theme });
+      await expect(browser.locator('html')).toHaveAttribute('data-theme', theme);
+      await browser.evaluate(() => {
+        document.querySelector('#help')!.scrollIntoView({ block: 'start' });
+        return null;
+      });
+      await app.screenshot(`manual-help-${path === '/manual' ? 'ja' : 'en'}-${theme}-collapsed`);
+      for (let index = 1; index <= 4; index++) {
+        const summary = browser.locator(`#help details:nth-child(${index}) > summary`);
+        const content = browser.locator(`#help details:nth-child(${index}) > ul`);
+        await expect(content).toBeHidden();
+        await summary.click();
+        await expect(content).toBeVisible();
+        await expect(browser.locator('#help details[open]')).toHaveCount(index);
+        expect(
+          await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
+      }
+      await browser.evaluate(() => {
+        document.querySelector('#help')!.scrollIntoView({ block: 'start' });
+        return null;
+      });
+      await app.screenshot(`manual-help-${path === '/manual' ? 'ja' : 'en'}-${theme}-expanded`);
+      for (let index = 1; index <= 4; index++) {
+        await browser.locator(`#help details:nth-child(${index}) > summary`).click();
+        await expect(browser.locator(`#help details:nth-child(${index}) > ul`)).toBeHidden();
+      }
+      await expect(intro).toBeVisible();
+      await expect(entry).toBeVisible();
     }
     await app.open(`${path}#pufu`);
     await expect(browser.locator('#pufu h3').first()).toBeVisible();

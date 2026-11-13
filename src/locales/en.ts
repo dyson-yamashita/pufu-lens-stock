@@ -92,8 +92,25 @@ export const en: Record<string, string> = {
     'Your message is still being processed. Please wait a moment and try again.',
   'feedback.session_changed':
     'Your login has changed. Please close the conversation and open it again.',
-  'feedback.manual':
-    'When signed in, you can talk to Pufi at the bottom right of the manual. On other pages, prompts appear only after repeated unresponsive clicks, input errors or operation failures. Choose “I could not find what to do” to have AI follow manual headings to the relevant text. If an answer is shortened, choose “Show full answer” to read it in the conversation. On the manual page, the link scrolls to and briefly highlights the relevant section. Choose “Back to conversation” to resume. If that does not help, Pufi asks which part remains unresolved. Submitted conversations are saved and organized by AI for maintenance review. Choose “Finish answering” or “Send and finish” to end.',
+  'feedback.manual_intro': 'If you are unsure how to use Pufu Lens, you can talk to Pufi.',
+  'feedback.manual_consult_heading': 'Talk to Pufi',
+  'feedback.manual_entry':
+    'When signed in, you can talk to Pufi at the bottom right of the manual.',
+  'feedback.manual_automatic_guidance':
+    'On other pages, prompts appear only after repeated unresponsive clicks, input errors or operation failures.',
+  'feedback.manual_question':
+    'Choose “I could not find what to do” to have AI follow manual headings to the relevant text.',
+  'feedback.manual_guide_heading': 'How to read the guidance',
+  'feedback.manual_full_answer':
+    'If an answer is shortened, choose “Show full answer” to read it in the conversation.',
+  'feedback.manual_link':
+    'On the manual page, the link scrolls to and briefly highlights the relevant section.',
+  'feedback.manual_return': 'Choose “Back to conversation” to resume.',
+  'feedback.manual_unresolved_heading': 'If the issue remains unresolved',
+  'feedback.manual_unresolved': 'If that does not help, Pufi asks which part remains unresolved.',
+  'feedback.manual_save':
+    'Submitted conversations are saved and organized by AI for maintenance review.',
+  'feedback.manual_finish': 'Choose “Finish answering” or “Send and finish” to end.',
 
   'manual.pufu_create_heading': 'Create a draft with AI',
   'manual.pufu_generation_heading': 'AI sources and generation limits',
@@ -1231,11 +1248,19 @@ export const en: Record<string, string> = {
     'Registered data and saved article bodies are deleted and cannot be recovered. Published projects become unavailable, all devices are signed out and integrations are disabled. A message is shown if background cleanup is still in progress. Your Google account itself is not deleted.',
   'ui.user_manual.troubleshooting': 'Troubleshooting',
   'ui.user_manual.article_retrieval_failed': 'Article retrieval failed',
-  'ui.user_manual.open_the_stock_details_and_use_retry_retrieval_under':
-    'Open the stock details and use Retry retrieval under Summary. You can also paste the article text and retry. PDFs must be within 10 MB and 100 pages. Check access restrictions and integration settings shown on screen. YouTube uses an embedded player and does not support article-retrieval retries. If playback fails, use Open on YouTube.',
+  'manual.help_retry_retrieval': 'Open the stock details and use Retry retrieval under Summary.',
+  'manual.help_paste_text': 'You can also paste the article text and retry.',
+  'manual.help_pdf_limits': 'PDFs must be within 10 MB and 100 pages.',
+  'manual.help_access_settings':
+    'Check access restrictions and integration settings shown on screen.',
+  'manual.help_youtube_retrieval':
+    'YouTube uses an embedded player and does not support article-retrieval retries.',
+  'manual.help_youtube_playback': 'If playback fails, use Open on YouTube.',
   'ui.user_manual.a_summary_or_pufu_has_not_appeared_yet': 'A summary or Pufu has not appeared yet',
-  'ui.user_manual.processing_after_a_save_can_take_time_check_the':
-    'Processing after a save can take time. Check the processing status and wait a little. If a failure appears, follow the on-screen instructions to retry.',
+  'manual.help_processing':
+    'Processing after a save can take time. Check the processing status and wait a little.',
+  'manual.help_retry_processing':
+    'If a failure appears, follow the on-screen instructions to retry.',
   'ui.user_manual.user_manual_pufu_lens': 'User manual | Pufu Lens',
   'ui.user_manual.back_to_home': 'Back to home',
   'ui.user_manual.a_basic_guide_to_collecting_articles_developing_questions_and':

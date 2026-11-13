@@ -89,8 +89,21 @@ export const ja: Record<string, string> = {
   'feedback.failed': '送信できませんでした。もう一度お試しください。',
   'feedback.wait_retry': 'まだ整理中です。少し待って、もう一度お試しください。',
   'feedback.session_changed': 'ログインが変更されました。会話を閉じて、もう一度開いてください。',
-  'feedback.manual':
-    'ログイン済みのマニュアルページでは右下のプフィから相談できます。それ以外の画面では、無反応クリック・入力エラー・操作失敗が繰り返されたときに案内します。「操作に迷いました」では質問をAIで確認し、見出しから該当するマニュアル本文をご案内します。回答が省略されているときは「回答を表示する」で全文を読めます。マニュアル内ではリンクから該当箇所へスクロールし、一時的に強調します。会話は「会話に戻る」から再開できます。役立たなかった場合は、解決しなかった部分をお伺いします。会話は送信時に保存し、AIで整理して保守担当が確認します。「回答を終了」または「送信して終了」で終了できます。',
+  'feedback.manual_intro': '使い方に迷ったら、プフィに相談できます。',
+  'feedback.manual_consult_heading': 'プフィに相談する',
+  'feedback.manual_entry': 'ログイン済みのマニュアルページでは右下のプフィから相談できます。',
+  'feedback.manual_automatic_guidance':
+    'それ以外の画面では、クリックしても反応しない・入力エラー・操作失敗が繰り返されたときに案内します。',
+  'feedback.manual_question':
+    '「操作に迷いました」では質問をAIで確認し、見出しから該当するマニュアル本文をご案内します。',
+  'feedback.manual_guide_heading': '案内の見方',
+  'feedback.manual_full_answer': '回答が省略されているときは「回答を表示する」で全文を読めます。',
+  'feedback.manual_link': 'マニュアル内ではリンクから該当箇所へスクロールし、一時的に強調します。',
+  'feedback.manual_return': '会話は「会話に戻る」から再開できます。',
+  'feedback.manual_unresolved_heading': '解決しなかったとき',
+  'feedback.manual_unresolved': '役立たなかった場合は、解決しなかった部分をお伺いします。',
+  'feedback.manual_save': '会話は送信時に保存し、AIで整理して保守担当が確認します。',
+  'feedback.manual_finish': '「回答を終了」または「送信して終了」で終了できます。',
 
   'manual.pufu_create_heading': 'AIで案をつくる',
   'manual.pufu_generation_heading': 'AIが参照する資料・生成の上限',
@@ -1213,11 +1226,18 @@ export const ja: Record<string, string> = {
     '登録したデータと保存本文が削除され、復元できません。公開中のプロジェクトも閲覧できなくなり、すべての端末でログアウトし、連携も無効になります。削除が継続中の場合は画面に案内が表示されます。Googleアカウント自体は削除されません。',
   'ui.user_manual.troubleshooting': '困ったときは',
   'ui.user_manual.article_retrieval_failed': '記事の取得に失敗した',
-  'ui.user_manual.open_the_stock_details_and_use_retry_retrieval_under':
-    'ストックの詳細を開き、「要約」の「取得を再試行」を使います。本文を貼り付けて再試行することもできます。PDFは10MB・100ページまでが対象です。ページの閲覧制限や、画面に表示された外部連携の設定も確認してください。YouTubeの動画は埋め込みプレーヤーで表示するため、記事取得の再試行はできません。再生できない場合は「YouTubeで開く」からご覧ください。',
+  'manual.help_retry_retrieval': 'ストックの詳細を開き、「要約」の「取得を再試行」を使います。',
+  'manual.help_paste_text': '本文を貼り付けて再試行することもできます。',
+  'manual.help_pdf_limits': 'PDFは10MB・100ページまでが対象です。',
+  'manual.help_access_settings':
+    'ページの閲覧制限や、画面に表示された外部連携の設定も確認してください。',
+  'manual.help_youtube_retrieval':
+    'YouTubeの動画は埋め込みプレーヤーで表示するため、記事取得の再試行はできません。',
+  'manual.help_youtube_playback': '再生できない場合は「YouTubeで開く」からご覧ください。',
   'ui.user_manual.a_summary_or_pufu_has_not_appeared_yet': '要約やプ譜がまだ表示されない',
-  'ui.user_manual.processing_after_a_save_can_take_time_check_the':
-    '保存後の処理には時間がかかることがあります。処理中の表示を確認し、少し待ってください。失敗が表示された場合は、画面の案内から再試行できます。',
+  'manual.help_processing':
+    '保存後の処理には時間がかかることがあります。処理中の表示を確認し、少し待ってください。',
+  'manual.help_retry_processing': '失敗が表示された場合は、画面の案内から再試行できます。',
   'ui.user_manual.user_manual_pufu_lens': 'ユーザーマニュアル | Pufu Lens',
   'ui.user_manual.back_to_home': 'トップへ戻る',
   'ui.user_manual.a_basic_guide_to_collecting_articles_developing_questions_and':
