@@ -980,6 +980,7 @@ p {
 }
 .section-heading-suffix {
   display: inline-block;
+  margin-inline-start: 0.35em;
   font-size: 0.7em;
   letter-spacing: -0.03em;
   white-space: nowrap;
