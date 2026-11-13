@@ -1,4 +1,41 @@
 export const ja: Record<string, string> = {
+  'announcements.description': 'Pufu Lensの新機能やメンテナンス、重要なご案内をお届けします。',
+  'push.loading': '読み込み中…',
+  'announcements.title': 'お知らせ',
+  'announcements.back': 'お知らせ一覧へ',
+  'announcements.feature': '新機能',
+  'announcements.maintenance': 'メンテナンス',
+  'announcements.important': '重要',
+  'announcements.empty': 'お知らせはまだありません。',
+  'announcements.not_found': 'このお知らせは見つかりません。',
+  'announcements.error': 'お知らせを取得できませんでした。',
+  'push.title': 'お知らせのPush通知',
+  'push.description':
+    '新機能や重要なお知らせを、この端末にお届けします。受信は任意です。通知を有効にしなくても、すべてのお知らせを読めます。',
+  'push.device_hint':
+    '端末・ブラウザーごとの設定です。ログアウトやログイン期限切れで配信を停止します。再ログイン後は、もう一度有効にしてください。',
+  'push.enable': '通知を有効にする',
+  'push.disable': 'この端末の通知を解除する',
+  'push.on': 'この端末で受信中',
+  'push.off': 'この端末では受信していません',
+  'push.unconfigured': 'Push通知は現在準備中です。お知らせはこのページで確認できます。',
+  'push.unsupported':
+    'このブラウザーでは通知を利用できません。HTTPSで開き、対応ブラウザーをご利用ください。iPhone・iPadの手順は下記をご覧ください。',
+  'push.denied':
+    '通知がブラウザーでブロックされています。ブラウザーまたは端末の通知設定でPufu Lensへの通知を許可してから、この画面を開き直してください。',
+  'push.error':
+    '通知設定を確認・変更できませんでした。通信状況と端末の通知設定をご確認のうえ、再度お試しください。',
+  'push.retry': '再読み込み',
+  'push.iphone_title': 'iPhone・iPadで通知を受け取るには',
+  'push.iphone':
+    'iOS・iPadOS 16.4以降で、Safariの共有メニューから「ホーム画面に追加」します。追加したPufu Lensをホーム画面から開き、ログインして通知を有効にしてください。ブラウザーの通常のタブでは利用できません。',
+  'manual.announcements':
+    'サイドメニューの「お知らせ」で、新機能やメンテナンスなどのご案内を確認できます。見出しを選ぶと本文を開きます。',
+  'manual.push_enable':
+    '「お知らせ」または「プロフィール」の「お知らせのPush通知」で「通知を有効にする」を押し、端末の確認で許可します。最初は無効です。通知する内容は運営からのお知らせだけで、ストックや問いなど個人の情報は通知しません。',
+  'manual.push_disable':
+    '通知を止める場合は「この端末の通知を解除する」を押します。通知は任意で、受信しなくてもすべてのお知らせを読めます。',
+
   'feedback.help_question': 'お知りになりたい操作を教えてください。',
   'feedback.help_confirm': 'お役に立ちましたか？',
   'feedback.help_choose': '該当する項目をお選びください。',

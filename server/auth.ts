@@ -58,9 +58,17 @@ export async function googleLogin(c: Context<AppEnv>) {
 async function createSession(c: Context<AppEnv>, userId: string) {
   const token = randomSecret();
   const expires = new Date(Date.now() + 30 * 86400000);
-  await c.env.DB.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
-    .bind(await hash(token), userId, expires.toISOString())
-    .run();
+  const previous = getCookie(c, cookieName(c));
+  // Replacing a browser login must revoke its old session and attached Push consent.
+  // Other devices retain their own sessions and subscriptions.
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      'INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
+    ).bind(await hash(token), userId, expires.toISOString()),
+    ...(previous
+      ? [c.env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await hash(previous))]
+      : []),
+  ]);
   setCookie(c, cookieName(c), token, { ...cookieOptions(c), expires });
 }
 export async function googleCallback(c: Context<AppEnv>) {
@@ -173,7 +181,7 @@ export async function authenticate(c: Context<AppEnv>): Promise<Principal> {
     : null;
   if (!user) throw new HTTPException(401, { message: 'ログインが必要です。' });
   if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) assertSameOrigin(c);
-  return { user, kind: 'session', tokenProjectId: null };
+  return { user, kind: 'session', tokenProjectId: null, sessionHash: await hash(cookie!) };
 }
 export async function logout(c: Context<AppEnv>) {
   const cookie = getCookie(c, cookieName(c));

@@ -1,0 +1,13 @@
+{
+  "id": "/",
+  "name": "Pufu Lens",
+  "short_name": "Pufu Lens",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fcfeff",
+  "theme_color": "#fcfeff",
+  "icons": [
+    { "src": "/pufu-lens-logo.png", "sizes": "1254x1254", "type": "image/png", "purpose": "any" }
+  ]
+}

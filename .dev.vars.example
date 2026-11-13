@@ -19,3 +19,9 @@ GOOGLE_CLIENT_SECRET=
 # X APIトークン保存用AES-256キー（64文字の16進数）。本番はWrangler Secretへ設定。
 # 値をGitへ追加しないでください。未設定時は登録を受け付けません。
 INTEGRATION_ENCRYPTION_KEY=
+
+# お知らせのWeb Push。初期は無効。鍵生成と本番設定はdocs/ANNOUNCEMENTS.md参照。
+PUSH_ENABLED=false
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=

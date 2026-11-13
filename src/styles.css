@@ -5156,3 +5156,39 @@ article.pufu-list-item {
   background: var(--wash);
   box-shadow: 0 0 0 6px var(--wash);
 }
+
+.announcements-page {
+  max-width: 860px;
+  width: 100%;
+}
+.announcements-list {
+  display: grid;
+  gap: 16px;
+}
+.announcement-card {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  overflow-wrap: anywhere;
+  margin: 16px 0;
+}
+.announcement-card h2 {
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+.announcement-card p,
+.push-settings p {
+  line-height: 1.8;
+}
+.push-settings h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.push-settings details {
+  margin-top: 18px;
+}
+.push-settings summary {
+  cursor: pointer;
+}
