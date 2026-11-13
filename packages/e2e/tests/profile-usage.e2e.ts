@@ -41,7 +41,7 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await browser.emulateMedia({ colorScheme: 'light' });
   await app.open('/#profile');
   await expect(screen.getByRole('heading', '利用状況', { exact: true })).toBeVisible();
-  await expect(browser.locator('.appearance-settings + .usage-card')).toBeVisible();
+  await expect(browser.locator('.usage-card + .appearance-settings')).toBeVisible();
   const check = async (period: UsagePeriod) => {
     for (const key of ['stocks', 'questions', 'pufus', 'ai_neurons'] as const) {
       await expect(browser.locator(`.usage-metrics [data-metric="${key}"] strong`)).toHaveText(
@@ -57,7 +57,7 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await screen.getByRole('radio', '全体', { exact: true }).check();
   await check('all');
   await browser.evaluate(() => {
-    document.querySelector('.appearance-settings')!.scrollIntoView({ block: 'start' });
+    document.querySelector('.usage-card')!.scrollIntoView({ block: 'start' });
     return null;
   });
   await app.screenshot('profile-usage-light');
@@ -74,7 +74,7 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await app.open('/manual');
   await browser.locator('.manual-start summary').getByText('利用状況', { exact: true }).click();
   await expect(browser.locator('.manual-start details[open] p')).toContainText(
-    '「プロフィール」で「表示設定」の下にある「利用状況」',
+    '「プロフィール」の「利用状況」',
   );
   await app.screenshot('manual-usage-dark');
   await browser.emulateMedia({ colorScheme: 'light' });

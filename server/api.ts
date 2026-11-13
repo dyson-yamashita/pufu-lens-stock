@@ -1,3 +1,5 @@
+import { pushApp } from './push';
+import { listAnnouncements } from './announcements';
 import { requestDiagnostics, logDiagnosticError, observeOperation } from './diagnostics';
 import { feedbackApp } from './feedback';
 import {
@@ -253,6 +255,15 @@ export function createApp(trustedPrincipal?: Principal) {
     )
       throw new HTTPException(403, { message: 'このトークンには操作の権限がありません。' });
     await next();
+  });
+  app.route('/api/v1/push', pushApp());
+  app.get('/api/v1/announcements', async (c) =>
+    c.json({ announcements: await listAnnouncements(c.env) }),
+  );
+  app.get('/api/v1/announcements/:id', async (c) => {
+    const [announcement] = await listAnnouncements(c.env, c.req.param('id'));
+    if (!announcement) throw new HTTPException(404);
+    return c.json({ announcements: [announcement] });
   });
   app.route('/api/v1/projects', publicationApp());
   app.route('/api/v1/feedback', feedbackApp());

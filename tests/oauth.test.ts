@@ -1,3 +1,4 @@
+import { legalVersions } from '../shared/legal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp } from './helpers';
 import type { User } from '../shared/domain';
@@ -251,8 +252,8 @@ describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', (
             name: 'ふくろう',
             terms_accepted: true,
             privacy_accepted: true,
-            terms_version: '2026-10-30',
-            privacy_version: '2026-11-12',
+            terms_version: legalVersions.terms,
+            privacy_version: legalVersions.privacy,
           },
         })
       ).status,

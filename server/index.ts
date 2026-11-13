@@ -1,3 +1,4 @@
+import { deliverAnnouncements } from './push-delivery';
 import { requestDiagnostics, logDiagnosticError, scheduledDiagnostics } from './diagnostics';
 import { createApp } from './api';
 import { scheduledMaintenance } from './jobs';
@@ -70,5 +71,6 @@ export default {
   fetch: entry.fetch,
   scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(scheduledDiagnostics(() => scheduledMaintenance(env)));
+    ctx.waitUntil(scheduledDiagnostics(() => deliverAnnouncements(env)));
   },
 } satisfies ExportedHandler<Env>;

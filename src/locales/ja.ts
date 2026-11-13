@@ -1,4 +1,34 @@
 export const ja: Record<string, string> = {
+  'announcements.description': 'Pufu Lensの新機能やメンテナンス、重要なご案内をお届けします。',
+  'push.loading': '読み込み中…',
+  'announcements.title': 'お知らせ',
+  'announcements.back': 'お知らせ一覧へ',
+  'announcements.feature': '新機能',
+  'announcements.maintenance': 'メンテナンス',
+  'announcements.important': '重要',
+  'announcements.empty': 'お知らせはまだありません。',
+  'announcements.not_found': 'このお知らせは見つかりません。',
+  'announcements.error': 'お知らせを取得できませんでした。',
+  'push.about': '通知について',
+  'push.title': '通知設定',
+  'push.description': '新機能や重要なお知らせを受け取る',
+  'push.device_hint':
+    '端末・ブラウザーごとの設定です。ログアウトやログイン期限切れで配信を停止します。再ログイン後は、もう一度有効にしてください。',
+  'push.unconfigured': '通知は現在準備中です。',
+  'push.unsupported': 'このブラウザーでは通知を利用できません。',
+  'push.denied': 'ブラウザーの設定で通知を許可してください。',
+  'push.error': '通知設定を変更できませんでした。再度お試しください。',
+  'push.retry': '再読み込み',
+  'push.iphone_title': 'iPhone・iPadで通知を受け取るには',
+  'push.iphone':
+    'iOS・iPadOS 16.4以降で、Safariの共有メニューから「ホーム画面に追加」します。追加したPufu Lensをホーム画面から開き、ログインして通知を有効にしてください。ブラウザーの通常のタブでは利用できません。',
+  'manual.announcements':
+    'サイドメニューの「お知らせ」で、新機能やメンテナンスなどのご案内を確認できます。見出しを選ぶと本文を開きます。',
+  'manual.push_enable':
+    '「プロフィール」の「通知設定」でスイッチをオンにし、端末の確認で許可します。最初はオフです。通知する内容は運営からのお知らせだけで、ストックや問いなど個人の情報は通知しません。',
+  'manual.push_disable':
+    '通知を止める場合は「通知設定」のスイッチをオフにします。通知は任意で、受信しなくてもすべてのお知らせを読めます。',
+
   'feedback.help_question': 'お知りになりたい操作を教えてください。',
   'feedback.help_confirm': 'お役に立ちましたか？',
   'feedback.help_choose': '該当する項目をお選びください。',
@@ -118,7 +148,7 @@ export const ja: Record<string, string> = {
   'ui.usage.retry': '再読み込み',
   'ui.usage.timezone_note': '日本時間で集計します。今週は月曜、今月は1日からです。',
   'manual.usage':
-    '「プロフィール」で「表示設定」の下にある「利用状況」から、今週・今月・全体のストック・問い・プ譜の登録数とAI使用量を確認できます。登録数は削除済みを除きます。AI使用量はモデル別にNeuronsへ換算した目安で、計測開始後の取得できた分だけを集計します。日本時間の月曜・月初を区切りに集計します。',
+    '「プロフィール」の「利用状況」から、今週・今月・全体のストック・問い・プ譜の登録数とAI使用量を確認できます。登録数は削除済みを除きます。AI使用量はモデル別にNeuronsへ換算した目安で、計測開始後の取得できた分だけを集計します。日本時間の月曜・月初を区切りに集計します。',
   'pufu.creation_method': '作成方法',
   'pufu.create_with_ai': 'AIで作成',
   'pufu.create_from_json': 'JSONから作成',

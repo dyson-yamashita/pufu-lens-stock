@@ -1,3 +1,4 @@
+import { legalVersions } from '../shared/legal';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp } from './helpers';
 import { isDemoOrigin } from '../server/env';
@@ -41,8 +42,8 @@ describe('同じWi-Fiからのローカルデモ', () => {
         name: 'LAN利用者',
         terms_accepted: true,
         privacy_accepted: true,
-        terms_version: '2026-10-30',
-        privacy_version: '2026-11-12',
+        terms_version: legalVersions.terms,
+        privacy_version: legalVersions.privacy,
       },
     });
     expect(accepted.status).toBe(200);

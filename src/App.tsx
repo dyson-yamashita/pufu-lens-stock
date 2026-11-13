@@ -1,3 +1,4 @@
+import Announcements from './Announcements';
 import FeedbackSurface from './FeedbackSurface';
 import { feedbackScreens, type FeedbackScreen } from '../shared/feedback';
 import BrandLogo, { BrandMark } from './BrandLogo';
@@ -34,6 +35,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
+  Bell,
   Bookmark,
   Check,
   ChevronDown,
@@ -109,6 +111,7 @@ type Route = {
     | 'memory'
     | 'shortcuts'
     | 'mcp'
+    | 'announcements'
     | 'profile'
     | 'questions'
     | 'pufus'
@@ -178,6 +181,7 @@ const headerLabels = (): Record<Route['view'], string> => ({
   pufus: t('ui.app.pufu'),
   memory: t('ui.app.memory'),
   settings: t('ui.app.settings'),
+  announcements: t('announcements.title'),
   profile: t('ui.app.profile'),
   mcp: t('ui.app.integrations'),
   shortcuts: t('ui.app.shortcuts'),
@@ -242,6 +246,7 @@ function routeFromHash(): Route {
       view === 'memory' ||
       view === 'shortcuts' ||
       view === 'mcp' ||
+      view === 'announcements' ||
       view === 'profile' ||
       view === 'questions' ||
       view === 'pufus' ||
@@ -260,7 +265,12 @@ function routeFromHash(): Route {
         ? decodeURIComponent(id)
         : null,
     detailId:
-      (view === 'question' || view === 'resolve' || view === 'pufu' || view === 'stock') && id
+      (view === 'announcements' ||
+        view === 'question' ||
+        view === 'resolve' ||
+        view === 'pufu' ||
+        view === 'stock') &&
+      id
         ? decodeURIComponent(id)
         : undefined,
   };
@@ -1013,6 +1023,7 @@ export default function App() {
         memory: Sparkles,
         settings: Settings,
         profile: UserRound,
+        announcements: Bell,
         mcp: Layers,
         shortcuts: KeyRound,
       } as Partial<Record<Route['view'], typeof Layers>>
@@ -1177,6 +1188,22 @@ export default function App() {
           </button>
         </nav>
         <div className="sidebar-bottom">
+          <button
+            className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
+            aria-current={route.view === 'profile' ? 'page' : undefined}
+            onClick={() => navigate('profile')}
+          >
+            <UserRound size={18} aria-hidden="true" />
+            {t('ui.app.profile')}
+          </button>
+          <button
+            className={`nav-item ${route.view === 'announcements' ? 'active' : ''}`}
+            aria-current={route.view === 'announcements' ? 'page' : undefined}
+            onClick={() => navigate('announcements')}
+          >
+            <Bell size={18} aria-hidden="true" />
+            {t('announcements.title')}
+          </button>
           <a
             className="nav-item"
             href={manualHref()}
@@ -1187,14 +1214,6 @@ export default function App() {
             <BookOpen size={18} aria-hidden="true" />
             {t('ui.app.user_manual')}
           </a>
-          <button
-            className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
-            aria-current={route.view === 'profile' ? 'page' : undefined}
-            onClick={() => navigate('profile')}
-          >
-            <UserRound size={18} aria-hidden="true" />
-            {t('ui.app.profile')}
-          </button>
           <button
             className={`nav-item ${route.view === 'shortcuts' ? 'active' : ''}`}
             onClick={() => navigate('shortcuts')}
@@ -1346,22 +1365,24 @@ export default function App() {
                 </h1>
                 {route.view !== 'profile' && (
                   <p>
-                    {route.view === 'questions'
-                      ? t('ui.app.collect_questions_and_insights_from_everyday_life_and_saved')
-                      : route.view === 'pufus'
-                        ? t('ui.app.review_ideas_for_solutions_inspired_by_your_questions_and')
-                        : route.view === 'settings'
-                          ? t('ui.app.edit_this_project_s_settings')
-                          : route.view === 'mcp'
-                            ? t('ui.app.connect_conversations_with_stocks_questions_and_insights')
-                            : route.view === 'shortcuts'
-                              ? t('ui.app.save_articles_from_your_iphone_directly_to_a_project')
-                              : route.view === 'memory'
-                                ? t(
-                                    'ui.app.interests_and_knowledge_from_your_articles_gradually_updated_with',
-                                  )
-                                : selected?.description ||
-                                  t('ui.app.keep_interesting_articles_and_new_ideas_together')}
+                    {route.view === 'announcements'
+                      ? t('announcements.description')
+                      : route.view === 'questions'
+                        ? t('ui.app.collect_questions_and_insights_from_everyday_life_and_saved')
+                        : route.view === 'pufus'
+                          ? t('ui.app.review_ideas_for_solutions_inspired_by_your_questions_and')
+                          : route.view === 'settings'
+                            ? t('ui.app.edit_this_project_s_settings')
+                            : route.view === 'mcp'
+                              ? t('ui.app.connect_conversations_with_stocks_questions_and_insights')
+                              : route.view === 'shortcuts'
+                                ? t('ui.app.save_articles_from_your_iphone_directly_to_a_project')
+                                : route.view === 'memory'
+                                  ? t(
+                                      'ui.app.interests_and_knowledge_from_your_articles_gradually_updated_with',
+                                    )
+                                  : selected?.description ||
+                                    t('ui.app.keep_interesting_articles_and_new_ideas_together')}
                   </p>
                 )}
               </div>
@@ -1680,6 +1701,8 @@ export default function App() {
                 setNotice({ message: t('ui.app.profile_saved') });
               }}
             />
+          ) : route.view === 'announcements' ? (
+            <Announcements key={route.detailId ?? 'list'} id={route.detailId} />
           ) : route.view === 'mcp' ? (
             <McpConnections />
           ) : route.view === 'shortcuts' ? (

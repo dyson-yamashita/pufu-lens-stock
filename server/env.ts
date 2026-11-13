@@ -37,6 +37,10 @@ export interface Env {
   LOCAL_DEMO_ENABLED?: string;
   LOCAL_DEMO_LAN_ORIGIN?: string;
   INTEGRATION_ENCRYPTION_KEY?: string;
+  PUSH_ENABLED?: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   AI_MODEL: string;
@@ -56,6 +60,7 @@ export interface Env {
 export type Principal = {
   user: User;
   kind: 'session' | 'token' | 'mcp';
+  sessionHash?: string;
   tokenProjectId: string | null;
   tokenProjectIds?: string[] | null;
 };

@@ -1,3 +1,4 @@
+import { legalVersions } from '../shared/legal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { testApp, mockEvent, mockStep, applyMigration } from './helpers';
@@ -319,8 +320,8 @@ describe('永続利用量制限', () => {
         name: 'Alice',
         terms_accepted: true,
         privacy_accepted: true,
-        terms_version: '2026-10-30',
-        privacy_version: '2026-11-12',
+        terms_version: legalVersions.terms,
+        privacy_version: legalVersions.privacy,
       },
     });
     expect(

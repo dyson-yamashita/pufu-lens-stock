@@ -1,3 +1,4 @@
+import PushSettings from './PushSettings';
 import { applicationError, t, intlLocale, useLanguage, setLanguage } from './i18n';
 import LanguageSelect from './LanguageSelect';
 import { resolveLanguage } from '../shared/locale';
@@ -166,8 +167,9 @@ export default function Profile({ user, onSave }: { user: User; onSave: (user: U
           </button>
         </details>
       </section>
-      <ThemeSettings />
       <ProfileUsage key={user.id} userId={user.id} />
+      <ThemeSettings />
+      <PushSettings />
       {confirmDelete && <AccountDeleteDialog onCancel={() => setConfirmDelete(false)} />}
     </>
   );

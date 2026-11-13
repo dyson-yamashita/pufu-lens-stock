@@ -1,4 +1,35 @@
 export const en: Record<string, string> = {
+  'announcements.description':
+    'New features, maintenance updates, and important news from Pufu Lens.',
+  'push.loading': 'Loading…',
+  'announcements.title': 'Announcements',
+  'announcements.back': 'Back to announcements',
+  'announcements.feature': 'New feature',
+  'announcements.maintenance': 'Maintenance',
+  'announcements.important': 'Important',
+  'announcements.empty': 'No announcements yet.',
+  'announcements.not_found': 'This announcement could not be found.',
+  'announcements.error': 'Could not load announcements.',
+  'push.about': 'About notifications',
+  'push.title': 'Notification settings',
+  'push.description': 'Receive new features and important updates',
+  'push.device_hint':
+    'This setting applies to this device and browser. Delivery stops when you sign out or your session expires. Enable notifications again after signing back in.',
+  'push.unconfigured': 'Notifications are being prepared.',
+  'push.unsupported': 'Notifications are unavailable in this browser.',
+  'push.denied': 'Allow notifications in your browser settings.',
+  'push.error': 'Could not update notifications. Please try again.',
+  'push.retry': 'Reload',
+  'push.iphone_title': 'Receiving notifications on iPhone and iPad',
+  'push.iphone':
+    'On iOS or iPadOS 16.4 or later, use Add to Home Screen from Safari’s share menu. Open Pufu Lens from the Home Screen, sign in, and enable notifications. Regular browser tabs do not support this.',
+  'manual.announcements':
+    'Open Announcements in the side menu to read about new features and maintenance. Select a heading to open the full announcement.',
+  'manual.push_enable':
+    'In Profile, turn on the switch under Notification settings, then allow notifications on your device. Notifications start off and contain only operator announcements, never your personal stocks or questions.',
+  'manual.push_disable':
+    'Turn off the switch under Notification settings to stop delivery. Notifications are optional; all announcements remain available without them.',
+
   'feedback.help_question': 'Which action would you like help with?',
   'feedback.help_confirm': 'Did this help?',
   'feedback.help_choose': 'Please choose the relevant topic.',
@@ -121,7 +152,7 @@ export const en: Record<string, string> = {
   'ui.usage.timezone_note':
     'Periods use Japan time. Weeks start on Monday; months start on the 1st.',
   'manual.usage':
-    'Open the Usage card below Display settings in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage is an estimate in Neurons using model-specific rates and includes only available usage since measurement began. Periods start on Monday or the 1st of the month in Japan time.',
+    'Open the Usage card in Profile to see stocks, questions and pufus registered, plus AI usage, for this week, this month or all time. Deleted items are excluded from registrations. AI usage is an estimate in Neurons using model-specific rates and includes only available usage since measurement began. Periods start on Monday or the 1st of the month in Japan time.',
   'pufu.creation_method': 'Creation method',
   'pufu.create_with_ai': 'Create with AI',
   'pufu.create_from_json': 'Create from JSON',

@@ -343,6 +343,24 @@ const sections = (tr: typeof t) => [
     ),
   },
   {
+    id: 'announcements',
+    title: tr('announcements.title'),
+    content: (
+      <div className="manual-guide">
+        <p>{tr('manual.announcements')}</p>
+        <p>{tr('manual.push_enable')}</p>
+        <p>{tr('manual.push_disable')}</p>
+        <p>{tr('push.device_hint')}</p>
+        <details>
+          <summary>{tr('push.iphone_title')}</summary>
+          <p>{tr('push.iphone')}</p>
+          <p>{tr('push.denied')}</p>
+          <p>{tr('push.unconfigured')}</p>
+        </details>
+      </div>
+    ),
+  },
+  {
     id: 'withdrawal',
     title: tr('ui.profile.delete_your_account'),
     content: (
