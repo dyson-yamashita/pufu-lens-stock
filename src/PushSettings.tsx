@@ -86,39 +86,60 @@ export default function PushSettings() {
       setBusy(false);
     }
   };
+  const status = !supported()
+    ? 'push.unsupported'
+    : !loaded
+      ? error
+        ? null
+        : 'push.loading'
+      : !config?.available && !subscribed
+        ? 'push.unconfigured'
+        : permission === 'denied'
+          ? 'push.denied'
+          : null;
   return (
     <section
       className="push-settings profile-card"
       aria-labelledby="push-settings-title"
       aria-busy={busy}
     >
-      <h2 id="push-settings-title">
-        <Bell size={19} aria-hidden="true" />
-        {t('push.title')}
-      </h2>
-      <p>{t('push.description')}</p>
-      <p className="muted">{t('push.device_hint')}</p>
-      {!supported() ? (
-        <p>{t('push.unsupported')}</p>
-      ) : !loaded ? (
-        <p>{t('push.loading')}</p>
-      ) : !config?.available && !subscribed ? (
-        <p>{t('push.unconfigured')}</p>
-      ) : (
-        <>
-          <p role="status">{t(subscribed && permission === 'granted' ? 'push.on' : 'push.off')}</p>
-          {permission === 'denied' && <p>{t('push.denied')}</p>}
-          <button
-            className="button secondary"
-            disabled={busy || (!subscribed && (permission === 'denied' || !config?.available))}
-            onClick={() => void change()}
-          >
-            {t(subscribed ? 'push.disable' : 'push.enable')}
-          </button>
-        </>
+      <div className="push-settings-row">
+        <span className="push-settings-icon" aria-hidden="true">
+          <Bell size={23} />
+        </span>
+        <div className="push-settings-copy">
+          <h2 id="push-settings-title">{t('push.title')}</h2>
+          <p id="push-settings-description">{t('push.description')}</p>
+        </div>
+        <button
+          type="button"
+          className="push-switch"
+          role="switch"
+          aria-labelledby="push-settings-title"
+          aria-describedby="push-settings-description"
+          aria-checked={subscribed}
+          disabled={
+            busy ||
+            !loaded ||
+            !supported() ||
+            (!subscribed && (permission === 'denied' || !config?.available))
+          }
+          onClick={() => void change()}
+        >
+          <span className="push-switch-track" aria-hidden="true">
+            <span className="push-switch-thumb" />
+          </span>
+        </button>
+      </div>
+      {status && (
+        <p className="push-settings-status muted" role="status">
+          {t(status)}
+        </p>
       )}
-      <details>
-        <summary>{t('push.iphone_title')}</summary>
+      <details className="push-settings-help">
+        <summary>{t('push.about')}</summary>
+        <p>{t('push.device_hint')}</p>
+        <h3>{t('push.iphone_title')}</h3>
         <p>{t('push.iphone')}</p>
       </details>
       {error && (

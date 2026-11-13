@@ -1189,6 +1189,14 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <button
+            className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
+            aria-current={route.view === 'profile' ? 'page' : undefined}
+            onClick={() => navigate('profile')}
+          >
+            <UserRound size={18} aria-hidden="true" />
+            {t('ui.app.profile')}
+          </button>
+          <button
             className={`nav-item ${route.view === 'announcements' ? 'active' : ''}`}
             aria-current={route.view === 'announcements' ? 'page' : undefined}
             onClick={() => navigate('announcements')}
@@ -1206,14 +1214,6 @@ export default function App() {
             <BookOpen size={18} aria-hidden="true" />
             {t('ui.app.user_manual')}
           </a>
-          <button
-            className={`nav-item ${route.view === 'profile' ? 'active' : ''}`}
-            aria-current={route.view === 'profile' ? 'page' : undefined}
-            onClick={() => navigate('profile')}
-          >
-            <UserRound size={18} aria-hidden="true" />
-            {t('ui.app.profile')}
-          </button>
           <button
             className={`nav-item ${route.view === 'shortcuts' ? 'active' : ''}`}
             onClick={() => navigate('shortcuts')}

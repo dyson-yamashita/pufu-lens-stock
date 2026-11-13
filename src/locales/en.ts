@@ -10,23 +10,15 @@ export const en: Record<string, string> = {
   'announcements.empty': 'No announcements yet.',
   'announcements.not_found': 'This announcement could not be found.',
   'announcements.error': 'Could not load announcements.',
-  'push.title': 'Announcement notifications',
-  'push.description':
-    'Receive new features and important announcements on this device. Notifications are optional. You can read all announcements without enabling them.',
+  'push.about': 'About notifications',
+  'push.title': 'Notifications',
+  'push.description': 'Receive new features and important updates',
   'push.device_hint':
     'This setting applies to this device and browser. Delivery stops when you sign out or your session expires. Enable notifications again after signing back in.',
-  'push.enable': 'Enable notifications',
-  'push.disable': 'Turn off notifications on this device',
-  'push.on': 'Receiving on this device',
-  'push.off': 'Not receiving on this device',
-  'push.unconfigured':
-    'Push notifications are being prepared. You can read announcements on this page.',
-  'push.unsupported':
-    'Notifications are unavailable in this browser. Open the site over HTTPS in a supported browser. See the iPhone and iPad instructions below.',
-  'push.denied':
-    'Notifications are blocked by your browser. Allow notifications for Pufu Lens in your browser or device settings, then reopen this page.',
-  'push.error':
-    'Could not check or update notification settings. Check your connection and device notification settings, then try again.',
+  'push.unconfigured': 'Notifications are being prepared.',
+  'push.unsupported': 'Notifications are unavailable in this browser.',
+  'push.denied': 'Allow notifications in your browser settings.',
+  'push.error': 'Could not update notifications. Please try again.',
   'push.retry': 'Reload',
   'push.iphone_title': 'Receiving notifications on iPhone and iPad',
   'push.iphone':
@@ -34,9 +26,9 @@ export const en: Record<string, string> = {
   'manual.announcements':
     'Open Announcements in the side menu to read about new features and maintenance. Select a heading to open the full announcement.',
   'manual.push_enable':
-    'In Announcements or Profile, choose Enable notifications under Announcement notifications, then allow notifications on your device. Notifications start disabled and contain only announcements from the operator, never your stocks, questions, or other personal content.',
+    'In Announcements or Profile, turn on the Notifications switch, then allow notifications on your device. Notifications start off and contain only operator announcements, never your personal stocks or questions.',
   'manual.push_disable':
-    'Choose Turn off notifications on this device to stop delivery. Notifications are optional; all announcements remain available without them.',
+    'Turn off the Notifications switch to stop delivery. Notifications are optional; all announcements remain available without them.',
 
   'feedback.help_question': 'Which action would you like help with?',
   'feedback.help_confirm': 'Did this help?',

@@ -8,10 +8,17 @@ test('NEWS-001 お知らせの閲覧と通知設定の入口を確認する', as
   fixture,
 }) => {
   void fixture;
-  await app.open('/#announcements');
+  const menu = screen.getByRole('button', 'メニューを開く', { exact: true });
+  if (await menu.isVisible()) await menu.click();
+  await screen.getByRole('button', 'お知らせ', { exact: true }).click();
   await expect(screen.getByRole('heading', 'お知らせ', { exact: true })).toBeVisible();
-  await expect(screen.getByRole('heading', 'お知らせのPush通知', { exact: true })).toBeVisible();
-  await expect(screen.getByRole('button', '通知を有効にする', { exact: true })).toHaveCount(0);
+  await expect(screen.getByRole('heading', '通知', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('switch', '通知', { exact: true })).toBeDisabled();
+  expect(
+    await browser.evaluate(() =>
+      document.querySelector('.push-settings-help')!.hasAttribute('open'),
+    ),
+  ).toBe(false);
   await screen.getByRole('link', 'お知らせページを追加しました', { exact: true }).click();
   await expect(
     screen.getByRole('heading', 'お知らせページを追加しました', { exact: true }),
@@ -32,7 +39,7 @@ test('NEWS-001 お知らせの閲覧と通知設定の入口を確認する', as
     ).toBe(true);
   }
   await app.open('/#profile');
-  await expect(screen.getByRole('heading', 'お知らせのPush通知', { exact: true })).toBeVisible();
+  await expect(screen.getByRole('heading', '通知', { exact: true })).toBeVisible();
   await app.open('/manual#announcements');
   await expect(screen.getByRole('heading', 'お知らせ', { exact: true })).toBeVisible();
 });

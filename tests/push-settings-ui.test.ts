@@ -55,20 +55,17 @@ afterEach(async () => {
   vi.resetAllMocks();
 });
 const render = () => act(async () => root.render(createElement(PushSettings)));
-const click = (label: string) =>
-  act(async () =>
-    [...document.querySelectorAll('button')]
-      .find((button) => button.textContent === label)!
-      .click(),
-  );
+const toggle = () => document.querySelector<HTMLButtonElement>('[role="switch"]')!;
+const click = () => act(async () => toggle().click());
 it('表示だけでは許可を要求せず、明示操作で拒否された時は設定の案内を表示する', async () => {
   await render();
   expect(permission).not.toHaveBeenCalled();
   expect(register).not.toHaveBeenCalled();
-  await click('通知を有効にする');
+  expect(toggle().getAttribute('aria-checked')).toBe('false');
+  await click();
   expect(permission).toHaveBeenCalledTimes(1);
   expect(register).not.toHaveBeenCalled();
-  expect(document.body.textContent).toContain('ブロックされています');
+  expect(document.body.textContent).toContain('ブラウザーの設定で通知を許可してください');
   expect(document.querySelector<HTMLButtonElement>('button')!.disabled).toBe(true);
 });
 it('解除失敗では受信中の表示を保ち、成功した時はサーバー解除後にブラウザー購読を解除する', async () => {
@@ -76,18 +73,22 @@ it('解除失敗では受信中の表示を保ち、成功した時はサーバ�
   serverSubscribed = true;
   Object.assign(Notification, { permission: 'granted' });
   await render();
+  expect(toggle().getAttribute('aria-checked')).toBe('true');
   vi.mocked(send).mockRejectedValueOnce(new Error('offline'));
-  await click('この端末の通知を解除する');
+  await click();
   expect(unsubscribe).not.toHaveBeenCalled();
   expect(document.querySelector('[role="alert"]')).not.toBeNull();
-  await click('この端末の通知を解除する');
+  await click();
   expect(unsubscribe).toHaveBeenCalledTimes(1);
   expect(serverSubscribed).toBe(false);
+  expect(toggle().getAttribute('aria-checked')).toBe('false');
 });
-it('管理者未設定では有効化ボタンを出さない', async () => {
+it('管理者未設定ではスイッチを無効にし、詳細説明は折りたたむ', async () => {
   vi.mocked(api).mockResolvedValue({ available: false, publicKey: null });
   await render();
   expect(document.body.textContent).toContain('準備中');
-  expect(document.querySelector('button')).toBeNull();
+  expect(toggle().disabled).toBe(true);
+  expect(toggle().getAttribute('aria-checked')).toBe('false');
+  expect(document.querySelector('details')?.hasAttribute('open')).toBe(false);
   expect(permission).not.toHaveBeenCalled();
 });

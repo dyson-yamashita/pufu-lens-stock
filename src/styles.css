@@ -5179,16 +5179,104 @@ article.pufu-list-item {
 }
 .announcement-card p,
 .push-settings p {
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.9;
 }
-.push-settings h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.push-settings details {
-  margin-top: 18px;
+.announcement-card p + p,
+.push-settings p + p {
+  margin-top: 10px;
 }
 .push-settings summary {
   cursor: pointer;
+}
+
+.push-settings-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 14px;
+}
+.push-settings-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--primary);
+  background: var(--wash);
+}
+.push-settings-copy h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.push-settings-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.push-settings-status {
+  margin: 10px 0 0 56px;
+}
+.push-settings .push-settings-status {
+  font-size: 13px;
+}
+.push-settings .push-settings-help {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.push-settings-help h3 {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.push-switch {
+  display: grid;
+  place-items: center;
+  min-width: 52px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.push-switch-track {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--wash);
+}
+.push-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 150ms ease;
+}
+.push-switch[aria-checked='true'] .push-switch-track {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.push-switch[aria-checked='true'] .push-switch-thumb {
+  background: var(--card);
+  transform: translateX(22px);
+}
+.push-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.push-switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .push-switch-thumb {
+    transition: none;
+  }
 }
