@@ -80,6 +80,9 @@ describe('MCP OAuth連携', () => {
       },
     });
     expect(page.status).toBe(200);
+    expect(page.headers.get('Content-Security-Policy')).toBe(
+      "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'",
+    );
     const html = await page.text();
     const { document } = parseHTML(html);
     expect(document.documentElement.getAttribute('data-theme')).toBe(
