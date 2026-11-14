@@ -490,3 +490,58 @@ it('再試行に一度失敗しても成功後はエラーを消して詳細画�
   await act(async () => retry().click());
   expect(document.querySelector('.stock-detail .form-error')).toBeNull();
 });
+
+it.each([
+  { mobile: true, view: 'stocks', pageSize: 6 },
+  { mobile: false, view: 'stocks', pageSize: 24 },
+  { mobile: true, view: 'questions', pageSize: 6 },
+  { mobile: false, view: 'questions', pageSize: 24 },
+])(
+  '$view: スマホ=$mobile で表示件数とページ移動時のスクロールを切り替える',
+  async ({ mobile, view, pageSize }) => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: () => ({ matches: mobile, addEventListener() {}, removeEventListener() {} }),
+    });
+    window.location.hash = view === 'questions' ? '#questions' : '#';
+    const original = vi.mocked(api).getMockImplementation()!;
+    vi.mocked(api).mockImplementation((path, options) => {
+      const url = new URL(path, 'https://example.com');
+      if (url.pathname === `/api/v1/${view}`) {
+        const limit = Number(url.searchParams.get('limit') ?? 24);
+        const page = Number(url.searchParams.get('page') ?? 1);
+        const items = Array.from(
+          { length: Math.min(limit, 49 - (page - 1) * limit) },
+          (_, index) => ({
+            ...stock,
+            id: `item-${(page - 1) * limit + index}`,
+            text: `問い${(page - 1) * limit + index}`,
+            source: 'user',
+          }),
+        );
+        return Promise.resolve({ [view]: items, total: 49 });
+      }
+      return original(path, options);
+    });
+    await act(async () => root.render(createElement(App)));
+    const selector = view === 'stocks' ? '.article-card' : '.question-card';
+    expect(document.querySelectorAll(selector)).toHaveLength(pageSize);
+    const pagination = () => document.querySelector('.pagination')!;
+    expect(pagination().textContent).toContain(`1 / ${Math.ceil(49 / pageSize)}`);
+    const scroll = vi.mocked(window.scrollTo);
+    scroll.mockClear();
+    await act(async () => pagination().querySelectorAll<HTMLButtonElement>('button')[1].click());
+    expect(pagination().textContent).toContain(`2 / ${Math.ceil(49 / pageSize)}`);
+    expect(document.querySelectorAll(selector)).toHaveLength(pageSize);
+    expect(document.querySelector(selector)?.textContent).toContain(
+      view === 'stocks' ? stock.title : `問い${pageSize}`,
+    );
+    if (mobile) expect(scroll).toHaveBeenCalledWith(0, 0);
+    else expect(scroll).not.toHaveBeenCalled();
+    scroll.mockClear();
+    await act(async () => pagination().querySelectorAll<HTMLButtonElement>('button')[0].click());
+    expect(pagination().textContent).toContain(`1 / ${Math.ceil(49 / pageSize)}`);
+    if (mobile) expect(scroll).toHaveBeenCalledWith(0, 0);
+    else expect(scroll).not.toHaveBeenCalled();
+  },
+);

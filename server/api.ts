@@ -1125,6 +1125,11 @@ export function createApp(trustedPrincipal?: Principal) {
   app.get('/api/v1/questions', async (c) => {
     const principal = c.get('principal');
     const { user } = principal;
+    const limit = stockListOptionsSchema.shape.limit.safeParse(
+      c.req.query('limit') === undefined ? undefined : Number(c.req.query('limit')),
+    );
+    if (!limit.success) throw new HTTPException(400, { message: '取得件数を確認してください。' });
+    const pageSize = limit.data;
     const projectId = resolveProjectId(principal, c.req.query('project_id') || null);
     if (projectId) await ownedProject(c.env, user.id, projectId);
     const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
@@ -1156,8 +1161,8 @@ export function createApp(trustedPrincipal?: Principal) {
     const [rows, totals] = await observeOperation('d1', 'questions_list', () =>
       c.env.DB.batch<Record<string, unknown>>([
         c.env.DB.prepare(
-          `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT 24 OFFSET ?`,
-        ).bind(...params, (page - 1) * 24),
+          `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT ? OFFSET ?`,
+        ).bind(...params, pageSize, (page - 1) * pageSize),
         c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${questionJoins} WHERE ${where}`).bind(
           ...params,
         ),
@@ -1170,7 +1175,7 @@ export function createApp(trustedPrincipal?: Principal) {
       questions: rows.results.map(withRelations),
       total: totals.results[0].count,
       page,
-      pageSize: 24,
+      pageSize,
     });
   });
   app.post('/api/v1/questions', async (c) => {
