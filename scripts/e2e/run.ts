@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { assertRunReport, executionMode, selectScenarios } from './policy.ts';
+import { assertRunReport, executionMode, selectScenarios, shardScenarios } from './policy.ts';
 import { command, e2eBin, repo, withRuntime, workspace } from './runtime.ts';
 
 const { values } = parseArgs({
@@ -13,6 +13,7 @@ const { values } = parseArgs({
     mode: { type: 'string' },
     target: { type: 'string' },
     scenario: { type: 'string' },
+    shard: { type: 'string' },
     related: { type: 'boolean' },
     base: { type: 'string', default: 'origin/main' },
   },
@@ -22,6 +23,7 @@ const targets = values.target ? [values.target] : ['desktop', 'phone'];
 if (targets.some((target) => !['desktop', 'phone'].includes(target)))
   throw new Error('不明なE2Eターゲットです。');
 const ledger = await checkLedger();
+const assigned = shardScenarios(ledger, values.shard);
 let selected = ledger.map(({ id }) => id);
 if (values.related) {
   if (!values.base || !/^[A-Za-z0-9_./-]+$/.test(values.base) || values.base.startsWith('-'))
@@ -47,8 +49,9 @@ if (values.scenario) {
   if (!selected.includes(values.scenario)) throw new Error('選択対象にないシナリオです。');
   selected = [values.scenario];
 }
+selected = selected.filter((id) => assigned.includes(id));
 if (!selected.length) {
-  console.log('変更箇所に対応するE2Eはありません。未実行（合格とは扱いません）。');
+  console.log('選択条件に対応するE2Eはありません。未実行（合格とは扱いません）。');
 } else {
   const output = join(workspace, '.e2e/runs', randomUUID());
   const context: { mode: string; selected: string[]; targets: string[]; url?: string } = {
@@ -71,7 +74,7 @@ if (!selected.length) {
         `^(${selected.join('|')}) `,
       ];
       console.log(
-        `E2E mode=${mode}, scenarios=${selected.join(',')}, targets=${targets.join(',')}`,
+        `E2E mode=${mode}, shard=${values.shard ?? 'all'}, scenarios=${selected.join(',')}, targets=${targets.join(',')}`,
       );
       const log = await command(args, runnerEnv, workspace);
       console.log(log);
