@@ -1,6 +1,7 @@
 [
   {
     "id": "USAGE-001",
+    "estimatedSeconds": 10,
     "title": "プロフィールの利用状況",
     "sources": [
       "src/ProfileUsage.tsx",
@@ -20,6 +21,7 @@
   },
   {
     "id": "THEME-001",
+    "estimatedSeconds": 2,
     "title": "トップページのライト・ダーク選択と保持",
     "sources": [
       "src/App.tsx",
@@ -36,6 +38,7 @@
   },
   {
     "id": "STOCK-001",
+    "estimatedSeconds": 12,
     "title": "テキストの保存と再表示",
     "sources": [
       "src/App.tsx",
@@ -67,6 +70,7 @@
   },
   {
     "id": "STOCK-002",
+    "estimatedSeconds": 30,
     "title": "URL記事の取得状態と失敗後の再試行",
     "sources": [
       "src/App.tsx",
@@ -83,6 +87,7 @@
   },
   {
     "id": "PUFU-001",
+    "estimatedSeconds": 13,
     "title": "プ譜の編集・局面・戻り先",
     "sources": [
       "src/PufuPage.tsx",
@@ -139,6 +144,7 @@
   },
   {
     "id": "PUFU-002",
+    "estimatedSeconds": 6,
     "title": "JSON取込によるプ譜の作成・編集",
     "sources": [
       "src/PufuForm.tsx",
@@ -155,6 +161,7 @@
   },
   {
     "id": "PUBLIC-001",
+    "estimatedSeconds": 10,
     "title": "公開の確認と非公開化",
     "sources": [
       "src/PublicProjects.tsx",
@@ -186,6 +193,7 @@
   },
   {
     "id": "LANG-001",
+    "estimatedSeconds": 5,
     "title": "言語の初回選択とアカウント設定の保持",
     "sources": [
       "src/i18n.ts",
@@ -210,6 +218,7 @@
   },
   {
     "id": "MCP-001",
+    "estimatedSeconds": 20,
     "title": "MCP連携の編集と保存",
     "sources": [
       "src/McpConnections.tsx",
@@ -242,6 +251,7 @@
   },
   {
     "id": "MEMORY-001",
+    "estimatedSeconds": 2,
     "title": "メモリの版履歴",
     "sources": [
       "src/MemoryHistory.tsx",
@@ -262,6 +272,7 @@
   },
   {
     "id": "FIRST-001",
+    "estimatedSeconds": 7,
     "title": "初回の進捗と記事からの問い追加",
     "sources": [
       "src/FirstSteps.tsx",
@@ -279,6 +290,7 @@
   },
   {
     "id": "QUESTION-001",
+    "estimatedSeconds": 4,
     "title": "問いのメモと関連ストックの編集・保持",
     "sources": [
       "src/QuestionPage.tsx",
@@ -294,6 +306,7 @@
   },
   {
     "id": "FEEDBACK-001",
+    "estimatedSeconds": 8,
     "title": "プフィの検知・会話・保守向けDB保存",
     "sources": [
       "src/PufiFeedback.tsx",
@@ -312,6 +325,7 @@
   },
   {
     "id": "FEEDBACK-002",
+    "estimatedSeconds": 5,
     "title": "保存競合の反復によるプフィの案内",
     "sources": [
       "src/PufuEditor.tsx",
@@ -326,6 +340,7 @@
   },
   {
     "id": "FEEDBACK-003",
+    "estimatedSeconds": 5,
     "title": "通信失敗の反復によるプフィの案内",
     "sources": [
       "src/PufuEditor.tsx",
@@ -340,6 +355,7 @@
   },
   {
     "id": "FEEDBACK-004",
+    "estimatedSeconds": 5,
     "title": "ログイン済みマニュアルの入口と見出し案内・未解決ヒアリング",
     "sources": [
       "src/PufiFeedback.tsx",
@@ -364,6 +380,7 @@
   },
   {
     "id": "FEEDBACK-005",
+    "estimatedSeconds": 5,
     "title": "通常のプ譜表示・局面往復・機能開閉で非表示",
     "sources": [
       "src/PufiFeedback.tsx",
@@ -378,6 +395,7 @@
   },
   {
     "id": "FEEDBACK-006",
+    "estimatedSeconds": 3,
     "title": "全画面の操作失敗とモーダル内の案内",
     "sources": [
       "src/FeedbackSurface.tsx",
@@ -391,6 +409,7 @@
   },
   {
     "id": "FEEDBACK-007",
+    "estimatedSeconds": 13,
     "title": "全画面の無反応クリック",
     "sources": [
       "src/FeedbackSurface.tsx",
@@ -404,6 +423,7 @@
   },
   {
     "id": "FEEDBACK-008",
+    "estimatedSeconds": 4,
     "title": "全画面のネイティブ入力エラー",
     "sources": [
       "src/FeedbackSurface.tsx",
@@ -417,6 +437,7 @@
   },
   {
     "id": "FEEDBACK-009",
+    "estimatedSeconds": 1,
     "title": "未ログインの公開マニュアル",
     "sources": [
       "src/FeedbackSurface.tsx",
@@ -430,6 +451,7 @@
   },
   {
     "id": "FEEDBACK-010",
+    "estimatedSeconds": 3,
     "title": "ログイン方法の短い質問への直接回答",
     "sources": [
       "src/manual-search.ts",
@@ -444,6 +466,7 @@
   },
   {
     "id": "NEWS-001",
+    "estimatedSeconds": 3,
     "title": "お知らせの閲覧と通知設定",
     "sources": [
       "src/Announcements.tsx",

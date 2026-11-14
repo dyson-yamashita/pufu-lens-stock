@@ -1,11 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { executionMode, runnerEnvironment, selectScenarios } from '../scripts/e2e/policy';
+import {
+  executionMode,
+  runnerEnvironment,
+  selectScenarios,
+  shardScenarios,
+} from '../scripts/e2e/policy';
+import scenarioLedger from '../packages/e2e/scenarios.json';
 
 const scenarios = [
   { id: 'STOCK-001', sources: ['src/Stocks.tsx', 'server/stocks.ts'] },
   { id: 'PUFU-001', sources: ['src/PufuEditor.tsx', 'server/pufu.ts'] },
   { id: 'PUBLIC-001', sources: ['src/PublicationSettings.tsx', 'server/public-projects.ts'] },
 ];
+
+describe('E2Eのシナリオ分割', () => {
+  it.each([1, 2, 3])('%i分割を合わせると台帳の全ケースが一度ずつ含まれる', (total) => {
+    const shards = Array.from({ length: total }, (_, i) =>
+      shardScenarios(scenarioLedger, `${i + 1}/${total}`),
+    );
+    const ids = scenarioLedger.map(({ id }) => id);
+    expect(shards.flat().sort()).toEqual([...ids].sort());
+    for (const shard of shards) {
+      expect(shard.length).toBeGreaterThan(0);
+      expect(shard).toEqual(ids.filter((id) => shard.includes(id)));
+    }
+    expect(shardScenarios(scenarioLedger, undefined)).toEqual(ids);
+  });
+  it('重いケースから割り当て、入力を変更せず同じ分割を返す', () => {
+    const input = [
+      { id: 'A-001', estimatedSeconds: 5 },
+      { id: 'B-001', estimatedSeconds: 11 },
+      { id: 'C-001', estimatedSeconds: 6 },
+    ];
+    expect(shardScenarios(input, '1/2')).toEqual(['B-001']);
+    expect(shardScenarios(input, '2/2')).toEqual(['A-001', 'C-001']);
+    expect(input.map(({ id }) => id)).toEqual(['A-001', 'B-001', 'C-001']);
+    expect(shardScenarios(input, '1/2')).toEqual(['B-001']);
+    expect(shardScenarios([...input, { id: 'D-001' }], '2/2')).toContain('C-001');
+  });
+  it.each(['', '0/2', '1/0', '3/2', '1/24', '1.5/2', '01/2', '1/2/3', 'x', '1/9007199254740992'])(
+    '不正な指定・空になる分割 %s を拒否する',
+    (shard) => {
+      expect(() => shardScenarios(scenarioLedger, shard)).toThrow('分割');
+    },
+  );
+});
 
 describe('E2Eの実行ポリシー', () => {
   it.each(['true', '1'])('CI=%sではAIによる記録を拒否する', (ci) => {
@@ -148,6 +187,11 @@ const pairs = () =>
 describe('E2E台帳と実行可能なテストの照合', () => {
   it('全シナリオが両方の画面幅で実行可能なら通す', () => {
     expect(() => validateLedger(ledger, pairs(), ['src/App.tsx'])).not.toThrow();
+  });
+  it.each([0, -1, '10'])('不正な所要秒数 %s を拒否する', (estimatedSeconds) => {
+    expect(() =>
+      validateLedger([{ ...ledger[0], estimatedSeconds }], pairs(), ['src/App.tsx']),
+    ).toThrow();
   });
   it('未登録・重複・片方だけのテスト・skipを拒否する', () => {
     expect(() => validateLedger(ledger, pairs().slice(0, 1), ['src/App.tsx'])).toThrow();

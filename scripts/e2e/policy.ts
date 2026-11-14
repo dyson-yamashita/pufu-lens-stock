@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export type E2EMode = 'ci' | 'record' | 'bootstrap';
-export type Scenario = { id: string; sources: string[] };
+export type Scenario = { id: string; sources: string[]; estimatedSeconds?: number };
 const ciEnabled = (value?: string) => !!value && value !== '0' && value !== 'false';
 
 export function executionMode(requested: string | undefined, ci: string | undefined): E2EMode {
@@ -53,6 +53,32 @@ export function selectScenarios(scenarios: Scenario[], changedPaths: string[]): 
   return scenarios
     .filter((item) => item.sources.some((path) => relevant.includes(path)))
     .map(({ id }) => id);
+}
+
+// Balance whole scenarios; every shard still runs serially against its own runtime.
+export function shardScenarios(
+  scenarios: { id: string; estimatedSeconds?: number }[],
+  shard: string | undefined,
+): string[] {
+  if (shard === undefined) return scenarios.map(({ id }) => id);
+  if (!/^[1-9]\d*\/[1-9]\d*$/.test(shard)) throw new Error('不正なE2E分割指定です。');
+  const [index, total] = shard.split('/').map(Number);
+  if (
+    !Number.isSafeInteger(index) ||
+    !Number.isSafeInteger(total) ||
+    index > total ||
+    total > scenarios.length
+  )
+    throw new Error('E2E分割数・番号が範囲外です。');
+  const loads = Array<number>(total).fill(0);
+  const assignments = new Map<string, number>();
+  const cost = (scenario: { estimatedSeconds?: number }) => scenario.estimatedSeconds ?? 1;
+  for (const scenario of [...scenarios].sort((a, b) => cost(b) - cost(a))) {
+    const lightest = loads.indexOf(Math.min(...loads));
+    assignments.set(scenario.id, lightest);
+    loads[lightest] += cost(scenario);
+  }
+  return scenarios.filter(({ id }) => assignments.get(id) === index - 1).map(({ id }) => id);
 }
 
 const runReportSchema = z.object({
@@ -131,6 +157,7 @@ export function assertRunReport(
 
 const scenarioSchema = z.object({
   id: z.string().regex(/^[A-Z]+-\d{3}$/),
+  estimatedSeconds: z.number().positive().optional(),
   title: z.string().min(1),
   sources: z.array(z.string().min(1)).min(1),
   aspects: z.array(z.string().min(1)).min(1),

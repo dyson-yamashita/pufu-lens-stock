@@ -74,13 +74,14 @@ jobs:
         run: pnpm run test --shard=${{ matrix.shard }}/4
 
   e2e:
-    name: Browser E2E (${{ matrix.target }}, recorded actions, no AI)
+    name: Browser E2E (${{ matrix.target }}, ${{ matrix.shard }}/2, recorded actions, no AI)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         target: [desktop, phone]
+        shard: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,12 +106,12 @@ jobs:
           E2E_TELEMETRY_DISABLED: '1'
         run: pnpm --filter @pufu-lens/e2e exec e2e-web install chromium --with-deps
       - name: Replay browser tests without AI
-        run: pnpm run e2e:ci --target ${{ matrix.target }}
+        run: pnpm run e2e:ci --target ${{ matrix.target }} --shard ${{ matrix.shard }}/2
       - name: Keep failure reports and traces
         if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: e2e-failure-${{ matrix.target }}
+          name: e2e-failure-${{ matrix.target }}-${{ matrix.shard }}
           path: packages/e2e/.e2e/runs/
           include-hidden-files: true
           retention-days: 7
