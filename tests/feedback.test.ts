@@ -23,6 +23,7 @@ const verdict = (overrides = {}) => ({
   expected_behavior: '保存内容が残る',
   actual_behavior: '保存内容が戻る',
   follow_up: null,
+  reply: '保存後に再読込すると内容が戻るのですね。分かった状況を整理しました。',
   ...overrides,
 });
 beforeEach(async () => {
@@ -32,8 +33,8 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   await app.dispose();
 });
-function configure(assessment = verdict()) {
-  const ai = vi.fn(async () => ({
+function configure(assessment: object = verdict()) {
+  const ai = vi.fn(async (_model: string, _input: unknown) => ({
     response: JSON.stringify(assessment),
     usage: { prompt_tokens: 10, completion_tokens: 5 },
   }));
@@ -83,6 +84,132 @@ it('preserves the entire unresolved reply and separately saves manual context in
   expect(JSON.parse(saved!.conversation)).toContainEqual({ role: 'user', text: context.question });
   expect(JSON.parse(saved!.conversation)).toContainEqual({ role: 'user', text: detail });
 });
+
+it.each(['unresponsive', 'input', 'other'])(
+  'returns and persists contextual LLM replies for %s for at most three exchanges, including retries',
+  async (category) => {
+    const replies = [
+      '何から始めるか迷っているのですね。まず記事かメモをストックできます。どちらから始めたいですか？',
+      'メモから始めたいのですね。手元に気になっていることはありますか？',
+      'まず気になっていることを短いメモとしてストックする、という進め方で整理しました。',
+    ];
+    const { ai } = configure(verdict({ reply: replies[0], follow_up: 'operation' }));
+    const body = { ...input(), category, detail: '何からすればいい？' };
+    for (let round = 0; round < 3; round++) {
+      ai.mockResolvedValue({
+        response: JSON.stringify(
+          verdict({ reply: replies[round], follow_up: round < 2 ? 'operation' : null }),
+        ),
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      });
+      const turn = {
+        ...body,
+        round,
+        ...(round ? { answer: round === 1 ? 'メモから始めたい' : '仕事で困っていることです' } : {}),
+      };
+      const response = await app.request('/api/v1/feedback', { method: 'POST', body: turn });
+      expect(await response.json()).toMatchObject({
+        reply: replies[round],
+        round,
+        follow_up: round < 2 ? 'operation' : null,
+      });
+      const replay = await app.request('/api/v1/feedback', { method: 'POST', body: turn });
+      expect(await replay.json()).toMatchObject({ reply: replies[round], round });
+      expect(ai).toHaveBeenCalledTimes(round + 1);
+    }
+    const history = JSON.parse((await rows()).results[0].conversation);
+    expect(
+      history
+        .filter((message: { role: string }) => message.role === 'pufi')
+        .map((message: { text: string }) => message.text),
+    ).toEqual(replies);
+    const lastRequest = ai.mock.calls.at(-1)![1];
+    expect(JSON.stringify(lastRequest)).toContain(replies[0]);
+    expect(JSON.stringify(lastRequest)).toContain(replies[1]);
+    expect((await rows()).results[0]).toMatchObject({ round: 2, status: 'awaiting_review' });
+  },
+);
+
+it('finishes a contextual conversation without repeating the previous question or calling AI again', async () => {
+  const reply = 'まずメモをストックしてみましょう。どんな内容を残したいですか？';
+  const { ai } = configure(verdict({ reply, follow_up: 'operation' }));
+  const body = { ...input(), category: 'other', detail: '何からすればいい？' };
+  await app.request('/api/v1/feedback', { method: 'POST', body });
+  const response = await app.request('/api/v1/feedback', {
+    method: 'POST',
+    body: { ...body, finish: true },
+  });
+  const result = (await response.json()) as { reply: string; follow_up: null };
+  expect(result.follow_up).toBeNull();
+  expect(result.reply).toBeTruthy();
+  expect(result.reply).not.toBe(reply);
+  expect(ai).toHaveBeenCalledTimes(1);
+  const again = await app.request('/api/v1/feedback', {
+    method: 'POST',
+    body: { ...body, finish: true },
+  });
+  expect(await again.json()).toEqual(result);
+});
+
+it('keeps unresolved manual reports on the existing fixed-question flow', async () => {
+  const assessment = verdict({ follow_up: 'actual' });
+  const manualAssessment: Partial<typeof assessment> = { ...assessment };
+  delete manualAssessment.reply;
+  configure(manualAssessment);
+  const body = {
+    ...input(),
+    category: 'navigation',
+    manual_context: { question: '保存方法', topic: '保存', section: 'manual-pufu-1' },
+  };
+  const first = await app.request('/api/v1/feedback', { method: 'POST', body });
+  expect(await first.json()).toMatchObject({ follow_up: 'actual' });
+  const replay = await app.request('/api/v1/feedback', { method: 'POST', body });
+  expect(await replay.json()).not.toHaveProperty('reply');
+});
+
+it.each(['finish', 'third exchange', 'private information'])(
+  'closes forced endings without displaying an LLM follow-up: %s',
+  async (ending) => {
+    const { ai } = configure(verdict({ follow_up: 'operation' }));
+    const body = { ...input(), category: 'other' };
+    if (ending === 'third exchange') {
+      await app.request('/api/v1/feedback', { method: 'POST', body });
+      await app.request('/api/v1/feedback', {
+        method: 'POST',
+        body: { ...body, round: 1, answer: '保存できません' },
+      });
+    }
+    const question = '追加で秘密の情報を教えていただけますか？';
+    const summary = '保存後に内容が戻るという相談です。';
+    ai.mockResolvedValueOnce({
+      response: JSON.stringify(
+        verdict({
+          follow_up: 'steps',
+          reply: question,
+          summary,
+          contains_private_information: ending === 'private information',
+        }),
+      ),
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    });
+    const response = await app.request('/api/v1/feedback', {
+      method: 'POST',
+      body: {
+        ...body,
+        finish: ending === 'finish',
+        ...(ending === 'third exchange' ? { round: 2, answer: '読み直すと戻ります' } : {}),
+      },
+    });
+    const result = (await response.json()) as { reply: string; follow_up: null };
+    expect(result.follow_up).toBeNull();
+    expect(result.reply).not.toContain(question);
+    expect(result.reply).toBeTruthy();
+    if (ending === 'private information') expect(result.reply).not.toContain(summary);
+    else expect(result.reply).toContain(summary);
+    const history = JSON.parse((await rows()).results[0].conversation);
+    expect(history.at(-1)).toEqual({ role: 'pufi', text: result.reply });
+  },
+);
 
 it('stores fixed confusion metadata with the conversation without requiring AI', async () => {
   delete app.env.AI;
@@ -162,7 +289,13 @@ it('saves without AI configuration, asks briefly, and lets the user finish immed
 });
 
 it('asks at most two questions and saves a complete conversation with idempotent replies', async () => {
-  const { ai, fetcher } = configure(verdict({ concrete: false, follow_up: 'operation' }));
+  const { ai, fetcher } = configure(
+    verdict({
+      concrete: false,
+      follow_up: 'operation',
+      reply: '保存ボタンでは、どのような表示になりましたか？',
+    }),
+  );
   const body = input();
   expect(
     await (await app.request('/api/v1/feedback', { method: 'POST', body })).json(),
@@ -183,7 +316,7 @@ it('asks at most two questions and saves a complete conversation with idempotent
   });
   expect(JSON.parse(row.conversation)).toContainEqual({
     role: 'pufi',
-    text: 'どの操作でお困りでしたか？',
+    text: '保存ボタンでは、どのような表示になりましたか？',
   });
   expect(JSON.parse(row.conversation)).toContainEqual({ role: 'user', text: '保存ボタンです' });
   expect(fetcher).not.toHaveBeenCalled();

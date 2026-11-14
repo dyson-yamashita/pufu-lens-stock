@@ -63,6 +63,7 @@ export const en: Record<string, string> = {
   'feedback.reply_hint': 'A brief reply is fine',
   'feedback.send': 'Send',
   'feedback.consent_hint': 'Messages are saved and organized by AI',
+  'feedback.chat_hint': 'Chat with AI for up to 3 exchanges. Messages are saved',
   'feedback.finish': 'Finish answering',
   'feedback.finish_send': 'Send and finish',
   'feedback.thanks': 'Thank you. Your feedback will help us improve.',
@@ -82,7 +83,7 @@ export const en: Record<string, string> = {
   'feedback.details': 'About saving our conversation',
   'feedback.privacy_link': 'Privacy policy',
   'feedback.explanation':
-    'Repeated interactions are detected locally while signed in. Input values and raw interaction logs are never sent automatically. AI checks manual-search questions. Submitted conversations are saved, organized by AI and reviewed by maintenance staff. Please avoid personal information. Automatic prompts appear at most once per session and 24 hours; “No, thank you” pauses them for 7 days.',
+    'Repeated interactions are detected locally while signed in. Input values and raw interaction logs are never sent automatically. AI checks manual-search questions and replies to other requests for help. Submitted conversations are saved, organized by AI and reviewed by maintenance staff. Please avoid personal information. Automatic prompts appear at most once per session and 24 hours; “No, thank you” pauses them for 7 days.',
   'feedback.question_operation': 'Which action were you having trouble with?',
   'feedback.question_expected': 'What did you expect to happen?',
   'feedback.question_actual': 'What happened at that point?',
@@ -101,6 +102,8 @@ export const en: Record<string, string> = {
     'On other pages, prompts appear only after repeated unresponsive clicks, input errors or operation failures.',
   'feedback.manual_question':
     'Choose “I could not find what to do” to have AI follow manual headings to the relevant text.',
+  'feedback.manual_conversation':
+    'For “No response”, “Input is difficult” and “Something else”, AI replies to your messages and helps clarify the issue and next steps in up to 3 exchanges, including your first message. You can finish earlier if the issue is resolved or you want to stop.',
   'feedback.manual_guide_heading': 'How to read the guidance',
   'feedback.manual_full_answer':
     'If an answer is shortened, choose “Show full answer” to read it in the conversation.',

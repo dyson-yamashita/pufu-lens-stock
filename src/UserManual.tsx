@@ -388,6 +388,7 @@ const sections = (tr: typeof t) => [
           <li>{tr('feedback.manual_entry')}</li>
           <li>{tr('feedback.manual_automatic_guidance')}</li>
           <li>{tr('feedback.manual_question')}</li>
+          <li>{tr('feedback.manual_conversation')}</li>
         </ul>
         <div className="manual-topics">
           <details>

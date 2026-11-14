@@ -207,7 +207,7 @@ export default function PufiFeedback({
         setFollowUp(result.follow_up);
         setMessages((current) => [
           ...current,
-          { role: 'pufi', text: t(`feedback.question_${result.follow_up}`) },
+          { role: 'pufi', text: result.reply ?? t(`feedback.question_${result.follow_up}`) },
         ]);
       } else {
         setDone(true);
@@ -215,7 +215,7 @@ export default function PufiFeedback({
         const thanks = topic
           ? t('feedback.thanks_topic', { topic: t(`feedback.topic_${topic}`) })
           : t('feedback.thanks');
-        setMessages((current) => [...current, { role: 'pufi', text: thanks }]);
+        setMessages((current) => [...current, { role: 'pufi', text: result.reply ?? thanks }]);
       }
     } catch (error) {
       const changed = error instanceof ApiError && [401, 409, 410].includes(error.status);
@@ -386,7 +386,11 @@ export default function PufiFeedback({
                     </button>
                   </div>
                   <div className="pufi-footer">
-                    <span>{t('feedback.consent_hint')}</span>
+                    <span>
+                      {t(
+                        category === 'navigation' ? 'feedback.consent_hint' : 'feedback.chat_hint',
+                      )}
+                    </span>
                     <button
                       type="button"
                       className="pufi-finish"

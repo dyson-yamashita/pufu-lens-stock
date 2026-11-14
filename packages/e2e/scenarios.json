@@ -465,6 +465,16 @@
     ]
   },
   {
+    "id": "FEEDBACK-011",
+    "estimatedSeconds": 5,
+    "title": "マニュアル検索以外の3項目で内容に応じた返答と3往復の終了",
+    "sources": ["src/PufiFeedback.tsx", "server/feedback.ts", "shared/feedback.ts"],
+    "aspects": [
+      "反応しません・入力しづらいです・その他の3項目で、HTTP fixtureの内容依存の返答を会話へ表示し、同じrequest_idでround 0〜2を送信する。3回目の返答後は入力を閉じ、固定のお礼へ置き換えない",
+      "実LLM呼び出しと品質は対象外。D1への実際の返答保存、履歴の引継ぎ、再送の重複防止、早期・手動終了、機微情報・利用枠・権限制御、旧receiptとの互換性はVitestで確認"
+    ]
+  },
+  {
     "id": "NEWS-001",
     "estimatedSeconds": 3,
     "title": "お知らせの閲覧と通知設定",
