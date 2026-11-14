@@ -47,6 +47,18 @@ export default function PufiFeedback({
   const [panel, setPanel] = useState<'closed' | 'prompt' | 'conversation'>('closed');
   const [helpEscalated, setHelpEscalated] = useState(false);
   const [manualReading, setManualReading] = useState(false);
+  const [manualFooterVisible, setManualFooterVisible] = useState(false);
+  useEffect(() => {
+    if (screen !== 'manual') return;
+    const footer = document.querySelector('.manual-main > .legal-links');
+    if (!footer || typeof IntersectionObserver === 'undefined') return;
+    // Keep the invitation clear of the footer while retaining the chat entry and history.
+    const observer = new IntersectionObserver(([entry]) => {
+      setManualFooterVisible(entry.isIntersecting);
+    });
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, [screen]);
   const [helpBusy, setHelpBusy] = useState(false);
   const [reasons, setReasons] = useState<FeedbackInput['reasons']>([]);
   const [category, setCategory] = useState<FeedbackInput['category'] | null>(null);
@@ -408,7 +420,7 @@ export default function PufiFeedback({
         </section>
       )}
       <div className="pufi-launcher">
-        {(panel === 'closed' || manualReading) && (
+        {!manualFooterVisible && (panel === 'closed' || manualReading) && (
           <button
             type="button"
             className="pufi-invitation"

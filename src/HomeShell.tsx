@@ -1,6 +1,7 @@
+import LegalLinks from './LegalLinks';
 import BrandLogo from './BrandLogo';
 import { translateUi } from './i18n';
-import { homePath, legalPath, manualPath } from '../shared/site-paths';
+import { homePath, manualPath } from '../shared/site-paths';
 import type { Language } from '../shared/locale';
 
 /** Crawlable marketing shell for `/` and `/en`. React App replaces this after JS loads. */
@@ -31,10 +32,7 @@ export default function HomeShell({ language }: { language: Language }) {
           {tr('ui.app.and_grow_them_into_a_shared_memory')}
         </p>
         <p>{tr('site.description')}</p>
-        <nav className="legal-links" aria-label={tr('ui.legal_links.policies_and_terms')}>
-          <a href={legalPath('privacy', language)}>{tr('ui.legal_links.privacy_policy')}</a>
-          <a href={legalPath('terms', language)}>{tr('ui.legal_links.terms_of_service')}</a>
-        </nav>
+        <LegalLinks language={language} />
         <noscript>
           {language === 'en'
             ? 'Enable JavaScript to sign in and use the app. '
