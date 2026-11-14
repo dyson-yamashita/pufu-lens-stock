@@ -160,6 +160,7 @@ export default function Questions({
   onOpen,
   onQuestion,
   active = true,
+  isMobile = false,
 }: {
   projects: Project[];
   onAdd: () => void;
@@ -169,8 +170,10 @@ export default function Questions({
   onOpen: (stockId: string) => Promise<void>;
   onQuestion: (id: string) => void;
   active?: boolean;
+  isMobile?: boolean;
 }) {
   useLanguage();
+  const pageSize = isMobile ? 6 : 24;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
@@ -188,7 +191,7 @@ export default function Questions({
       (projectId ? project.id === projectId : project.show_in_all_lists !== false) &&
       project.auto_generate_questions,
   );
-  useEffect(() => setPage(1), [projectId]);
+  useEffect(() => setPage(1), [projectId, pageSize]);
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -202,6 +205,7 @@ export default function Questions({
         q: search,
         source: filter === 'favorites' ? 'all' : filter,
         page: String(page),
+        limit: String(pageSize),
       });
       if (filter === 'favorites') params.set('favorite', 'true');
       if (projectId) params.set('project_id', projectId);
@@ -214,8 +218,8 @@ export default function Questions({
           setQuestions(result.questions);
           setTotal(result.total);
           setError('');
-          if (page > Math.max(1, Math.ceil(result.total / 24)))
-            setPage(Math.max(1, Math.ceil(result.total / 24)));
+          if (page > Math.max(1, Math.ceil(result.total / pageSize)))
+            setPage(Math.max(1, Math.ceil(result.total / pageSize)));
         }
       } catch (e) {
         if (!controller.signal.aborted) setError(applicationError((e as Error).message));
@@ -232,7 +236,7 @@ export default function Questions({
       controller.abort();
       window.clearInterval(interval);
     };
-  }, [projectId, search, filter, page, refresh, reload, active]);
+  }, [projectId, search, filter, page, pageSize, refresh, reload, active]);
   return (
     <section className="questions-page" aria-label={t('ui.questions.project_questions_insights')}>
       <SearchField
@@ -411,23 +415,29 @@ export default function Questions({
           ))}
         </div>
       )}
-      {total > 24 && (
+      {total > pageSize && (
         <div className="pagination">
           <button
             className="button secondary"
             disabled={page === 1}
-            onClick={() => setPage((value) => value - 1)}
+            onClick={() => {
+              setPage((value) => value - 1);
+              if (isMobile) window.scrollTo(0, 0);
+            }}
           >
             <ChevronLeft size={17} aria-hidden="true" />
             {t('ui.app.previous')}
           </button>
           <span>
-            {page} / {Math.ceil(total / 24)}
+            {page} / {Math.ceil(total / pageSize)}
           </span>
           <button
             className="button secondary"
-            disabled={page * 24 >= total}
-            onClick={() => setPage((value) => value + 1)}
+            disabled={page * pageSize >= total}
+            onClick={() => {
+              setPage((value) => value + 1);
+              if (isMobile) window.scrollTo(0, 0);
+            }}
           >
             {t('ui.app.next')}
             <ChevronRight size={17} aria-hidden="true" />

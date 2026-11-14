@@ -59,6 +59,34 @@ describe('問いのお気に入り', () => {
     return (await response.json()) as { questions: Question[]; total: number };
   }
 
+  it('取得件数に合わせてページを区切り、既定は24件と所有者の絞り込みを保持する', async () => {
+    await app.env.DB.batch([
+      ...Array.from({ length: 25 }, (_, index) =>
+        fixture(`question-${String(index).padStart(2, '0')}`),
+      ).flat(),
+      ...fixture('other-owner', 'user', { user: 'bob' }),
+    ]);
+    const first = await list('?limit=6');
+    const second = await list('?limit=6&page=2');
+    const last = await list('?limit=6&page=5');
+    expect(first.total).toBe(25);
+    expect(first.questions).toHaveLength(6);
+    expect(second.questions).toHaveLength(6);
+    expect(second.questions.some((q) => first.questions.some((item) => item.id === q.id))).toBe(
+      false,
+    );
+    expect(last.questions).toHaveLength(1);
+    expect((await list()).questions).toHaveLength(24);
+    expect((await list('?page=2')).questions).toHaveLength(1);
+  });
+
+  it.each(['0', '25', '1.5', 'no', '-1', 'Infinity', ''])(
+    '不正な取得件数limit=%sを拒否する',
+    async (limit) => {
+      expect((await app.request(`/api/v1/questions?limit=${limit}`)).status).toBe(400);
+    },
+  );
+
   it('AI・ユーザーの問いを個別に登録・解除し、再取得と詳細でも保持する', async () => {
     await app.env.DB.batch([...fixture('ai'), ...fixture('user', 'user')]);
     expect((await list()).questions.every((q) => q.is_favorite === 0)).toBe(true);

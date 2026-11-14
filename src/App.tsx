@@ -576,6 +576,7 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
+  const pageSize = isMobile ? 6 : 24;
   const sidebarOpen = isMobile ? mobileNav : !desktopNavCollapsed;
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
@@ -765,7 +766,10 @@ export default function App() {
   ]);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)');
-    const listener = () => setIsMobile(media.matches);
+    const listener = () => {
+      setIsMobile(media.matches);
+      setPage(1);
+    };
     media.addEventListener('change', listener);
     return () => media.removeEventListener('change', listener);
   }, []);
@@ -819,6 +823,7 @@ export default function App() {
         q: search,
         source: stockSource === 'favorites' ? 'all' : stockSource,
         page: String(page),
+        limit: String(pageSize),
       });
       if (stockSource === 'favorites') params.set('favorite', 'true');
       if (listProjectId) params.set('project_id', listProjectId);
@@ -848,8 +853,8 @@ export default function App() {
           if (version === stockMutationVersion.current) {
             setStocks(stockData.stocks);
             setTotal(stockData.total);
-            if (page > 1 && page > Math.max(1, Math.ceil(stockData.total / 24)))
-              setPage(Math.max(1, Math.ceil(stockData.total / 24)));
+            if (page > 1 && page > Math.max(1, Math.ceil(stockData.total / pageSize)))
+              setPage(Math.max(1, Math.ceil(stockData.total / pageSize)));
           }
           setMemoryResponse(memoryData);
           setTokens(tokenData.tokens);
@@ -883,6 +888,7 @@ export default function App() {
     search,
     stockSource,
     page,
+    pageSize,
     refresh,
   ]);
   useEffect(() => {
@@ -1532,6 +1538,7 @@ export default function App() {
                 onAdd={() => setModal({ type: projects.length ? 'question' : 'project' })}
                 key={`${(stockFlow ? stockOrigin.projectId : questionFlow ? questionListContext.projectId : route.projectId) ?? 'all'}-${questionCreation}`}
                 active={route.view === 'questions'}
+                isMobile={isMobile}
                 projectId={
                   stockFlow
                     ? stockOrigin.scope
@@ -1838,23 +1845,29 @@ export default function App() {
                     ))}
                   </div>
                 )}
-                {total > 24 && (
+                {total > pageSize && (
                   <div className="pagination">
                     <button
                       className="button secondary"
                       disabled={page === 1}
-                      onClick={() => setPage((value) => value - 1)}
+                      onClick={() => {
+                        setPage((value) => value - 1);
+                        if (isMobile) window.scrollTo(0, 0);
+                      }}
                     >
                       <ChevronLeft size={17} aria-hidden="true" />
                       {t('ui.app.previous')}
                     </button>
                     <span>
-                      {page} / {Math.ceil(total / 24)}
+                      {page} / {Math.ceil(total / pageSize)}
                     </span>
                     <button
                       className="button secondary"
-                      disabled={page * 24 >= total}
-                      onClick={() => setPage((value) => value + 1)}
+                      disabled={page * pageSize >= total}
+                      onClick={() => {
+                        setPage((value) => value + 1);
+                        if (isMobile) window.scrollTo(0, 0);
+                      }}
                     >
                       {t('ui.app.next')}
                       <ChevronRight size={17} aria-hidden="true" />
