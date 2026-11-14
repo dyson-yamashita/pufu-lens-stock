@@ -403,6 +403,7 @@ const sections = (tr: typeof t) => [
             <ul>
               <li>{tr('feedback.manual_unresolved')}</li>
               <li>{tr('feedback.manual_save')}</li>
+              <li>{tr('feedback.manual_limit')}</li>
               <li>{tr('feedback.manual_finish')}</li>
             </ul>
           </details>

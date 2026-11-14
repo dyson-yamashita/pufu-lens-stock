@@ -87,6 +87,7 @@ export const ja: Record<string, string> = {
   'feedback.question_actual': 'そのとき、どのような状態になりましたか？',
   'feedback.question_steps': '直前に行っていた操作を教えていただけますか？',
   'feedback.failed': '送信できませんでした。もう一度お試しください。',
+  'feedback.rate_limited': '1日の送信上限に達しました。',
   'feedback.wait_retry': 'まだ整理中です。少し待って、もう一度お試しください。',
   'feedback.session_changed': 'ログインが変更されました。会話を閉じて、もう一度開いてください。',
   'feedback.manual_intro': '使い方に迷ったら、プフィに相談できます。',
@@ -103,6 +104,7 @@ export const ja: Record<string, string> = {
   'feedback.manual_unresolved_heading': '解決しなかったとき',
   'feedback.manual_unresolved': '役立たなかった場合は、解決しなかった部分をお伺いします。',
   'feedback.manual_save': '会話は送信時に保存し、AIで整理して保守担当が確認します。',
+  'feedback.manual_limit': '会話の送信は1人あたり直近24時間で50回までです。',
   'feedback.manual_finish': '「回答を終了」または「送信して終了」で終了できます。',
 
   'manual.pufu_create_heading': 'AIで案をつくる',

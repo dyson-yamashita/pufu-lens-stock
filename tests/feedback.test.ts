@@ -295,11 +295,20 @@ it('enforces consent, fixed metadata, ownership, authentication, quotas and casc
     { ...input(), reasons: [{ type: 'rage_click', action: 'private-name' }] },
   ])
     expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(400);
+  // Seed 49 recent conversations and one outside the rolling 24-hour window.
+  await app.env.DB.batch([
+    app.env.DB.prepare(
+      `WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<49)
+       INSERT INTO usability_feedback(id,user_id,request_id,category,detail,reasons,created_at,updated_at)
+       SELECT 'quota-'||x,'alice','quota-'||x,'other','','[]',?,? FROM n`,
+    ).bind(new Date().toISOString(), new Date().toISOString()),
+    app.env.DB.prepare(
+      `INSERT INTO usability_feedback(id,user_id,request_id,category,detail,reasons,created_at,updated_at)
+       VALUES('expired-quota','alice','expired-quota','other','','[]',?,?)`,
+    ).bind(new Date(Date.now() - 86400000 - 1000).toISOString(), new Date().toISOString()),
+  ]);
   const body = input();
-  for (let i = 0; i < 3; i++)
-    expect(
-      (await app.request('/api/v1/feedback', { method: 'POST', body: i ? input() : body })).status,
-    ).toBe(201);
+  expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(201);
   expect((await app.request('/api/v1/feedback', { method: 'POST', body: input() })).status).toBe(
     429,
   );

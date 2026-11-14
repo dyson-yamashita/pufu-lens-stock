@@ -274,7 +274,7 @@ export function feedbackApp() {
       c.env.DB.prepare('DELETE FROM feedback_global_usage WHERE created_at<=?').bind(start),
       c.env.DB.prepare(
         `INSERT OR IGNORE INTO usability_feedback(id,user_id,request_id,screen,language,category,detail,reasons,conversation,title,summary,created_at,updated_at,page_path,device_type,country,viewport)
-       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM usability_feedback WHERE user_id=? AND created_at>?)<3
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM usability_feedback WHERE user_id=? AND created_at>?)<50
        AND (SELECT COUNT(*) FROM feedback_global_usage WHERE created_at>?)<60`,
       ).bind(
         id,
