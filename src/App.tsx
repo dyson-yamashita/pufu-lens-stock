@@ -89,7 +89,7 @@ import PufuModal from './PufuModal';
 import Comments from './Comments';
 import DeleteAction from './DeleteAction';
 import Pufus from './Pufus';
-import McpConnections from './McpConnections';
+import Integrations, { isIntegrationTab } from './Integrations';
 import MemoryRebuildForm from './MemoryRebuildForm';
 import MemoryKnowledge from './MemoryKnowledge';
 import MemoryHistory from './MemoryHistory';
@@ -111,6 +111,7 @@ type Route = {
     | 'memory'
     | 'shortcuts'
     | 'mcp'
+    | 'sns'
     | 'announcements'
     | 'profile'
     | 'questions'
@@ -184,7 +185,8 @@ const headerLabels = (): Record<Route['view'], string> => ({
   announcements: t('announcements.title'),
   profile: t('ui.app.profile'),
   mcp: t('ui.app.integrations'),
-  shortcuts: t('ui.app.shortcuts'),
+  shortcuts: t('ui.app.integrations'),
+  sns: t('ui.app.integrations'),
   question: t('ui.app.details'),
   resolve: t('ui.app.create_pufu'),
   pufu: t('ui.app.details'),
@@ -246,6 +248,7 @@ function routeFromHash(): Route {
       view === 'memory' ||
       view === 'shortcuts' ||
       view === 'mcp' ||
+      view === 'sns' ||
       view === 'announcements' ||
       view === 'profile' ||
       view === 'questions' ||
@@ -1012,6 +1015,7 @@ export default function App() {
         onLogout={() => setUser(null)}
       />
     );
+  const integrationTab = isIntegrationTab(route.view) ? route.view : null;
   const projectHeading =
     selected && ['stocks', 'questions', 'pufus', 'memory', 'settings'].includes(route.view);
   const HeadingIcon =
@@ -1025,15 +1029,14 @@ export default function App() {
         profile: UserRound,
         announcements: Bell,
         mcp: Layers,
-        shortcuts: KeyRound,
+        shortcuts: Layers,
+        sns: Layers,
       } as Partial<Record<Route['view'], typeof Layers>>
     )[route.view] ?? BookOpen;
   const heading =
     route.view === 'settings'
       ? t('ui.app.project_settings')
-      : route.view === 'shortcuts'
-        ? t('ui.app.shortcut_integration')
-        : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
+      : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
   const questionListProject = projects.find(
     (project) => project.id === questionListContext.projectId,
   );
@@ -1215,16 +1218,9 @@ export default function App() {
             {t('ui.app.user_manual')}
           </a>
           <button
-            className={`nav-item ${route.view === 'shortcuts' ? 'active' : ''}`}
+            className={`nav-item ${integrationTab ? 'active' : ''}`}
+            aria-current={integrationTab ? 'page' : undefined}
             onClick={() => navigate('shortcuts')}
-          >
-            <KeyRound size={18} aria-hidden="true" />
-            {t('ui.app.shortcut_integration')}
-          </button>
-          <button
-            className={`nav-item ${route.view === 'mcp' ? 'active' : ''}`}
-            aria-current={route.view === 'mcp' ? 'page' : undefined}
-            onClick={() => navigate('mcp')}
           >
             <Layers size={18} aria-hidden="true" />
             {t('ui.app.integrations')}
@@ -1373,16 +1369,14 @@ export default function App() {
                           ? t('ui.app.review_ideas_for_solutions_inspired_by_your_questions_and')
                           : route.view === 'settings'
                             ? t('ui.app.edit_this_project_s_settings')
-                            : route.view === 'mcp'
-                              ? t('ui.app.connect_conversations_with_stocks_questions_and_insights')
-                              : route.view === 'shortcuts'
-                                ? t('ui.app.save_articles_from_your_iphone_directly_to_a_project')
-                                : route.view === 'memory'
-                                  ? t(
-                                      'ui.app.interests_and_knowledge_from_your_articles_gradually_updated_with',
-                                    )
-                                  : selected?.description ||
-                                    t('ui.app.keep_interesting_articles_and_new_ideas_together')}
+                            : integrationTab
+                              ? t('ui.app.integrations_description')
+                              : route.view === 'memory'
+                                ? t(
+                                    'ui.app.interests_and_knowledge_from_your_articles_gradually_updated_with',
+                                  )
+                                : selected?.description ||
+                                  t('ui.app.keep_interesting_articles_and_new_ideas_together')}
                   </p>
                 )}
               </div>
@@ -1703,24 +1697,24 @@ export default function App() {
             />
           ) : route.view === 'announcements' ? (
             <Announcements key={route.detailId ?? 'list'} id={route.detailId} />
-          ) : route.view === 'mcp' ? (
-            <McpConnections />
-          ) : route.view === 'shortcuts' ? (
-            <Shortcuts
-              baseUrl={config?.appUrl ?? window.location.origin}
-              projects={projects}
-              tokens={tokens}
-              onCreate={() => setModal({ type: 'token' })}
-              onRevoke={async (id) => {
-                try {
-                  await api(`/api/v1/tokens/${id}`, { method: 'DELETE' });
-                  setNotice({ message: t('ui.app.token_revoked') });
-                  reload();
-                } catch (e) {
-                  setError(applicationError((e as Error).message));
-                }
-              }}
-            />
+          ) : integrationTab ? (
+            <Integrations tab={integrationTab} onSelect={navigate}>
+              <Shortcuts
+                baseUrl={config?.appUrl ?? window.location.origin}
+                projects={projects}
+                tokens={tokens}
+                onCreate={() => setModal({ type: 'token' })}
+                onRevoke={async (id) => {
+                  try {
+                    await api(`/api/v1/tokens/${id}`, { method: 'DELETE' });
+                    setNotice({ message: t('ui.app.token_revoked') });
+                    reload();
+                  } catch (e) {
+                    setError(applicationError((e as Error).message));
+                  }
+                }}
+              />
+            </Integrations>
           ) : route.view === 'memory' ? (
             <div className="memory-page">
               <MemoryPanel

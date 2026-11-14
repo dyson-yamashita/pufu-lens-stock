@@ -131,7 +131,7 @@ export const legalEn = {
           type: 'list',
           items: [
             'Profile details can be changed and the bio removed in Profile.',
-            'MCP connections and registered X credentials can be disconnected in Integrations. API tokens can be revoked in Shortcut integration. Disconnecting does not delete saved stocks or data already received by the destination.',
+            'Under Integrations, disconnect MCP connections in the MCP tab, delete registered X credentials in the SNS tab, and revoke API tokens in the Shortcuts tab. Disconnecting does not delete saved stocks or data already received by the destination.',
             'Google access can be revoked in [Google account connections](https://myaccount.google.com/connections). Revoking Google access or signing out does not delete information stored in the Service.',
             'Delete the account from Profile → Delete account to remove registration data and stored bodies and disable integrations. Background cleanup may continue until deletion is complete. Deleted data cannot be recovered.',
             'Contact the address below for disclosure, correction, deletion or suspension requests unavailable in the UI. We verify identity and respond under applicable law.',

@@ -213,6 +213,8 @@
     "title": "MCP連携の編集と保存",
     "sources": [
       "src/McpConnections.tsx",
+      "src/Integrations.tsx",
+      "src/XIntegration.tsx",
       "src/UserManual.tsx",
       "shared/skills.ts",
       "src/McpConnectionEditor.tsx",
@@ -224,6 +226,7 @@
       "server/mcp-consent-style.ts"
     ],
     "aspects": [
+      "外部連携メニューにショートカット・MCP・SNSの3タブを表示し、クリック・矢印/Home/End操作・履歴の戻る/進む・再読込で選択内容を保持。ショートカットの発行と失効、SNSのX認証情報の設定欄と状態表示、各タブで他の設定を非表示にし、両幅のlight/darkで横はみ出しがないことを確認",
       "MCP連携内に接続中サービスを表示し、その後にスキル概要と導入・配布リンクを縦リストで表示",
       "外部連携に問い・対話によるプ譜作成支援の2つのスキルを表示し、導入手順でdeepen-questionsとsupport-pufuの限定パスのコマンドと配布先を確認。両画面幅のlight/darkを撮影",
       "連携先の表示名・参照プロジェクト・権限を変更",

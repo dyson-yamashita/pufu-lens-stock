@@ -100,6 +100,90 @@ test('MCP-001 連携先の名前・プロジェクト・権限を編集して再
     expect(deniedCallback.searchParams.get('error')).toBe('access_denied');
     expect(deniedCallback.searchParams.get('state')).toBe('e2e-mcp-state');
     await app.open('/#mcp');
+    await expect(screen.getByRole('heading', '外部連携', { exact: true })).toBeVisible();
+    await expect(
+      browser.locator('.sidebar .nav-item').filter({ hasText: 'ショートカット連携' }),
+    ).toHaveCount(0);
+    const menu = screen.getByRole('button', 'メニューを開く', { exact: true });
+    if (await menu.isVisible()) await menu.click();
+    await screen.getByRole('button', '外部連携', { exact: true }).click();
+    const tabs = browser.locator('.integration-tabs');
+    const panel = screen.getByRole('tabpanel');
+    await expect(tabs.getByRole('tab')).toHaveText(['ショートカット', 'MCP', 'SNS']);
+    await expect(tabs.getByRole('tab', 'ショートカット', { exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(panel.getByRole('heading', '共有メニューから、記事をストック。')).toBeVisible();
+    await expect(browser.locator('#mcp-url, #x-token')).toHaveCount(0);
+    await screen.getByRole('button', 'トークンを発行', { exact: true }).click();
+    const shortcutName = `E2Eショートカット-${fixture.projectId}`;
+    await screen.getByLabel('トークン名', { exact: true }).fill(shortcutName);
+    await screen.getByRole('button', '発行する', { exact: true }).click();
+    await expect(
+      screen.getByRole('heading', 'トークンを発行しました', { exact: true }),
+    ).toBeVisible();
+    await screen.getByRole('button', '閉じる', { exact: true }).click();
+    const tokenRow = browser.locator('.token-row').filter({ hasText: shortcutName });
+    await expect(tokenRow).toBeVisible();
+    const accept = await browser.onDialog(async (dialog) => {
+      expect(dialog.type).toBe('confirm');
+      await dialog.accept();
+    });
+    await tokenRow.getByRole('button', '失効する', { exact: true }).click();
+    await expect(tokenRow).toContainText('失効済み');
+    await accept();
+    for (const label of ['ショートカット', 'MCP', 'SNS']) {
+      await tabs.getByRole('tab', label, { exact: true }).click();
+      await expect(tabs.getByRole('tab', label, { exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      expect(
+        await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await app.screenshot(`integrations-${label}-light`);
+      await browser.emulateMedia({ colorScheme: 'dark' });
+      await app.screenshot(`integrations-${label}-dark`);
+      await browser.emulateMedia({ colorScheme: 'light' });
+    }
+    await expect(screen.getByLabel('X API Bearer Token', { exact: true })).toBeVisible();
+    await expect(panel).toContainText('未登録');
+    await expect(browser.locator('#mcp-url, #shortcut-project')).toHaveCount(0);
+    await browser.reload();
+    await expect(tabs.getByRole('tab', 'SNS', { exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(screen.getByLabel('X API Bearer Token', { exact: true })).toBeVisible();
+    await tabs.getByRole('tab', 'SNS', { exact: true }).click();
+    for (const [key, label] of [
+      ['ArrowRight', 'ショートカット'],
+      ['ArrowLeft', 'SNS'],
+      ['Home', 'ショートカット'],
+      ['End', 'SNS'],
+      ['ArrowLeft', 'MCP'],
+    ]) {
+      await browser.keyboard.press(key);
+      await expect(tabs.getByRole('tab', label, { exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      expect(await browser.evaluate(() => document.activeElement?.textContent ?? null)).toBe(label);
+    }
+    await browser.back();
+    await expect(tabs.getByRole('tab', 'SNS', { exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(await browser.evaluate(() => document.activeElement?.textContent ?? null)).toBe('SNS');
+    await browser.forward();
+    await expect(tabs.getByRole('tab', 'MCP', { exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(await browser.evaluate(() => document.activeElement?.textContent ?? null)).toBe('MCP');
+    await expect(browser.locator('#x-token, #shortcut-project')).toHaveCount(0);
     const integration = browser.locator('section[aria-labelledby="mcp-integration-heading"]');
     await expect(integration.getByRole('heading', '接続中のサービス')).toBeVisible();
     await expect(screen.getByRole('heading', '対話でプ譜づくりを支援する')).toBeVisible();
