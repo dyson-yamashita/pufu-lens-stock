@@ -53,6 +53,7 @@ import {
   Menu,
   Network,
   Pencil,
+  Plug,
   Plus,
   RefreshCw,
   Settings,
@@ -1028,9 +1029,9 @@ export default function App() {
         settings: Settings,
         profile: UserRound,
         announcements: Bell,
-        mcp: Layers,
-        shortcuts: Layers,
-        sns: Layers,
+        mcp: Plug,
+        shortcuts: Plug,
+        sns: Plug,
       } as Partial<Record<Route['view'], typeof Layers>>
     )[route.view] ?? BookOpen;
   const heading =
@@ -1222,7 +1223,7 @@ export default function App() {
             aria-current={integrationTab ? 'page' : undefined}
             onClick={() => navigate('shortcuts')}
           >
-            <Layers size={18} aria-hidden="true" />
+            <Plug size={18} aria-hidden="true" />
             {t('ui.app.integrations')}
           </button>
           <div className="user-row">
