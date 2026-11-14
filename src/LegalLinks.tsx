@@ -1,4 +1,4 @@
-import { useLanguage, translateUi, legalHref } from './i18n';
+import { useLanguage, translateUi, legalHref, homeHref } from './i18n';
 import type { Language } from '../shared/locale';
 export default function LegalLinks({
   newTab = false,
@@ -13,14 +13,15 @@ export default function LegalLinks({
     translateUi(locale, message, values);
   return (
     <nav className="legal-links" aria-label={text('ui.legal_links.policies_and_terms')}>
-      {(['privacy', 'terms'] as const).map((page) => {
-        const label = text(
-          page === 'privacy' ? 'ui.legal_links.privacy_policy' : 'ui.legal_links.terms_of_service',
-        );
+      {[
+        { href: legalHref('privacy', locale), label: text('ui.legal_links.privacy_policy') },
+        { href: legalHref('terms', locale), label: text('ui.legal_links.terms_of_service') },
+        { href: `${homeHref(locale)}#announcements`, label: text('announcements.title') },
+      ].map(({ href, label }) => {
         return (
           <a
-            key={page}
-            href={legalHref(page, locale)}
+            key={href}
+            href={href}
             target={newTab ? '_blank' : undefined}
             rel={newTab ? 'noreferrer' : undefined}
             aria-label={

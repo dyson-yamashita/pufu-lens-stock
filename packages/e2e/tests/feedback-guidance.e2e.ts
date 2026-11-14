@@ -38,6 +38,24 @@ test('FEEDBACK-004 ログイン済みマニュアルから案内し、未解決�
       }),
     ).toBe(true);
     await app.screenshot(`pufi-manual-entry-${theme}`);
+    await browser.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      return null;
+    });
+    await expect(invitation).toHaveCount(0);
+    await expect(browser.locator('.pufi-avatar')).toBeVisible();
+    await expect(
+      browser.locator('.manual-main > .legal-links a[href="/#announcements"]'),
+    ).toBeVisible();
+    await app.screenshot(`pufi-manual-footer-${theme}`);
+    await browser.locator('.pufi-avatar').click();
+    await expect(browser.locator('.pufi-panel')).toBeVisible();
+    await browser.locator('.pufi-avatar').click();
+    await browser.evaluate(() => {
+      window.scrollTo(0, 0);
+      return null;
+    });
+    await expect(invitation).toBeVisible();
   }
   let searches = 0;
   await browser.route(`${fixture.url}/api/v1/feedback/manual-search`, async (route) => {
