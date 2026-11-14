@@ -2534,8 +2534,16 @@ p {
 .integration-heading:first-child {
   margin-top: 0;
 }
-.mcp-integration {
-  margin-top: 32px;
+.integration-tabs {
+  flex-wrap: nowrap;
+  max-width: 970px;
+}
+.integration-tabs button {
+  flex: 1;
+  padding-inline: 12px;
+}
+.integration-tabs button:focus-visible {
+  outline-offset: -3px;
 }
 .skill-links {
   display: grid;

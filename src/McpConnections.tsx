@@ -2,7 +2,6 @@ import McpConnectionEditor from './McpConnectionEditor';
 import { applicationError, t, intlLocale, useLanguage, manualHref } from './i18n';
 import { useEffect, useState } from 'react';
 import { Copy, Layers, LoaderCircle, Pencil, Trash2 } from 'lucide-react';
-import XIntegration from './XIntegration';
 import { api } from './api';
 import { mcpScopes, type McpConnection } from '../shared/mcp';
 import { translate } from '../shared/locale';
@@ -41,8 +40,6 @@ export default function McpConnections() {
   }, []);
   return (
     <div className="shortcuts-page">
-      <h2 className="integration-heading">{t('ui.mcp_connections.x_api_integration')}</h2>
-      <XIntegration />
       <section className="mcp-integration" aria-labelledby="mcp-integration-heading">
         <h2 id="mcp-integration-heading" className="integration-heading">
           {t('ui.mcp_connections.mcp_integration')}

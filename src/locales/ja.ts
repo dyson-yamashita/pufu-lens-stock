@@ -121,7 +121,7 @@ export const ja: Record<string, string> = {
   'manual.sharing_view_heading': '公開ページの表示と公開される情報',
   'manual.sharing_search_heading': '検索エンジンへの掲載を許可する',
   'manual.integrations_intro':
-    '「外部連携」から、iPhoneの共有メニューやChatGPTなどのAIアプリを接続できます。使いたい連携の手順を開いてください。',
+    '「外部連携」から、iPhoneの共有メニューやChatGPTなどのAIアプリを接続できます。「ショートカット」「MCP」「SNS」のタブから、使いたい連携を選んでください。',
   'manual.integration_connect_heading': 'ChatGPTなどを接続する・権限を変える',
   'manual.integration_project_heading': 'プロジェクトIDを確認する',
   'manual.integration_memory_heading': '連携先からプロジェクトのメモリを読む',
@@ -282,6 +282,7 @@ export const ja: Record<string, string> = {
   'ui.app.settings': '設定',
   'ui.app.profile': 'プロフィール',
   'ui.app.integrations': '外部連携',
+  'ui.app.integrations_description': 'ショートカット・AIアプリ・SNSとの連携を設定できます。',
   'ui.app.shortcuts': 'ショートカット',
   'ui.app.details': '詳細',
   'ui.app.create_pufu': 'プ譜を作成',
@@ -691,7 +692,7 @@ export const ja: Record<string, string> = {
   'ui.mcp_connections.edit_help':
     '変更は発行済みのトークンにも適用されます。選べない権限を追加する場合は、接続先から連携をやり直してください。トークン更新を無効にすると、現在のトークンの期限後は再連携が必要になる場合があります。',
   'ui.user_manual.edit_mcp_connection':
-    '「外部連携」の「接続中のサービス」で「編集」を押すと、連携先の表示名・アクセスを許可するプロジェクト・許可する操作を変更して保存できます。初回の連携許可画面でも「選択したプロジェクト」から複数選べます。「すべてのプロジェクト」には今後作成するものも含まれます。最初に認可していない権限を追加する場合は、接続先から連携をやり直してください。',
+    '「外部連携」の「MCP」タブにある「接続中のサービス」で「編集」を押すと、連携先の表示名・アクセスを許可するプロジェクト・許可する操作を変更して保存できます。初回の連携許可画面でも「選択したプロジェクト」から複数選べます。「すべてのプロジェクト」には今後作成するものも含まれます。最初に認可していない権限を追加する場合は、接続先から連携をやり直してください。',
   'ui.mcp_connections.connected_services': '接続中のサービス',
   'ui.mcp_connections.loading': ' 読み込み中…',
   'ui.mcp_connections.could_not_load_connected_services':
@@ -1114,7 +1115,7 @@ export const ja: Record<string, string> = {
     'ストックを削除するには、詳細画面の下部にある「その他の操作」を開き、「このストックを削除」を選びます。確認画面で対象と削除範囲を確認してください。ストックとそのコメントは削除されますが、関連する問い・プ譜は残ります。他のプロジェクトに保存した同じ記事も残ります。',
   'ui.user_manual.to_delete_a_whole_project_open_project_deletion_at':
     'プロジェクト全体を削除するには、「設定」の最下部で「プロジェクトの削除」を開きます。プロジェクト内のデータが削除され、公開ページも閲覧できなくなります。',
-  'manual.stock_x': 'Xの投稿を保存するには、「外部連携」でX API連携を設定します。',
+  'manual.stock_x': 'Xの投稿を保存するには、「外部連携」の「SNS」タブでX API連携を設定します。',
   'manual.stock_youtube_playback':
     'YouTubeは、一覧のサムネイルかタイトルを押し、詳細画面の「動画」で再生できます。チャンネルURLや再生できない動画は「YouTubeで開く」を使います。',
   'manual.stock_youtube_storage':
@@ -1197,13 +1198,13 @@ export const ja: Record<string, string> = {
   'ui.user_manual.use_other_apps': 'ほかのアプリから使う',
   'ui.user_manual.iphone_share_menu': 'iPhoneの共有メニュー：',
   'ui.user_manual.create_a_token_under_shortcut_integration_then_configure_the':
-    '「ショートカット連携」でトークンを発行し、案内に表示される送信先URLと保存先を使って設定します。「共有シートから受け取る」→「入力からURLを取得」→「URLの内容を取得」の順に設定すると、開いている記事を共有メニューからストックできます。',
+    '「外部連携」の「ショートカット」タブでトークンを発行し、案内に表示される送信先URLと保存先を使って設定します。「共有シートから受け取る」→「入力からURLを取得」→「URLの内容を取得」の順に設定すると、開いている記事を共有メニューからストックできます。',
   'ui.user_manual.find_a_project_id': 'プロジェクトIDの確認：',
   'ui.user_manual.if_an_integration_needs_a_project_id_open_that':
     '連携でプロジェクトIDが必要な場合は、対象プロジェクトの「設定」を開き、IDの横のコピーアイコンを押します。',
   'ui.user_manual.connect_chatgpt_and_other_apps': 'ChatGPTなどとの連携：',
   'ui.user_manual.register_the_url_under_integrations_mcp_integration_in_the':
-    '「外部連携」の「MCP連携」にあるURLを接続先へ登録します。ログイン後に、許可する操作と対象プロジェクトを選びます。問いとプ譜の閲覧を許可すると、保存済みのプ譜を会話で確認し、改善案の検討にも使えます。 問いの追加を許可すると、会話から問いとメモを一緒に保存できます。メモは2,000文字までで、公開ページやAIのメモリには含まれません。',
+    '「外部連携」の「MCP」タブにあるURLを接続先へ登録します。ログイン後に、許可する操作と対象プロジェクトを選びます。問いとプ譜の閲覧を許可すると、保存済みのプ譜を会話で確認し、改善案の検討にも使えます。 問いの追加を許可すると、会話から問いとメモを一緒に保存できます。メモは2,000文字までで、公開ページやAIのメモリには含まれません。',
   'ui.user_manual.create_and_edit_pufu_in_chatgpt_and_other_apps':
     'ChatGPTなどでプ譜をつくる・編集する：',
   'ui.user_manual.allow_create_edit_pufu_in_your_mcp_connection_to':
@@ -1216,7 +1217,7 @@ export const ja: Record<string, string> = {
     'プ譜の一覧、または問いの詳細から、取得したいプ譜を指定してJSONや画像で確認できます。複数のプ譜がある場合も選べます。「プ譜を表示して」と依頼すると、対応環境では会話内のビューアーで拡大・移動・PNGの保存ができます。表示に失敗した場合は「再取得」を選びます。ビューアーが使えない環境では、画像や外部リンクの取得を依頼してください。画像はリクエスト時に、指定したプ譜の最新局面から生成します。リンクを知る人が1時間閲覧でき、期限切れやプ譜の更新・削除後は再取得してください。リンクを使えない場合は、PNGファイルへの保存を依頼できます。閲覧を許可した本人のプロジェクトが対象です。',
   'ui.user_manual.disconnect': '接続をやめる：',
   'ui.user_manual.disconnect_a_service_under_integrations_connected_services_open_x':
-    '「外部連携」の「接続中のサービス」から、対象の連携を解除できます。Xの認証情報は、同じ画面の「Xの認証情報の削除」を開いて削除します。削除してもストック済みの記事は残ります。',
+    '「外部連携」の「MCP」タブにある「接続中のサービス」から、対象の連携を解除できます。Xの認証情報は、「SNS」タブの「Xの認証情報の削除」を開いて削除します。削除してもストック済みの記事は残ります。',
   'ui.user_manual.open_profile_from_the_side_menu': 'サイドメニューの「プロフィール」を開きます。',
   'ui.user_manual.open_how_do_i_delete_my_account_to_show':
     '「退会するには？」を押して退会欄を開きます。',

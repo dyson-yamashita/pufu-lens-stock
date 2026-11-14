@@ -128,7 +128,7 @@ export const en: Record<string, string> = {
   'manual.sharing_view_heading': 'Public page navigation and visible information',
   'manual.sharing_search_heading': 'Allow search engine indexing',
   'manual.integrations_intro':
-    'Use Integrations to connect the iPhone share menu or AI apps such as ChatGPT. Open the instructions for the connection you need.',
+    'Use Integrations to connect the iPhone share menu or AI apps such as ChatGPT. Choose the Shortcuts, MCP, or SNS tab for the connection you need.',
   'manual.integration_connect_heading': 'Connect ChatGPT or other apps and change permissions',
   'manual.integration_project_heading': 'Find a project ID',
   'manual.integration_memory_heading': 'Read project memory from a connected app',
@@ -289,6 +289,8 @@ export const en: Record<string, string> = {
   'ui.app.settings': 'Settings',
   'ui.app.profile': 'Profile',
   'ui.app.integrations': 'Integrations',
+  'ui.app.integrations_description':
+    'Manage connections with Shortcuts, AI apps, and social networks.',
   'ui.app.shortcuts': 'Shortcuts',
   'ui.app.details': 'Details',
   'ui.app.create_pufu': 'Create Pufu',
@@ -701,7 +703,7 @@ export const en: Record<string, string> = {
   'ui.mcp_connections.edit_help':
     'Changes also apply to existing tokens. Reconnect from the destination app to add unavailable permissions. Disabling token refresh may require reconnecting after the current token expires.',
   'ui.user_manual.edit_mcp_connection':
-    'Under Integrations → Connected services, select Edit to change and save a connection’s display name, allowed projects, and operations. On the initial authorization screen or when editing, choose Selected projects to select more than one. All projects includes future projects. To add permissions that were not originally authorized, reconnect from the destination app.',
+    'Under Integrations → MCP → Connected services, select Edit to change and save a connection’s display name, allowed projects, and operations. On the initial authorization screen or when editing, choose Selected projects to select more than one. All projects includes future projects. To add permissions that were not originally authorized, reconnect from the destination app.',
   'ui.mcp_connections.connected_services': 'Connected services',
   'ui.mcp_connections.loading': ' Loading…',
   'ui.mcp_connections.could_not_load_connected_services': 'Could not load connected services.',
@@ -1135,7 +1137,7 @@ export const en: Record<string, string> = {
     'To delete a stock, open Other actions at the bottom of its details and select Delete this stock. Review the target and deletion scope in the confirmation dialog. The stock and its comments are deleted; related questions and Pufu remain. The same article saved in other projects also remains.',
   'ui.user_manual.to_delete_a_whole_project_open_project_deletion_at':
     'To delete a whole project, open Project deletion at the bottom of Settings. Data in the project is deleted and its public page becomes unavailable.',
-  'manual.stock_x': 'To save X posts, configure the X API under Integrations.',
+  'manual.stock_x': 'To save X posts, configure the X API in the SNS tab under Integrations.',
   'manual.stock_youtube_playback':
     'Select a YouTube thumbnail or title, then play it under Video in the details. For channel links or videos that cannot play here, choose Open on YouTube.',
   'manual.stock_youtube_storage':
@@ -1219,13 +1221,13 @@ export const en: Record<string, string> = {
   'ui.user_manual.use_other_apps': 'Use other apps',
   'ui.user_manual.iphone_share_menu': 'iPhone share menu: ',
   'ui.user_manual.create_a_token_under_shortcut_integration_then_configure_the':
-    'Create a token under Shortcut integration, then configure the destination URL and project shown in the instructions. Set up Receive from Share Sheet → Get URLs from Input → Get Contents of URL to save an open article from the share menu.',
+    'Create a token in the Shortcuts tab under Integrations, then configure the destination URL and project shown in the instructions. Set up Receive from Share Sheet → Get URLs from Input → Get Contents of URL to save an open article from the share menu.',
   'ui.user_manual.find_a_project_id': 'Find a project ID: ',
   'ui.user_manual.if_an_integration_needs_a_project_id_open_that':
     "If an integration needs a project ID, open that project's Settings and press the copy icon beside its ID.",
   'ui.user_manual.connect_chatgpt_and_other_apps': 'Connect ChatGPT and other apps: ',
   'ui.user_manual.register_the_url_under_integrations_mcp_integration_in_the':
-    'Register the URL under Integrations → MCP integration in the destination app. After signing in, select allowed operations and projects. Allow reading questions and Pufu to review saved Pufu in conversations and explore improvements. Allow adding questions to save a question together with its note from a conversation. Notes allow up to 2,000 characters and are excluded from public pages and AI memory.',
+    'Register the URL from the MCP tab under Integrations in the destination app. After signing in, select allowed operations and projects. Allow reading questions and Pufu to review saved Pufu in conversations and explore improvements. Allow adding questions to save a question together with its note from a conversation. Notes allow up to 2,000 characters and are excluded from public pages and AI memory.',
   'ui.user_manual.create_and_edit_pufu_in_chatgpt_and_other_apps':
     'Create and edit Pufu in ChatGPT and other apps: ',
   'ui.user_manual.allow_create_edit_pufu_in_your_mcp_connection_to':
@@ -1238,7 +1240,7 @@ export const en: Record<string, string> = {
     "Choose a Pufu from the list or question details and request its JSON or image. You can choose among multiple Pufu. Ask to display the Pufu to use an inline viewer with zoom, pan and PNG saving in supported apps. Choose Fetch again if display fails. If the viewer is unavailable, request an image or external link. Images are generated on request from the selected Pufu's latest phase. Anyone with the link can view it for one hour; fetch again after expiration or after the Pufu is changed or deleted. If links are unavailable, request a saved PNG file. Access is limited to projects the signed-in user allowed for reading.",
   'ui.user_manual.disconnect': 'Disconnect: ',
   'ui.user_manual.disconnect_a_service_under_integrations_connected_services_open_x':
-    'Disconnect a service under Integrations → Connected services. Open X credential deletion on the same screen to remove X credentials. Saved articles remain after removal.',
+    'Disconnect a service under Integrations → MCP → Connected services. Open X credential deletion in the SNS tab to remove X credentials. Saved articles remain after removal.',
   'ui.user_manual.open_profile_from_the_side_menu': 'Open Profile from the side menu.',
   'ui.user_manual.open_how_do_i_delete_my_account_to_show':
     'Open How do I delete my account? to show the deletion section.',
