@@ -14,18 +14,21 @@ const scenarios = [
 ];
 
 describe('E2Eのシナリオ分割', () => {
-  it.each([1, 2, 3])('%i分割を合わせると台帳の全ケースが一度ずつ含まれる', (total) => {
-    const shards = Array.from({ length: total }, (_, i) =>
-      shardScenarios(scenarioLedger, `${i + 1}/${total}`),
-    );
-    const ids = scenarioLedger.map(({ id }) => id);
-    expect(shards.flat().sort()).toEqual([...ids].sort());
-    for (const shard of shards) {
-      expect(shard.length).toBeGreaterThan(0);
-      expect(shard).toEqual(ids.filter((id) => shard.includes(id)));
-    }
-    expect(shardScenarios(scenarioLedger, undefined)).toEqual(ids);
-  });
+  it.each([1, 2, 3, scenarioLedger.length])(
+    '%i分割を合わせると台帳の全ケースが一度ずつ含まれる',
+    (total) => {
+      const shards = Array.from({ length: total }, (_, i) =>
+        shardScenarios(scenarioLedger, `${i + 1}/${total}`),
+      );
+      const ids = scenarioLedger.map(({ id }) => id);
+      expect(shards.flat().sort()).toEqual([...ids].sort());
+      for (const shard of shards) {
+        expect(shard.length).toBeGreaterThan(0);
+        expect(shard).toEqual(ids.filter((id) => shard.includes(id)));
+      }
+      expect(shardScenarios(scenarioLedger, undefined)).toEqual(ids);
+    },
+  );
   it('重いケースから割り当て、入力を変更せず同じ分割を返す', () => {
     const input = [
       { id: 'A-001', estimatedSeconds: 5 },
@@ -38,12 +41,20 @@ describe('E2Eのシナリオ分割', () => {
     expect(shardScenarios(input, '1/2')).toEqual(['B-001']);
     expect(shardScenarios([...input, { id: 'D-001' }], '2/2')).toContain('C-001');
   });
-  it.each(['', '0/2', '1/0', '3/2', '1/24', '1.5/2', '01/2', '1/2/3', 'x', '1/9007199254740992'])(
-    '不正な指定・空になる分割 %s を拒否する',
-    (shard) => {
-      expect(() => shardScenarios(scenarioLedger, shard)).toThrow('分割');
-    },
-  );
+  it.each([
+    '',
+    '0/2',
+    '1/0',
+    '3/2',
+    `1/${scenarioLedger.length + 1}`,
+    '1.5/2',
+    '01/2',
+    '1/2/3',
+    'x',
+    '1/9007199254740992',
+  ])('不正な指定・空になる分割 %s を拒否する', (shard) => {
+    expect(() => shardScenarios(scenarioLedger, shard)).toThrow('分割');
+  });
 });
 
 describe('E2Eの実行ポリシー', () => {
