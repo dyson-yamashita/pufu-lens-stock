@@ -32,11 +32,13 @@ function authorizationApp() {
   app.use('*', bodyLimit({ maxSize: 16384 }), async (c, next) => {
     c.header('Cache-Control', 'no-store');
     c.header('X-Frame-Options', 'DENY');
+    await next();
+    // Apply after the provider's consent headers so its frame policy cannot replace ours.
+    // Omit form-action: browsers also check OAuth's redirects to external client callbacks.
     c.header(
       'Content-Security-Policy',
-      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+      "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'",
     );
-    await next();
   });
   app.get('/oauth/authorize', async (c) => {
     const oauth = c.env.OAUTH_PROVIDER!;
@@ -71,13 +73,13 @@ function authorizationApp() {
     const scopes = Object.entries(mcpScopes)
       .map(
         ([scope, label]) =>
-          `<label class="permission"><input type="checkbox" name="scope" value="${scope}"${details.scope.includes(scope) ? ' checked' : ''}> ${escape(t(label))}</label>`,
+          `<label class="permission"><input type="checkbox" name="scope" value="${scope}"${details.scope.includes(scope) ? ' checked' : ''}><span>${escape(t(label))}</span></label>`,
       )
       .join('');
     const projectOptions = projects.results
       .map(
         (project) =>
-          `<label class="permission"><input type="checkbox" name="project_id" value="${escape(project.id)}"> ${escape(project.name)}</label>`,
+          `<label class="permission"><input type="checkbox" name="project_id" value="${escape(project.id)}"><span>${escape(project.name)}</span></label>`,
       )
       .join('');
     for (const [name, value] of consent.headers) c.header(name, value);
@@ -85,7 +87,54 @@ function authorizationApp() {
     const themeAttribute =
       preference === 'light' || preference === 'dark' ? ` data-theme="${preference}"` : '';
     return c.html(
-      `<!doctype html><html lang="${language}"${themeAttribute}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(t('MCP連携の許可'))} | Pufu Lens</title><style>${mcpConsentStyle}</style></head><body><main><p>Pufu Lens · ${escape(t('MCP連携'))}</p><h1>${escape(t('mcp.consentTitle', { client: details.clientName }))}</h1><p>${escape(t('mcp.consentIdentity', { name: principal.user.name }))}</p><p>${details.clientDomain ? escape(t('mcp.clientDomain', { domain: details.clientDomain })) : escape(t('クライアント名は接続元が登録した名称です。'))}<br>${escape(t('mcp.redirectHost'))}: <strong>${escape(details.redirectHost)}</strong></p>${details.redirectIsLoopback ? `<p>${escape(t('このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。'))}</p>` : ''}<form method="post" action="/oauth/authorize"><input type="hidden" name="handle" value="${escape(consent.handle)}"><fieldset class="project-access"><legend>${escape(t('アクセスを許可するプロジェクト'))}</legend><label class="permission"><input type="radio" name="project_access" value="all" checked> ${escape(t('すべてのプロジェクト'))}</label><label class="permission"><input type="radio" name="project_access" value="selected"> ${escape(t('選択したプロジェクト'))}</label><div class="project-options">${projectOptions}</div><small>${escape(t('プロジェクトを複数選択できます。すべてを選ぶと、今後作成するプロジェクトにもアクセスできます。'))}</small></fieldset><fieldset><legend>${escape(t('許可する操作'))}</legend>${scopes}</fieldset><p class="selection-required">${escape(t('アクセスを許可するプロジェクトを選択してください。'))}</p><div class="actions"><button class="button primary selection-required" type="button" disabled>${escape(t('連携を許可'))}</button><button class="button primary approve" name="decision" value="approve">${escape(t('連携を許可'))}</button><button class="button secondary" name="decision" value="deny">${escape(t('許可しない'))}</button></div></form></main></body></html>`,
+      `<!doctype html>
+<html lang="${language}"${themeAttribute}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${escape(t('MCP連携の許可'))} | Pufu Lens</title>
+  <style>${mcpConsentStyle}</style>
+</head>
+<body>
+  <header class="page-header">
+    <span class="brand-lockup">
+      <img class="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38">
+      <img class="brand-logo brand-logo-light" src="/pufu-lens-wordmark.svg" alt="Pufu Lens" width="1200" height="340">
+      <img class="brand-logo brand-logo-dark" src="/pufu-lens-wordmark-dark.svg" alt="Pufu Lens" width="1200" height="340">
+    </span>
+    <p class="page-label">${escape(t('MCP連携'))}</p>
+  </header>
+  <main>
+    <h1>${escape(t('mcp.consentTitle', { client: details.clientName }))}</h1>
+    <p class="identity">${escape(t('mcp.consentIdentity', { name: principal.user.name }))}</p>
+    <div class="connection-details">
+      <p>${details.clientDomain ? escape(t('mcp.clientDomain', { domain: details.clientDomain })) : escape(t('クライアント名は接続元が登録した名称です。'))}</p>
+      <p>${escape(t('mcp.redirectHost'))}: <strong>${escape(details.redirectHost)}</strong></p>
+      ${details.redirectIsLoopback ? `<p>${escape(t('このコンピューター上のアプリへ接続します。自分で開始した接続であることを確認してください。'))}</p>` : ''}
+    </div>
+    <form method="post" action="/oauth/authorize">
+      <input type="hidden" name="handle" value="${escape(consent.handle)}">
+      <fieldset class="project-access">
+        <legend>${escape(t('アクセスを許可するプロジェクト'))}</legend>
+        <label class="permission"><input type="radio" name="project_access" value="all" checked><span>${escape(t('すべてのプロジェクト'))}</span></label>
+        <label class="permission"><input type="radio" name="project_access" value="selected"><span>${escape(t('選択したプロジェクト'))}</span></label>
+        <div class="project-options">${projectOptions}</div>
+        <small>${escape(t('プロジェクトを複数選択できます。すべてを選ぶと、今後作成するプロジェクトにもアクセスできます。'))}</small>
+      </fieldset>
+      <fieldset>
+        <legend>${escape(t('許可する操作'))}</legend>
+        ${scopes}
+      </fieldset>
+      <p class="selection-required">${escape(t('アクセスを許可するプロジェクトを選択してください。'))}</p>
+      <div class="actions">
+        <button class="button primary selection-required" type="button" disabled>${escape(t('連携を許可'))}</button>
+        <button class="button primary approve" name="decision" value="approve">${escape(t('連携を許可'))}</button>
+        <button class="button secondary" name="decision" value="deny">${escape(t('許可しない'))}</button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>`,
     );
   });
   app.post('/oauth/authorize', async (c) => {
