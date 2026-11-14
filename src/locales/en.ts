@@ -88,6 +88,7 @@ export const en: Record<string, string> = {
   'feedback.question_actual': 'What happened at that point?',
   'feedback.question_steps': 'Could you describe what you did just before that?',
   'feedback.failed': 'Your message could not be sent. Please try again.',
+  'feedback.rate_limited': 'The daily sending limit has been reached.',
   'feedback.wait_retry':
     'Your message is still being processed. Please wait a moment and try again.',
   'feedback.session_changed':
@@ -110,6 +111,7 @@ export const en: Record<string, string> = {
   'feedback.manual_unresolved': 'If that does not help, Pufi asks which part remains unresolved.',
   'feedback.manual_save':
     'Submitted conversations are saved and organized by AI for maintenance review.',
+  'feedback.manual_limit': 'Each person can submit up to 50 conversations in a rolling 24 hours.',
   'feedback.manual_finish': 'Choose “Finish answering” or “Send and finish” to end.',
 
   'manual.pufu_create_heading': 'Create a draft with AI',

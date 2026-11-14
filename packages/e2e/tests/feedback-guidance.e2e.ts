@@ -55,13 +55,24 @@ test('FEEDBACK-004 ログイン済みマニュアルから案内し、未解決�
     });
   });
   const reports: {
+    request_id: string;
     screen: string;
     detail: string;
     manual_context: { question: string; section: string };
   }[] = [];
+  let rateLimited = false;
   // The production D1 contract is covered by Vitest; do not exceed the real demo account's daily report quota.
   await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
     reports.push(JSON.parse(route.request.postData ?? '{}'));
+    if (rateLimited) {
+      rateLimited = false;
+      await route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'フィードバックの送信上限に達しました。' }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
@@ -127,6 +138,25 @@ test('FEEDBACK-004 ログイン済みマニュアルから案内し、未解決�
   expect(reports[0].detail).toContain('保存先がどこか');
   expect(reports[0].manual_context.question).toContain('画像でダウンロード');
   expect(reports[0].manual_context.section).toMatch(/^manual-pufu-/);
+  await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
+
+  // The next successful response represents retrying after the limit has expired.
+  rateLimited = true;
+  await invitation.click();
+  await screen.getByRole('button', 'その他', { exact: true }).click();
+  await screen.getByLabel('プフィへの返答').fill('メモリの履歴について');
+  await screen.getByRole('button', '送信', { exact: true }).click();
+  await expect(screen.getByRole('alert')).toHaveText('1日の送信上限に達しました。');
+  await expect(screen.getByLabel('プフィへの返答')).toHaveValue('メモリの履歴について');
+  await expect(screen.getByRole('button', '送信', { exact: true })).toBeEnabled();
+  expect(reports).toHaveLength(2);
+  expect(reports[1].detail).toBe('メモリの履歴について');
+  await screen.getByRole('button', '送信', { exact: true }).click();
+  await expect(browser.locator('.pufi-thread')).toContainText('改善に役立てます');
+  await expect(screen.getByRole('alert')).toHaveCount(0);
+  expect(reports).toHaveLength(3);
+  expect(reports[2]).toEqual(reports[1]);
+  await expect(browser.locator('.pufi-message-user')).toHaveCount(2);
   await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
   await expect(invitation).toBeVisible();
 });

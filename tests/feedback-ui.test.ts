@@ -5,7 +5,7 @@ import { parseHTML } from 'linkedom';
 import PufiFeedback from '../src/PufiFeedback';
 import { FeedbackDetector } from '../src/feedback-detector';
 import { manualTree, selectManualBranch } from '../src/manual-search';
-import { api, send } from '../src/api';
+import { api, ApiError, send } from '../src/api';
 
 vi.mock('../src/manual-search', () => ({ manualTree: vi.fn(), selectManualBranch: vi.fn() }));
 vi.mock('../src/api', async (original) => ({
@@ -86,6 +86,53 @@ it('shows the manual entry during cooldown, without any settings or detection co
   expect(document.body.textContent).not.toContain('声かけを受け取る');
   expect(send).not.toHaveBeenCalled();
 });
+it.each([
+  { language: 'ja' as const, category: 'その他', message: '1日の送信上限', status: 429 },
+  {
+    language: 'en' as const,
+    category: 'Something else',
+    message: 'daily sending limit',
+    status: 429,
+  },
+  { language: 'ja' as const, category: 'その他', message: '送信できませんでした', status: 503 },
+])(
+  'explains $status in $language and retries the same conversation',
+  async ({ language, category, message, status }) => {
+    vi.mocked(send).mockRejectedValueOnce(new ApiError('server error', status));
+    await act(async () => {
+      root.render(
+        createElement(PufiFeedback, {
+          detector,
+          host: null,
+          blocked: false,
+          screen: 'manual',
+          alwaysVisible: true,
+          language,
+        }),
+      );
+    });
+    await act(async () => document.querySelector<HTMLButtonElement>('.pufi-invitation')!.click());
+    await act(async () =>
+      [...document.querySelectorAll('button')].find((b) => b.textContent === category)!.click(),
+    );
+    const submit = () =>
+      act(async () => {
+        document
+          .querySelector('form')!
+          .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+      });
+    await submit();
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain(message);
+    expect(document.querySelector<HTMLButtonElement>('.pufi-send')?.disabled).toBe(false);
+    const first = vi.mocked(send).mock.calls[0][1];
+    await submit();
+    expect(document.querySelector('[role="alert"]')).toBeNull();
+    expect(document.querySelector('.pufi-thread')?.textContent).toContain(
+      language === 'ja' ? '改善' : 'improve',
+    );
+    expect(vi.mocked(send).mock.calls[1][1]).toEqual(first);
+  },
+);
 it('suppresses new automatic prompts while busy or focused in an input', async () => {
   detector.enable(true);
   await render(true);

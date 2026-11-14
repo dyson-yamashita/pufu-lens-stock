@@ -211,7 +211,15 @@ export default function PufiFeedback({
         setInvalidSession(true);
         frozen.current = null;
       }
-      setError(t(changed ? 'feedback.session_changed' : 'feedback.failed'));
+      setError(
+        t(
+          changed
+            ? 'feedback.session_changed'
+            : error instanceof ApiError && error.status === 429
+              ? 'feedback.rate_limited'
+              : 'feedback.failed',
+        ),
+      );
     } finally {
       sending.current = false;
       setBusy(false);
