@@ -135,7 +135,7 @@ async function assessFeedback(env: Env, row: FeedbackRecord, finish: boolean) {
                   ? `replyには利用者へ表示する会話の返答を1〜3文で書きます。直前の発言に具体的に答え、必要なら確認を一つだけ添えます。質問を単なる改善意見としてお礼だけで打ち切らず、会話履歴を踏まえて案内・状況整理をしてください。PufuLensは記事のURLや自分のテキストをストックし、問い・気づきを作り、プ譜で案を考えるサービスです。「何からすればいい」には、まず気になる記事やメモのストックから始める案を示せます。ここにない機能や操作、原因を推測して案内せず、分からない場合は確認します。外部の操作・修正・連絡を実行したと伝えてはいけません。未保存の内容が失われる操作を安易に勧めません。会話は最初の投稿を含め最大3往復、今回は${row.round + 1}往復目です。${
                       finish || row.round >= 2
                         ? '今回は最終返答です。follow_upは必ずnullとし、新たな質問をせず、分かった状況と次にできること・残った課題を短くまとめて終了してください。'
-                        : '相談が続く場合はfollow_upに確認したい内容に近いoperation/expected/actual/stepsを一つ選びます。解決した・終了したいという発言や、これ以上確認が不要な場合はfollow_upをnullにして短くまとめます。具体性があるだけで操作の質問への返答を省略しないでください。'
+                        : '利用者はこの返答の後も続けて相談できます。1・2往復目では会話の終了を宣言せず、具体性があるだけで操作の質問への返答を省略しないでください。確認したい内容があればfollow_upに近いoperation/expected/actual/stepsを一つ選び、確認が不要ならnullにします。追加確認の有無と会話の終了は別です。途中で終えたい利用者は画面の終了ボタンを使えます。'
                     }秘密情報を含む場合は転載や追加の聞き取りをせずfollow_upをnullにします。`
                   : '足りない情報があり追加確認が役立つ場合のみfollow_upにoperation/expected/actual/stepsの一つを選びます。十分な情報がある、秘密情報を含む、追加確認不要ならnull。追加確認は任意で最大2回。'
               }既に答えた質問を繰り返さないでください。個人情報やプ譜の本文を返答や要約へ転載しません。返答と整理は${row.language === 'en' ? '英語' : '日本語'}で、JSONのみ。外部登録・修正・通知は行いません。`,
@@ -158,9 +158,11 @@ async function assessFeedback(env: Env, row: FeedbackRecord, finish: boolean) {
       ),
       schema,
     );
+    // For chat, follow_up also keeps existing clients ready for another message.
+    // The absence of a maintenance question must not close the input.
     const question =
       !finish && row.round < 2 && !assessment.contains_private_information
-        ? assessment.follow_up
+        ? (assessment.follow_up ?? (conversational ? 'operation' : null))
         : null;
     const status = question
       ? 'needs_info'
