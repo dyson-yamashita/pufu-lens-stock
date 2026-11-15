@@ -83,7 +83,7 @@ export const en: Record<string, string> = {
   'feedback.details': 'About saving our conversation',
   'feedback.privacy_link': 'Privacy policy',
   'feedback.explanation':
-    'Repeated interactions are detected locally while signed in. Input values and raw interaction logs are never sent automatically. AI checks manual-search questions and replies to other requests for help. Submitted conversations are saved, organized by AI and reviewed by maintenance staff. Please avoid personal information. Automatic prompts appear at most once per session and 24 hours; “No, thank you” pauses them for 7 days.',
+    'AI helps with your questions. Messages you send, except manual searches, are saved to improve the service. Input values and interaction logs are not sent automatically. Please avoid personal information.',
   'feedback.question_operation': 'Which action were you having trouble with?',
   'feedback.question_expected': 'What did you expect to happen?',
   'feedback.question_actual': 'What happened at that point?',
