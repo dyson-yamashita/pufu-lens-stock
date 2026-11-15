@@ -48,12 +48,15 @@ test('FEEDBACK-011 マニュアル検索以外の3項目で返答を表示して
     for (let round = 0; round < 3; round++) {
       await screen
         .getByLabel('プフィへの返答')
-        .fill(['何からすればいい？', '仕事のことをメモしたい', 'まず一文から始めます'][round]);
+        .fill(['何からしたらいい？', '仕事のことをメモしたい', 'まず一文から始めます'][round]);
       await screen.getByRole('button', '送信', { exact: true }).click();
       await expect(browser.locator('.pufi-thread')).toContainText(replies[round]);
       expect(turns.at(-1)?.category).toBe(category);
       expect(turns.at(-1)?.round).toBe(round);
-      if (round < 2) await expect(screen.getByLabel('プフィへの返答')).toBeVisible();
+      if (round < 2) {
+        await expect(screen.getByLabel('プフィへの返答')).toBeEnabled();
+        await expect(screen.getByRole('button', '会話を閉じる', { exact: true })).toHaveCount(0);
+      }
     }
     await expect(screen.getByLabel('プフィへの返答')).toHaveCount(0);
     await expect(browser.locator('.pufi-message-user')).toHaveCount(4);

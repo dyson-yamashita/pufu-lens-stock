@@ -86,20 +86,18 @@ it('preserves the entire unresolved reply and separately saves manual context in
 });
 
 it.each(['unresponsive', 'input', 'other'])(
-  'returns and persists contextual LLM replies for %s for at most three exchanges, including retries',
+  'keeps %s open for three exchanges even when the model returns no follow-up, including retries',
   async (category) => {
     const replies = [
       '何から始めるか迷っているのですね。まず記事かメモをストックできます。どちらから始めたいですか？',
-      'メモから始めたいのですね。手元に気になっていることはありますか？',
+      'メモから始めたいのですね。短いメモからでもストックできます。',
       'まず気になっていることを短いメモとしてストックする、という進め方で整理しました。',
     ];
-    const { ai } = configure(verdict({ reply: replies[0], follow_up: 'operation' }));
+    const { ai } = configure(verdict({ reply: replies[0], follow_up: null }));
     const body = { ...input(), category, detail: '何からすればいい？' };
     for (let round = 0; round < 3; round++) {
       ai.mockResolvedValue({
-        response: JSON.stringify(
-          verdict({ reply: replies[round], follow_up: round < 2 ? 'operation' : null }),
-        ),
+        response: JSON.stringify(verdict({ reply: replies[round], follow_up: null })),
         usage: { prompt_tokens: 10, completion_tokens: 5 },
       });
       const turn = {
@@ -116,6 +114,7 @@ it.each(['unresponsive', 'input', 'other'])(
       const replay = await app.request('/api/v1/feedback', { method: 'POST', body: turn });
       expect(await replay.json()).toMatchObject({ reply: replies[round], round });
       expect(ai).toHaveBeenCalledTimes(round + 1);
+      expect((await rows()).results[0].status).toBe(round < 2 ? 'needs_info' : 'awaiting_review');
     }
     const history = JSON.parse((await rows()).results[0].conversation);
     expect(
@@ -132,7 +131,7 @@ it.each(['unresponsive', 'input', 'other'])(
 
 it('finishes a contextual conversation without repeating the previous question or calling AI again', async () => {
   const reply = 'まずメモをストックしてみましょう。どんな内容を残したいですか？';
-  const { ai } = configure(verdict({ reply, follow_up: 'operation' }));
+  const { ai } = configure(verdict({ reply, follow_up: null }));
   const body = { ...input(), category: 'other', detail: '何からすればいい？' };
   await app.request('/api/v1/feedback', { method: 'POST', body });
   const response = await app.request('/api/v1/feedback', {
@@ -151,21 +150,25 @@ it('finishes a contextual conversation without repeating the previous question o
   expect(await again.json()).toEqual(result);
 });
 
-it('keeps unresolved manual reports on the existing fixed-question flow', async () => {
-  const assessment = verdict({ follow_up: 'actual' });
-  const manualAssessment: Partial<typeof assessment> = { ...assessment };
-  delete manualAssessment.reply;
-  configure(manualAssessment);
-  const body = {
-    ...input(),
-    category: 'navigation',
-    manual_context: { question: '保存方法', topic: '保存', section: 'manual-pufu-1' },
-  };
-  const first = await app.request('/api/v1/feedback', { method: 'POST', body });
-  expect(await first.json()).toMatchObject({ follow_up: 'actual' });
-  const replay = await app.request('/api/v1/feedback', { method: 'POST', body });
-  expect(await replay.json()).not.toHaveProperty('reply');
-});
+it.each(['actual', null])(
+  'keeps the manual report flow unchanged with follow-up %s',
+  async (followUp) => {
+    const assessment = verdict({ follow_up: followUp });
+    const manualAssessment: Partial<typeof assessment> = { ...assessment };
+    delete manualAssessment.reply;
+    configure(manualAssessment);
+    const body = {
+      ...input(),
+      category: 'navigation',
+      manual_context: { question: '保存方法', topic: '保存', section: 'manual-pufu-1' },
+    };
+    const first = await app.request('/api/v1/feedback', { method: 'POST', body });
+    expect(await first.json()).toMatchObject({ follow_up: followUp });
+    expect((await rows()).results[0].status).toBe(followUp ? 'needs_info' : 'awaiting_review');
+    const replay = await app.request('/api/v1/feedback', { method: 'POST', body });
+    expect(await replay.json()).not.toHaveProperty('reply');
+  },
+);
 
 it.each(['finish', 'third exchange', 'private information'])(
   'closes forced endings without displaying an LLM follow-up: %s',
@@ -237,7 +240,7 @@ it('stores an issue-equivalent maintenance report in D1 without GitHub or extern
   const body = input();
   expect((await app.request('/api/v1/feedback', { method: 'POST', body })).status).toBe(201);
   expect((await rows()).results[0]).toMatchObject({
-    status: 'awaiting_review',
+    status: 'needs_info',
     review_status: 'unreviewed',
     title: '保存結果を保持する',
     reproduction_steps: '第2局面で保存後に再読込する',
@@ -256,7 +259,7 @@ it('stores an issue-equivalent maintenance report in D1 without GitHub or extern
 });
 
 it.each([
-  [verdict({ concrete: false, actionable: false }), 'awaiting_review', 'needs_review'],
+  [verdict({ concrete: false, actionable: false }), 'needs_info', 'needs_review'],
   [verdict({ contains_private_information: true }), 'held', 'private_information'],
 ])(
   'preserves incomplete or sensitive reports for maintenance',
