@@ -77,7 +77,7 @@ test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDB�
   );
   await screen.getByRole('button', '回答を終了').click();
   await expect(browser.locator('.pufi-thread')).toContainText(
-    '保存についてご意見ありがとうございます。いただいたご意見はサービス改善に役立てます。',
+    'お話しいただきありがとうございます。ここまでの内容を保存しました。',
   );
   expect(reports.length).toBeGreaterThan(0);
   const viewport = await browser.evaluate(() => `${innerWidth}x${innerHeight}`);

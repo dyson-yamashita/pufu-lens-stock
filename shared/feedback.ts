@@ -95,4 +95,5 @@ export type FeedbackReceipt = {
   round: number;
   follow_up: FeedbackQuestion | null;
   pending: boolean;
+  reply?: string;
 };

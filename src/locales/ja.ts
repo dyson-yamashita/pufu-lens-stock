@@ -62,6 +62,7 @@ export const ja: Record<string, string> = {
   'feedback.reply_hint': 'ひとことでも構いません',
   'feedback.send': '送信',
   'feedback.consent_hint': '会話を保存し、AIで整理します',
+  'feedback.chat_hint': 'AIと最大3往復お話しできます。会話を保存します',
   'feedback.finish': '回答を終了',
   'feedback.finish_send': '送信して終了',
   'feedback.thanks': 'ありがとうございます。改善に役立てます。',
@@ -81,7 +82,7 @@ export const ja: Record<string, string> = {
   'feedback.details': '会話の保存について',
   'feedback.privacy_link': 'プライバシーポリシー',
   'feedback.explanation':
-    'ログイン中の操作の反復をブラウザー内で検知します。入力値や生の操作ログは自動送信しません。マニュアル検索の質問はAIで確認します。会話を送信すると保存・AI整理し、保守担当が確認します。個人情報の記入はお控えください。自動案内は1セッション・24時間に1回まで。「大丈夫です」で7日間休止します。',
+    'ログイン中の操作の反復をブラウザー内で検知します。入力値や生の操作ログは自動送信しません。マニュアル検索の質問はAIで確認し、それ以外の相談にはAIが返答します。会話を送信すると保存・AI整理し、保守担当が確認します。個人情報の記入はお控えください。自動案内は1セッション・24時間に1回まで。「大丈夫です」で7日間休止します。',
   'feedback.question_operation': 'どの操作でお困りでしたか？',
   'feedback.question_expected': 'どのような動きを期待されていましたか？',
   'feedback.question_actual': 'そのとき、どのような状態になりましたか？',
@@ -97,6 +98,8 @@ export const ja: Record<string, string> = {
     'それ以外の画面では、クリックしても反応しない・入力エラー・操作失敗が繰り返されたときに案内します。',
   'feedback.manual_question':
     '「操作に迷いました」では質問をAIで確認し、見出しから該当するマニュアル本文をご案内します。',
+  'feedback.manual_conversation':
+    '「反応しません」「入力しづらいです」「その他」では、AIが内容に応じて返答し、最初の投稿を含め最大3往復で困りごとや次にできることを整理します。解決した場合や終了したい場合は途中で終えられます。',
   'feedback.manual_guide_heading': '案内の見方',
   'feedback.manual_full_answer': '回答が省略されているときは「回答を表示する」で全文を読めます。',
   'feedback.manual_link': 'マニュアル内ではリンクから該当箇所へスクロールし、一時的に強調します。',

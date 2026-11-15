@@ -4,6 +4,67 @@ import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
 import type { ThemePreference } from '../../../src/theme';
 
+test('FEEDBACK-011 マニュアル検索以外の3項目で返答を表示して3往復で終了する', async ({
+  app,
+  screen,
+  browser,
+  fixture,
+}) => {
+  await app.open('/manual');
+  const turns: {
+    category: string;
+    round: number;
+    request_id: string;
+    detail: string;
+    answer?: string;
+  }[] = [];
+  const replies = [
+    'まず気になっていることをメモとしてストックできます。どんな内容を残したいですか？',
+    '仕事で気になっていることを残したいのですね。最初の一文を一緒に整理しましょう。',
+    '仕事で気になる点を短くメモし、ストックするところから始めると整理できました。',
+  ];
+  await browser.route(`${fixture.url}/api/v1/feedback`, async (route) => {
+    const body = JSON.parse(route.request.postData ?? '{}') as (typeof turns)[number];
+    turns.push(body);
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        received: true,
+        round: body.round,
+        follow_up: body.round < 2 ? 'operation' : null,
+        pending: false,
+        reply: replies[body.round],
+      }),
+    });
+  });
+  for (const [label, category] of [
+    ['反応しません', 'unresponsive'],
+    ['入力しづらいです', 'input'],
+    ['その他', 'other'],
+  ]) {
+    await screen.getByRole('button', '何かお困りですか？', { exact: true }).click();
+    await screen.getByRole('button', label, { exact: true }).click();
+    for (let round = 0; round < 3; round++) {
+      await screen
+        .getByLabel('プフィへの返答')
+        .fill(['何からすればいい？', '仕事のことをメモしたい', 'まず一文から始めます'][round]);
+      await screen.getByRole('button', '送信', { exact: true }).click();
+      await expect(browser.locator('.pufi-thread')).toContainText(replies[round]);
+      expect(turns.at(-1)?.category).toBe(category);
+      expect(turns.at(-1)?.round).toBe(round);
+      if (round < 2) await expect(screen.getByLabel('プフィへの返答')).toBeVisible();
+    }
+    await expect(screen.getByLabel('プフィへの返答')).toHaveCount(0);
+    await expect(browser.locator('.pufi-message-user')).toHaveCount(4);
+    await screen.getByRole('button', '会話を閉じる', { exact: true }).click();
+    const conversation = turns.slice(-3);
+    expect(new Set(conversation.map((turn) => turn.request_id)).size).toBe(1);
+    expect(conversation[1].answer).toBe('仕事のことをメモしたい');
+  }
+  expect(turns).toHaveLength(9);
+});
+
 test('FEEDBACK-004 ログイン済みマニュアルから案内し、未解決の部分をヒアリングする', async ({
   app,
   screen,

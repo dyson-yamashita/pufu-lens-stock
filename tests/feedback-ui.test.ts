@@ -86,6 +86,53 @@ it('shows the manual entry during cooldown, without any settings or detection co
   expect(document.body.textContent).not.toContain('声かけを受け取る');
   expect(send).not.toHaveBeenCalled();
 });
+
+it.each(['反応しません', '入力しづらいです', 'その他'])(
+  'displays contextual replies for %s and the closing reply when finishing',
+  async (category) => {
+    await render(false, true);
+    const press = (label: string) =>
+      act(async () => {
+        [...document.querySelectorAll('button')]
+          .find((button) => button.textContent === label)!
+          .click();
+      });
+    await press('何かお困りですか？');
+    await press(category);
+    vi.mocked(send).mockResolvedValueOnce({
+      received: true,
+      round: 0,
+      follow_up: 'operation',
+      pending: false,
+      reply: 'どの操作で止まりましたか？',
+    });
+    await act(async () => {
+      document
+        .querySelector('form')!
+        .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(document.querySelector('.pufi-thread')?.textContent).toContain(
+      'どの操作で止まりましたか？',
+    );
+    expect(document.querySelector('textarea')).not.toBeNull();
+    vi.mocked(send).mockResolvedValueOnce({
+      received: true,
+      round: 0,
+      follow_up: null,
+      pending: false,
+      reply: 'ここまでのお話を保存しました。',
+    });
+    await press('回答を終了');
+    expect(document.querySelector('.pufi-thread')?.textContent).toContain(
+      'ここまでのお話を保存しました。',
+    );
+    expect(document.querySelector('textarea')).toBeNull();
+    expect(document.querySelector('.pufi-thread')?.textContent).not.toContain(
+      'ありがとうございます。改善に役立てます。',
+    );
+    await press('会話を閉じる');
+  },
+);
 it.each([
   { language: 'ja' as const, category: 'その他', message: '1日の送信上限', status: 429 },
   {
