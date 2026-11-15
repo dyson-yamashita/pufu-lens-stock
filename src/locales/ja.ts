@@ -82,7 +82,7 @@ export const ja: Record<string, string> = {
   'feedback.details': '会話の保存について',
   'feedback.privacy_link': 'プライバシーポリシー',
   'feedback.explanation':
-    'ログイン中の操作の反復をブラウザー内で検知します。入力値や生の操作ログは自動送信しません。マニュアル検索の質問はAIで確認し、それ以外の相談にはAIが返答します。会話を送信すると保存・AI整理し、保守担当が確認します。個人情報の記入はお控えください。自動案内は1セッション・24時間に1回まで。「大丈夫です」で7日間休止します。',
+    '相談にはAIを使い、マニュアル検索以外の送信内容は改善のために保存します。入力値や操作ログは自動送信しません。個人情報は書かないでください。',
   'feedback.question_operation': 'どの操作でお困りでしたか？',
   'feedback.question_expected': 'どのような動きを期待されていましたか？',
   'feedback.question_actual': 'そのとき、どのような状態になりましたか？',
