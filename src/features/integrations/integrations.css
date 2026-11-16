@@ -136,7 +136,8 @@
   color: var(--accent);
 }
 .shortcut-setup-figure {
-  margin: 0 0 24px;
+  max-width: 320px;
+  margin: 0 auto 24px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
