@@ -21,6 +21,7 @@ export type PublicProject = {
 };
 export type PublicProjectDetail = PublicProject & { search_indexable: number };
 export type PublicStock = {
+  og_image_url?: string | null;
   images?: (StockImage & { url: string })[];
   id: string;
   title: string;

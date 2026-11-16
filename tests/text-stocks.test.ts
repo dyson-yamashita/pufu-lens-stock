@@ -223,10 +223,12 @@ describe('URLとテキストのストック', () => {
     await applyMigration(app.env.DB, '0012_pufu_phases.sql');
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
     await applyMigration(app.env.DB, '0036_language.sql');
+    await applyMigration(app.env.DB, '0053_stock_og_images.sql');
     expect((await detail('old-stock')).stock).toMatchObject({
       source_type: 'url',
       title: '既存記事',
       status: 'ready',
+      has_og_image: 0,
     });
     const response = await app.request('/api/v1/stocks', {
       method: 'POST',

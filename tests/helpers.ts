@@ -284,4 +284,6 @@ export async function upgradeRelationsSchema(DB: D1Database) {
   if (!(await columns('pufu_scores')).includes('title'))
     await applyMigration(DB, '0040_pufu_titles.sql');
   if (!(await columns('users')).includes('language')) await applyMigration(DB, '0036_language.sql');
+  if (!(await columns('articles')).includes('has_og_image'))
+    await applyMigration(DB, '0053_stock_og_images.sql');
 }

@@ -1,3 +1,4 @@
+import OgImage from '../stocks/OgImage';
 import { ArrowLeft, BookOpen, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import type { PublicList, PublicStock, PublicStockDetail } from '../../../shared/public-project';
@@ -49,6 +50,7 @@ export function PublicStockCard({
       <Heading className="public-stock-card-title">
         {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
       </Heading>
+      {!youtube && <OgImage src={stock.og_image_url} />}
       {youtube && <YouTubeThumbnail url={stock.source_url!} />}
       <p className="public-summary">
         {youtube
@@ -81,6 +83,7 @@ export function StockDetails({
       <Heading className="public-stock-title">
         {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
       </Heading>
+      {!youtube && <OgImage src={stock.og_image_url} />}
       {youtube ? (
         <YouTubePlayer url={href!} />
       ) : (

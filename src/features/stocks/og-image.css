@@ -1,0 +1,23 @@
+.stock-og-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  aspect-ratio: 1200 / 630;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--wash);
+  margin: 0 0 16px;
+}
+.article-og-preview {
+  display: block;
+  width: 100%;
+  padding: 0;
+}
+.article-og-preview .stock-og-image {
+  object-fit: cover;
+}
+
+.article-og-preview:not(:has(img)) {
+  display: none;
+}

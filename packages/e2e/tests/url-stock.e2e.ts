@@ -25,7 +25,16 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
     timeout: 15000,
   });
   await expect(browser.locator('.article-card .status')).toHaveCount(0, { timeout: 15000 });
+  await expect(browser.locator('.article-card .stock-og-image')).toBeVisible();
+  expect(
+    await browser.evaluate(async () => {
+      const image = document.querySelector<HTMLImageElement>('.article-card .stock-og-image')!;
+      await image.decode();
+      return image.naturalWidth > 0 && document.documentElement.scrollWidth <= window.innerWidth;
+    }),
+  ).toBe(true);
   await screen.getByRole('button', 'E2EのURL記事', { exact: true }).click();
+  await expect(browser.locator('.detail-summary .stock-og-image')).toBeVisible();
   await expect(browser.locator('.detail-summary')).toContainText(
     '保存と要約を分離し、失敗後も同じストックで再試行します。',
   );
@@ -33,6 +42,7 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
   await expect(browser.locator('.article-body')).toContainText('URLから取得した記事です。');
   await browser.reload();
   await expect(browser.locator('.stock-detail-page')).toBeVisible();
+  await expect(browser.locator('.detail-summary .stock-og-image')).toBeVisible();
   await expect(browser.locator('.detail-summary')).toContainText(
     '保存と要約を分離し、失敗後も同じストックで再試行します。',
   );

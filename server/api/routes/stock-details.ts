@@ -6,6 +6,7 @@ import { isYouTubeUrl, youtubeUnavailableMessage } from '../../../shared/youtube
 import type { AppEnv } from '../../env';
 import { canAccessProject } from '../../features/projects/project-access';
 import { withRelations } from '../../features/relations/relations';
+import { ogImageResponse } from '../../features/stocks/og-image';
 import { cleanupStockImages } from '../../features/stocks/stock-images';
 import { assertOperation, reserveOperation } from '../../features/usage/usage';
 import {
@@ -24,7 +25,7 @@ import { body } from '../validation';
 export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/stocks/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.has_og_image, a.status, a.summary_json, a.error, a.model FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE s.id = ? AND s.user_id = ?',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();
@@ -106,6 +107,12 @@ export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
       observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
     );
     return c.json({ ok: true }, 202);
+  });
+
+  app.get('/api/v1/stocks/:id/og-image', async (c) => {
+    const stock = await ownedStock(c);
+    if (!stock.has_og_image) throw new HTTPException(404);
+    return ogImageResponse(c.env, stock.content_key);
   });
 
   app.get('/api/v1/stocks/:id/content', async (c) => {

@@ -65,6 +65,33 @@ describe('公開記事の取得', () => {
     expect(requests).toEqual(['https://example.com/folder/start', 'https://example.com/article']);
   });
 
+  it.each([
+    ['<meta property="og:image" content="../cover.png">', 'https://example.com/cover.png'],
+    [
+      '<meta property="og:image" content="javascript:alert(1)"><meta name="twitter:image" content="//cdn.example.com/cover.png">',
+      'https://cdn.example.com/cover.png',
+    ],
+    [
+      '<meta property="og:image" content="/cover.png"><meta property="og:image:secure_url" content="https://cdn.example.com/secure.png">',
+      'https://cdn.example.com/secure.png',
+    ],
+    ['<meta property="og:image" content="data:image/png;base64,abc">', undefined],
+  ])('OGP画像を本文抽出前に読み、移動後のURLを基準に解決する: %s', async (metadata, expected) => {
+    const requests = mockNetwork((url) =>
+      url.pathname === '/start'
+        ? new Response(null, { status: 302, headers: { Location: '/folder/article' } })
+        : new Response(
+            `<html><head><title>通常のタイトル</title><meta property="og:title" content="OGPのタイトル">${metadata}</head><body><article><p>${articleText}</p></article></body></html>`,
+            { headers: { 'Content-Type': 'text/html' } },
+          ),
+    );
+    const result = await fetchArticle(env, 'https://example.com/start');
+    expect(result.ogImageUrl).toBe(expected);
+    expect(result.title).toBe('OGPのタイトル');
+    expect(result.text).toContain(articleText);
+    expect(requests).toHaveLength(2);
+  });
+
   const htmlPage = (body: string, next = '') =>
     new Response(
       `<html><head><title>同じ記事</title>${next ? `<link rel="next" href="${next}">` : ''}</head><body><article><h1>同じ記事</h1><p>${body}</p></article></body></html>`,

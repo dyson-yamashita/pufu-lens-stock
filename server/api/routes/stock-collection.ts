@@ -213,7 +213,7 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
 
   app.get('/api/v1/articles/:id', async (c) => {
     const row = await c.env.DB.prepare(
-      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
+      'SELECT s.id, s.is_favorite, s.article_id, s.project_id, p.name AS project_name, s.note, s.created_at, COALESCE(s.title, a.title) AS title, a.source_type, a.source_url, a.domain, a.has_og_image, a.status, a.summary_json, a.error, a.model FROM articles a JOIN stocks s ON s.article_id = a.id JOIN projects p ON p.id = s.project_id WHERE a.id = ? AND a.user_id = ? ORDER BY s.created_at LIMIT 1',
     )
       .bind(c.req.param('id'), c.get('principal').user.id)
       .first<Record<string, unknown>>();

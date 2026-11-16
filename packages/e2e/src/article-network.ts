@@ -37,12 +37,21 @@ globalThis.fetch = async (input: RequestInfo | URL) => {
   ) {
     throw new Error('E2Eではfixture以外の外部取得を許可しません。');
   }
+  if (url.searchParams.get('image') === 'true') {
+    const bytes = Uint8Array.from(
+      atob(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
+      ),
+      (c) => c.charCodeAt(0),
+    );
+    return new Response(bytes, { headers: { 'Content-Type': 'image/png' } });
+  }
   if (url.searchParams.get('fail') === 'true')
     return new Response('Fixture unavailable', { status: 503 });
   // The browser releases this after observing the actual extracting state.
   await gate(key).ready;
   return new Response(
-    `<html lang="ja"><head><title>E2EのURL記事</title></head><body><article><h1>E2EのURL記事</h1><p>${articleText}</p></article></body></html>`,
+    `<html lang="ja"><head><title>E2EのURL記事</title><meta property="og:image" content="/pufu-e2e/article?key=${key}&amp;image=true"></head><body><article><h1>E2EのURL記事</h1><p>${articleText}</p></article></body></html>`,
     { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
   );
 };

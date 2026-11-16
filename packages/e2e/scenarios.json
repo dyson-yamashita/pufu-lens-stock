@@ -108,12 +108,17 @@
       "server/api/routes/stock-details.ts",
       "src/features/stocks/detail.css",
       "src/features/stocks/forms.css",
-      "src/features/stocks/list.css"
+      "src/features/stocks/list.css",
+      "server/features/stocks/og-image.ts",
+      "server/features/stocks/image-type.ts",
+      "src/features/stocks/OgImage.tsx",
+      "src/features/stocks/og-image.css"
     ],
     "aspects": [
       "URL入力から実際の取得・本文抽出・要約・保存と再読込までを確認。取得中を確認してからテスト専用HTTP fixtureを解放する",
       "HTTP 503で取得が失敗した記事を画面から本文補完して再試行し、5秒周期の詳細更新と通信時間を考慮して要約完了を待ち、同じストックID・保存先のまま本文と要約を保持。再読込後も重複がない",
-      "DNSと外部HTTPだけをscratch Workerのfixtureに置換。実サイト・実AIの品質、PDF・YouTubeは対象外"
+      "DNSと外部HTTPだけをscratch Workerのfixtureに置換。実サイト・実AIの品質、PDF・YouTubeは対象外",
+      "Web記事のOGP画像を実際の取得処理でR2へ保存し、一覧・詳細・再読込後に表示。取得失敗・内部URL・不正形式・容量制限・公開停止・所有者分離・削除後処理はVitestで確認"
     ]
   },
   {

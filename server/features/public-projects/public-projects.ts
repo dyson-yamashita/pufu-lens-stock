@@ -14,6 +14,7 @@ import type { StockImage } from '../../../shared/stock-images';
 import type { AppEnv } from '../../env';
 import { now } from '../../infrastructure/db';
 import { pufuRelationsColumns, stockRelationsColumn, withRelations } from '../relations/relations';
+import { ogImageResponse } from '../stocks/og-image';
 import { stockImageResponse } from '../stocks/stock-images';
 
 const notFound = () =>
@@ -31,7 +32,7 @@ const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count,
   ${publicPufuCount} AS pufu_count`;
 const stockColumns =
-  "s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
+  "s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,a.has_og_image,p.public_id,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
 const stockJoins =
   'stocks s JOIN projects p ON p.id=s.project_id JOIN articles a ON a.id=s.article_id';
 const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.title) AS article_title,q.created_at,
@@ -39,7 +40,13 @@ const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.titl
 const questionJoins =
   'questions q JOIN projects p ON p.id=q.project_id LEFT JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id';
 const publicWhere = 'p.public_id=? AND p.is_public=1';
-function stock(row: Omit<PublicStock, 'summary'> & { summary_json: string | null }): PublicStock {
+function stock(
+  row: Omit<PublicStock, 'summary'> & {
+    summary_json: string | null;
+    has_og_image: number;
+    public_id: string;
+  },
+): PublicStock {
   // 本文採用時は要約の代わりに原文を公開する。
   // 明示したフィールドだけを返し、通常保存の取得本文・個人メモ・内部情報は返さない。
   const parsed = row.summary_json ? (JSON.parse(row.summary_json) as ArticleSummary) : null;
@@ -48,6 +55,9 @@ function stock(row: Omit<PublicStock, 'summary'> & { summary_json: string | null
     title: row.title,
     source_url: row.source_url,
     domain: row.domain,
+    og_image_url: row.has_og_image
+      ? `/api/public/projects/${encodeURIComponent(row.public_id)}/stocks/${encodeURIComponent(row.id)}/og-image`
+      : null,
     created_at: row.created_at,
     summary: parsed
       ? {
@@ -155,6 +165,15 @@ export function publicProjectsApp() {
       page,
       has_more: page * limit < total,
     });
+  });
+  app.get('/projects/:key/stocks/:id/og-image', async (c) => {
+    const row = await c.env.DB.prepare(
+      `SELECT a.content_key FROM ${stockJoins} WHERE ${publicWhere} AND s.id=? AND a.has_og_image=1`,
+    )
+      .bind(c.req.param('key'), c.req.param('id'))
+      .first<{ content_key: string }>();
+    if (!row) throw notFound();
+    return ogImageResponse(c.env, row.content_key);
   });
   app.get('/projects/:key/stocks/:id/images/:imageId', async (c) => {
     const image = await c.env.DB.prepare(
