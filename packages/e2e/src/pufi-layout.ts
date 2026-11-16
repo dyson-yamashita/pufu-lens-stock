@@ -63,8 +63,8 @@ export async function checkPufiCompose(browser: Browser) {
         reachable: true,
         noOverflow: true,
         fontSize: 16,
-        buttonWidth: 40,
-        buttonHeight: 40,
+        buttonWidth: 36,
+        buttonHeight: 36,
         focused: true,
       });
     }
