@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { testApp, mockEvent, mockStep } from './helpers';
-import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
+import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type { Question, Stock } from '../shared/domain';
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import type { Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import { api } from '../src/api';
+import { api } from '../src/lib/api';
 
 const { roots } = vi.hoisted(() => ({ roots: [] as Root[] }));
 vi.mock('react-dom/client', async (original) => {
@@ -16,8 +16,8 @@ vi.mock('react-dom/client', async (original) => {
     },
   };
 });
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
 }));
 let document: Document;

@@ -1,6 +1,6 @@
 # デザイン仕様
 
-Pufu Lens Stockの現在の画面と操作を記録したドキュメントです。配色や寸法は [src/styles.css](../src/styles.css)、表示条件と文言は各Reactコンポーネントを基準にしています。機能・API・運用の詳細は [SPEC](SPEC.md)、使い始めの手順は [README](../README.md) を参照してください。
+Pufu Lens Stockの現在の画面と操作を記録したドキュメントです。配色や寸法は [src/styles/styles.css](../src/styles/styles.css)、表示条件と文言は各Reactコンポーネントを基準にしています。機能・API・運用の詳細は [SPEC](SPEC.md)、使い始めの手順は [README](../README.md) を参照してください。
 
 ## 目次
 
@@ -288,18 +288,18 @@ URLは接続一覧の読み込み中や取得失敗時にも表示します。�
 
 ## 実装の参照先
 
-| ファイル                                            | 対象                                                             |
-| --------------------------------------------------- | ---------------------------------------------------------------- |
-| [src/styles.css](../src/styles.css)                 | 共通色・文字・余白・レスポンシブ表示                             |
-| [src/App.tsx](../src/App.tsx)                       | 画面全体、サイドメニュー、ログイン、ストック、メモリ、設定、連携 |
-| [src/Questions.tsx](../src/Questions.tsx)           | 問い一覧、ストック内の問い                                       |
-| [src/QuestionLabels.tsx](../src/QuestionLabels.tsx) | AI／ユーザー／プ譜ラベル                                         |
-| [src/QuestionPage.tsx](../src/QuestionPage.tsx)     | 問い詳細、課題の入力                                             |
-| [src/PufuPage.tsx](../src/PufuPage.tsx)             | プ譜の文脈と生成状態                                             |
-| [src/PufuEditor.tsx](../src/PufuEditor.tsx)         | エディター、局面、編集・保存                                     |
-| [src/Profile.tsx](../src/Profile.tsx)               | プロフィール                                                     |
-| [src/SearchField.tsx](../src/SearchField.tsx)       | 一覧の検索・クリア                                               |
-| [src/QuestionForm.tsx](../src/QuestionForm.tsx)     | 問いの追加フォーム                                               |
-| [vite.config.ts](../vite.config.ts)                 | エディターCSSを `.pufu-editor-root` 配下へ限定する設定           |
+| ファイル                                                                                  | 対象                                                             |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [src/styles/styles.css](../src/styles/styles.css)                                         | 共通色・文字・余白・レスポンシブ表示                             |
+| [src/app/App.tsx](../src/app/App.tsx)                                                     | 画面全体、サイドメニュー、ログイン、ストック、メモリ、設定、連携 |
+| [src/features/questions/Questions.tsx](../src/features/questions/Questions.tsx)           | 問い一覧、ストック内の問い                                       |
+| [src/features/questions/QuestionLabels.tsx](../src/features/questions/QuestionLabels.tsx) | AI／ユーザー／プ譜ラベル                                         |
+| [src/features/questions/QuestionPage.tsx](../src/features/questions/QuestionPage.tsx)     | 問い詳細、課題の入力                                             |
+| [src/features/pufu/PufuPage.tsx](../src/features/pufu/PufuPage.tsx)                       | プ譜の文脈と生成状態                                             |
+| [src/features/pufu/PufuEditor.tsx](../src/features/pufu/PufuEditor.tsx)                   | エディター、局面、編集・保存                                     |
+| [src/features/settings/Profile.tsx](../src/features/settings/Profile.tsx)                 | プロフィール                                                     |
+| [src/components/SearchField.tsx](../src/components/SearchField.tsx)                       | 一覧の検索・クリア                                               |
+| [src/features/questions/QuestionForm.tsx](../src/features/questions/QuestionForm.tsx)     | 問いの追加フォーム                                               |
+| [vite.config.ts](../vite.config.ts)                                                       | エディターCSSを `.pufu-editor-root` 配下へ限定する設定           |
 
 YouTube URLの初期タイトルは「YouTube」で、手動編集したタイトルはそのまま表示します。既存の「YouTube（記録不可）」も表示上は「YouTube」に揃えます。一覧は16:9の静止画サムネイルを遅延読み込みし、画像かタイトルから詳細を開きます。画像が表示できない場合も詳細への導線を残し、取得失敗のバッジは出しません。一覧にはiframeや再生ボタンを置きません。本人の詳細には「動画」「コメント」「メモ・保存先」のタブを置き、「動画」でYouTubeの埋め込みプレーヤーを表示します。プレーヤーは画面幅に追従する16:9、最小高さ200pxとし、自動再生しません。「YouTubeで開く」から元のページも開けます。動画を特定できないURLには埋め込めない旨を表示します。公開プロジェクトのストック一覧・詳細も同じ動画表示ですが、コメントは表示しません。

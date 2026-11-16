@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
-import { generatePufu } from '../server/pufu';
-import { normalizeGeneratedScore } from '../server/pufu-output';
+import { generatePufu } from '../server/features/pufu/pufu';
+import { normalizeGeneratedScore } from '../server/features/pufu/generation/pufu-output';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 import type { Env } from '../server/env';
 import { mockPufuAi, reviewDraft } from './pufu-ai-fixture';

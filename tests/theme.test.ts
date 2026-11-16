@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { parseHTML } from 'linkedom';
 import { expect, it, vi } from 'vitest';
-import type { ThemeStore } from '../src/theme';
+import type { ThemeStore } from '../src/features/settings/theme';
 
 function start({
   stored,

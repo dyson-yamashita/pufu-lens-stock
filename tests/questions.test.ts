@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp, applyMigration, mockEvent, mockStep, upgradeRelationsSchema } from './helpers';
-import { queueQuestionStatements, jobFailureStatements } from '../server/db';
-import { ArticleWorkflow } from '../server/workflows';
-import { scheduledMaintenance } from '../server/jobs';
+import { queueQuestionStatements, jobFailureStatements } from '../server/infrastructure/db';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
+import { scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
 import type { Env, Job } from '../server/env';
 import type { Question } from '../shared/domain';
 

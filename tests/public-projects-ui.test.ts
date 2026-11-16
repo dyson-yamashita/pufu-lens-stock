@@ -2,16 +2,16 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import PublicProjectPage from '../src/PublicProjects';
-import { api } from '../src/api';
-import { setLanguage } from '../src/i18n';
+import PublicProjectPage from '../src/features/public-projects';
+import { api } from '../src/lib/api';
+import { setLanguage } from '../src/i18n/i18n';
 import type { PublicStock } from '../shared/public-project';
 
-vi.mock('../src/PublicPufuScore', () => ({
+vi.mock('../src/features/public-projects/PublicPufuScore', () => ({
   default: ({ phase }: { phase: number }) =>
     createElement('div', { 'data-testid': 'score' }, `第${phase}局面の本文と画像`),
 }));
-vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
+vi.mock('../src/lib/api', () => ({ api: vi.fn(), send: vi.fn() }));
 const stock: PublicStock = {
   id: 'stock',
   title: 'ストックのタイトル',

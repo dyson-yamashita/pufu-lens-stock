@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchArticle } from '../server/ingest';
-import { ArticleWorkflow } from '../server/workflows';
+import { fetchArticle } from '../server/features/stocks/ingest';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Env } from '../server/env';
 import type { Stock } from '../shared/domain';
 import { mockEvent, mockStep, testApp } from './helpers';

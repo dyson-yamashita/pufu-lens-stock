@@ -1,0 +1,350 @@
+.project-settings {
+  max-width: 680px;
+}
+.project-settings > form,
+.project-settings > .publication-settings {
+  padding: clamp(22px, 4vw, 32px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.project-id {
+  margin: 22px 0 0;
+}
+.project-id dt {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.project-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.project-id-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.project-advanced {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.project-advanced summary {
+  cursor: pointer;
+  padding: 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.project-memory-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.8;
+  cursor: pointer;
+}
+.project-memory-toggle input {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--field-border);
+  cursor: pointer;
+}
+.project-memory-toggle input::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--on-button);
+}
+.project-memory-toggle input:checked {
+  background: var(--button);
+}
+.project-memory-toggle input:checked::before {
+  transform: translateX(18px);
+}
+.project-memory-toggle input:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+.project-memory-hint {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.9;
+}
+.header-project-select {
+  width: 220px;
+  min-width: 0;
+}
+.header-project-select label {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.header-project-select select {
+  font-size: 12px;
+  appearance: none;
+  padding-right: 44px;
+}
+.project-select-control {
+  position: relative;
+}
+.project-select-control > svg {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--primary);
+  pointer-events: none;
+}
+.profile-card {
+  max-width: 680px;
+  padding: clamp(22px, 4vw, 32px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.appearance-settings {
+  margin-top: 24px;
+}
+.usage-card {
+  margin-top: 24px;
+}
+.usage-card h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.usage-periods {
+  display: flex;
+  gap: 4px;
+  margin: 20px 0 12px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--wash);
+}
+.usage-periods label {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  cursor: pointer;
+}
+.usage-periods legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.usage-periods input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.usage-periods span {
+  display: grid;
+  min-height: 40px;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.usage-periods input:checked + span {
+  background: var(--card);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 1px 4px #0001;
+}
+.usage-periods input:focus-visible + span {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.usage-range {
+  margin-bottom: 14px;
+}
+.usage-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+}
+.usage-metrics > div {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.usage-metrics dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.usage-metrics dd {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.usage-metrics strong {
+  font-size: clamp(22px, 4vw, 30px);
+  overflow-wrap: anywhere;
+}
+.usage-metrics dd span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.usage-error {
+  margin-bottom: 20px;
+}
+.appearance-settings h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.theme-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 12px;
+  padding: 0;
+  border: 0;
+}
+.theme-options legend {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.theme-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.theme-options label:has(input:checked) {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--wash);
+}
+.theme-options input {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--primary);
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  font-size: 21px;
+}
+.profile-identity > div:last-child {
+  min-width: 0;
+}
+.profile-identity h2 {
+  font-size: 18px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.profile-identity p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.profile-required {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.profile-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.profile-bio-hint {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.profile-bio-hint > span:last-child {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.profile-field-error {
+  color: var(--danger);
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.profile-card [aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.account-deletion {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.account-deletion > summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.account-deletion[open] > summary {
+  margin-bottom: 12px;
+}
+.account-deletion h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.account-deletion > summary,
+.account-deletion > p,
+.account-deletion-description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+}
+.account-deletion > p {
+  margin-bottom: 12px;
+}
+.account-deletion-description ul {
+  padding-left: 22px;
+  margin: 12px 0;
+}
+.account-deletion-description p + p {
+  margin-top: 8px;
+}

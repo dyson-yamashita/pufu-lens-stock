@@ -8,7 +8,7 @@ import {
   observeOperation,
   requestDiagnostics,
   scheduledDiagnostics,
-} from '../server/diagnostics';
+} from '../server/infrastructure/diagnostics';
 import { testApp } from './helpers';
 
 afterEach(() => vi.restoreAllMocks());

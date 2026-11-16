@@ -1,4 +1,4 @@
-// Static English guidance. Original source URLs remain in server/pufu-guideline.ts.
+// Static English guidance. Original source URLs remain in server/features/pufu/generation/pufu-guideline.ts.
 export const pufuGuidelineEn = {
   principles: {
     principles: {

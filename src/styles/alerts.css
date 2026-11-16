@@ -1,0 +1,22 @@
+.toast {
+  flex-wrap: wrap;
+}
+.toast,
+.error-banner {
+  border: 1px solid var(--border);
+  background: var(--wash);
+  font-size: 12px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+.error-banner {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error-text);
+  justify-content: space-between;
+}

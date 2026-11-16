@@ -2,17 +2,17 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import App from '../src/App';
-import Profile from '../src/Profile';
-import PageLanguage from '../src/PageLanguage';
-import UserManual from '../src/UserManual';
-import { BootMessage } from '../src/BootMessage';
-import { setLanguage, useLanguage } from '../src/i18n';
-import { api, ApiError, send } from '../src/api';
+import App from '../src/app/App';
+import Profile from '../src/features/settings/Profile';
+import PageLanguage from '../src/i18n/PageLanguage';
+import UserManual from '../src/features/manual/UserManual';
+import { BootMessage } from '../src/components/BootMessage';
+import { setLanguage, useLanguage } from '../src/i18n/i18n';
+import { api, ApiError, send } from '../src/lib/api';
 import type { User } from '../shared/domain';
 
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
   send: vi.fn(),
 }));

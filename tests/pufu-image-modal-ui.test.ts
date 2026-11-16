@@ -2,10 +2,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import PufuImagePreview from '../src/PufuImagePreview';
+import PufuImagePreview from '../src/features/pufu/PufuImagePreview';
 import { pufuScoreSchema } from '../shared/pufu';
 import fixture from './fixtures/pufu-sparse.json';
-import type { ThemeStore } from '../src/theme';
+import type { ThemeStore } from '../src/features/settings/theme';
 
 let root: Root;
 let document: Document;

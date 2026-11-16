@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigration, testApp, mockEvent, mockStep } from './helpers';
 import { readdir } from 'node:fs/promises';
-import { hash } from '../server/security';
-import { scheduledMaintenance } from '../server/jobs';
-import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
-import { AiLimitError, deferLimitedJob } from '../server/usage';
+import { hash } from '../server/infrastructure/security';
+import { scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
+import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
+import { AiLimitError, deferLimitedJob } from '../server/features/usage/usage';
 import type { Job } from '../server/env';
-import { cleanupAccount } from '../server/account';
+import { cleanupAccount } from '../server/features/auth/account';
 import { allMcpScopes, mcpToken, mcpTokens } from './mcp-helpers';
 import worker from '../server/index';
 

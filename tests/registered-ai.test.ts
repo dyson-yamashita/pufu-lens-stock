@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp, mockStep } from './helpers';
-import { meteredOperation } from '../server/ai-neurons';
-import { aiStep, invokeAi } from '../server/usage';
-import { dispatchJobs } from '../server/jobs';
-import { embedSearchText } from '../server/search-ai';
-import { syncSearchIndex } from '../server/search-index';
+import { meteredOperation } from '../server/infrastructure/ai/ai-neurons';
+import { aiStep, invokeAi } from '../server/features/usage/usage';
+import { dispatchJobs } from '../server/infrastructure/jobs/jobs';
+import { embedSearchText } from '../server/infrastructure/ai/search-ai';
+import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
 import { searchBindings, searchStock, searchEntry } from './search-helpers';
 import type { Job } from '../server/env';
 import { legalVersions } from '../shared/legal';

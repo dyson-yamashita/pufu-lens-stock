@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { assertPublicDestination, canonicalUrl, publicIp, validateUrl } from '../server/security';
-import { groundedMemory, parseAiJson, topicCounts } from '../server/ai';
+import {
+  assertPublicDestination,
+  canonicalUrl,
+  publicIp,
+  validateUrl,
+} from '../server/infrastructure/security';
+import { groundedMemory, parseAiJson, topicCounts } from '../server/infrastructure/ai/ai';
 import { summarySchema } from '../shared/domain';
 
 describe('URL取得とAIの境界', () => {

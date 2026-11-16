@@ -1,6 +1,6 @@
 import { mockPufuAi } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
-import { generatePufu } from '../server/pufu';
+import { generatePufu } from '../server/features/pufu/pufu';
 import type { Env } from '../server/env';
 import type { PufuContext, PufuScore } from '../shared/pufu';
 

@@ -1,0 +1,20 @@
+.pufu-progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 8px;
+}
+.pufu-progress-steps span {
+  width: 28px;
+  height: 100%;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+}
+.pufu-progress-steps [data-state='complete'] {
+  border: 4px solid var(--accent);
+}
+.pufu-progress-steps [data-state='current'] {
+  border: 2px solid var(--accent);
+}

@@ -2,12 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import ProfileUsage from '../src/ProfileUsage';
-import { api } from '../src/api';
-import { setLanguage } from '../src/i18n';
+import ProfileUsage from '../src/features/settings/ProfileUsage';
+import { api } from '../src/lib/api';
+import { setLanguage } from '../src/i18n/i18n';
 import type { ProfileUsage as Usage } from '../shared/profile-usage';
 
-vi.mock('../src/api', () => ({ api: vi.fn() }));
+vi.mock('../src/lib/api', () => ({ api: vi.fn() }));
 let root: Root;
 let document: Document;
 beforeEach(() => {

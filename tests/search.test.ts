@@ -35,9 +35,9 @@ describe('ストックの検索モード', () => {
   });
 });
 
-import { syncSearchIndex } from '../server/search-index';
+import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
 import { searchBindings, searchStock, searchEntry } from './search-helpers';
-import { requestAccountDeletion } from '../server/account';
+import { requestAccountDeletion } from '../server/features/auth/account';
 import { applyMigration } from './helpers';
 import { readdir } from 'node:fs/promises';
 

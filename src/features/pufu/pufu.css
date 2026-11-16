@@ -1,0 +1,508 @@
+.question-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  min-height: 44px;
+}
+.question-detail-meta > span:last-child,
+.question-project {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.question-project {
+  min-height: 44px;
+  padding: 0;
+  text-align: left;
+  margin-left: auto;
+}
+.question-detail-meta svg {
+  flex-shrink: 0;
+}
+.question-detail-card h2,
+.question-detail-card .question-text,
+.question-card .question-text {
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1.9;
+  margin: 24px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 761px) {
+  .question-card .question-text {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+}
+.question-detail-source {
+  margin: 28px 0 18px;
+}
+.question-detail-source button,
+.question-detail-source a {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 0;
+  min-height: 44px;
+  text-align: left;
+  color: var(--primary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.question-detail-source svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.question-detail-source span {
+  overflow-wrap: anywhere;
+}
+.pufu-task-form {
+  margin-top: 24px;
+}
+.pufu-task-form label {
+  margin-top: 0;
+}
+.task-caption {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  color: var(--primary);
+  background: var(--wash);
+  font-size: 11px;
+  font-weight: 500;
+}
+.field-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.85;
+}
+.pufu-task-form textarea {
+  margin: 14px 0 10px;
+  font-size: 15px;
+}
+.pufu-list-heading {
+  margin-top: 36px;
+}
+.relation-picker {
+  min-width: 0;
+  margin: 24px 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.relation-picker legend {
+  padding: 0 5px;
+  color: var(--text);
+  font-size: 13px;
+}
+.relation-picker legend .optional {
+  display: inline-block;
+}
+.relation-picker .relation-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 4px;
+  font-size: 13px;
+  line-height: 1.8;
+  cursor: pointer;
+}
+.relation-picker .relation-option input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--primary);
+}
+.relation-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.relation-selected .relation-option {
+  border-radius: 5px;
+  background: var(--wash);
+}
+.relation-selected,
+.relation-options {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.relation-options {
+  margin-top: 10px;
+}
+.pufu-relations {
+  margin: 0 0 28px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+}
+.pufu-relations > summary {
+  min-height: 28px;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.pufu-related {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.pufu-related > summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.pufu-related-stocks ul {
+  margin: 5px 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+.pufu-list {
+  display: grid;
+  gap: 12px;
+}
+.pufu-list-item {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+  padding: 18px 20px;
+}
+article.pufu-list-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+.pufu-list-item:hover {
+  border-color: var(--field-border);
+  background: var(--wash);
+}
+.pufu-list-open {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 20px 4px;
+  text-align: left;
+  background: transparent;
+}
+.pufu-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px 8px 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.pufu-favorite {
+  flex-shrink: 0;
+  align-self: center;
+}
+.pufu-list-item span {
+  min-width: 0;
+}
+.pufu-list-item strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.pufu-list-item small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.pufu-list-item svg {
+  flex-shrink: 0;
+}
+.pufu-empty {
+  padding: 28px;
+  border: 1px dashed var(--field-border);
+  border-radius: 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 2;
+}
+.question-resolve-action {
+  display: flex;
+  justify-content: flex-end;
+  margin: 28px 0 12px;
+}
+.pufu-context {
+  padding: 5px 0;
+  margin-bottom: 24px;
+}
+.pufu-context-label {
+  background: var(--context-label-bg);
+  color: var(--context-label-text);
+}
+.pufu-context p {
+  margin: 10px 0 7px;
+  font-size: 16px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pufu-context-questions {
+  margin: 10px 0 7px;
+  padding-left: 1.5em;
+  font-size: 16px;
+  line-height: 1.9;
+}
+.pufu-context-questions li + li {
+  margin-top: 8px;
+}
+.pufu-context-questions .text-link {
+  display: block;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.public-pufu-context section + section {
+  margin-top: 18px;
+}
+.public-pufu-context h3 {
+  margin: 0;
+}
+.public-pufu-context li {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pufu-download-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pufu-download-options .button {
+  flex: 1;
+}
+.pufu-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0 14px;
+}
+.pufu-json-import {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.pufu-json-import .button {
+  justify-self: start;
+}
+.pufu-json-import-panel {
+  margin-bottom: 14px;
+}
+.pufu-json-import-panel summary {
+  cursor: pointer;
+  padding: 12px 0;
+}
+.pufu-toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+.pufu-phase-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.pufu-phase-navigation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pufu-phase-number {
+  min-width: 72px;
+  text-align: center;
+  white-space: nowrap;
+}
+.pufu-phase-previous svg {
+  transform: rotate(-90deg);
+}
+.pufu-phase-next svg {
+  transform: rotate(90deg);
+}
+.pufu-phase-help {
+  line-height: 1.8;
+  margin: 0 0 16px;
+}
+.pufu-demo-note {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--wash);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.pufu-image-preview {
+  margin: 16px 0 24px;
+  /* Reserve space before SVG decode; createPufuSvg uses width 1760 with variable height. */
+  min-height: min(52vw, 420px);
+}
+.pufu-image-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: 0 4px 16px var(--shadow);
+  cursor: zoom-in;
+}
+.pufu-image-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.pufu-image-preview svg > g,
+.pufu-image-canvas svg > g {
+  font-family: 'Noto Sans JP', sans-serif;
+}
+.pufu-image-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pufu-image-controls .icon-button {
+  width: 44px;
+  height: 44px;
+}
+.pufu-image-controls output {
+  min-width: 56px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pufu-image-viewport {
+  height: 65svh;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  background: var(--wash);
+}
+.pufu-image-viewport:active {
+  cursor: grabbing;
+}
+.pufu-image-canvas,
+.pufu-image-canvas > div,
+.pufu-image-canvas svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pufu-image-help {
+  margin: 12px 0 0;
+  line-height: 1.8;
+}
+.pufu-image-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.dialog.pufu-modal {
+  width: min(1500px, calc(100% - 24px));
+  padding: 20px;
+}
+.pufu-modal .dialog-head {
+  position: sticky;
+  top: -20px;
+  z-index: 1;
+  padding: 12px 0;
+  background: var(--card);
+}
+.pufu-editor-shell {
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.pufu-editor-root.pufu-editor-root {
+  font-family: inherit;
+  min-width: 0;
+}
+.pufu-editor-root [role='region'] {
+  /* エディターがインライン指定する狭い画面の高さ上限を上書きする。 */
+  max-height: 70svh !important;
+}
+.pufu-editor-root.pufu-editor-root [role='score'] {
+  border-color: var(--field-border);
+}
+.pufu-editor-root.pufu-editor-root textarea {
+  line-height: 1.7;
+}
+.pufu-editor-root.pufu-editor-root :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.pufu-memory-caption,
+.pufu-credit {
+  font-size: 11px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.pufu-credit a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .question-detail-card,
+  .pufu-task-form {
+    padding: 22px;
+  }
+  .question-detail-card h2,
+  .question-detail-card .question-text,
+  .question-card .question-text {
+    font-size: 19px;
+  }
+  .question-card .question-text {
+    font-size: 17px;
+  }
+  .question-detail-meta {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .pufu-task-form textarea {
+    font-size: 16px;
+  }
+  .question-resolve-action .button {
+    width: 100%;
+  }
+  .pufu-editor-shell {
+    padding: 12px 0;
+  }
+  .pufu-toolbar .button {
+    padding: 10px 14px;
+  }
+  .pufu-memory-caption {
+    overflow-wrap: anywhere;
+  }
+}

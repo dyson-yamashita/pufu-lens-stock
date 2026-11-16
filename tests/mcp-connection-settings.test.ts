@@ -4,7 +4,7 @@ import worker from '../server/index';
 import { testApp, applyMigration } from './helpers';
 import { readdir } from 'node:fs/promises';
 import { searchBindings, searchStock } from './search-helpers';
-import { syncSearchIndex } from '../server/search-index';
+import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
 import { mcpTokens } from './mcp-helpers';
 
 let app: Awaited<ReturnType<typeof testApp>>;

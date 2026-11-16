@@ -3,13 +3,13 @@ import type { ProjectScoreModel } from '@goto-lab/pufu-editor';
 import { elementKeys, type PufuScore } from '../shared/pufu';
 import worker from '../server/index';
 import { testApp, mockEvent, mockStep } from './helpers';
-import { ArticleWorkflow } from '../server/workflows';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
-import * as ingest from '../server/ingest';
+import * as ingest from '../server/features/stocks/ingest';
 import { mcpToken } from './mcp-helpers';
 import { searchBindings } from './search-helpers';
-import { syncSearchIndex } from '../server/search-index';
-import * as imageRenderer from '../server/pufu-renderer';
+import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
+import * as imageRenderer from '../server/features/pufu/images/pufu-renderer';
 import { readFile } from 'node:fs/promises';
 import imageScore from './fixtures/pufu-sparse.json';
 

@@ -1,10 +1,10 @@
 import { mockPufuAi } from './pufu-ai-fixture';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { testApp, mockEvent, mockStep } from './helpers';
-import { ArticleWorkflow } from '../server/workflows';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import { elementKeys, type Pufu } from '../shared/pufu';
-import { snapshotStocks } from '../server/pufu-context';
-import { generatePufu } from '../server/pufu';
+import { snapshotStocks } from '../server/features/pufu/generation/pufu-context';
+import { generatePufu } from '../server/features/pufu/pufu';
 import type { PufuContext } from '../shared/pufu';
 import savedScore from './fixtures/pufu-sparse.json';
 

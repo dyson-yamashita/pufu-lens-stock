@@ -1,0 +1,38 @@
+.dialog {
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--card);
+  padding: 27px;
+  width: min(510px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  color: var(--text);
+  box-shadow: 0 20px 80px var(--shadow);
+  overflow-y: auto;
+}
+.dialog::backdrop {
+  background: var(--overlay);
+  backdrop-filter: blur(3px);
+}
+.dialog-wide {
+  width: min(710px, calc(100% - 32px));
+}
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.dialog-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.dialog-head .icon-button {
+  margin: -10px -9px -10px 0;
+}
+.form-intro {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.9;
+  margin-bottom: 24px;
+}

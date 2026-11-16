@@ -2,9 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import ManualHelp from '../src/ManualHelp';
-import { manualTree, selectManualBranch } from '../src/manual-search';
-vi.mock('../src/manual-search', () => ({ manualTree: vi.fn(), selectManualBranch: vi.fn() }));
+import ManualHelp from '../src/features/manual/ManualHelp';
+import { manualTree, selectManualBranch } from '../src/features/manual/manual-search';
+vi.mock('../src/features/manual/manual-search', () => ({
+  manualTree: vi.fn(),
+  selectManualBranch: vi.fn(),
+}));
 const leaf = {
   id: 'pufu-download',
   title: 'JSON・画像を保存',

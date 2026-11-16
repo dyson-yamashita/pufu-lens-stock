@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { api, ApiError } from '../src/api';
-import { t } from '../src/i18n';
+import { api, ApiError } from '../src/lib/api';
+import { t } from '../src/i18n/i18n';
 
 afterEach(() => vi.unstubAllGlobals());
 

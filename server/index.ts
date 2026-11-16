@@ -1,17 +1,20 @@
-import { deliverAnnouncements } from './push-delivery';
-import { requestDiagnostics, logDiagnosticError, scheduledDiagnostics } from './diagnostics';
-import { createApp } from './api';
-import { scheduledMaintenance } from './jobs';
-import type { Env } from './env';
-import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp-oauth';
-import { handleMcp } from './mcp';
-import { publicPagesApp } from './public-pages';
-import { publicDocumentRoutes } from '../shared/public-document-routes';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import type { AppEnv } from './env';
+import { publicDocumentRoutes } from '../shared/public-document-routes';
 import { stockImageMcpMaxBytes } from '../shared/stock-images';
-export { ArticleWorkflow, MemoryWorkflow } from './workflows';
+import { createApp } from './api/app';
+import type { AppEnv, Env } from './env';
+import { deliverAnnouncements } from './features/announcements/push-delivery';
+import { publicPagesApp } from './features/public-projects/public-pages';
+import {
+  logDiagnosticError,
+  requestDiagnostics,
+  scheduledDiagnostics,
+} from './infrastructure/diagnostics';
+import { scheduledMaintenance } from './infrastructure/jobs/jobs';
+import { createMcpOAuthProvider, mcpAuthorizationApp } from './mcp/oauth';
+import { handleMcp } from './mcp/server';
+export { ArticleWorkflow, MemoryWorkflow } from './infrastructure/jobs/workflows';
 
 const app = createApp();
 const entry = new Hono<AppEnv>();

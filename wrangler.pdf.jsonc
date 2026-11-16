@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pufu-lens-pdf-parser",
-  "main": "server/pdf-worker.ts",
+  "main": "server/features/stocks/pdf/pdf-worker.ts",
   "compatibility_date": "2026-07-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "enable_request_signal"],
   "observability": {

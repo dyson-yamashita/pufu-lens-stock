@@ -6,7 +6,7 @@ it('実際のWorkersランタイムで非同期の計測コンテキストを隔
   const bundle = await build({
     stdin: {
       resolveDir: new URL('..', import.meta.url).pathname,
-      contents: `import { meteredOperation, observeAiUsage } from './server/ai-neurons';
+      contents: `import { meteredOperation, observeAiUsage } from './server/infrastructure/ai/ai-neurons';
         export default { async fetch() {
           const rows = [];
           const env = { DB: { prepare: () => ({ bind: (...values) => ({

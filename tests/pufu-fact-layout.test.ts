@@ -1,8 +1,8 @@
 import { mockPufuStages, purposeDraft } from './pufu-ai-fixture';
 import { expect, it, vi } from 'vitest';
-import { generatePufu } from '../server/pufu';
-import { arrangePufu } from '../server/pufu-plan';
-import type { PufuFacts } from '../server/pufu-source-facts';
+import { generatePufu } from '../server/features/pufu/pufu';
+import { arrangePufu } from '../server/features/pufu/generation/pufu-plan';
+import type { PufuFacts } from '../server/features/pufu/generation/pufu-source-facts';
 import type { Env } from '../server/env';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 

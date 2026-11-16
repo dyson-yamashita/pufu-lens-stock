@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { testApp, mockStep } from './helpers';
-import { neuronMicros, saveAiUsage } from '../server/ai-neurons';
-import { aiStep, invokeAi } from '../server/usage';
-import { embedSearchText } from '../server/search-ai';
+import { neuronMicros, saveAiUsage } from '../server/infrastructure/ai/ai-neurons';
+import { aiStep, invokeAi } from '../server/features/usage/usage';
+import { embedSearchText } from '../server/infrastructure/ai/search-ai';
 import type { Job } from '../server/env';
 import type { ProfileUsage } from '../shared/profile-usage';
 

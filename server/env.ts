@@ -1,7 +1,7 @@
+import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider';
+import ipaddr from 'ipaddr.js';
 import type { User } from '../shared/domain';
 import type { Language } from '../shared/locale';
-import ipaddr from 'ipaddr.js';
-import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider';
 
 export type EmbeddingAI = {
   run(model: '@cf/baai/bge-m3', input: { text: string[]; truncate_inputs: true }): Promise<unknown>;

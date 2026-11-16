@@ -5,9 +5,9 @@ import { parseHTML } from 'linkedom';
 
 const { render } = vi.hoisted(() => ({ render: vi.fn() }));
 vi.mock('react-dom/client', () => ({ createRoot: () => ({ render }) }));
-vi.mock('../src/App', () => ({ default: () => createElement('div', {}, '認証付きアプリ') }));
-vi.mock('../src/PublicProjects', () => ({ default: () => null }));
-vi.mock('../src/UserManual', () => ({ default: () => null }));
+vi.mock('../src/app/App', () => ({ default: () => createElement('div', {}, '認証付きアプリ') }));
+vi.mock('../src/features/public-projects', () => ({ default: () => null }));
+vi.mock('../src/features/manual/UserManual', () => ({ default: () => null }));
 
 beforeEach(() => {
   vi.resetModules();

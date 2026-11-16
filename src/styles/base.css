@@ -1,0 +1,375 @@
+* {
+  box-sizing: border-box;
+}
+.onboarding-page {
+  min-height: 100svh;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.onboarding-card {
+  width: min(100%, 520px);
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+.onboarding-card h1 {
+  margin: 0;
+  font-size: clamp(23px, 5vw, 28px);
+}
+.onboarding-card form {
+  margin-top: 28px;
+}
+.onboarding-card form > label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.onboarding-card input:not([type='checkbox']) {
+  width: 100%;
+}
+.onboarding-consents {
+  margin: 24px 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.onboarding-consents legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.onboarding-consent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.onboarding-consent input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--button);
+  padding: 0;
+  align-self: center;
+}
+.onboarding-consent label {
+  display: block;
+  margin: 0;
+  padding: 10px 0;
+  line-height: 1.6;
+}
+.onboarding-consent a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.onboarding-submit {
+  width: 100%;
+  min-height: 48px;
+}
+.onboarding-logout {
+  display: block;
+  margin: 16px auto 0;
+  min-height: 44px;
+  font-size: 13px;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  color: inherit;
+}
+button,
+a {
+  transition:
+    background 0.16s,
+    color 0.16s,
+    border-color 0.16s;
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+/* ページ内リンクの移動先の本文には、操作部品用の枠を付けない。 */
+:where(header, section)[tabindex='-1']:focus {
+  outline: none;
+}
+button {
+  border: 0;
+  background: none;
+}
+input:where(:not(.pufu-editor-root *)),
+textarea:where(:not(.pufu-editor-root *)),
+select:where(:not(.pufu-editor-root *)) {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 11px 13px;
+  color: var(--text);
+}
+textarea:where(:not(.pufu-editor-root *)) {
+  resize: vertical;
+  line-height: 1.75;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder);
+}
+label:where(:not(.pufu-editor-root *)) {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 22px 0 8px;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.eyebrow {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 17px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.primary {
+  background: var(--button);
+  color: var(--on-button);
+}
+.primary:hover:not(:disabled) {
+  background: var(--button-hover);
+}
+.secondary {
+  background: var(--card);
+  border-color: var(--field-border);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--wash);
+}
+.text-button {
+  padding: 5px 10px;
+}
+.danger-text {
+  color: var(--danger);
+  padding-left: 0;
+}
+.danger-text:hover {
+  color: var(--danger-hover);
+}
+.delete-action {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.delete-action > summary {
+  min-height: 44px;
+  padding: 11px 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.delete-action > button {
+  margin-top: 8px;
+}
+.delete-description {
+  font-size: 14px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.delete-description p + p {
+  margin-top: 12px;
+}
+.delete-target {
+  font-weight: 600;
+}
+.delete-confirmation .form-actions {
+  flex-wrap: wrap;
+}
+.delete-confirm-button {
+  background: var(--danger);
+  color: var(--card);
+  white-space: normal;
+}
+.delete-confirm-button:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+.icon-button {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+.icon-button:hover {
+  background: var(--wash);
+}
+.icon-button.small {
+  min-width: 36px;
+  min-height: 36px;
+}
+.icon-button.bordered {
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.spin {
+  animation: rotate 1.1s linear infinite;
+}
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: max-content;
+}
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  vertical-align: middle;
+}
+.brand-mark {
+  display: block;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  object-fit: contain;
+}
+.brand-logo {
+  display: block;
+  flex-shrink: 0;
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+}
+.brand-logo-dark,
+:root[data-theme='dark'] .brand-logo-light {
+  display: none;
+}
+:root[data-theme='dark'] .brand-logo-dark {
+  display: block;
+}
+.boot {
+  background: linear-gradient(145deg, var(--page), var(--wash) 50%, var(--selected));
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+}
+.boot .brand-logo {
+  width: 160px;
+}
+.boot .brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+.boot .brand-lockup {
+  gap: 12px;
+}
+.boot p {
+  font-size: 14px;
+  color: var(--text);
+}
+.boot-status {
+  position: relative;
+  display: grid;
+  white-space: pre;
+}
+.boot-message-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.boot-message-space,
+.boot-message-typing {
+  grid-area: 1 / 1;
+}
+.boot-message-space {
+  visibility: hidden;
+  padding-right: 5px;
+}
+.boot-message-typing {
+  text-align: center;
+}
+.boot-composing {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.boot-converted {
+  background: var(--selected);
+  border-radius: 3px;
+}
+.boot-caret {
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.1em;
+  background: currentColor;
+  animation: boot-caret 1s step-end infinite;
+}
+@keyframes boot-caret {
+  50% {
+    opacity: 0;
+  }
+}

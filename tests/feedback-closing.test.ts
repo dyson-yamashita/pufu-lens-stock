@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { feedbackClosingTopic } from '../src/feedback-closing';
+import { feedbackClosingTopic } from '../src/features/feedback/feedback-closing';
 
 it.each([
   [['マニュアルの困ったときはの文章が長くで読みづらいです。'], 'manual'],
