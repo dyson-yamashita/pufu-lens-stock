@@ -102,9 +102,6 @@
   font-size: 9px;
   margin-bottom: 14px;
 }
-.article-meta .status {
-  margin-left: auto;
-}
 .site-mark {
   width: 20px;
   height: 20px;
@@ -121,7 +118,6 @@
 .domain {
   color: var(--muted);
   max-width: 150px;
-  flex: 1;
 }
 .status {
   display: inline-flex;
