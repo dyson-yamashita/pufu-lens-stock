@@ -21,6 +21,15 @@ describe('認証と保存API（実際のSQLite）', () => {
   it('未認証の保存を拒否する', async () => {
     expect((await save({}, { Cookie: '' })).status).toBe(401);
   });
+  it.each(['/api/v1/stocks/%0A', '/api/v1/projects/%0D%0A'])(
+    '改行を含むパスでも未認証のAPIアクセスを拒否する: %s',
+    async (path) => {
+      const response = await app.request(path, { headers: { Cookie: '' } });
+      expect(response.status).toBe(401);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    },
+  );
   it('セッションによる他サイトからの変更を拒否する', async () => {
     expect((await save({}, { Origin: 'https://evil.example.com' })).status).toBe(403);
   });

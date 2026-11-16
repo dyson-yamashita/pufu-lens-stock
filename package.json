@@ -47,7 +47,7 @@
     "@resvg/resvg-wasm": "2.6.2",
     "agents": "^0.28.1",
     "dom-to-image": "^2.6.0",
-    "hono": "^4.13.13",
+    "hono": "^4.13.18",
     "html-to-image": "^1.11.11",
     "i18next": "^23.10.1",
     "i18next-browser-languagedetector": "^7.2.0",
