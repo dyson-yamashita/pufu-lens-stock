@@ -290,6 +290,7 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(stocks.items[0]).toEqual({
       id: 'stock',
       title: '公開する記事',
+      og_image_url: null,
       source_url: 'https://example.com/a',
       domain: 'example.com',
       created_at: expect.any(String),

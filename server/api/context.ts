@@ -24,7 +24,7 @@ export async function ownedProject(env: Env, userId: string, id: string) {
 
 export async function ownedStock(c: import('hono').Context<AppEnv>) {
   const stock = await c.env.DB.prepare(
-    'SELECT s.id, s.project_id, s.article_id, s.note, a.source_type, a.source_url, a.status, a.generation, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
+    'SELECT s.id, s.project_id, s.article_id, s.note, a.source_type, a.source_url, a.status, a.generation, a.has_og_image, a.content_key, a.input_text FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.id = ? AND s.user_id = ?',
   )
     .bind(c.req.param('id'), c.get('principal').user.id)
     .first<{
@@ -36,6 +36,7 @@ export async function ownedStock(c: import('hono').Context<AppEnv>) {
       source_url: string;
       status: string;
       generation: number;
+      has_og_image: number;
       content_key: string | null;
       input_text: string | null;
     }>();

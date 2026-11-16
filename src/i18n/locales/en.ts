@@ -272,6 +272,8 @@ export const en: Record<string, string> = {
   'pufu.title_too_long': 'Keep the title within 200 characters.',
   'pufu.title_hint':
     'Optionally enter a short title. Leave blank to show the gaining goal from phase 1.',
+  'manual.stock_og_image':
+    'When a web article provides a preview image, it is retrieved when saving and shown in the list and details. Unavailable images are omitted. Images in public projects are also public. Previously saved stocks are not backfilled.',
   'manual.article_pages':
     'Explicit next pages of the same article are collected as one stock, up to five pages. Site structure, retrieval failures or size limits may leave only part of the article available.',
   'manual.pufu_grounding':

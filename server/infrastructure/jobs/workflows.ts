@@ -11,6 +11,7 @@ import {
 } from '../../features/memory/memory';
 import { saveMemoryWithHistory } from '../../features/memory/memory-history';
 import { runPufu } from '../../features/pufu/pufu';
+import { ogImageKey, storeOgImage } from '../../features/stocks/og-image';
 import { fetchArticle } from '../../features/stocks/ingest';
 import { aiStep, deferLimitedJob } from '../../features/usage/usage';
 import {
@@ -135,7 +136,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         )
           .bind(job.target_id)
           .first();
-        if (!referenced) await this.env.CONTENT.delete(job.target_id);
+        if (!referenced) await this.env.CONTENT.delete([job.target_id, ogImageKey(job.target_id)]);
       });
       await step.do('finish-cleanup', () => done(this.env, job.id));
       return;
@@ -201,10 +202,15 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
               }
             : {}),
         });
+        const hasOgImage = await storeOgImage(
+          this.env,
+          key,
+          'ogImageUrl' in content ? content.ogImageUrl : undefined,
+        );
         const statements = [
           this.env.DB.prepare(
-            "UPDATE articles SET title = ?, content_key = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
-          ).bind(content.title, key, now(), article.id, job.revision),
+            "UPDATE articles SET title = ?, content_key = ?, has_og_image = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
+          ).bind(content.title, key, Number(hasOgImage), now(), article.id, job.revision),
         ];
         if (current.content_key && current.content_key !== key) {
           statements.push(
@@ -223,7 +229,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         }
         const result = await this.env.DB.batch(statements);
         if (!result[0].meta.changes) {
-          await this.env.CONTENT.delete(key);
+          await this.env.CONTENT.delete([key, ogImageKey(key)]);
           return null;
         }
         return content.title;

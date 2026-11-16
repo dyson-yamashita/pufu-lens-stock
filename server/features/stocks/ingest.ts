@@ -14,8 +14,27 @@ export async function limitedText(response: Response): Promise<string> {
     await limitedBytes(response, MAX_BYTES, 'ページが大きすぎます（上限2MB）。'),
   );
 }
-export function extractHtml(html: string, url: string): { title: string; text: string } {
+type ArticleContent = { title: string; text: string; ogImageUrl?: string };
+export function extractHtml(html: string, url: string): ArticleContent {
   const { document } = parseHTML(html);
+  let ogImageUrl: string | undefined;
+  for (const selector of [
+    'meta[property="og:image:secure_url"]',
+    'meta[property="og:image"], meta[property="og:image:url"]',
+    'meta[name="twitter:image"], meta[property="twitter:image"]',
+  ]) {
+    for (const meta of document.querySelectorAll(selector)) {
+      const value = meta.getAttribute('content')?.trim();
+      if (!value) continue;
+      try {
+        ogImageUrl = validateUrl(new URL(value, url).href).href;
+        break;
+      } catch {
+        // Invalid preview metadata must not prevent article extraction.
+      }
+    }
+    if (ogImageUrl) break;
+  }
   const base = document.createElement('base');
   base.setAttribute('href', url);
   document.head.insertBefore(base, document.head.firstChild);
@@ -25,7 +44,11 @@ export function extractHtml(html: string, url: string): { title: string; text: s
     .replace(/[\t ]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  return { title: (parsed?.title || fallbackTitle).trim().slice(0, 300), text };
+  return {
+    title: (parsed?.title || fallbackTitle).trim().slice(0, 300),
+    text,
+    ...(ogImageUrl ? { ogImageUrl } : {}),
+  };
 }
 async function renderHtml(env: Env, url: string): Promise<string> {
   if (!env.BROWSER)
@@ -82,6 +105,7 @@ export async function fetchPublic(
   value: string,
   guard?: (url: URL) => void,
   deadline = Date.now() + 120000,
+  accept = 'text/html,application/pdf,text/plain;q=0.8,application/octet-stream;q=0.5',
 ): Promise<{ response: Response; url: URL }> {
   let url = validateUrl(value);
   for (let redirects = 0; redirects <= 5; redirects++) {
@@ -94,7 +118,7 @@ export async function fetchPublic(
       redirect: 'manual',
       headers: {
         'User-Agent': 'PufuLens/0.1 (personal article bookmarks)',
-        Accept: 'text/html,application/pdf,text/plain;q=0.8,application/octet-stream;q=0.5',
+        Accept: accept,
       },
       signal: AbortSignal.timeout(Math.min(20000, Math.max(1, deadline - Date.now()))),
     });
@@ -114,7 +138,7 @@ export async function fetchArticle(
   env: Env,
   value: string,
   userId?: string,
-): Promise<{ title: string; text: string; pages?: string[]; complete?: boolean }> {
+): Promise<ArticleContent & { pages?: string[]; complete?: boolean }> {
   const deadline = Date.now() + 60000;
   const postId = xPostId(validateUrl(value).href);
   if (postId) {
@@ -133,12 +157,13 @@ export async function fetchArticle(
   if (!/text\/(html|plain)|application\/xhtml\+xml/i.test(contentType))
     throw new Error('現在はHTML・テキスト・PDFの記事に対応しています。');
   let content = await limitedText(response);
-  let result = contentType.includes('text/plain')
+  let result: ArticleContent = contentType.includes('text/plain')
     ? { title: url.hostname, text: content.trim() }
     : extractHtml(content, url.href);
   if (!result || result.text.length < 200) {
     content = await renderHtml(env, url.href);
-    result = extractHtml(content, url.href);
+    const rendered = extractHtml(content, url.href);
+    result = { ...rendered, ogImageUrl: rendered.ogImageUrl ?? result.ogImageUrl };
   }
   if (result.text.length < 200)
     throw new Error(

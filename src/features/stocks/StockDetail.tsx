@@ -1,3 +1,4 @@
+import OgImage from './OgImage';
 import { Check, ExternalLink, Pencil, RefreshCw } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Project, Stock } from '../../../shared/domain';
@@ -228,6 +229,9 @@ export function StockDetail({
       </div>
       {tab === 'summary' ? (
         <div className="detail-summary">
+          {!youtube && !!stock.has_og_image && (
+            <OgImage src={`/api/v1/stocks/${encodeURIComponent(stock.id)}/og-image`} />
+          )}
           {youtube ? (
             <>
               <YouTubePlayer url={stock.source_url} />

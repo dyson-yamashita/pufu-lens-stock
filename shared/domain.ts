@@ -167,6 +167,7 @@ export type Project = {
   pufu_count: number;
 };
 export type Stock = {
+  has_og_image?: 0 | 1;
   id: string;
   is_favorite: 0 | 1;
   article_id: string;

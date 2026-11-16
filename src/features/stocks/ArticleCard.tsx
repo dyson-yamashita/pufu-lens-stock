@@ -1,3 +1,4 @@
+import OgImage from './OgImage';
 import { BookOpen, Folder, Globe } from 'lucide-react';
 import type { Stock } from '../../../shared/domain';
 import { isYouTubeUrl, youtubeDisplayTitle } from '../../../shared/youtube';
@@ -74,6 +75,16 @@ export function ArticleCard({
           </div>
         )}
       </div>
+      {!youtube && !!stock.has_og_image && (
+        <button
+          type="button"
+          className="article-og-preview"
+          onClick={onOpen}
+          aria-label={t('ui.app.open_details_for_value', { value0: stock.title })}
+        >
+          <OgImage src={`/api/v1/stocks/${encodeURIComponent(stock.id)}/og-image`} />
+        </button>
+      )}
       {youtube && (
         <button
           type="button"
