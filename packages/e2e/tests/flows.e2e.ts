@@ -40,7 +40,39 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await screen.getByRole('button', '未保存の画像を再試行').click();
   await expect(screen.getByRole('heading', 'E2Eで保存した本文')).toBeVisible();
   await app.open(`/#project/${fixture.projectId}`);
-  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  const previews = browser.locator('.article-image-previews img');
+  await expect(previews).toHaveCount(1);
+  await expect(previews).toHaveAttribute('alt', 'stock-image.png');
+  expect(
+    await browser.evaluate(async () => {
+      const image = document.querySelector<HTMLImageElement>('.article-image-previews img')!;
+      await image.decode();
+      image.scrollIntoView({ block: 'center' });
+      const summary = document.querySelector('.article-summary')!.getBoundingClientRect();
+      const bounds = image.getBoundingClientRect();
+      return (
+        image.naturalWidth > 0 &&
+        bounds.width === 56 &&
+        bounds.height === 56 &&
+        bounds.top >= summary.bottom &&
+        bounds.right <= window.innerWidth
+      );
+    }),
+  ).toBe(true);
+  await app.screenshot('stock-previews-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await app.screenshot('stock-previews-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
+  // タイトルと同じ詳細導線がサムネイルの上でも使える。
+  const previewCenter = await browser.evaluate(() => {
+    const image = document.querySelector('.article-image-previews img')!;
+    image.scrollIntoView({ block: 'center' });
+    const bounds = image.getBoundingClientRect();
+    return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  });
+  await browser.mouse.move(previewCenter.x, previewCenter.y);
+  await browser.mouse.down();
+  await browser.mouse.up();
   expect(await browser.evaluate(() => window.location.hash.startsWith('#stock/'))).toBe(true);
   expect(
     await browser.evaluate(() =>
@@ -102,6 +134,10 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
     images: { id: string }[];
   };
   expect(images.images).toHaveLength(2);
+  await app.open(`/#project/${fixture.projectId}`);
+  await expect(previews).toHaveCount(2);
+  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await screen.getByRole('button', '画像', { exact: true }).click();
   const imageUrl = `${fixture.url}/api/v1/stocks/${data.stocks[0].id}/images/${images.images[0].id}`;
   expect((await fetch(imageUrl)).status).toBe(401);
   const dismiss = await browser.onDialog('dismiss');
@@ -121,6 +157,8 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(browser.locator('.stock-detail-page')).toHaveCount(0);
   expect(await browser.evaluate(() => window.location.hash)).toBe(`#project/${fixture.projectId}`);
   await expect(browser.locator('.article-card')).toBeVisible();
+  await expect(previews).toHaveCount(1);
+  await expect(previews).toHaveAttribute('alt', 'stock-image.png');
   // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
   const verbatimText =
     '  原文の段落を保ちます。https://example.com/source?x=1&y=2\n\n' +
@@ -134,6 +172,9 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
     skip_summary: true,
   });
   await app.open(`/#project/${fixture.projectId}`);
+  await expect(
+    browser.locator('.article-card').filter({ hasText: 'E2E要約しない本文' }).getByRole('img'),
+  ).toHaveCount(0);
   await screen.getByRole('heading', 'E2E要約しない本文', { exact: true }).click();
   await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
   await expect(browser.locator('.verbatim-content a')).toHaveAttribute(

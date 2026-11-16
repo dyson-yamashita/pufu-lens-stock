@@ -67,11 +67,13 @@ describe('ストックのお気に入り', () => {
         ...stock,
         is_favorite: 1,
       });
+      const { image_previews, ...detailStock } = stock;
+      expect(image_previews).toEqual([]);
       for (const path of [`/stocks/${stock.id}`, `/articles/${stock.article_id}`]) {
         const response = await app.request(`/api/v1${path}`);
         expect(response.status).toBe(200);
         expect(((await response.json()) as { stock: Stock }).stock).toEqual({
-          ...stock,
+          ...detailStock,
           is_favorite: 1,
         });
       }
