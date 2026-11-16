@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import ScrollHeader from '../src/ScrollHeader';
+import ScrollHeader from '../src/components/ScrollHeader';
 
 let root: Root;
 let document: Document;

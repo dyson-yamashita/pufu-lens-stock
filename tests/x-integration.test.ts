@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Miniflare } from 'miniflare';
 import { testApp, mockEvent, mockStep } from './helpers';
-import { encryptToken, xPostId, xToken } from '../server/x';
-import { fetchArticle } from '../server/ingest';
-import { ArticleWorkflow } from '../server/workflows';
-import { createApp } from '../server/api';
+import { encryptToken, xPostId, xToken } from '../server/features/integrations/x';
+import { fetchArticle } from '../server/features/stocks/ingest';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
+import { createApp } from '../server/api/app';
 import type { Job } from '../server/env';
 
 describe('X外部連携と本文補完', () => {

@@ -2,11 +2,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import Announcements from '../src/Announcements';
-import { api, ApiError } from '../src/api';
+import Announcements from '../src/features/announcements/Announcements';
+import { api, ApiError } from '../src/lib/api';
 import { testAnnouncement } from './announcement-fixture';
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
 }));
 let root: Root;

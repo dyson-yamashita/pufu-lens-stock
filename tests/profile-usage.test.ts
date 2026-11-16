@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { applyMigration, testApp } from './helpers';
 import { readdir } from 'node:fs/promises';
-import { createApp } from '../server/api';
-import { saveAiUsage } from '../server/ai-neurons';
+import { createApp } from '../server/api/app';
+import { saveAiUsage } from '../server/infrastructure/ai/ai-neurons';
 import type { User } from '../shared/domain';
 import type { ProfileUsage } from '../shared/profile-usage';
 

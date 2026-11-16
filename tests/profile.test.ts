@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyMigration, testApp } from './helpers';
 import type { User } from '../shared/domain';
-import { hash } from '../server/security';
+import { hash } from '../server/infrastructure/security';
 
 describe('本人のプロフィール', () => {
   let app: Awaited<ReturnType<typeof testApp>>;

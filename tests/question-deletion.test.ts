@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { applyMigration, mockEvent, mockStep, testApp, upgradeRelationsSchema } from './helpers';
-import { queueQuestionStatements } from '../server/db';
-import { ArticleWorkflow } from '../server/workflows';
+import { queueQuestionStatements } from '../server/infrastructure/db';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type { Question } from '../shared/domain';
 

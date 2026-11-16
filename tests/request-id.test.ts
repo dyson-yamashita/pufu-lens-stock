@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { userQuestionSchema } from '../shared/domain';
-import { createRequestId } from '../src/api';
+import { createRequestId } from '../src/lib/api';
 
 afterEach(() => vi.unstubAllGlobals());
 

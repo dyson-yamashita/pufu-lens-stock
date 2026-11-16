@@ -2,14 +2,17 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import PufiFeedback from '../src/PufiFeedback';
-import { FeedbackDetector } from '../src/feedback-detector';
-import { manualTree, selectManualBranch } from '../src/manual-search';
-import { api, ApiError, send } from '../src/api';
+import PufiFeedback from '../src/features/feedback/PufiFeedback';
+import { FeedbackDetector } from '../src/features/feedback/feedback-detector';
+import { manualTree, selectManualBranch } from '../src/features/manual/manual-search';
+import { api, ApiError, send } from '../src/lib/api';
 
-vi.mock('../src/manual-search', () => ({ manualTree: vi.fn(), selectManualBranch: vi.fn() }));
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+vi.mock('../src/features/manual/manual-search', () => ({
+  manualTree: vi.fn(),
+  selectManualBranch: vi.fn(),
+}));
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
   send: vi.fn(),
   createRequestId: () => crypto.randomUUID(),

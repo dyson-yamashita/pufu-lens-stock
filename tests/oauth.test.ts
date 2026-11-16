@@ -2,7 +2,7 @@ import { legalVersions } from '../shared/legal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp } from './helpers';
 import type { User } from '../shared/domain';
-import { hash } from '../server/security';
+import { hash } from '../server/infrastructure/security';
 
 const base64url = (value: Uint8Array) => Buffer.from(value).toString('base64url');
 describe('Google OIDCのstate・nonce・署名検証（模擬Google応答）', () => {

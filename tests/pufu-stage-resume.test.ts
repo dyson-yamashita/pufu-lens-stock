@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { testApp, mockStep } from './helpers';
 import { mockPufuAi, reviewDraft } from './pufu-ai-fixture';
-import { runPufu } from '../server/pufu';
+import { runPufu } from '../server/features/pufu/pufu';
 import type { Job } from '../server/env';
 import type { Pufu } from '../shared/pufu';
 

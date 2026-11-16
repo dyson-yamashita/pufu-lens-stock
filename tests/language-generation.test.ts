@@ -7,9 +7,9 @@ import {
   summarize,
   updateMemory,
   type Source,
-} from '../server/ai';
-import { generatePufu } from '../server/pufu';
-import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
+} from '../server/infrastructure/ai/ai';
+import { generatePufu } from '../server/features/pufu/pufu';
+import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Env, Job } from '../server/env';
 import { mockEvent, mockStep, testApp } from './helpers';
 

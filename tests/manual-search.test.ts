@@ -1,13 +1,13 @@
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import ManualHelp from '../src/ManualHelp';
+import ManualHelp from '../src/features/manual/ManualHelp';
 import { afterEach, expect, it, vi } from 'vitest';
-import { api } from '../src/api';
-import { getManualTree } from '../src/UserManual';
-import { selectManualBranch } from '../src/manual-search';
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+import { api } from '../src/lib/api';
+import { getManualTree } from '../src/features/manual/UserManual';
+import { selectManualBranch } from '../src/features/manual/manual-search';
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
 }));
 afterEach(() => vi.clearAllMocks());

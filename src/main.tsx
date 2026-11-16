@@ -1,12 +1,12 @@
-import { publicPathPattern, publicHref } from '../shared/public-route';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
-import PublicProjectPage from './PublicProjects';
-import UserManual from './UserManual';
-import LegalPage from './LegalPage';
-import PageLanguage from './PageLanguage';
-import './styles.css';
+import { publicHref, publicPathPattern } from '../shared/public-route';
+import App from './app/App';
+import LegalPage from './features/legal/LegalPage';
+import UserManual from './features/manual/UserManual';
+import PublicProjectPage from './features/public-projects';
+import PageLanguage from './i18n/PageLanguage';
+import './styles/styles.css';
 
 const publicRoute = publicPathPattern.exec(window.location.pathname);
 if (publicRoute && window.location.hash) {

@@ -6,11 +6,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 import { testApp } from './helpers';
-import * as api from '../src/api';
-import { createPufuPng } from '../src/pufu-download';
-import { readPufuJson } from '../src/pufu-import';
+import * as api from '../src/lib/api';
+import { createPufuPng } from '../src/features/pufu/pufu-download';
+import { readPufuJson } from '../src/features/pufu/pufu-import';
 
-vi.mock('../src/pufu-download', () => ({ createPufuPng: vi.fn() }));
+vi.mock('../src/features/pufu/pufu-download', () => ({ createPufuPng: vi.fn() }));
 
 const require = createRequire(import.meta.url);
 const editorRoot = dirname(require.resolve('@goto-lab/pufu-editor'));
@@ -180,7 +180,8 @@ it.each([
       configurable: true,
       value: { subscribe: () => () => {}, getSnapshot: () => snapshot },
     });
-    const { default: PublicScore } = await import('../src/PublicPufuScore');
+    const { default: PublicScore } =
+      await import('../src/features/public-projects/PublicPufuScore');
     const original = structuredClone(score);
     await act(async () => root.render(createElement(PublicScore, { score, phase: 2 })));
     const image = document.querySelector('[role="img"][aria-label="第2局面のプ譜"]');
@@ -230,7 +231,7 @@ it('公開画像の生成に失敗しても編集操作は出さず、状態を�
     configurable: true,
     value: { subscribe: () => () => {}, getSnapshot: () => snapshot },
   });
-  const { default: PublicScore } = await import('../src/PublicPufuScore');
+  const { default: PublicScore } = await import('../src/features/public-projects/PublicPufuScore');
   const invalid = structuredClone(score);
   invalid.elements.people.text = '\n'.repeat(1000);
   await act(async () => root.render(createElement(PublicScore, { score: invalid, phase: 1 })));
@@ -257,7 +258,7 @@ it.each([
       configurable: true,
       value: () => ({ matches: width < 1000, addEventListener() {}, removeEventListener() {} }),
     });
-    const { default: PufuEditor } = await import('../src/PufuEditor');
+    const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
     await act(async () => root.render(createElement(PufuEditor, { pufu, onGuard: () => {} })));
     expect(document.querySelector('[role="score"]')).toBeNull();
     expect(document.querySelector('.pufu-image-preview figcaption')).toBeNull();
@@ -291,7 +292,7 @@ it.each([
 
 it('幅の変更でミニマップと文字サイズが一緒に切り替わり、未保存の編集を保持する', async () => {
   containerWidth = 900;
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const { setScore, getScoreJson } = require(
     join(editorRoot, 'components/ProjectScore.js'),
   ) as typeof import('@goto-lab/pufu-editor');
@@ -319,7 +320,7 @@ it('幅の変更でミニマップと文字サイズが一緒に切り替わり�
 });
 
 it('プ譜画像は選択中の局面を表示し、未保存の編集では変わらず保存・局面追加後に更新する', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const { setScore } = require(
     join(editorRoot, 'components/ProjectScore.js'),
   ) as typeof import('@goto-lab/pufu-editor');
@@ -366,7 +367,7 @@ it('プ譜画像は選択中の局面を表示し、未保存の編集では変�
 });
 
 it('画像にできない内容でも編集画面を維持し、保存で解消すると画像を表示する', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const { setScore } = require(
     join(editorRoot, 'components/ProjectScore.js'),
   ) as typeof import('@goto-lab/pufu-editor');
@@ -392,7 +393,7 @@ it('画像にできない内容でも編集画面を維持し、保存で解消�
 });
 
 it('未保存の編集は閉じる・Escapeで確認し、保存失敗後も保持して破棄後は保存済み内容に戻す', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const { setScore, getScoreJson } = require(
     join(editorRoot, 'components/ProjectScore.js'),
   ) as typeof import('@goto-lab/pufu-editor');
@@ -425,7 +426,7 @@ it('未保存の編集は閉じる・Escapeで確認し、保存失敗後も保�
 });
 
 it('保存中は閉じる・Escapeを受け付けず、完了後に閉じられる', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   let finish!: (value: unknown) => void;
   vi.spyOn(api, 'send').mockImplementation(
     () =>
@@ -453,7 +454,7 @@ it('保存中は閉じる・Escapeを受け付けず、完了後に閉じられ�
 });
 
 it('エディターを一度も開かずに保存済みの局面をJSON出力できる', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const input = { ...pufu, id: 'unmounted-export' };
   const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:export');
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
@@ -470,7 +471,7 @@ it('エディターを一度も開かずに保存済みの局面をJSON出力で
 });
 
 it.each([1, 2, 3])('第%s局面で各項目のコメントを開き、修正内容を保存できる', async (number) => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const { setScore } = require(
     join(editorRoot, 'components/ProjectScore.js'),
   ) as typeof import('@goto-lab/pufu-editor');
@@ -514,7 +515,7 @@ it.each([1, 2, 3])('第%s局面で各項目のコメントを開き、修正内�
 });
 
 it('PNGは選択中の保存済み局面を出力し、失敗時は形式選択から再試行できる', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const input = structuredClone(pufu);
   input.current_phase = 2;
   const second = structuredClone(score);
@@ -595,7 +596,7 @@ it('読み取り専用の取得結果はEditorのJSON出力と一致し、その
 });
 
 it('JSON取込は未保存内容を確認して置き換え、不正なJSONとキャンセルでは編集を保持する', async () => {
-  const { default: PufuEditor } = await import('../src/PufuEditor');
+  const { default: PufuEditor } = await import('../src/features/pufu/PufuEditor');
   const { setScore, getScoreJson } = require(
     join(editorRoot, 'components/ProjectScore.js'),
   ) as typeof import('@goto-lab/pufu-editor');

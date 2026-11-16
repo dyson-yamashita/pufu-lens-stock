@@ -1,11 +1,11 @@
-import { languages, resolveLanguage, translate } from '../../shared/locale';
-import { pufuViewerMessages } from '../../shared/pufu-viewer';
 import {
   App,
   applyDocumentTheme,
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps';
+import { languages, resolveLanguage, translate } from '../../shared/locale';
+import { pufuViewerMessages } from '../../shared/pufu-viewer';
 import { PufuViewerController, needsNewUrl, type ViewerState } from './controller';
 
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;

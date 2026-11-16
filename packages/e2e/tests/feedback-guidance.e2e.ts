@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
-import type { ThemePreference } from '../../../src/theme';
+import type { ThemePreference } from '../../../src/features/settings/theme';
 
 test('FEEDBACK-011 マニュアル検索以外の3項目で返答を表示して3往復で終了する', async ({
   app,

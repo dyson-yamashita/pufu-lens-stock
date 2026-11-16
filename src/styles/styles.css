@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
+
+/* Import order preserves the existing cascade, including later overrides. */
+@import '../features/feedback/feedback.css';
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import '../features/settings/settings.css';
+@import '../features/stocks/list.css';
+@import '../features/memory/reader.css';
+@import '../features/pufu/progress.css';
+@import '../features/onboarding/first-steps.css';
+@import './alerts.css';
+@import '../features/memory/rebuild.css';
+@import './dialog.css';
+@import '../features/stocks/forms.css';
+@import '../features/questions/questions.css';
+@import '../features/integrations/integrations.css';
+@import '../features/auth/login.css';
+@import './responsive.css';
+@import '../features/questions/details.css';
+@import '../features/pufu/pufu.css';
+@import '../features/public-projects/public-projects.css';
+@import '../features/manual/manual.css';
+@import '../features/legal/legal.css';
+@import '../features/comments/comments.css';
+@import '../i18n/language-select.css';
+@import '../features/pufu/title.css';
+@import '../features/memory/history.css';
+@import '../features/stocks/detail.css';
+@import '../features/manual/target.css';
+@import '../features/announcements/announcements.css';

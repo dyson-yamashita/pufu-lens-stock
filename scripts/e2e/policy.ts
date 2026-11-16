@@ -46,7 +46,7 @@ export function runnerEnvironment(input: NodeJS.ProcessEnv, mode: E2EMode): Node
 export function selectScenarios(scenarios: Scenario[], changedPaths: string[]): string[] {
   const all = () => scenarios.map(({ id }) => id);
   const common =
-    /^(?:src\/(?:App|api)\.|server\/(?:api|auth|env|index)\.|shared\/|migrations\/|packages\/|scripts\/|package\.json|pnpm-|\.github\/|vite\.|vitest\.|tsconfig\.|wrangler\.|index\.html|public\/)/;
+    /^(?:src\/(?:app\/|components\/|lib\/|i18n\/|styles\/|features\/auth\/useAppSession\.|main\.)|server\/(?:api\/(?:app\.|middleware\/)|features\/auth\/|infrastructure\/|(?:env|index)\.)|shared\/|migrations\/|packages\/|scripts\/|package\.json|pnpm-|\.github\/|vite\.|vitest\.|tsconfig\.|wrangler\.|index\.html|public\/)/;
   if (changedPaths.some((path) => common.test(path))) return all();
   const relevant = changedPaths.filter((path) => /^(src|server)\//.test(path));
   if (relevant.some((path) => !scenarios.some((item) => item.sources.includes(path)))) return all();

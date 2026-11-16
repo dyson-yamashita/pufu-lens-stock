@@ -1,0 +1,23 @@
+.stock-detail-page {
+  max-width: 900px;
+}
+.stock-detail-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 28px;
+}
+@media (max-width: 760px) {
+  .stock-detail-card {
+    padding: 22px;
+  }
+}
+
+.pufi-avatar img,
+.pufi-name img {
+  clip-path: circle(45%);
+}
+
+.pufi-avatar[aria-expanded='true'] {
+  border-color: var(--primary);
+}

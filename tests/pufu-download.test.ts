@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { afterEach, expect, it, vi } from 'vitest';
-import { createPufuPng } from '../src/pufu-download';
+import { createPufuPng } from '../src/features/pufu/pufu-download';
 import { pufuScoreSchema } from '../shared/pufu';
 import fixture from './fixtures/pufu-sparse.json';
 

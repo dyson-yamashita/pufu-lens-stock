@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
-import { prepareEvidenceInput } from '../server/pufu-evidence';
-import { generationInput } from '../server/pufu-grounding';
+import { prepareEvidenceInput } from '../server/features/pufu/generation/pufu-evidence';
+import { generationInput } from '../server/features/pufu/generation/pufu-grounding';
 import type { PufuContext } from '../shared/pufu';
 
 const context: PufuContext = {

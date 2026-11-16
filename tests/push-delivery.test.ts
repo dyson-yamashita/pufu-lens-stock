@@ -1,7 +1,7 @@
 import * as webPush from '@block65/webcrypto-web-push';
 import { afterEach, expect, it, vi } from 'vitest';
 import { testApp } from './helpers';
-import { deliverAnnouncements } from '../server/push-delivery';
+import { deliverAnnouncements } from '../server/features/announcements/push-delivery';
 import { announcementSchema, type Announcement } from '../shared/announcements';
 import { testAnnouncement, saveAnnouncement } from './announcement-fixture';
 

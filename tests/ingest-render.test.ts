@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { launch } from '@cloudflare/playwright';
-import { fetchArticle } from '../server/ingest';
+import { fetchArticle } from '../server/features/stocks/ingest';
 import type { Env } from '../server/env';
 
 vi.mock('@cloudflare/playwright', () => ({ launch: vi.fn() }));

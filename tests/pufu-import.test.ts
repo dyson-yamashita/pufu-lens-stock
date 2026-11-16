@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { parsePufuJson, readPufuJson } from '../src/pufu-import';
+import { parsePufuJson, readPufuJson } from '../src/features/pufu/pufu-import';
 import score from './fixtures/pufu-sparse.json';
 
 const metadata = {

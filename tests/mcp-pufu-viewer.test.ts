@@ -11,7 +11,7 @@ import worker from '../server/index';
 import { testApp } from './helpers';
 import { mcpToken } from './mcp-helpers';
 import { pufuViewerSchema, pufuViewerUri } from '../shared/pufu-viewer';
-import * as renderer from '../server/pufu-renderer';
+import * as renderer from '../server/features/pufu/images/pufu-renderer';
 import score from './fixtures/pufu-sparse.json';
 
 const font = readFile(new URL('../public/fonts/pufu-jp.otf', import.meta.url));

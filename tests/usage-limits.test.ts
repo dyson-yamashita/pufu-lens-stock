@@ -2,9 +2,9 @@ import { legalVersions } from '../shared/legal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { testApp, mockEvent, mockStep, applyMigration } from './helpers';
-import { aiStep, AiLimitError, invokeAi } from '../server/usage';
-import { dispatchJobs, scheduledMaintenance } from '../server/jobs';
-import { MemoryWorkflow } from '../server/workflows';
+import { aiStep, AiLimitError, invokeAi } from '../server/features/usage/usage';
+import { dispatchJobs, scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
+import { MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 
 describe('永続利用量制限', () => {

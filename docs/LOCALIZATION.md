@@ -11,16 +11,16 @@
 
 ## 主な編集先
 
-| 対象                                                 | 編集先                                                                                                           |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 言語コード・表示名・Intl書式・生成指示・Editor対応   | `shared/locale.ts`                                                                                               |
-| サーバーの生成テンプレートとMCP文言                  | `shared/locales/`                                                                                                |
-| アプリ専用のi18nextとブラウザー選択                  | `src/i18n.ts`                                                                                                    |
-| 画面・既知エラーの翻訳                               | `src/locales/`                                                                                                   |
-| マニュアルの構造・操作説明                           | `src/UserManual.tsx` とその翻訳キー                                                                              |
-| 法務・トップ・マニュアルの静的HTMLとhreflang/JSON-LD | `src/LegalPage.tsx`、`src/HomeShell.tsx`、`src/UserManual.tsx`、`scripts/legal-pages-plugin.ts`、`shared/seo.ts` |
-| 公開HTMLの配信とセキュリティヘッダー                 | `server/public-pages.ts`、`server/document-headers.ts`、`wrangler.jsonc`                                         |
-| 画像ラベルと改行                                     | `shared/pufu-image-labels.ts`、`packages/pufu-image/src/svg.ts`                                                  |
+| 対象                                                 | 編集先                                                                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 言語コード・表示名・Intl書式・生成指示・Editor対応   | `shared/locale.ts`                                                                                                                                            |
+| サーバーの生成テンプレートとMCP文言                  | `shared/locales/`                                                                                                                                             |
+| アプリ専用のi18nextとブラウザー選択                  | `src/i18n/i18n.ts`                                                                                                                                            |
+| 画面・既知エラーの翻訳                               | `src/i18n/locales/`                                                                                                                                           |
+| マニュアルの構造・操作説明                           | `src/features/manual/UserManual.tsx` とその翻訳キー                                                                                                           |
+| 法務・トップ・マニュアルの静的HTMLとhreflang/JSON-LD | `src/features/legal/LegalPage.tsx`、`src/features/auth/HomeShell.tsx`、`src/features/manual/UserManual.tsx`、`scripts/legal-pages-plugin.ts`、`shared/seo.ts` |
+| 公開HTMLの配信とセキュリティヘッダー                 | `server/features/public-projects/public-pages.ts`、`server/features/public-projects/document-headers.ts`、`wrangler.jsonc`                                    |
+| 画像ラベルと改行                                     | `shared/pufu-image-labels.ts`、`packages/pufu-image/src/svg.ts`                                                                                               |
 
 アプリは独立したi18nextインスタンスを使います。Pufu Editorは独自のReact-i18nextインスタンスを使うため、アプリのインスタンスをグローバル登録したり、Editorをアプリの `I18nextProvider` で包んだりしません。Editorへは明示的な `lang` を渡します。
 

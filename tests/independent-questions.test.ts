@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyMigration, mockEvent, mockStep, testApp, upgradeRelationsSchema } from './helpers';
-import { ArticleWorkflow } from '../server/workflows';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Question } from '../shared/domain';
 import type { Pufu } from '../shared/pufu';
 import type { Job } from '../server/env';

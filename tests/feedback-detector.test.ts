@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { FeedbackDetector, FeedbackFrequency } from '../src/feedback-detector';
+import { FeedbackDetector, FeedbackFrequency } from '../src/features/feedback/feedback-detector';
 
 it('counts only unacknowledged repetitions on the same control', () => {
   let time = 100000;

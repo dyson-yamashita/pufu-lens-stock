@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
-import type { ThemePreference } from '../../../src/theme';
+import type { ThemePreference } from '../../../src/features/settings/theme';
 import { checkPufiCompose } from '../src/pufi-layout.ts';
 
 test('FEEDBACK-001 操作検知で声をかけ、プフィと短く話してDBへ保存する', async ({

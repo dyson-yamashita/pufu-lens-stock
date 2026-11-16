@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { generatePufu } from '../server/pufu';
+import { generatePufu } from '../server/features/pufu/pufu';
 import { elementKeys, type PufuContext } from '../shared/pufu';
 import type { Env } from '../server/env';
 import { reviewDraft } from './pufu-ai-fixture';

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { testApp, mockStep } from './helpers';
-import { runPufu } from '../server/pufu';
+import { runPufu } from '../server/features/pufu/pufu';
 import type { Job } from '../server/env';
 
 let app: Awaited<ReturnType<typeof testApp>>;

@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { testApp } from './helpers';
-import { generateQuestionPufuImage } from '../server/pufu-images';
-import { issuePufuImageLink, cleanupExpiredPufuImageLinks } from '../server/pufu-image-links';
-import * as renderer from '../server/pufu-renderer';
+import { generateQuestionPufuImage } from '../server/features/pufu/images/pufu-images';
+import {
+  issuePufuImageLink,
+  cleanupExpiredPufuImageLinks,
+} from '../server/features/pufu/images/pufu-image-links';
+import * as renderer from '../server/features/pufu/images/pufu-renderer';
 import type { Principal } from '../server/env';
 import score from './fixtures/pufu-sparse.json';
 

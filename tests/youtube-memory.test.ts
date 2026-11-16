@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { Job } from '../server/env';
 import type { MemoryData, MemoryCoverage } from '../shared/domain';
-import { MemoryWorkflow } from '../server/workflows';
+import { MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import { mockEvent, mockStep, testApp } from './helpers';
 
 let app: Awaited<ReturnType<typeof testApp>>;
