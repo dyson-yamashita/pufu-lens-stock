@@ -17,6 +17,13 @@ describe('MCP OAuth連携', () => {
   const session = { Cookie: 'stock_session=alice-session', Origin: 'http://localhost:5173' };
   const scopes =
     'projects:read stocks:read stocks:write questions:read questions:write offline_access';
+  it.each(['%0A', '%0D%0A'])(
+    '改行を含む接続IDでも未認証のMCP管理アクセスを拒否する: %s',
+    async (id) => {
+      const response = await request(`/api/v1/mcp/connections/${id}`, { method: 'PATCH' });
+      expect(response.status).toBe(401);
+    },
+  );
   it('OAuth用KVが未設定でも本人に接続URLと未設定状態を返す', async () => {
     delete app.env.OAUTH_KV;
     const response = await request('/api/v1/mcp/connections', { headers: session });
