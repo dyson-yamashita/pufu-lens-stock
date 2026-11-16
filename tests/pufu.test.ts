@@ -328,11 +328,11 @@ describe('問いからプ譜を生成・編集・保存する', () => {
 
   it('プ譜専用モデルで生成し、実行モデルを保存する', async () => {
     const id = await make();
-    app.env.AI_PUFU_MODEL = '@cf/zai-org/glm-4.7-flash';
+    app.env.AI_PUFU_MODEL = '@cf/deepseek-ai/deepseek-v4.1-flash-1017';
     const ai = mockPufuAi(draft);
     app.env.AI = { run: ai };
     await run(id);
-    expect((await get(id)).model).toBe('@cf/zai-org/glm-4.7-flash');
+    expect((await get(id)).model).toBe('@cf/deepseek-ai/deepseek-v4.1-flash-1017');
     expect(app.env.AI_MODEL).not.toBe(app.env.AI_PUFU_MODEL);
   });
 

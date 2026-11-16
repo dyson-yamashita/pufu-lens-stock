@@ -18,7 +18,6 @@ export async function callPufuModel<T>(
   schema: z.ZodType<T>,
   maxTokens: number,
   byteLimit: number,
-  reasoningEffort: 'low' | 'high' = 'low',
 ): Promise<T> {
   if (!env.AI) throw new Error('Workers AIが未設定です。');
   const model = pufuModel(env);
@@ -34,7 +33,7 @@ export async function callPufuModel<T>(
       ],
       max_tokens: maxTokens,
       temperature: 0,
-      ...reasoningOptions(model, reasoningEffort),
+      ...reasoningOptions(model),
       response_format: structuredOutput(model, schema, 'pufu'),
     },
   );

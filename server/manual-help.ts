@@ -8,7 +8,7 @@ import { meteredOperation, observeAiUsage } from './ai-neurons';
 // The installed chat binding type predates this typed-decision API. Keep its adapter local.
 // Arguments follow the official System One schema; responses stay unknown until validated.
 type ClefInput = {
-  model: 'clef' | 'clef-flash';
+  model: 'clef';
   state: {
     question: string;
     language: 'ja' | 'en';
@@ -52,7 +52,7 @@ export default function manualHelpApp() {
     const unavailable = () => c.json({ selection: null, available: false });
     if (!c.env.AI) return unavailable();
     const model = z
-      .enum(['@cf/cloudflare/clef', '@cf/cloudflare/clef-flash'])
+      .literal('@cf/cloudflare/clef')
       .safeParse(c.env.AI_MANUAL_MODEL ?? '@cf/cloudflare/clef');
     if (!model.success) return unavailable();
     const user = principal.user.id,
@@ -84,7 +84,7 @@ export default function manualHelpApp() {
           const response: unknown = await Reflect.apply(c.env.AI!.run, c.env.AI, [
             model.data,
             {
-              model: model.data === '@cf/cloudflare/clef' ? 'clef' : 'clef-flash',
+              model: 'clef',
               state: {
                 question: input.question,
                 language: input.language,

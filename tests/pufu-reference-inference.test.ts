@@ -497,7 +497,7 @@ it('プ譜専用モデルでは単独記事の本文全体を4万バイトの枠
     elements: Object.fromEntries(elementKeys.map((key) => [key, ''])),
   });
   app.env.AI = { run: ai };
-  app.env.AI_PUFU_MODEL = '@cf/zai-org/glm-4.7-flash';
+  app.env.AI_PUFU_MODEL = '@cf/deepseek-ai/deepseek-v4.1-flash-1017';
   await generatePufu(app.env, {
     task: '整理する',
     question: null,

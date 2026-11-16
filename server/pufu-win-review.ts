@@ -81,7 +81,6 @@ wholeSituation means the sentence expresses the specific overall situation achie
     schema,
     1200,
     24000,
-    'high',
   );
   if (result.purposeChecks.some((p, index) => p.purpose !== index + 1))
     throw new Error('勝利条件の検証対象が揃っていません。再試行してください。');
