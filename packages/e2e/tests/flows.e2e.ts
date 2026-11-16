@@ -623,6 +623,22 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     `/p/${publicId}/pufus/${pufu.id}`,
   );
   await app.open(`/#project/${fixture.projectId}`);
+  await expect(screen.getByRole('heading', 'E2Eの公開するストック', { exact: true })).toBeVisible();
+  const stockTypography = await browser.evaluate(() => {
+    const title = getComputedStyle(document.querySelector('.article-title')!);
+    const summary = getComputedStyle(document.querySelector('.article-summary')!);
+    return {
+      title: [title.fontSize, title.fontWeight, title.lineHeight],
+      summary: [summary.fontSize, summary.lineHeight, summary.whiteSpace, summary.webkitLineClamp],
+    };
+  });
+  await app.open('/#questions');
+  await expect(screen.getByText('E2Eの公開する問い', { exact: true })).toBeVisible();
+  const questionTypography = await browser.evaluate(() => {
+    const title = getComputedStyle(document.querySelector('.question-card .question-text')!);
+    return [title.fontSize, title.fontWeight, title.lineHeight];
+  });
+  await app.open(`/#project/${fixture.projectId}`);
   await screen.getByRole('heading', 'E2Eの公開するストック', { exact: true }).click();
   await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
   const cookies = await browser.cookies();
@@ -634,6 +650,46 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
+  expect(
+    await browser.evaluate(() => {
+      const title = getComputedStyle(document.querySelector('.public-stock-card h3')!);
+      const element = document.querySelector<HTMLElement>('.public-stock-card .public-summary')!;
+      const summary = getComputedStyle(element);
+      return {
+        title: [title.fontSize, title.fontWeight, title.lineHeight],
+        summary: [
+          summary.fontSize,
+          summary.lineHeight,
+          summary.whiteSpace,
+          summary.webkitLineClamp,
+        ],
+        visibleLines: Math.round(element.clientHeight / parseFloat(summary.lineHeight)),
+        fitsViewport: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    }),
+  ).toEqual({ ...stockTypography, visibleLines: 3, fitsViewport: true });
+  await app.screenshot('public-stock-cards-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await app.screenshot('public-stock-cards-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
+  await browser.locator('.public-tabs a').filter({ hasText: '問い・気づき' }).click();
+  await expect(screen.getByRole('heading', 'E2Eの公開する問い', { exact: true })).toBeVisible();
+  expect(
+    await browser.evaluate(() => {
+      const title = getComputedStyle(document.querySelector('.public-question-card h3')!);
+      return [title.fontSize, title.fontWeight, title.lineHeight];
+    }),
+  ).toEqual(questionTypography);
+  await app.screenshot('public-question-cards-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await app.screenshot('public-question-cards-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
+  await browser.locator('.public-tabs a').filter({ hasText: 'ストック' }).click();
+  await expect(browser.locator('.public-stock-card')).toBeVisible();
   await browser.locator('.public-stock-card').click();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
   await expect(browser.locator('.public-stock-detail .public-summary a')).toHaveAttribute(

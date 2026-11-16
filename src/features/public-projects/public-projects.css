@@ -76,6 +76,25 @@
   line-height: 1.5;
   margin: 10px 0 6px;
 }
+/* ログイン時のストック・問いの一覧カードと文字組みを揃える。 */
+.public-stock-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.8;
+  margin-bottom: 11px;
+}
+.public-question-card h3 {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.7;
+  margin: 24px 0;
+}
+@media (max-width: 760px) {
+  .public-question-card h3 {
+    font-size: 17px;
+    line-height: 1.9;
+  }
+}
 .public-project-card > p {
   color: var(--muted);
   font-size: 14px;
@@ -457,10 +476,18 @@
   background: var(--wash);
 }
 .public-stock-card .public-summary {
+  color: var(--muted);
+  font-size: 14px;
+  white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+@media (min-width: 601px) and (max-width: 1250px) {
+  .public-stock-card .public-summary {
+    -webkit-line-clamp: 2;
+  }
 }
 .public-stock-detail .public-stock-title {
   margin: 18px 0 12px;
