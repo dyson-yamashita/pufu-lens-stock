@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { build, type Rollup } from 'vite';
 import { parseHTML } from 'linkedom';
+import { translateUi } from '../src/i18n/i18n';
 import { legalPagesPlugin } from '../scripts/legal-pages-plugin';
 
 let root: string;
@@ -109,7 +110,21 @@ it('トップと英語トップにクロール可能な本文・hreflang・JSON-
     expect(html).toContain('<!--public-root-end-->');
     const { document } = parseHTML(html);
     expect(document.documentElement.lang).toBe(lang);
-    expect(document.querySelector('#root h1')?.textContent?.length).toBeGreaterThan(5);
+    expect(document.querySelector('#root h1')?.textContent).toBe(
+      translateUi(lang, 'home.headline'),
+    );
+    expect(document.querySelectorAll('#what-you-can-do .home-entry')).toHaveLength(3);
+    const description = translateUi(lang, 'site.description');
+    expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+      description,
+    );
+    const jsonLd = [...document.querySelectorAll('script[type="application/ld+json"]')]
+      .map((node) => JSON.parse(node.textContent!))
+      .find((data) => data['@graph']);
+    expect(
+      jsonLd['@graph'].find((item: { '@type': string }) => item['@type'] === 'SoftwareApplication')
+        .description,
+    ).toBe(description);
     expect(document.querySelector('#root p')?.textContent?.length).toBeGreaterThan(20);
     expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toContain(path);
     expect(document.querySelector('link[hreflang="en"]')).not.toBeNull();
@@ -123,8 +138,14 @@ it('トップと英語トップにクロール可能な本文・hreflang・JSON-
 });
 
 it.each([
-  ['index.html', '/', 'ja_JP', 'en_US', 'Pufu Lens — 記事と知識のストック'],
-  ['en/index.html', '/en', 'en_US', 'ja_JP', 'Pufu Lens — Connect knowledge into memory.'],
+  ['index.html', '/', 'ja_JP', 'en_US', 'Pufu Lens — 気づきを残し、AIと育て、次の一歩へ。'],
+  [
+    'en/index.html',
+    '/en',
+    'en_US',
+    'ja_JP',
+    'Pufu Lens — Save insights. Grow them with AI. Take your next step.',
+  ],
 ])('%s の初期HTMLに言語別のOGPとXカードを含める', (file, path, locale, alternate, title) => {
   const { document } = parseHTML(assets.get(file)!);
   const description = document.querySelector('meta[name="description"]')!.getAttribute('content');

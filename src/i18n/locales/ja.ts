@@ -322,35 +322,50 @@ export const ja: Record<string, string> = {
     '退会しました。残りのデータの削除は自動で継続します。',
   'ui.app.your_account_and_registered_data_have_been_deleted':
     '退会が完了し、登録したデータを削除しました。',
-  'ui.app.what_you_can_do': 'Pufu Lensでできること',
-  'ui.app.step_stock_title': '記事をストックする',
-  'ui.app.step_stock_body': '気になった記事を、URLかテキストでプロジェクトに保存します。',
-  'ui.app.step_grow_title': '「問い・気づき」と「メモリ」を育てる',
-  'ui.app.step_grow_body': '要約から問い・気づきが生まれ、関心と知識がメモリにつながります。',
-  'ui.app.step_pufu_title': 'プ譜で考える',
+  'home.headline': '気づきを残し、AIと育て、次の一歩へ。',
+  'home.description_intro': '調べたこと、ふと浮かんだ疑問、やってみたいこと。',
+  'home.description_body': 'PufuLensは、あなたとAIが一緒に考え続ける場所です。',
+  'home.start_with_google': 'Googleで始める',
+  'home.view_manual': '使い方を見る',
+  'home.entry_intro':
+    'どこから始めても大丈夫。ストックを経由せず、問い・気づきやプ譜からも始められます。',
+  'home.try': 'まずは、こんなことから',
+  'home.stock_example': '気になった記事を1つ保存してみる',
+  'home.question_example': '最近気になっている疑問を書いてみる',
+  'home.pufu_example': 'やってみたいことを整理してみる',
+  'home.get_started':
+    'ログイン後は、まず保存先のプロジェクトを1つ作成。メニューの「ストック」「問い・気づき」「プ譜」から、始めたいものを選べます。記事の保存や問いの追加は、初回利用案内も参考にしてください。',
+  'ui.app.what_you_can_do': 'あなたに合った、3つの入口',
+  'ui.app.step_stock_title': 'ストック — 気になることを残す',
+  'ui.app.step_stock_body':
+    '読んだ記事や学んだこと、気になった情報を保存。AIと振り返りながら、自分の関心や知識を蓄積できます。',
+  'ui.app.step_grow_title': '問い・気づき — 考えを深める',
+  'ui.app.step_grow_body':
+    'ふと思った疑問やアイデアを記録。AIの提案や異なる視点を取り入れながら、自分なりの問いを育てられます。',
+  'ui.app.step_pufu_title': 'プ譜 — 次の行動を考える',
   'ui.app.step_pufu_body':
-    '目指すゴールと打ち手を1枚にまとめる思考の地図「プ譜」で、次の一手を整理します。',
+    '取り組みたい課題や目標、施策を整理。何から始めるかを考え、実際の行動と振り返りにつなげます。',
   'ui.app.step_mcp_title': 'MCPでAIと繋がる',
   'ui.app.step_mcp_body':
-    'ChatGPTなどのAIと連携し、ストックや問い・気づきを使って考えを深められます。',
+    'ChatGPTなどのAIと連携し、ストック・問い・気づき・プ譜を会話の中で活用。3つの入口から始めた思考を、いつものAIと深められます。',
   'ui.app.use_cases': 'ユースケース',
   'ui.app.use_case_learning_title': '学んだことを蓄積する',
   'ui.app.use_case_learning_body':
-    '読んだ記事や本、勉強したこと、気づきをストック。AIと振り返りながら知識を深め、自分だけの学びの記録を育てます。',
+    '記事や学習記録を残して、AIと振り返る。日々の小さな発見を、自分だけの知識へ。',
   'ui.app.use_case_business_title': '新規事業やアイデアを検討する',
   'ui.app.use_case_business_body':
-    '市場調査や顧客の声、思いついたアイデアを集め、解決したい課題を問いにする。プ譜で事業化に向けた施策を整理します。',
+    '気になる課題から問いを立て、実現に向けた施策を考える。アイデアを具体的な行動へ。',
   'ui.app.use_case_sharing_title': '仲間と気づきを共有する',
   'ui.app.use_case_sharing_body':
-    '日々の活動で得た気づきや疑問、アイデアをストック。問いやプ譜を通じて互いの考えや目標を共有し、異なる視点から議論を深めながら、新しい発見や次の行動につなげます。',
-  'ui.app.find_connections_beyond_what_you_read': '読んだ先に、つながりがある。',
-  'ui.app.today_s_article': '明日のアイデアにつながる、',
-  'ui.app.tomorrow_s_idea': '今日のひと記事。',
+    '問いやプ譜を共有し、異なる視点から考える。一人では見つからなかった発見へ。',
+  'ui.app.find_connections_beyond_what_you_read': '小さな気づきから、考えが広がる。',
+  'ui.app.today_s_article': 'この疑問、',
+  'ui.app.tomorrow_s_idea': 'どう考えよう？',
   'ui.app.interests': '気になること',
   'ui.app.fresh_perspectives': '新しい視点',
-  'ui.app.grow_your_interests_and_knowledge': '関心と知識が、少しずつ育つ。',
+  'ui.app.grow_your_interests_and_knowledge': 'AIと考え、次の一歩を見つける。',
   'ui.app.organize_themes_and_questions_from_saved_articles':
-    '保存した記事から、テーマと論点を整理。',
+    '問いを育て、やってみたいことを整理。',
   'ui.app.project_heading_suffix': 'の{{value0}}',
   'ui.app.settings_for_value': '{{value0}}の設定',
   'ui.app.project_settings': 'プロジェクト設定',
@@ -773,7 +788,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.pagination': 'ページ切り替え',
   'ui.public_projects.public_projects': '公開プロジェクト',
   'ui.public_projects.discover_your_next_idea_through_someone_else_s_interests':
-    '誰かの関心から、次のアイデアへ。ストックと問い・気づき、その先のプ譜をのぞいてみませんか。',
+    '他の人のストックや問い、プ譜をのぞいて、PufuLensの使い方や次のアイデアを見つけてみましょう。',
   'ui.public_projects.public': '公開',
   'ui.public_projects.sharing_collected_stocks_and_the_questions_and_insights_they':
     '集めたストックと、そこから生まれた問い・気づきを公開しています。',
@@ -859,7 +874,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.related_stocks': '関連するストック',
   'ui.public_projects.home': 'トップへ',
   'ui.public_projects.pufu_lens_connect_knowledge_into_memory':
-    'Pufu Lens · 集めた知識を、つながる記憶に。',
+    'Pufu Lens · 気づきを残し、AIと育て、次の一歩へ。',
   'ui.public_pufu_score.people': 'ひと',
   'ui.public_pufu_score.money': 'お金',
   'ui.public_pufu_score.time': '時間',
@@ -1511,8 +1526,9 @@ export const ja: Record<string, string> = {
     '処理に失敗しました。時間をおいて再度お試しください。',
   'error.youtube_metadata_and_captions_are_not_retrieved_your_note_is':
     'YouTubeの動画情報・字幕は取得しません。メモを記入するとメモリに反映されます。',
-  'site.title': 'Pufu Lens — 記事と知識のストック',
-  'site.description': '記事をプロジェクトにストック。集めた知識と関心を、あなたのメモリに。',
+  'site.title': 'Pufu Lens — 気づきを残し、AIと育て、次の一歩へ。',
+  'site.description':
+    '調べたこと、ふと浮かんだ疑問、やってみたいこと。PufuLensは、あなたとAIが一緒に考え続ける場所です。ストック・問い・気づき・プ譜の好きな入口から、次の一歩へ。',
   'consent.prefix': '',
   'consent.suffix': 'に同意します',
   'phase.number': '第{{number}}局面',

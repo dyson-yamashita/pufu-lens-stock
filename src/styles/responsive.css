@@ -16,9 +16,6 @@
   }
 }
 @media (max-width: 1250px) {
-  .what-you-can-do-steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .question-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -220,7 +217,7 @@
     padding: 24px;
   }
   .login-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     margin: 12px auto 16px;
     padding: 0 28px;
     gap: 5px;
@@ -231,23 +228,16 @@
   .login-caption {
     font-size: 9px;
   }
-  .login-copy h1 {
-    font-size: 38px;
-  }
   .login-art {
     margin: 5px auto 0;
-    width: 400px;
+    width: min(400px, 100%);
     min-height: 400px;
     transform: scale(0.9);
     transform-origin: center;
   }
-  .google-button {
-    margin-top: 24px;
-  }
   .what-you-can-do {
     padding: 36px 20px 0;
   }
-  .what-you-can-do-steps,
   .use-case-list {
     grid-template-columns: 1fr;
   }
@@ -350,12 +340,9 @@
   .token-row span {
     line-height: 1.7;
   }
-  .login-copy h1 {
-    font-size: 35px;
-  }
   .login-art {
-    width: 350px;
-    transform: scale(0.83);
+    width: min(350px, 100%);
+    transform: scale(0.75);
     margin-left: -8px;
     transform-origin: left center;
     min-height: 380px;

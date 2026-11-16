@@ -331,36 +331,50 @@ export const en: Record<string, string> = {
     'Your account was deleted. Remaining data will continue to be deleted automatically.',
   'ui.app.your_account_and_registered_data_have_been_deleted':
     'Your account and registered data have been deleted.',
-  'ui.app.what_you_can_do': 'What you can do with Pufu Lens',
-  'ui.app.step_stock_title': 'Stock articles',
-  'ui.app.step_stock_body': 'Save articles you find interesting to a project, by URL or text.',
-  'ui.app.step_grow_title': 'Grow questions, insights and memory',
+  'home.headline': 'Save insights. Grow them with AI. Take your next step.',
+  'home.description_intro': 'Things you research, questions that pop up, things you want to try.',
+  'home.description_body': 'PufuLens is a place where you and AI keep thinking together.',
+  'home.start_with_google': 'Get started with Google',
+  'home.view_manual': 'See how it works',
+  'home.entry_intro':
+    'Start wherever you like. You can begin with a question or a Pufu, without saving a stock first.',
+  'home.try': 'A small thing to try',
+  'home.stock_example': 'Save one article that caught your attention',
+  'home.question_example': 'Write down a question on your mind',
+  'home.pufu_example': 'Map out something you want to try',
+  'home.get_started':
+    'After signing in, create a project to save your work. Then choose Stocks, Questions & insights, or Pufu from the menu. The first-use guide also helps you save an article and add a question.',
+  'ui.app.what_you_can_do': 'Three ways to get started',
+  'ui.app.step_stock_title': 'Stocks — Save what interests you',
+  'ui.app.step_stock_body':
+    'Save articles, things you learn, and information that catches your eye. Reflect with AI to build your interests and knowledge.',
+  'ui.app.step_grow_title': 'Questions & insights — Deepen your thinking',
   'ui.app.step_grow_body':
-    'Summaries spark questions and insights, and your interests and knowledge connect in memory.',
-  'ui.app.step_pufu_title': 'Think it through with Pufu',
+    'Record a question or an idea. Explore AI suggestions and different perspectives to develop questions of your own.',
+  'ui.app.step_pufu_title': 'Pufu — Plan your next action',
   'ui.app.step_pufu_body':
-    'Pufu is a one-page thinking map of a goal and the moves toward it. Use it to plan your next step.',
+    'Map out a challenge, a goal, and possible actions. Decide where to start, take action, and reflect on what happens.',
   'ui.app.step_mcp_title': 'Connect with AI via MCP',
   'ui.app.step_mcp_body':
-    'Connect with ChatGPT and other AI apps to explore your stocks, questions and insights.',
+    'Connect with ChatGPT and other AI apps to use stocks, questions, insights, and Pufu in conversation. Keep exploring any of the three starting points with the AI you already use.',
   'ui.app.use_cases': 'Use cases',
   'ui.app.use_case_learning_title': 'Build on what you learn',
   'ui.app.use_case_learning_body':
-    'Stock articles and books you read, things you study, and insights you discover. Reflect with AI to deepen your knowledge and grow a learning record of your own.',
+    'Save articles and learning notes, then reflect with AI. Turn small daily discoveries into knowledge of your own.',
   'ui.app.use_case_business_title': 'Explore new businesses and ideas',
   'ui.app.use_case_business_body':
-    'Gather market research, customer feedback, and ideas, then frame the problems you want to solve as questions. Use Pufu to organize the steps toward turning your idea into a business.',
+    'Turn a challenge into a question and explore ways to make it happen. Move from an idea to concrete action.',
   'ui.app.use_case_sharing_title': 'Share insights with others',
   'ui.app.use_case_sharing_body':
-    'Stock insights, questions, and ideas from your daily activities. Share your thoughts and goals through questions and Pufu, deepen discussions with different perspectives, and turn them into new discoveries and next steps.',
-  'ui.app.find_connections_beyond_what_you_read': 'Find connections beyond what you read.',
-  'ui.app.today_s_article': "Today's article,",
-  'ui.app.tomorrow_s_idea': "tomorrow's idea.",
+    'Share questions and Pufu to explore different perspectives. Find discoveries you would not have reached alone.',
+  'ui.app.find_connections_beyond_what_you_read': 'Small insights open up new thoughts.',
+  'ui.app.today_s_article': 'A question on your mind,',
+  'ui.app.tomorrow_s_idea': 'a new perspective to explore.',
   'ui.app.interests': 'Interests',
   'ui.app.fresh_perspectives': 'Fresh perspectives',
-  'ui.app.grow_your_interests_and_knowledge': 'Grow your interests and knowledge.',
+  'ui.app.grow_your_interests_and_knowledge': 'Think with AI. Find your next step.',
   'ui.app.organize_themes_and_questions_from_saved_articles':
-    'Organize themes and questions from saved articles.',
+    'Grow a question and map out what you want to try.',
   'ui.app.project_heading_suffix': ' — {{value0}}',
   'ui.app.settings_for_value': 'Settings for {{value0}}',
   'ui.app.project_settings': 'Project settings',
@@ -784,7 +798,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.pagination': 'Pagination',
   'ui.public_projects.public_projects': 'Public projects',
   'ui.public_projects.discover_your_next_idea_through_someone_else_s_interests':
-    "Discover your next idea through someone else's interests. Explore their stocks, questions, insights and Pufu.",
+    'Explore other people’s stocks, questions, and Pufu to see how PufuLens works and find your next idea.',
   'ui.public_projects.public': 'Public',
   'ui.public_projects.sharing_collected_stocks_and_the_questions_and_insights_they':
     'Sharing collected stocks and the questions and insights they inspired.',
@@ -871,7 +885,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.related_stocks': 'Related stocks',
   'ui.public_projects.home': 'Home',
   'ui.public_projects.pufu_lens_connect_knowledge_into_memory':
-    'Pufu Lens · Connect knowledge into memory.',
+    'Pufu Lens · Save insights. Grow them with AI. Take your next step.',
   'ui.public_pufu_score.people': 'People',
   'ui.public_pufu_score.money': 'Money',
   'ui.public_pufu_score.time': 'Time',
@@ -1540,9 +1554,9 @@ export const en: Record<string, string> = {
     'The operation failed. Wait a little and try again.',
   'error.youtube_metadata_and_captions_are_not_retrieved_your_note_is':
     'YouTube metadata and captions are not retrieved. Your note is used in memory updates.',
-  'site.title': 'Pufu Lens — Connect knowledge into memory.',
+  'site.title': 'Pufu Lens — Save insights. Grow them with AI. Take your next step.',
   'site.description':
-    'Collect articles, explore questions and develop your next idea. Pufu Lens connects your interests and knowledge into memory.',
+    'Things you research, questions that pop up, things you want to try. PufuLens is a place where you and AI keep thinking together. Start with stocks, questions, insights, or Pufu and find your next step.',
   'consent.prefix': 'I agree to the ',
   'consent.suffix': '',
   'phase.number': 'Phase {{number}}',

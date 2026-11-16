@@ -5,7 +5,6 @@
   --on-login-button: #fff;
   min-height: 100dvh;
   background: var(--page);
-  overflow: hidden;
 }
 .login-page > header {
   display: flex;
@@ -103,7 +102,7 @@
 }
 .login-copy h1 {
   font-size: clamp(35px, 3.5vw, 51px);
-  line-height: 1.65;
+  line-height: 1.5;
   letter-spacing: -1.8px;
   font-weight: 500;
   margin: 24px 0 21px;
@@ -124,7 +123,7 @@
   --button: var(--login-button);
   --button-hover: var(--login-button-hover);
   --on-button: var(--on-login-button);
-  margin-top: 31px;
+  margin-top: 0;
   gap: 16px;
   min-width: 230px;
 }
@@ -160,16 +159,11 @@
   margin: 0 0 28px;
   font-size: 24px;
 }
-.what-you-can-do-steps,
+.home-entry-list,
 .use-case-list {
   display: grid;
-  gap: 32px;
-}
-.what-you-can-do-steps {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.use-case-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
 }
 .what-you-can-do-item {
   min-width: 0;
@@ -183,24 +177,10 @@
   gap: 12px;
   margin-bottom: 10px;
 }
-.what-you-can-do-number {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background-color: #ffe8df;
-  border-radius: 28px;
-  color: var(--login-accent);
-  font-size: 20px;
-  line-height: 1;
-  font-weight: 600;
-}
 .what-you-can-do-item h3 {
   margin: 0;
   font-size: 17px;
-  line-height: 1.5;
+  line-height: 1.7;
 }
 .what-you-can-do-item p {
   margin: 0;
@@ -316,4 +296,101 @@
   right: 15px;
   top: 40px;
   transform: rotate(6deg);
+}
+
+.login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  margin-top: 28px;
+}
+.login-manual-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.home-section-intro,
+.home-start-guide,
+.home-integration p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.9;
+}
+.what-you-can-do > .home-section-intro {
+  margin: -12px 0 28px;
+}
+.home-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--border);
+}
+.home-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--selected);
+  color: var(--primary);
+}
+.home-entry-example {
+  margin-top: auto;
+  padding: 16px;
+  background: var(--wash);
+  border-radius: 10px;
+}
+.home-entry-example > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-entry-example > p {
+  color: var(--text);
+}
+.home-start-guide {
+  margin: 22px 0;
+}
+.home-integration {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--selected);
+}
+.home-integration > svg,
+.home-use-case-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.home-integration h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.home-integration p {
+  margin: 0;
+}
+.home-integration .text-link {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .home-entry-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-integration {
+    flex-wrap: wrap;
+  }
+  .home-integration > div {
+    flex: 1 1 200px;
+  }
+  .login-copy h1 {
+    font-size: clamp(28px, 7.6vw, 38px);
+    letter-spacing: -1px;
+  }
 }

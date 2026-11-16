@@ -17,6 +17,7 @@ import LanguageSelect from '../../i18n/LanguageSelect';
 import LegalLinks from '../legal/LegalLinks';
 import { PublicProjectDirectory } from '../public-projects';
 import ThemeToggle from '../settings/ThemeToggle';
+import HomeSections from './HomeSections';
 
 export function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<void> }) {
   useLanguage();
@@ -53,31 +54,29 @@ export function Login({ config, onLogin }: { config: Config; onLogin: () => Prom
       </header>
       <main className="login-main">
         <div className="login-copy">
-          <h1>
-            {t('ui.app.turn_collected_knowledge')}
-            <br />
-            {t('ui.app.into_connected')}
-            <span>{t('ui.app.memory_2')}</span>
-            {t('ui.app.separator')}
-          </h1>
+          <h1>{t('home.headline')}</h1>
           <p className="login-description">
-            {t('ui.app.save_interesting_articles_to_projects')}
+            {t('home.description_intro')}
             <br />
-            {t('ui.app.connect_their_key_points_with_your_interests')}
-            <br />
-            {t('ui.app.and_grow_them_into_a_shared_memory')}
+            {t('home.description_body')}
           </p>
-          <a
-            className={`button primary google-button ${!config.googleConfigured ? 'disabled' : ''}`}
-            href={config.googleConfigured ? '/api/auth/google' : undefined}
-            aria-disabled={!config.googleConfigured}
-          >
-            <span className="google-g" aria-hidden="true">
-              G
-            </span>
-            {t('ui.app.sign_in_with_google')}
-            <ArrowRight size={18} aria-hidden="true" />
-          </a>
+          <div className="login-actions">
+            <a
+              className={`button primary google-button ${!config.googleConfigured ? 'disabled' : ''}`}
+              href={config.googleConfigured ? '/api/auth/google' : undefined}
+              aria-disabled={!config.googleConfigured}
+            >
+              <span className="google-g" aria-hidden="true">
+                G
+              </span>
+              {t('home.start_with_google')}
+              <ArrowRight size={18} aria-hidden="true" />
+            </a>
+            <a className="text-link login-manual-link" href={manualHref(language)}>
+              <BookOpen size={18} aria-hidden="true" />
+              {t('home.view_manual')}
+            </a>
+          </div>
           {!config.googleConfigured && (
             <p className="login-help">
               {config.demo
@@ -148,71 +147,7 @@ export function Login({ config, onLogin }: { config: Config; onLogin: () => Prom
           </div>
         </div>
       </main>
-      <section
-        id="what-you-can-do"
-        className="what-you-can-do"
-        aria-labelledby="what-you-can-do-heading"
-      >
-        <h2 id="what-you-can-do-heading">{t('ui.app.what_you_can_do')}</h2>
-        <div className="what-you-can-do-steps">
-          <article className="what-you-can-do-item">
-            <div className="what-you-can-do-heading">
-              <span className="what-you-can-do-number" aria-hidden="true">
-                1
-              </span>
-              <h3>{t('ui.app.step_stock_title')}</h3>
-            </div>
-            <p>{t('ui.app.step_stock_body')}</p>
-          </article>
-          <article className="what-you-can-do-item">
-            <div className="what-you-can-do-heading">
-              <span className="what-you-can-do-number" aria-hidden="true">
-                2
-              </span>
-              <h3>{t('ui.app.step_grow_title')}</h3>
-            </div>
-            <p>{t('ui.app.step_grow_body')}</p>
-          </article>
-          <article className="what-you-can-do-item">
-            <div className="what-you-can-do-heading">
-              <span className="what-you-can-do-number" aria-hidden="true">
-                3
-              </span>
-              <h3>{t('ui.app.step_pufu_title')}</h3>
-            </div>
-            <p>{t('ui.app.step_pufu_body')}</p>
-          </article>
-          <article className="what-you-can-do-item">
-            <div className="what-you-can-do-heading">
-              <span className="what-you-can-do-number" aria-hidden="true">
-                4
-              </span>
-              <h3>{t('ui.app.step_mcp_title')}</h3>
-            </div>
-            <p>{t('ui.app.step_mcp_body')}</p>
-          </article>
-        </div>
-      </section>
-      <section id="use-cases" className="what-you-can-do" aria-labelledby="use-cases-heading">
-        <h2 id="use-cases-heading">{t('ui.app.use_cases')}</h2>
-        <div className="use-case-list">
-          {[
-            ['ui.app.use_case_learning_title', 'ui.app.use_case_learning_body'],
-            ['ui.app.use_case_business_title', 'ui.app.use_case_business_body'],
-            ['ui.app.use_case_sharing_title', 'ui.app.use_case_sharing_body'],
-          ].map(([title, body], index) => (
-            <article className="what-you-can-do-item" key={title}>
-              <div className="what-you-can-do-heading">
-                <span className="what-you-can-do-number" aria-hidden="true">
-                  {index + 1}
-                </span>
-                <h3>{t(title)}</h3>
-              </div>
-              <p>{t(body)}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      <HomeSections language={language} />
       <PublicProjectDirectory />
       <footer className="login-footer">
         <LegalLinks />
