@@ -566,6 +566,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     skip_summary: true,
     note: 'E2E_PRIVATE_NOTE',
   });
+  await fixture.request(`/questions/${question.id}`, 'PATCH', { stock_ids: [stock.id] });
   const imageResponse = await fetch(`${fixture.url}/api/v1/stocks/${stock.id}/images`, {
     method: 'POST',
     headers: {
@@ -650,6 +651,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
+  await expect(browser.locator('.public-stock-card .public-card-footer')).toHaveCount(0);
   expect(
     await browser.evaluate(() => {
       const title = getComputedStyle(document.querySelector('.public-stock-card h3')!);
@@ -676,6 +678,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
   await browser.locator('.public-tabs a').filter({ hasText: '問い・気づき' }).click();
   await expect(screen.getByRole('heading', 'E2Eの公開する問い', { exact: true })).toBeVisible();
+  await expect(screen.getByText('問い・気づきの詳細を見る', { exact: true })).toHaveCount(0);
   expect(
     await browser.evaluate(() => {
       const title = getComputedStyle(document.querySelector('.public-question-card h3')!);
@@ -688,7 +691,29 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await app.screenshot('public-question-cards-dark');
   await browser.emulateMedia({ colorScheme: 'light' });
   await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
-  await browser.locator('.public-tabs a').filter({ hasText: 'ストック' }).click();
+  await browser.locator('.public-question-card').filter({ hasText: 'E2Eの公開する問い' }).click();
+  await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
+  await expect(browser.locator('.public-stock-detail,.public-stock-points')).toHaveCount(0);
+  await expect(screen.getByText('ストックの詳細を見る', { exact: true })).toHaveCount(0);
+  expect(
+    await browser.evaluate(() => {
+      const card = document.querySelector('.public-stock-card')!;
+      card.scrollIntoView({ block: 'center' });
+      const summary = card.querySelector<HTMLElement>('.public-summary')!;
+      const style = getComputedStyle(summary);
+      return {
+        clamp: style.webkitLineClamp,
+        visibleLines: Math.round(summary.clientHeight / parseFloat(style.lineHeight)),
+        fitsViewport: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    }),
+  ).toEqual({ clamp: '3', visibleLines: 3, fitsViewport: true });
+  await app.screenshot('public-question-stock-preview-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await app.screenshot('public-question-stock-preview-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(browser.locator('.public-stock-card')).toBeVisible();
   await browser.locator('.public-stock-card').click();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
@@ -705,6 +730,13 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     'alt',
     'stock-image.png',
   );
+  await expect(browser.locator('.public-stock-detail .stock-image-caption')).toBeHidden();
+  await app.screenshot('public-stock-detail-light');
+  await browser.emulateMedia({ colorScheme: 'dark' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await app.screenshot('public-stock-detail-dark');
+  await browser.emulateMedia({ colorScheme: 'light' });
+  await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
   expect((await fetch(publicImageUrl)).status).toBe(200);
   await browser.reload();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
