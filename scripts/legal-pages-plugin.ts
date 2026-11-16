@@ -2,10 +2,10 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseHTML } from 'linkedom';
 import type { Plugin } from 'vite';
-import LegalPage from '../src/LegalPage';
-import UserManual from '../src/UserManual';
-import HomeShell from '../src/HomeShell';
-import { setServerLanguage, translateUi } from '../src/i18n';
+import LegalPage from '../src/features/legal/LegalPage';
+import UserManual from '../src/features/manual/UserManual';
+import HomeShell from '../src/features/auth/HomeShell';
+import { setServerLanguage, translateUi } from '../src/i18n/i18n';
 import {
   homeHreflang,
   homeJsonLd,
@@ -113,7 +113,7 @@ function prepareDocument(
   }
   appendHeadHtml(document, `${options.hreflang}${jsonLdScript(options.jsonLd)}`);
   // Keep the public-page SSR markers: Japanese home becomes ASSETS `/` and
-  // server/public-pages.ts replaces only the marked region.
+  // server/features/public-projects/public-pages.ts replaces only the marked region.
   document.getElementById('root')!.innerHTML =
     `<!--public-root-start-->${options.body}<!--public-root-end-->`;
   if (!options.keepModule) removeModuleScripts(document);

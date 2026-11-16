@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import MemoryKnowledge from '../src/MemoryKnowledge';
+import MemoryKnowledge from '../src/features/memory/MemoryKnowledge';
 
 let root: Root;
 let document: Document;

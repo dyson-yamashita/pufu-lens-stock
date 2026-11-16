@@ -1,10 +1,10 @@
 import { mockPufuAi } from './pufu-ai-fixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp, mockEvent, mockStep, applyMigration, upgradeRelationsSchema } from './helpers';
-import { ArticleWorkflow } from '../server/workflows';
-import { generatePufu, runPufu } from '../server/pufu';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
+import { generatePufu, runPufu } from '../server/features/pufu/pufu';
 import type { Job } from '../server/env';
-import { jobFailureStatements } from '../server/db';
+import { jobFailureStatements } from '../server/infrastructure/db';
 import { pufuScoreSchema, type Pufu, type PufuSummary, type PufuContext } from '../shared/pufu';
 import type { Question } from '../shared/domain';
 

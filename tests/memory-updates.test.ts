@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryWorkflow } from '../server/workflows';
-import { loadMemoryInputPage } from '../server/memory';
+import { MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
+import { loadMemoryInputPage } from '../server/features/memory/memory';
 import { testApp, mockEvent, mockStep } from './helpers';
 import type { Job } from '../server/env';
 import type { MemoryData } from '../shared/domain';

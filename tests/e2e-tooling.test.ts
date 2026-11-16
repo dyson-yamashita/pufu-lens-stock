@@ -9,8 +9,11 @@ import scenarioLedger from '../packages/e2e/scenarios.json';
 
 const scenarios = [
   { id: 'STOCK-001', sources: ['src/Stocks.tsx', 'server/stocks.ts'] },
-  { id: 'PUFU-001', sources: ['src/PufuEditor.tsx', 'server/pufu.ts'] },
-  { id: 'PUBLIC-001', sources: ['src/PublicationSettings.tsx', 'server/public-projects.ts'] },
+  { id: 'PUFU-001', sources: ['src/features/pufu/PufuEditor.tsx', 'server/features/pufu/pufu.ts'] },
+  {
+    id: 'PUBLIC-001',
+    sources: ['src/PublicationSettings.tsx', 'server/features/public-projects/public-projects.ts'],
+  },
 ];
 
 describe('E2Eのシナリオ分割', () => {
@@ -96,19 +99,31 @@ describe('E2Eの実行ポリシー', () => {
     expect(env.E2E_TELEMETRY_DISABLED).toBe('1');
   });
   it('局所的な変更は担当シナリオを選ぶ', () => {
-    expect(selectScenarios(scenarios, ['src/PufuEditor.tsx'])).toEqual(['PUFU-001']);
+    expect(selectScenarios(scenarios, ['src/features/pufu/PufuEditor.tsx'])).toEqual(['PUFU-001']);
   });
   it.each([
-    'src/App.tsx',
-    'src/api.ts',
-    'server/api.ts',
-    'server/auth.ts',
+    'src/app/App.tsx',
+    'src/lib/api.ts',
+    'src/app/useAppNavigation.ts',
+    'src/components/Modal.tsx',
+    'src/styles/tokens.css',
+    'src/i18n/i18n.ts',
+    'src/features/auth/useAppSession.ts',
+    'server/api/middleware/authentication.ts',
+    'server/infrastructure/security.ts',
+    'server/env.ts',
+    'server/api/app.ts',
+    'server/features/auth/auth.ts',
     'shared/pufu.ts',
     'packages/pufu-image/src/index.ts',
     'wrangler.jsonc',
     'vite.config.ts',
   ])('共通経路 %s の変更は全シナリオを選ぶ', (path) => {
-    expect(selectScenarios(scenarios, [path])).toEqual(['STOCK-001', 'PUFU-001', 'PUBLIC-001']);
+    const classified = scenarios.map((scenario, index) => ({
+      ...scenario,
+      sources: index === 0 ? [...scenario.sources, path] : scenario.sources,
+    }));
+    expect(selectScenarios(classified, [path])).toEqual(['STOCK-001', 'PUFU-001', 'PUBLIC-001']);
   });
   it('未分類のアプリ変更を確認対象なしとして取りこぼさない', () => {
     expect(selectScenarios(scenarios, ['src/NewFeature.tsx'])).toEqual([
@@ -187,7 +202,7 @@ describe('E2Eの実行結果照合', () => {
 
 import { validateLedger } from '../scripts/e2e/policy';
 const ledger = [
-  { id: 'STOCK-001', title: '保存', sources: ['src/App.tsx'], aspects: ['再読込後も残る'] },
+  { id: 'STOCK-001', title: '保存', sources: ['src/app/App.tsx'], aspects: ['再読込後も残る'] },
 ];
 const pairs = () =>
   ['desktop', 'phone'].map((target) => ({
@@ -197,37 +212,37 @@ const pairs = () =>
   }));
 describe('E2E台帳と実行可能なテストの照合', () => {
   it('全シナリオが両方の画面幅で実行可能なら通す', () => {
-    expect(() => validateLedger(ledger, pairs(), ['src/App.tsx'])).not.toThrow();
+    expect(() => validateLedger(ledger, pairs(), ['src/app/App.tsx'])).not.toThrow();
   });
   it.each([0, -1, '10'])('不正な所要秒数 %s を拒否する', (estimatedSeconds) => {
     expect(() =>
-      validateLedger([{ ...ledger[0], estimatedSeconds }], pairs(), ['src/App.tsx']),
+      validateLedger([{ ...ledger[0], estimatedSeconds }], pairs(), ['src/app/App.tsx']),
     ).toThrow();
   });
   it('未登録・重複・片方だけのテスト・skipを拒否する', () => {
-    expect(() => validateLedger(ledger, pairs().slice(0, 1), ['src/App.tsx'])).toThrow();
-    expect(() => validateLedger(ledger, [...pairs(), pairs()[0]], ['src/App.tsx'])).toThrow();
+    expect(() => validateLedger(ledger, pairs().slice(0, 1), ['src/app/App.tsx'])).toThrow();
+    expect(() => validateLedger(ledger, [...pairs(), pairs()[0]], ['src/app/App.tsx'])).toThrow();
     expect(() =>
       validateLedger(
         ledger,
         [...pairs(), { title: 'NEW-001 新機能', target: 'desktop', disposition: 'run' }],
-        ['src/App.tsx'],
+        ['src/app/App.tsx'],
       ),
     ).toThrow();
     expect(() =>
       validateLedger(
         ledger,
         pairs().map((pair) => ({ ...pair, disposition: 'skip' })),
-        ['src/App.tsx'],
+        ['src/app/App.tsx'],
       ),
     ).toThrow();
   });
   it('存在しない担当ソース・空の検証観点・重複IDを拒否する', () => {
     expect(() => validateLedger(ledger, pairs(), [])).toThrow();
     expect(() =>
-      validateLedger([{ ...ledger[0], aspects: [] }], pairs(), ['src/App.tsx']),
+      validateLedger([{ ...ledger[0], aspects: [] }], pairs(), ['src/app/App.tsx']),
     ).toThrow();
-    expect(() => validateLedger([...ledger, ledger[0]], pairs(), ['src/App.tsx'])).toThrow();
+    expect(() => validateLedger([...ledger, ledger[0]], pairs(), ['src/app/App.tsx'])).toThrow();
   });
 });
 

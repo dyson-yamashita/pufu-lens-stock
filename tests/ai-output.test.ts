@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildMemory, generateQuestion, summarize, parseAiJson, type Source } from '../server/ai';
+import {
+  buildMemory,
+  generateQuestion,
+  summarize,
+  parseAiJson,
+  type Source,
+} from '../server/infrastructure/ai/ai';
 import { z } from 'zod';
-import { callPufuModel, pufuInputLimit } from '../server/pufu-ai';
+import { callPufuModel, pufuInputLimit } from '../server/features/pufu/generation/pufu-ai';
 import type { Env } from '../server/env';
 
 const source: Source = {

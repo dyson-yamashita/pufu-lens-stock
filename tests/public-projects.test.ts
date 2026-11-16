@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp, mockEvent, mockStep } from './helpers';
-import { ArticleWorkflow } from '../server/workflows';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type {
   Publication,
@@ -11,8 +11,8 @@ import type {
   PublicPufu,
 } from '../shared/public-project';
 import { elementKeys, type PufuScore } from '../shared/pufu';
-import { hash } from '../server/security';
-import { createApp } from '../server/api';
+import { hash } from '../server/infrastructure/security';
+import { createApp } from '../server/api/app';
 
 function score(text: string): PufuScore {
   const node = (id: string) => ({

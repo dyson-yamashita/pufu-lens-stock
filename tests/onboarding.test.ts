@@ -5,7 +5,7 @@ import { inspect } from 'node:util';
 import { applyMigration, testApp } from './helpers';
 import worker from '../server/index';
 import { mcpToken, mcpTokens } from './mcp-helpers';
-import { mcpAuthorizationApp } from '../server/mcp-oauth';
+import { mcpAuthorizationApp } from '../server/mcp/oauth';
 
 const acceptance = {
   name: '  ふくろう  ',

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { testApp, mockStep } from './helpers';
-import { scheduledMaintenance } from '../server/jobs';
-import { aiStep } from '../server/usage';
+import { scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
+import { aiStep } from '../server/features/usage/usage';
 import type { Job } from '../server/env';
 
 let app: Awaited<ReturnType<typeof testApp>>;

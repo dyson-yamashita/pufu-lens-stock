@@ -9,8 +9,8 @@ description: Use when adding, changing, removing, or fixing Pufu Lens features, 
 
 ## 参照先
 
-- 本文の唯一の編集元：`src/UserManual.tsx`（公開URLは `/manual`）。同じ説明を別のMarkdownなどへ複製しない。
-- 導線：`src/main.tsx`、`src/App.tsx`。表示：`src/styles.css` の `manual-*`。
+- 本文の唯一の編集元：`src/features/manual/UserManual.tsx`（公開URLは `/manual`）。同じ説明を別のMarkdownなどへ複製しない。
+- 導線：`src/main.tsx`、`src/app/App.tsx`。表示：`src/features/manual/manual.css` と `target.css` の `manual-*`。
 - 実装・画面を確認し、必要に応じて `docs/SPEC.md` と照合する。設計書だけを根拠に未実装の機能を案内しない。
 
 ## 更新するかの判断

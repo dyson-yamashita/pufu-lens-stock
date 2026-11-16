@@ -2,15 +2,15 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import App from '../src/App';
-import QuestionPage from '../src/QuestionPage';
-import PufuPage from '../src/PufuPage';
-import XIntegration from '../src/XIntegration';
-import { api, send } from '../src/api';
+import App from '../src/app/App';
+import QuestionPage from '../src/features/questions/QuestionPage';
+import PufuPage from '../src/features/pufu/PufuPage';
+import XIntegration from '../src/features/integrations/XIntegration';
+import { api, send } from '../src/lib/api';
 import type { Project, Question, Stock } from '../shared/domain';
 
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
   send: vi.fn(),
 }));

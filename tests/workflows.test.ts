@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
+import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import { testApp, mockEvent, mockStep } from './helpers';
 import type { Env, Job } from '../server/env';
 import { createPdfWorker } from './pdf-worker-helper';

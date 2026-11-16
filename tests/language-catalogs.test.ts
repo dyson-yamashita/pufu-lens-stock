@@ -1,14 +1,15 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { expect, it } from 'vitest';
 import ts from 'typescript';
-import { en } from '../src/locales/en';
-import { ja } from '../src/locales/ja';
-import { errorKeys } from '../src/locales/error-keys';
+import { en } from '../src/i18n/locales/en';
+import { ja } from '../src/i18n/locales/ja';
+import { errorKeys } from '../src/i18n/locales/error-keys';
 
 it('all application message IDs and error mappings have matching Japanese/English interpolation contracts', async () => {
   const keys = new Set(Object.values(errorKeys));
-  const files = (await readdir(new URL('../src/', import.meta.url))).filter((file) =>
-    /\.tsx?$/.test(file),
+  // The standalone MCP viewer has separate shared locale catalogs and tests.
+  const files = (await readdir(new URL('../src/', import.meta.url), { recursive: true })).filter(
+    (file) => /\.tsx?$/.test(file) && !file.startsWith('mcp-pufu-viewer/'),
   );
   for (const file of files) {
     const source = ts.createSourceFile(

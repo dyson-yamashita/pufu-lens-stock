@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build, type Rollup } from 'vite';
-import type { fetchArticle } from '../server/ingest';
+import type { fetchArticle } from '../server/features/stocks/ingest';
 import type { Env } from '../server/env';
 
 let root: string | undefined;
@@ -21,7 +21,7 @@ it('ビルド後もCanvas要素を含む記事の本文と次ページを取得�
     logLevel: 'silent',
     ssr: { noExternal: true, external: ['@cloudflare/playwright'] },
     build: {
-      ssr: fileURLToPath(new URL('../server/ingest.ts', import.meta.url)),
+      ssr: fileURLToPath(new URL('../server/features/stocks/ingest.ts', import.meta.url)),
       write: false,
     },
   })) as Rollup.RollupOutput;

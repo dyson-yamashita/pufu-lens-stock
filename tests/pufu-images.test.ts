@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { testApp } from './helpers';
 import { PufuImageError } from '@pufu-lens/pufu-image';
-import * as renderer from '../server/pufu-renderer';
+import * as renderer from '../server/features/pufu/images/pufu-renderer';
 import score from './fixtures/pufu-sparse.json';
 import scalable from './fixtures/pufu-scalable';
 
@@ -210,7 +210,7 @@ describe('プ譜画像をリクエスト時に生成する', () => {
     },
   );
   it('フォント通信の例外を制御されたエラーにし、再取得で回復する', async () => {
-    const modulePath = '../server/pufu-renderer.ts?font-failure';
+    const modulePath = '../server/features/pufu/images/pufu-renderer.ts?font-failure';
     const fresh = (await import(modulePath)) as typeof renderer;
     const unavailable = {
       ...app.env,

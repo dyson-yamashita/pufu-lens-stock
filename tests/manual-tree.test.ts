@@ -2,9 +2,9 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseHTML } from 'linkedom';
 import { expect, it } from 'vitest';
-import UserManual, { getManualTree } from '../src/UserManual';
-import { translateUi } from '../src/i18n';
-import type { ManualNode } from '../src/manual-search';
+import UserManual, { getManualTree } from '../src/features/manual/UserManual';
+import { translateUi } from '../src/i18n/i18n';
+import type { ManualNode } from '../src/features/manual/manual-search';
 it.each(['ja', 'en'] as const)(
   'indexes only actual %s manual text with working heading/paragraph links',
   (language) => {

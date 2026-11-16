@@ -2,12 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import QuestionPage from '../src/QuestionPage';
-import { api, send } from '../src/api';
+import QuestionPage from '../src/features/questions/QuestionPage';
+import { api, send } from '../src/lib/api';
 import type { QuestionDetail } from '../shared/domain';
 
-vi.mock('../src/api', async (original) => ({
-  ...(await original<typeof import('../src/api')>()),
+vi.mock('../src/lib/api', async (original) => ({
+  ...(await original<typeof import('../src/lib/api')>()),
   api: vi.fn(),
   send: vi.fn(),
 }));

@@ -1,13 +1,13 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { api } from '../src/api';
-import { setLanguage } from '../src/i18n';
+import { api } from '../src/lib/api';
+import { setLanguage } from '../src/i18n/i18n';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseHTML } from 'linkedom';
-import McpConnections from '../src/McpConnections';
+import McpConnections from '../src/features/integrations/McpConnections';
 
-vi.mock('../src/api', () => ({ api: vi.fn() }));
+vi.mock('../src/lib/api', () => ({ api: vi.fn() }));
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();

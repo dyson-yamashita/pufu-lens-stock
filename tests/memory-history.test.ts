@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { testApp, mockEvent, mockStep } from './helpers';
-import { MemoryWorkflow } from '../server/workflows';
+import { MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import {
   saveMemoryWithHistory,
   cleanupMemoryHistory,
   type MemorySaveInput,
-} from '../server/memory-history';
-import { cleanupAccount, requestAccountDeletion } from '../server/account';
+} from '../server/features/memory/memory-history';
+import { cleanupAccount, requestAccountDeletion } from '../server/features/auth/account';
 import type { MemoryVersionList } from '../shared/domain';
 
 let app: Awaited<ReturnType<typeof testApp>>;

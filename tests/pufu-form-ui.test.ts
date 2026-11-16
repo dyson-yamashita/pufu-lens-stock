@@ -2,12 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import PufuForm from '../src/PufuForm';
-import { send } from '../src/api';
+import PufuForm from '../src/features/pufu/PufuForm';
+import { send } from '../src/lib/api';
 import score from './fixtures/pufu-sparse.json';
 
-vi.mock('../src/api', () => ({ send: vi.fn(), createRequestId: () => crypto.randomUUID() }));
-vi.mock('../src/RelationPicker', () => ({
+vi.mock('../src/lib/api', () => ({ send: vi.fn(), createRequestId: () => crypto.randomUUID() }));
+vi.mock('../src/features/relations/RelationPicker', () => ({
   default: ({
     kind,
     value,

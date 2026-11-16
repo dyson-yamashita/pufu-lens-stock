@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { applyMigration, testApp } from './helpers';
 import { searchBindings, searchStock } from './search-helpers';
-import { syncSearchIndex } from '../server/search-index';
-import { loadMemoryInputs } from '../server/memory';
+import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
+import { loadMemoryInputs } from '../server/features/memory/memory';
 import type { Project } from '../shared/domain';
 
 describe('プロジェクトの全体一覧への表示設定', () => {

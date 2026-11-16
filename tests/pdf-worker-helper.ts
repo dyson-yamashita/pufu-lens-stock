@@ -5,7 +5,7 @@ import { pdfCmapsSource } from '../scripts/pdf-cmaps-plugin';
 let bundle: Promise<string> | undefined;
 export function pdfWorkerSource(): Promise<string> {
   bundle ??= build({
-    entryPoints: [new URL('../server/pdf-worker.ts', import.meta.url).pathname],
+    entryPoints: [new URL('../server/features/stocks/pdf/pdf-worker.ts', import.meta.url).pathname],
     bundle: true,
     format: 'esm',
     platform: 'browser',
@@ -59,7 +59,7 @@ export async function createPdfWorker() {
 export async function createPdfService({ manualClock = false } = {}) {
   const { outputFiles } = await build({
     stdin: {
-      contents: `import {parsePdf} from './server/pdf-client.ts';
+      contents: `import {parsePdf} from './server/features/stocks/pdf/pdf-client.ts';
         ${manualClock ? "import {advanceClock} from './tests/pdf-test-clock.ts';" : ''}
         let cancellations = 0;
         export default { async fetch(request, env) {

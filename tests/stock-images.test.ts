@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createApp } from '../server/api';
-import { cleanupStockImages } from '../server/stock-images';
+import { createApp } from '../server/api/app';
+import { cleanupStockImages } from '../server/features/stocks/stock-images';
 import { stockImageMaxBytes, type StockImage } from '../shared/stock-images';
 import { testApp } from './helpers';
 import worker from '../server/index';

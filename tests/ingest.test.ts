@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { fetchArticle } from '../server/ingest';
+import { fetchArticle } from '../server/features/stocks/ingest';
 import type { Env } from '../server/env';
 import { japanesePdfFixture, japanesePdfText, pdfArticleText, pdfFixture } from './pdf-fixture';
 import { createPdfWorker } from './pdf-worker-helper';

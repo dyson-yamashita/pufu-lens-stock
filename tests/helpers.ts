@@ -2,8 +2,8 @@ import { Miniflare } from 'miniflare';
 import { readFile, readdir } from 'node:fs/promises';
 import { vi } from 'vitest';
 import { serialize } from 'node:v8';
-import { createApp } from '../server/api';
-import { hash } from '../server/security';
+import { createApp } from '../server/api/app';
+import { hash } from '../server/infrastructure/security';
 import type { Env } from '../server/env';
 
 const migrationCache = new Map<string, Promise<string[]>>();

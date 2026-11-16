@@ -4,14 +4,18 @@
     "estimatedSeconds": 10,
     "title": "プロフィールの利用状況",
     "sources": [
-      "src/ProfileUsage.tsx",
-      "server/profile-usage.ts",
-      "server/ai-neurons.ts",
-      "server/search-ai.ts",
+      "src/features/settings/ProfileUsage.tsx",
+      "server/features/usage/profile-usage.ts",
+      "server/infrastructure/ai/ai-neurons.ts",
+      "server/infrastructure/ai/search-ai.ts",
       "shared/profile-usage.ts",
-      "src/Profile.tsx",
-      "src/ThemeSettings.tsx",
-      "src/UserManual.tsx"
+      "src/features/settings/Profile.tsx",
+      "src/features/settings/ThemeSettings.tsx",
+      "src/features/manual/UserManual.tsx",
+      "server/api/routes/account.ts",
+      "src/features/manual/manual.css",
+      "src/features/manual/target.css",
+      "src/features/settings/settings.css"
     ],
     "aspects": [
       "プロフィール編集の直後に利用状況、続いて表示設定・通知設定を配置。今週・今月・全体の切替、一覧非表示のプロジェクトを含むストック・問い・プ譜の登録数とAI使用量のNeurons整数表示（四捨五入）、再読込後の再取得",
@@ -24,11 +28,14 @@
     "estimatedSeconds": 2,
     "title": "トップページのライト・ダーク選択と保持",
     "sources": [
-      "src/App.tsx",
-      "src/ThemeToggle.tsx",
-      "src/theme.ts",
-      "src/BrandLogo.tsx",
-      "src/HomeShell.tsx"
+      "src/app/App.tsx",
+      "src/features/settings/ThemeToggle.tsx",
+      "src/features/settings/theme.ts",
+      "src/components/BrandLogo.tsx",
+      "src/features/auth/HomeShell.tsx",
+      "src/features/auth/Login.tsx",
+      "src/features/auth/login.css",
+      "src/features/settings/settings.css"
     ],
     "aspects": [
       "システムのダーク設定を初期表示に反映し、太陽・月を内蔵したスイッチで明示的に切替。状態をaria-checkedで通知し、Space・Enterでも操作可能",
@@ -41,17 +48,27 @@
     "estimatedSeconds": 12,
     "title": "テキストの保存と再表示",
     "sources": [
-      "src/App.tsx",
-      "src/StockImages.tsx",
-      "src/StockImageCarousel.tsx",
-      "src/stock-image-upload.ts",
-      "server/stock-images.ts",
+      "src/app/App.tsx",
+      "src/features/stocks/StockImages.tsx",
+      "src/features/stocks/StockImageCarousel.tsx",
+      "src/features/stocks/stock-image-upload.ts",
+      "server/features/stocks/stock-images.ts",
       "shared/stock-images.ts",
-      "server/ingest.ts",
-      "server/workflows.ts",
-      "server/article-pages.ts",
-      "server/ai.ts",
-      "server/ai-model.ts"
+      "server/features/stocks/ingest.ts",
+      "server/infrastructure/jobs/workflows.ts",
+      "server/features/stocks/article-pages.ts",
+      "server/infrastructure/ai/ai.ts",
+      "server/infrastructure/ai/ai-model.ts",
+      "src/features/stocks/ArticleCard.tsx",
+      "src/features/stocks/StockFavoriteButton.tsx",
+      "src/features/stocks/SaveForm.tsx",
+      "src/features/stocks/StockDetail.tsx",
+      "src/features/stocks/StockList.tsx",
+      "server/api/routes/stock-collection.ts",
+      "server/api/routes/stock-details.ts",
+      "src/features/stocks/detail.css",
+      "src/features/stocks/forms.css",
+      "src/features/stocks/list.css"
     ],
     "aspects": [
       "画面から本文を保存",
@@ -73,11 +90,21 @@
     "estimatedSeconds": 30,
     "title": "URL記事の取得状態と失敗後の再試行",
     "sources": [
-      "src/App.tsx",
-      "server/ingest.ts",
-      "server/workflows.ts",
-      "server/api.ts",
-      "server/security.ts"
+      "src/app/App.tsx",
+      "server/features/stocks/ingest.ts",
+      "server/infrastructure/jobs/workflows.ts",
+      "server/api/app.ts",
+      "server/infrastructure/security.ts",
+      "src/features/stocks/ArticleCard.tsx",
+      "src/features/stocks/StockFavoriteButton.tsx",
+      "src/features/stocks/SaveForm.tsx",
+      "src/features/stocks/StockDetail.tsx",
+      "src/features/stocks/StockList.tsx",
+      "server/api/routes/stock-collection.ts",
+      "server/api/routes/stock-details.ts",
+      "src/features/stocks/detail.css",
+      "src/features/stocks/forms.css",
+      "src/features/stocks/list.css"
     ],
     "aspects": [
       "URL入力から実際の取得・本文抽出・要約・保存と再読込までを確認。取得中を確認してからテスト専用HTTP fixtureを解放する",
@@ -90,36 +117,41 @@
     "estimatedSeconds": 13,
     "title": "プ譜の編集・局面・戻り先",
     "sources": [
-      "src/PufuPage.tsx",
-      "src/PufuTitle.tsx",
-      "src/PufuForm.tsx",
-      "src/RelationPicker.tsx",
-      "src/PufuRelations.tsx",
-      "server/pufu-title.ts",
-      "server/pufu-create.ts",
-      "server/usage.ts",
-      "server/pufu-context.ts",
+      "src/features/pufu/PufuPage.tsx",
+      "src/features/pufu/PufuTitle.tsx",
+      "src/features/pufu/PufuForm.tsx",
+      "src/features/relations/RelationPicker.tsx",
+      "src/features/pufu/PufuRelations.tsx",
+      "server/features/pufu/pufu-title.ts",
+      "server/features/pufu/pufu-create.ts",
+      "server/features/usage/usage.ts",
+      "server/features/pufu/generation/pufu-context.ts",
       "shared/pufu.ts",
       "shared/locales/generation-ja.ts",
       "shared/locales/generation-en.ts",
-      "src/PufuEditor.tsx",
-      "src/pufu-download.ts",
-      "src/Pufus.tsx",
-      "src/PufuImagePreview.tsx",
-      "server/pufu.ts",
-      "server/pufu-write.ts",
-      "server/pufu-phases.ts",
-      "server/pufu-grounding.ts",
-      "server/pufu-guideline.ts",
-      "server/pufu-output.ts",
-      "server/pufu-evidence.ts",
-      "server/pufu-ai.ts",
-      "server/pufu-source-facts.ts",
-      "server/pufu-plan.ts",
-      "server/pufu-win.ts",
-      "server/pufu-win-review.ts",
-      "server/pufu-cases.ts",
-      "server/ai-model.ts"
+      "src/features/pufu/PufuEditor.tsx",
+      "src/features/pufu/pufu-download.ts",
+      "src/features/pufu/Pufus.tsx",
+      "src/features/pufu/PufuImagePreview.tsx",
+      "server/features/pufu/pufu.ts",
+      "server/features/pufu/pufu-write.ts",
+      "server/features/pufu/pufu-phases.ts",
+      "server/features/pufu/generation/pufu-grounding.ts",
+      "server/features/pufu/generation/pufu-guideline.ts",
+      "server/features/pufu/generation/pufu-output.ts",
+      "server/features/pufu/generation/pufu-evidence.ts",
+      "server/features/pufu/generation/pufu-ai.ts",
+      "server/features/pufu/generation/pufu-source-facts.ts",
+      "server/features/pufu/generation/pufu-plan.ts",
+      "server/features/pufu/generation/pufu-win.ts",
+      "server/features/pufu/generation/pufu-win-review.ts",
+      "server/features/pufu/generation/pufu-cases.ts",
+      "server/infrastructure/ai/ai-model.ts",
+      "server/api/routes/pufu.ts",
+      "server/api/routes/question-details.ts",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "作成時に問い・ストックは各1件まで選択でき、選び直しは置換し、獲得目標と補足が空でも生成して再読込後に目標・関連を保持",
@@ -147,10 +179,14 @@
     "estimatedSeconds": 6,
     "title": "JSON取込によるプ譜の作成・編集",
     "sources": [
-      "src/PufuForm.tsx",
-      "src/PufuEditor.tsx",
-      "src/PufuJsonImport.tsx",
-      "src/pufu-import.ts"
+      "src/features/pufu/PufuForm.tsx",
+      "src/features/pufu/PufuEditor.tsx",
+      "src/features/pufu/PufuJsonImport.tsx",
+      "src/features/pufu/pufu-import.ts",
+      "server/api/routes/pufu.ts",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "pufu editor形式のJSONをファイル選択とテキストエリアへの貼り付けの両方からAI生成せず新規作成し、問い・ストックの紐付けなしでタイトル・内容を保存。元アプリの管理情報付きエクスポートも本文だけを取り込み、元の所有者・保存先・局面番号を引き継がない",
@@ -164,15 +200,31 @@
     "estimatedSeconds": 10,
     "title": "公開の確認と非公開化",
     "sources": [
-      "src/PublicProjects.tsx",
-      "src/PublicPufuScore.tsx",
-      "src/PufuImagePreview.tsx",
-      "server/public-projects.ts",
-      "server/privacy.ts",
-      "server/public-pages.ts",
-      "server/document-headers.ts",
+      "src/features/public-projects/ProjectPublicationSettings.tsx",
+      "src/features/public-projects/PublicLayout.tsx",
+      "src/features/public-projects/PublicProjectDirectory.tsx",
+      "src/features/public-projects/PublicProjectPage.tsx",
+      "src/features/public-projects/PublicPufuDetail.tsx",
+      "src/features/public-projects/PublicPufuList.tsx",
+      "src/features/public-projects/PublicPufuScore.tsx",
+      "src/features/public-projects/PublicQuestions.tsx",
+      "src/features/public-projects/PublicStocks.tsx",
+      "src/features/public-projects/ResourceState.tsx",
+      "src/features/public-projects/index.ts",
+      "src/features/public-projects/public-routing.ts",
+      "src/features/public-projects/types.ts",
+      "src/features/public-projects/useResource.ts",
+      "src/features/pufu/PufuImagePreview.tsx",
+      "server/features/public-projects/public-projects.ts",
+      "server/features/projects/privacy.ts",
+      "server/features/public-projects/public-pages.ts",
+      "server/features/public-projects/document-headers.ts",
       "shared/public-route.ts",
-      "shared/seo.ts"
+      "shared/seo.ts",
+      "src/features/public-projects/public-projects.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "本文採用モードの原文をログイン後・匿名公開の一覧と詳細・再読込後に表示し、改行を保持、詳細の本文中URLを別タブのリンクにし、空の要点を非表示。非公開化後は取得不可（関連API・SSR・エスケープ・個人メモの除外はVitestでも検証）",
@@ -196,17 +248,25 @@
     "estimatedSeconds": 5,
     "title": "言語の初回選択とアカウント設定の保持",
     "sources": [
-      "src/i18n.ts",
-      "src/LanguageSelect.tsx",
-      "src/Onboarding.tsx",
-      "src/Profile.tsx",
-      "src/App.tsx",
+      "src/i18n/i18n.ts",
+      "src/i18n/LanguageSelect.tsx",
+      "src/features/auth/Onboarding.tsx",
+      "src/features/settings/Profile.tsx",
+      "src/app/App.tsx",
       "src/main.tsx",
       "shared/locale.ts",
-      "server/auth.ts",
-      "server/api.ts",
-      "src/PufuEditor.tsx",
-      "src/PufuImagePreview.tsx"
+      "server/features/auth/auth.ts",
+      "server/api/app.ts",
+      "src/features/pufu/PufuEditor.tsx",
+      "src/features/pufu/PufuImagePreview.tsx",
+      "src/features/auth/Login.tsx",
+      "src/features/auth/useAppSession.ts",
+      "server/api/routes/account.ts",
+      "src/features/auth/login.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/settings/settings.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "初回登録前の英語選択と登録後の英語表示。登録前はプロジェクト・意味検索APIを403で拒否し、登録後に通常操作を許可。デモ・起動済みWorkflow・検索索引のAI呼び出し0と登録後の再開はVitestで検証",
@@ -221,18 +281,33 @@
     "estimatedSeconds": 20,
     "title": "MCP連携の編集と保存",
     "sources": [
-      "src/McpConnections.tsx",
-      "src/Integrations.tsx",
-      "src/XIntegration.tsx",
-      "src/UserManual.tsx",
+      "src/features/integrations/McpConnections.tsx",
+      "src/features/integrations/Integrations.tsx",
+      "src/features/integrations/XIntegration.tsx",
+      "src/features/manual/UserManual.tsx",
       "shared/skills.ts",
-      "src/McpConnectionEditor.tsx",
-      "server/mcp-oauth.ts",
-      "server/mcp-connection-settings.ts",
-      "server/mcp.ts",
+      "src/features/integrations/McpConnectionEditor.tsx",
+      "server/mcp/oauth.ts",
+      "server/mcp/connection-settings.ts",
+      "server/mcp/server.ts",
       "shared/mcp.ts",
-      "server/project-access.ts",
-      "server/mcp-consent-style.ts"
+      "server/features/projects/project-access.ts",
+      "server/mcp/consent-style.ts",
+      "src/features/integrations/Shortcuts.tsx",
+      "src/features/integrations/TokenForm.tsx",
+      "server/api/routes/tokens.ts",
+      "server/mcp/tool-context.ts",
+      "server/mcp/tools/comments.ts",
+      "server/mcp/tools/guideline.ts",
+      "server/mcp/tools/memory.ts",
+      "server/mcp/tools/projects.ts",
+      "server/mcp/tools/pufu.ts",
+      "server/mcp/tools/question-read.ts",
+      "server/mcp/tools/question-write.ts",
+      "server/mcp/tools/stocks.ts",
+      "src/features/integrations/integrations.css",
+      "src/features/manual/manual.css",
+      "src/features/manual/target.css"
     ],
     "aspects": [
       "外部連携メニューにショートカット・MCP・SNSの3タブを表示し、クリック・矢印/Home/End操作・履歴の戻る/進む・再読込で選択内容を保持。ショートカットの発行と失効、SNSのX認証情報の設定欄と状態表示、各タブで他の設定を非表示にし、両幅のlight/darkで横はみ出しがないことを確認",
@@ -254,12 +329,17 @@
     "estimatedSeconds": 2,
     "title": "メモリの版履歴",
     "sources": [
-      "src/MemoryHistory.tsx",
-      "src/MemoryKnowledge.tsx",
-      "server/memory-history.ts",
-      "server/workflows.ts",
-      "server/ai.ts",
-      "server/ai-model.ts"
+      "src/features/memory/MemoryHistory.tsx",
+      "src/features/memory/MemoryKnowledge.tsx",
+      "server/features/memory/memory-history.ts",
+      "server/infrastructure/jobs/workflows.ts",
+      "server/infrastructure/ai/ai.ts",
+      "server/infrastructure/ai/ai-model.ts",
+      "src/features/memory/MemoryPanel.tsx",
+      "server/api/routes/memory.ts",
+      "src/features/memory/history.css",
+      "src/features/memory/reader.css",
+      "src/features/memory/rebuild.css"
     ],
     "aspects": [
       "過去版を選択して当時の記事数・内容を表示",
@@ -275,12 +355,24 @@
     "estimatedSeconds": 7,
     "title": "初回の進捗と記事からの問い追加",
     "sources": [
-      "src/FirstSteps.tsx",
-      "src/QuestionForm.tsx",
-      "src/Questions.tsx",
-      "src/App.tsx",
-      "server/api.ts",
-      "shared/domain.ts"
+      "src/features/onboarding/FirstSteps.tsx",
+      "src/features/questions/QuestionForm.tsx",
+      "src/features/questions/Questions.tsx",
+      "src/app/App.tsx",
+      "server/api/app.ts",
+      "shared/domain.ts",
+      "src/features/stocks/SaveForm.tsx",
+      "src/features/stocks/StockList.tsx",
+      "src/features/projects/ProjectForm.tsx",
+      "server/api/routes/projects.ts",
+      "server/api/routes/stock-collection.ts",
+      "server/api/routes/question-collection.ts",
+      "src/features/onboarding/first-steps.css",
+      "src/features/questions/details.css",
+      "src/features/questions/questions.css",
+      "src/features/stocks/detail.css",
+      "src/features/stocks/forms.css",
+      "src/features/stocks/list.css"
     ],
     "aspects": [
       "プロジェクト作成済みから記事保存・問い追加で3ステップを完了",
@@ -293,11 +385,15 @@
     "estimatedSeconds": 4,
     "title": "問いのメモと関連ストックの編集・保持",
     "sources": [
-      "src/QuestionPage.tsx",
-      "src/QuestionSettings.tsx",
-      "src/RelationPicker.tsx",
-      "server/api.ts",
-      "server/relations.ts"
+      "src/features/questions/QuestionPage.tsx",
+      "src/features/questions/QuestionSettings.tsx",
+      "src/features/relations/RelationPicker.tsx",
+      "server/api/app.ts",
+      "server/features/relations/relations.ts",
+      "server/api/routes/question-collection.ts",
+      "server/api/routes/question-details.ts",
+      "src/features/questions/details.css",
+      "src/features/questions/questions.css"
     ],
     "aspects": [
       "問いの詳細画面で改行付きメモと関連ストックの追加・解除・選び直しを保存し、再読込後も保持",
@@ -309,12 +405,16 @@
     "estimatedSeconds": 8,
     "title": "プフィの検知・会話・保守向けDB保存",
     "sources": [
-      "src/PufiFeedback.tsx",
-      "src/feedback-detector.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback-detector.ts",
       "shared/feedback.ts",
-      "server/feedback.ts",
-      "src/PufuJsonImport.tsx",
-      "src/feedback-closing.ts"
+      "server/features/feedback/feedback.ts",
+      "src/features/pufu/PufuJsonImport.tsx",
+      "src/features/feedback/feedback-closing.ts",
+      "src/features/feedback/feedback.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "設定不要で、同じJSON取込の入力エラーを120秒以内に3回起こすだけで自動表示する。局面往復は不要。入力中は避け、検知画面を両幅・light/darkで撮影",
@@ -329,10 +429,14 @@
     "estimatedSeconds": 5,
     "title": "保存競合の反復によるプフィの案内",
     "sources": [
-      "src/PufuEditor.tsx",
-      "src/feedback-detector.ts",
-      "src/PufiFeedback.tsx",
-      "shared/feedback.ts"
+      "src/features/pufu/PufuEditor.tsx",
+      "src/features/feedback/feedback-detector.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "shared/feedback.ts",
+      "src/features/feedback/feedback.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "実編集画面の保存APIにJSONの409/HTMLの503を返し、1回では出さず、同じ保存が2回失敗すると単独で案内。処理中抑止/成功解除/120秒失効はVitestでも確認",
@@ -344,10 +448,14 @@
     "estimatedSeconds": 5,
     "title": "通信失敗の反復によるプフィの案内",
     "sources": [
-      "src/PufuEditor.tsx",
-      "src/feedback-detector.ts",
-      "src/PufiFeedback.tsx",
-      "shared/feedback.ts"
+      "src/features/pufu/PufuEditor.tsx",
+      "src/features/feedback/feedback-detector.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "shared/feedback.ts",
+      "src/features/feedback/feedback.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "実編集画面の保存APIにJSONの409/HTMLの503を返し、1回では出さず、同じ保存が2回失敗すると単独で案内。処理中抑止/成功解除/120秒失効はVitestでも確認",
@@ -359,16 +467,23 @@
     "estimatedSeconds": 5,
     "title": "ログイン済みマニュアルの入口と見出し案内・未解決ヒアリング",
     "sources": [
-      "src/PufiFeedback.tsx",
-      "src/feedback-detector.ts",
-      "src/PufuEditor.tsx",
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback-detector.ts",
+      "src/features/pufu/PufuEditor.tsx",
       "shared/feedback.ts",
-      "src/ManualHelp.tsx",
-      "src/manual-search.ts",
-      "src/UserManual.tsx",
-      "server/manual-help.ts",
-      "src/manual-navigation.ts",
-      "src/LegalLinks.tsx"
+      "src/features/manual/ManualHelp.tsx",
+      "src/features/manual/manual-search.ts",
+      "src/features/manual/UserManual.tsx",
+      "server/features/feedback/manual-help.ts",
+      "src/features/manual/manual-navigation.ts",
+      "src/features/legal/LegalLinks.tsx",
+      "src/features/feedback/feedback.css",
+      "src/features/legal/legal.css",
+      "src/features/manual/manual.css",
+      "src/features/manual/target.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "ログイン済みマニュアルだけに案内文とアイコン。フッター表示時は吹き出しを隠し、上へ戻ると再表示。最下部でもアイコンから会話を開閉でき、お知らせリンクが見える。設定UIなし、両幅・明暗で左右配置を撮影。未ログインは009で確認",
@@ -384,10 +499,14 @@
     "estimatedSeconds": 5,
     "title": "通常のプ譜表示・局面往復・機能開閉で非表示",
     "sources": [
-      "src/PufiFeedback.tsx",
-      "src/feedback-detector.ts",
-      "src/PufuEditor.tsx",
-      "shared/feedback.ts"
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback-detector.ts",
+      "src/features/pufu/PufuEditor.tsx",
+      "shared/feedback.ts",
+      "src/features/feedback/feedback.css",
+      "src/features/pufu/pufu.css",
+      "src/features/pufu/title.css",
+      "src/features/pufu/progress.css"
     ],
     "aspects": [
       "閲覧だけではアイコン・文を含め非表示。6回の局面交互切替と3回のダウンロード開閉でも表示しない",
@@ -399,10 +518,11 @@
     "estimatedSeconds": 3,
     "title": "全画面の操作失敗とモーダル内の案内",
     "sources": [
-      "src/FeedbackSurface.tsx",
-      "src/feedback-monitor.ts",
-      "src/feedback-events.ts",
-      "src/PufiFeedback.tsx"
+      "src/features/feedback/FeedbackSurface.tsx",
+      "src/features/feedback/feedback-monitor.ts",
+      "src/features/feedback/feedback-events.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback.css"
     ],
     "aspects": [
       "プ譜以外のストック保存409を2回繰り返して案内。通常時と1回目は全体非表示、ネイティブdialog内でも案内を操作できる"
@@ -413,10 +533,11 @@
     "estimatedSeconds": 13,
     "title": "全画面の無反応クリック",
     "sources": [
-      "src/FeedbackSurface.tsx",
-      "src/feedback-monitor.ts",
-      "src/feedback-events.ts",
-      "src/PufiFeedback.tsx"
+      "src/features/feedback/FeedbackSurface.tsx",
+      "src/features/feedback/feedback-monitor.ts",
+      "src/features/feedback/feedback-events.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback.css"
     ],
     "aspects": [
       "初期表示を待ち、背景再読込の応答を一時保留したローカル画面に無反応ボタンを追加。最初の3回から9秒空けた4回目（16秒以内）で案内。16秒・120秒の境界と失敗の集計期間はVitestで確認。実サービス障害や外部通信なし"
@@ -427,10 +548,11 @@
     "estimatedSeconds": 4,
     "title": "全画面のネイティブ入力エラー",
     "sources": [
-      "src/FeedbackSurface.tsx",
-      "src/feedback-monitor.ts",
-      "src/feedback-events.ts",
-      "src/PufiFeedback.tsx"
+      "src/features/feedback/FeedbackSurface.tsx",
+      "src/features/feedback/feedback-monitor.ts",
+      "src/features/feedback/feedback-events.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback.css"
     ],
     "aspects": [
       "実フォームのネイティブ入力エラー3回を捕捉。フォーカスが入力欄にある間は抑止、離れてから表示"
@@ -441,10 +563,11 @@
     "estimatedSeconds": 1,
     "title": "未ログインの公開マニュアル",
     "sources": [
-      "src/FeedbackSurface.tsx",
-      "src/feedback-monitor.ts",
-      "src/feedback-events.ts",
-      "src/PufiFeedback.tsx"
+      "src/features/feedback/FeedbackSurface.tsx",
+      "src/features/feedback/feedback-monitor.ts",
+      "src/features/feedback/feedback-events.ts",
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/feedback/feedback.css"
     ],
     "aspects": [
       "認証用拡張fixtureから独立したbase testで未ログインのマニュアルを閲覧。実/meの401を確認し、本文は読めるがプフィは非表示"
@@ -455,10 +578,12 @@
     "estimatedSeconds": 3,
     "title": "ログイン方法の短い質問への直接回答",
     "sources": [
-      "src/manual-search.ts",
-      "src/UserManual.tsx",
-      "src/ManualHelp.tsx",
-      "server/manual-help.ts"
+      "src/features/manual/manual-search.ts",
+      "src/features/manual/UserManual.tsx",
+      "src/features/manual/ManualHelp.tsx",
+      "server/features/feedback/manual-help.ts",
+      "src/features/manual/manual.css",
+      "src/features/manual/target.css"
     ],
     "aspects": [
       "実際の本文から作る補足を元に見出しからログイン手順へ自動で辿り、短い「ログイン方法」に本文・該当リンク・解決確認を返す。全見出しを選ばせず、検索だけではレポート送信なし。判定は受信本文に依存するHTTP fixture、実Clef契約はVitestと開発時の実推論で別途確認",
@@ -469,7 +594,13 @@
     "id": "FEEDBACK-012",
     "estimatedSeconds": 5,
     "title": "日英マニュアルのプフィ入力行レイアウト",
-    "sources": ["src/PufiFeedback.tsx", "src/ManualHelp.tsx"],
+    "sources": [
+      "src/features/feedback/PufiFeedback.tsx",
+      "src/features/manual/ManualHelp.tsx",
+      "src/features/feedback/feedback.css",
+      "src/features/manual/manual.css",
+      "src/features/manual/target.css"
+    ],
     "aspects": [
       "ログイン済みの/manualと/en/manualで入力カテゴリ・マニュアル検索まで進み、320・390・1280px幅と320×360pxの縮小レイアウトviewportで実際に長文・改行を入力してフォーカス。入力欄がパネル内幅いっぱい、送信ボタンが内側右下の36px、文字領域との重なりと横スクロールがなく、入力行までスクロールできることを確認",
       "入力文字サイズ16pxを確認。実機iOSのフォーカスズームとソフトウェアキーボードは未検証。エディタのネイティブdialog内の同じ入力行はFEEDBACK-001で同じ幅・高さを確認"
@@ -479,7 +610,12 @@
     "id": "FEEDBACK-011",
     "estimatedSeconds": 5,
     "title": "マニュアル検索以外の3項目で内容に応じた返答と3往復の終了",
-    "sources": ["src/PufiFeedback.tsx", "server/feedback.ts", "shared/feedback.ts"],
+    "sources": [
+      "src/features/feedback/PufiFeedback.tsx",
+      "server/features/feedback/feedback.ts",
+      "shared/feedback.ts",
+      "src/features/feedback/feedback.css"
+    ],
     "aspects": [
       "反応しません・入力しづらいです・その他の3項目で、HTTP fixtureの内容依存の返答を会話へ表示し、同じrequest_idでround 0〜2を送信する。3回目の返答後は入力を閉じ、固定のお礼へ置き換えない",
       "実LLM呼び出しと品質は対象外。モデルがfollow_up:nullでも通常会話の1・2往復目の入力を閉じないことはAPI/D1のVitestで再現して確認。ブラウザーはその継続用receiptから追加投稿できることを検証。D1への実際の返答保存、履歴の引継ぎ、再送の重複防止、手動終了、3往復上限、機微情報・利用枠・権限制御、マニュアル報告の終了判定、旧receiptとの互換性もVitestで確認"
@@ -490,12 +626,15 @@
     "estimatedSeconds": 3,
     "title": "お知らせの閲覧と通知設定",
     "sources": [
-      "src/Announcements.tsx",
-      "src/PushSettings.tsx",
+      "src/features/announcements/Announcements.tsx",
+      "src/features/settings/PushSettings.tsx",
       "shared/announcements.ts",
-      "server/push.ts",
-      "server/push-delivery.ts",
-      "server/announcements.ts"
+      "server/features/announcements/push.ts",
+      "server/features/announcements/push-delivery.ts",
+      "server/features/announcements/announcements.ts",
+      "server/api/routes/announcements.ts",
+      "src/features/announcements/announcements.css",
+      "src/features/settings/settings.css"
     ],
     "aspects": [
       "一覧・詳細・戻る・再読込・プロフィール内だけの通知設定とマニュアルの導線。管理者未設定時は通知スイッチを無効にする。両画面幅light/darkで横はみ出しなし。メニュー下部はプロフィール→お知らせ→ユーザーマニュアルの順。サイドバー（スマホはメニューを開いて）からお知らせへ移動",
@@ -508,7 +647,20 @@
     "id": "LIST-001",
     "estimatedSeconds": 10,
     "title": "スマホの一覧件数とページ切替",
-    "sources": ["src/App.tsx", "src/Questions.tsx", "server/api.ts"],
+    "sources": [
+      "src/app/App.tsx",
+      "src/features/questions/Questions.tsx",
+      "server/api/app.ts",
+      "src/features/stocks/ArticleCard.tsx",
+      "src/features/stocks/StockFavoriteButton.tsx",
+      "src/features/stocks/StockList.tsx",
+      "server/api/routes/stock-collection.ts",
+      "src/features/questions/details.css",
+      "src/features/questions/questions.css",
+      "src/features/stocks/detail.css",
+      "src/features/stocks/forms.css",
+      "src/features/stocks/list.css"
+    ],
     "aspects": [
       "すべてのストック・問いを保存先で絞り、phoneは6件、desktopは従来どおり24件。次へ・前へで重複なく切り替わり、先頭ページに戻ると同じ項目を表示。総ページ数・末尾ページ1件・前後ボタンの無効化を確認",
       "phoneは次へ・前へで画面先頭へ移動。PCで明示的にスクロールしないこと、取得件数の入力検証と所有者分離はVitestで確認。データは通常APIからURLのみ保存するダミーYouTubeリンクと手動の問いを登録し、メモリ生成枠や他シナリオへ影響させない"

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { parseHTML } from 'linkedom';
-import { revealManualSection } from '../src/manual-navigation';
+import { revealManualSection } from '../src/features/manual/manual-navigation';
 let target: HTMLElement;
 beforeEach(() => {
   vi.useFakeTimers();

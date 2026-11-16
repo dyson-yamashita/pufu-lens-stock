@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
-import { createApp } from '../server/api';
+import { createApp } from '../server/api/app';
 import type { User } from '../shared/domain';
 import { pufuDisplayTitle, type Pufu } from '../shared/pufu';
 import { applyMigration, testApp } from './helpers';

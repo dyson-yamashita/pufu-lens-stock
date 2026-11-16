@@ -1,8 +1,8 @@
-import { saveMemoryWithHistory } from '../server/memory-history';
+import { saveMemoryWithHistory } from '../server/features/memory/memory-history';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CallToolResult, ListToolsResult } from '@modelcontextprotocol/server';
 import worker from '../server/index';
-import { createApp } from '../server/api';
+import { createApp } from '../server/api/app';
 import type { Principal } from '../server/env';
 import { testApp } from './helpers';
 import { mcpToken } from './mcp-helpers';

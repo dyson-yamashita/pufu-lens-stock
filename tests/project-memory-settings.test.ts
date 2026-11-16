@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
-import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
-import { loadMemoryInputs } from '../server/memory';
+import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
+import { loadMemoryInputs } from '../server/features/memory/memory';
 import type { Job } from '../server/env';
 import type { MemoryData, Project } from '../shared/domain';
 import { applyMigration, mockEvent, mockStep, testApp } from './helpers';

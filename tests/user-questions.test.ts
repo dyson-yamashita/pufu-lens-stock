@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp, applyMigration, mockEvent, mockStep, upgradeRelationsSchema } from './helpers';
-import { ArticleWorkflow } from '../server/workflows';
-import { queueQuestionStatements } from '../server/db';
+import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
+import { queueQuestionStatements } from '../server/infrastructure/db';
 import type { Question, QuestionDetail } from '../shared/domain';
 import type { Job } from '../server/env';
 

@@ -2,10 +2,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import PushSettings from '../src/PushSettings';
-import { api, send } from '../src/api';
+import PushSettings from '../src/features/settings/PushSettings';
+import { api, send } from '../src/lib/api';
 
-vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
+vi.mock('../src/lib/api', () => ({ api: vi.fn(), send: vi.fn() }));
 let root: Root;
 let document: Document;
 const permission = vi.fn();

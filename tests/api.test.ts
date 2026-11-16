@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp } from './helpers';
-import { memorySaveStatement } from '../server/db';
-import { hash } from '../server/security';
+import { memorySaveStatement } from '../server/infrastructure/db';
+import { hash } from '../server/infrastructure/security';
 import type { Project } from '../shared/domain';
 
 describe('認証と保存API（実際のSQLite）', () => {

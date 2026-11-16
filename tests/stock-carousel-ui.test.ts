@@ -2,12 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import StockImageCarousel from '../src/StockImageCarousel';
-import StockImages from '../src/StockImages';
-import { api } from '../src/api';
-import { setLanguage } from '../src/i18n';
+import StockImageCarousel from '../src/features/stocks/StockImageCarousel';
+import StockImages from '../src/features/stocks/StockImages';
+import { api } from '../src/lib/api';
+import { setLanguage } from '../src/i18n/i18n';
 
-vi.mock('../src/api', () => ({ api: vi.fn(), createRequestId: vi.fn() }));
+vi.mock('../src/lib/api', () => ({ api: vi.fn(), createRequestId: vi.fn() }));
 const images = ['first', 'second', 'third'].map((id) => ({
   id,
   filename: `${id}.png`,

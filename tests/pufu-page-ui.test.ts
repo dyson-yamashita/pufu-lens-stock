@@ -2,13 +2,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import PufuPage from '../src/PufuPage';
-import { api, send } from '../src/api';
-import { setLanguage } from '../src/i18n';
+import PufuPage from '../src/features/pufu/PufuPage';
+import { api, send } from '../src/lib/api';
+import { setLanguage } from '../src/i18n/i18n';
 import { elementKeys, type Pufu, type PufuScore } from '../shared/pufu';
 
-vi.mock('../src/api', () => ({ api: vi.fn(), send: vi.fn() }));
-vi.mock('../src/PufuEditor', () => {
+vi.mock('../src/lib/api', () => ({ api: vi.fn(), send: vi.fn() }));
+vi.mock('../src/features/pufu/PufuEditor', () => {
   throw new TypeError('Failed to fetch dynamically imported module');
 });
 

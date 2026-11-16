@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp, mockStep, mockEvent } from './helpers';
-import { dispatchJobs, scheduledMaintenance } from '../server/jobs';
-import { aiStep, AiLimitError, deferLimitedJob } from '../server/usage';
+import { dispatchJobs, scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
+import { aiStep, AiLimitError, deferLimitedJob } from '../server/features/usage/usage';
 import type { Job } from '../server/env';
-import { ArticleWorkflow, MemoryWorkflow } from '../server/workflows';
-import { stopWaitingJob } from '../server/job-retries';
+import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
+import { stopWaitingJob } from '../server/infrastructure/jobs/job-retries';
 
 describe('AIジョブの再試行と待機期限', () => {
   let app: Awaited<ReturnType<typeof testApp>>;

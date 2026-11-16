@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { parseHTML } from 'linkedom';
-import { FeedbackDetector } from '../src/feedback-detector';
-import { monitorFeedback } from '../src/feedback-monitor';
-import { beginFeedbackRequest, feedbackRequestKey, reportFeedback } from '../src/feedback-events';
+import { FeedbackDetector } from '../src/features/feedback/feedback-detector';
+import { monitorFeedback } from '../src/features/feedback/feedback-monitor';
+import {
+  beginFeedbackRequest,
+  feedbackRequestKey,
+  reportFeedback,
+} from '../src/features/feedback/feedback-events';
 let document: Document, detector: FeedbackDetector, stop: () => void;
 beforeEach(() => {
   vi.useFakeTimers();

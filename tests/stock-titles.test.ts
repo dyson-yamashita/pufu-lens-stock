@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Question, Stock } from '../shared/domain';
-import { createApp } from '../server/api';
+import { createApp } from '../server/api/app';
 import { testApp } from './helpers';
 
 describe('ストックのタイトル編集', () => {

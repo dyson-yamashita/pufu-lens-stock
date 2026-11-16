@@ -272,7 +272,7 @@ corepack pnpm exec wrangler secret put INTEGRATION_ENCRYPTION_KEY --env producti
 
 登録依頼がある場合だけ `add_question` で保存し、`text` に検証する問い、既存の非公開 `note`（2,000文字以内）に仮説・検証の要点・根拠ID・既存との差・スキル版を残します。保存元は既存の `user` です。問い同士の関連付けは構造化せず参照IDで記録します。
 
-導入方法の編集元は `src/UserManual.tsx` の `#skills` 節です。日英で利用条件・インストール・別途必要なMCP認可・使い方・更新・費用・公開範囲を案内します。外部連携ページには紹介と、表示言語のマニュアル節およびGitHub配布一覧へのリンクを表示します。配布URLと導入コマンドは `shared/skills.ts` を参照し、一覧を増やしても取得元がずれないようにします。GitHubのmain向け案内はこの変更のマージ後に有効となります。プラグインの公開申請や本番反映はこの変更に含めません。
+導入方法の編集元は `src/features/manual/UserManual.tsx` の `#skills` 節です。日英で利用条件・インストール・別途必要なMCP認可・使い方・更新・費用・公開範囲を案内します。外部連携ページには紹介と、表示言語のマニュアル節およびGitHub配布一覧へのリンクを表示します。配布URLと導入コマンドは `shared/skills.ts` を参照し、一覧を増やしても取得元がずれないようにします。GitHubのmain向け案内はこの変更のマージ後に有効となります。プラグインの公開申請や本番反映はこの変更に含めません。
 
 ### 接続とツール
 
@@ -674,7 +674,7 @@ OAuth同意画面の「アプリのドメイン」には、次のURLを登録で
 | プライバシーポリシー           | `<APP_URL>/privacy` |
 | 利用規約                       | `<APP_URL>/terms`   |
 
-本文の編集元は `src/LegalPage.tsx` です。ビルド時に同じコンポーネントから `dist/client/privacy/index.html` と `dist/client/terms/index.html` を生成するため、JavaScriptを実行しない取得でも本文を読めます。トップの初期HTMLにもサービス説明と両ページへのリンクを含めます。開発サーバーでは従来どおりReactで表示します。
+本文の編集元は `src/features/legal/LegalPage.tsx` です。ビルド時に同じコンポーネントから `dist/client/privacy/index.html` と `dist/client/terms/index.html` を生成するため、JavaScriptを実行しない取得でも本文を読めます。トップの初期HTMLにもサービス説明と両ページへのリンクを含めます。開発サーバーでは従来どおりReactで表示します。
 
 Googleから取得する識別子の用途・保存・削除はプライバシーポリシーの「Googleユーザーデータの取り扱い」に記載しています。自己紹介はユーザーメモリ生成時にWorkers AIへ送信します。Googleアカウントの識別子とニックネームはユーザーメモリ生成の入力に使用しません。
 
@@ -881,14 +881,14 @@ pnpm run check
 ## ソース構成
 
 - `src/`：Reactの日本語管理画面
-- `server/api.ts`：認証を必要とするAPIとアクセス制御
-- `server/auth.ts`：Googleログイン、セッション、トークン認証
-- `server/ingest.ts`：URL検証付きの取得、本文抽出、ブラウザ対応
-- `server/ai.ts`：記事要約、問い、根拠付きメモリの生成
-- `server/pufu.ts`：プ譜の生成
-- `server/usage.ts`：保存・AI処理の利用量制限
+- `server/api/app.ts`：認証を必要とするAPIとアクセス制御
+- `server/features/auth/auth.ts`：Googleログイン、セッション、トークン認証
+- `server/features/stocks/ingest.ts`：URL検証付きの取得、本文抽出、ブラウザ対応
+- `server/infrastructure/ai/ai.ts`：記事要約、問い、根拠付きメモリの生成
+- `server/features/pufu/pufu.ts`：プ譜の生成
+- `server/features/usage/usage.ts`：保存・AI処理の利用量制限
 - `shared/`：クライアントとサーバーで共有する型・入力検証
-- `server/workflows.ts`：記事・メモリの非同期処理
+- `server/infrastructure/jobs/workflows.ts`：記事・メモリの非同期処理
 - `migrations/`：D1のスキーマ
 - `tests/`：認証、二重保存、削除、メモリ競合、処理パイプラインの検証
 
