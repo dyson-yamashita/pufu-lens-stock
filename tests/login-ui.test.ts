@@ -62,87 +62,73 @@ afterEach(async () => {
 
 const render = () => act(async () => root.render(createElement(App)));
 
-it('ログイン画面に「できること」4項目を出し、旧チップ文言は出さない', async () => {
-  await render();
-  const section = document.querySelector('#what-you-can-do');
-  expect(section).not.toBeNull();
-  expect(section?.getAttribute('aria-hidden')).toBeNull();
-  expect(section?.querySelector('h2')?.textContent).toBe('Pufu Lensでできること');
-  const titles = [...section!.querySelectorAll('h3')].map((node) => node.textContent);
-  expect(titles).toEqual([
-    '記事をストックする',
-    '「問い・気づき」と「メモリ」を育てる',
-    'プ譜で考える',
-    'MCPでAIと繋がる',
-  ]);
-  expect(section?.textContent).toContain(
-    '気になった記事を、URLかテキストでプロジェクトに保存します。',
-  );
-  expect(section?.textContent).toContain(
-    '要約から問い・気づきが生まれ、関心と知識がメモリにつながります。',
-  );
-  expect(section?.textContent).toContain(
-    '目指すゴールと打ち手を1枚にまとめる思考の地図「プ譜」で、次の一手を整理します。',
-  );
-  expect(section?.textContent).toContain(
-    'ChatGPTなどのAIと連携し、ストックや問い・気づきを使って考えを深められます。',
-  );
-  expect(section?.querySelector('a[href="/manual#integrations"]')).toBeNull();
-  expect(section?.querySelector('a[href="#public-projects"]')).toBeNull();
-  expect(document.querySelector('#public-projects')).not.toBeNull();
-  expect(document.querySelector('.public-project-card .public-card-footer')?.textContent).toContain(
-    '4 プ譜',
-  );
-  expect(document.querySelector('.login-features')).toBeNull();
-  expect(document.body.textContent).not.toContain('プロジェクトで整理');
-  expect(document.body.textContent).not.toContain('記事からメモリへ');
-  expect(document.body.textContent).not.toContain('MCPでAIと連携');
-  expect(document.querySelector('.demo-login')).not.toBeNull();
-  expect(document.querySelector('#what-you-can-do h3')).not.toBeNull();
-});
+it.each([
+  ['/', 'ja', '気づきを残し、AIと育て、次の一歩へ。', 'Googleで始める', '使い方を見る'],
+  [
+    '/en',
+    'en',
+    'Save insights. Grow them with AI. Take your next step.',
+    'Get started with Google',
+    'See how it works',
+  ],
+] as const)(
+  '%s は3つの独立した入口と初めの体験を示し、既存の導線を維持する',
+  async (path, language, headline, cta, manual) => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { hash: '', pathname: path, search: '' },
+    });
+    await render();
+    const section = document.querySelector('#what-you-can-do')!;
+    expect(document.querySelector('h1')?.textContent).toBe(headline);
+    expect(section.querySelectorAll('.home-entry')).toHaveLength(3);
+    expect(section.querySelector('ol')).toBeNull();
+    expect(section.querySelectorAll('.home-entry-example')).toHaveLength(3);
+    expect(section.querySelector('.home-entry-list')?.textContent).not.toContain('MCP');
+    expect(section.querySelector('.home-integration')?.textContent).toContain('MCP');
+    const prefix = language === 'ja' ? '' : '/en';
+    expect(section.querySelector('.home-integration a')?.getAttribute('href')).toBe(
+      `${prefix}/manual#integrations`,
+    );
+    expect(document.querySelector('.google-button')?.textContent).toContain(cta);
+    expect(document.querySelector('.google-button')?.getAttribute('href')).toBe('/api/auth/google');
+    expect(document.querySelector('.login-manual-link')?.textContent).toBe(manual);
+    expect(document.querySelector('.login-manual-link')?.getAttribute('href')).toBe(
+      `${prefix}/manual`,
+    );
+    expect(document.querySelectorAll('#use-cases article')).toHaveLength(3);
+    expect(document.querySelector('.public-project-card')?.getAttribute('href')).toBe('/p/sample');
+    expect(document.querySelector('.public-card-footer')?.textContent).toContain(
+      language === 'ja' ? '4 プ譜' : '4 Pufu',
+    );
+    expect(document.querySelector('.demo-login')).not.toBeNull();
+    // The public HTML and loaded app must describe the same service and starting points.
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { default: HomeShell } = await import('../src/features/auth/HomeShell');
+    const shell = parseHTML(renderToStaticMarkup(createElement(HomeShell, { language }))).document;
+    expect(shell.querySelector('h1')?.textContent).toBe(headline);
+    expect(shell.querySelector('#what-you-can-do')?.textContent).toBe(section.textContent);
+    expect(shell.querySelector('#use-cases')?.textContent).toBe(
+      document.querySelector('#use-cases')?.textContent,
+    );
+  },
+);
 
-it('英語ランディングでも4項目を表示する', async () => {
-  Object.defineProperty(window, 'location', {
-    configurable: true,
-    value: { hash: '', pathname: '/en', search: '' },
-  });
-  await render();
-  const section = document.querySelector('#what-you-can-do');
-  expect(section?.querySelector('h2')?.textContent).toBe('What you can do with Pufu Lens');
-  expect([...section!.querySelectorAll('h3')].map((node) => node.textContent)).toEqual([
-    'Stock articles',
-    'Grow questions, insights and memory',
-    'Think it through with Pufu',
-    'Connect with AI via MCP',
-  ]);
-  expect(section?.textContent).toContain(
-    'Save articles you find interesting to a project, by URL or text.',
-  );
-  expect(section?.textContent).toContain(
-    'Summaries spark questions and insights, and your interests and knowledge connect in memory.',
-  );
-  expect(section?.textContent).toContain(
-    'Pufu is a one-page thinking map of a goal and the moves toward it. Use it to plan your next step.',
-  );
-  expect(section?.textContent).toContain(
-    'Connect with ChatGPT and other AI apps to explore your stocks, questions and insights.',
-  );
-  expect(section?.querySelector('a[href="/en/manual#integrations"]')).toBeNull();
-  expect(section?.querySelector('a[href="#public-projects"]')).toBeNull();
-  expect(document.querySelector('.public-project-card .public-card-footer')?.textContent).toContain(
-    '4 Pufu',
-  );
-});
-
-it('デモ無効でも4項目は同じ構成で出す', async () => {
-  vi.mocked(api).mockImplementation(async (path) => {
-    if (path === '/api/config') return { demo: false, googleConfigured: true, aiEnabled: false };
-    if (path === '/api/v1/me') throw new ApiError('Unauthorized', 401);
-    if (path.startsWith('/api/public/projects')) return { items: [], total: 0, has_more: false };
-    return {};
-  });
-  await render();
-  expect(document.querySelector('.demo-login')).toBeNull();
-  expect(document.querySelectorAll('#what-you-can-do h3')).toHaveLength(4);
-  expect(document.querySelector('#public-projects')).not.toBeNull();
-});
+it.each([true, false])(
+  'Google未設定では認証リンクを無効にし、マニュアルと公開一覧は使える（demo=%s）',
+  async (demo) => {
+    vi.mocked(api).mockImplementation(async (path) => {
+      if (path === '/api/config') return { demo, googleConfigured: false, aiEnabled: false };
+      if (path === '/api/v1/me') throw new ApiError('Unauthorized', 401);
+      if (path.startsWith('/api/public/projects')) return { items: [], total: 0, has_more: false };
+      return {};
+    });
+    await render();
+    expect(document.querySelector('.google-button')?.getAttribute('href')).toBeNull();
+    expect(document.querySelector('.google-button')?.getAttribute('aria-disabled')).toBe('true');
+    expect(!!document.querySelector('.demo-login')).toBe(demo);
+    expect(document.querySelectorAll('#what-you-can-do .home-entry')).toHaveLength(3);
+    expect(document.querySelector('.login-manual-link')?.getAttribute('href')).toBe('/manual');
+    expect(document.querySelector('#public-projects')).not.toBeNull();
+  },
+);

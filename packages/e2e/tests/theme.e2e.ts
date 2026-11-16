@@ -55,6 +55,34 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
       }, theme),
     ).toBe(true);
   };
+  const checkHome = async (language: 'ja' | 'en') => {
+    await expect(browser.locator('.login-copy h1')).toHaveText(
+      language === 'ja'
+        ? '気づきを残し、AIと育て、次の一歩へ。'
+        : 'Save insights. Grow them with AI. Take your next step.',
+    );
+    await expect(browser.locator('.home-entry-list article')).toHaveCount(3);
+    await expect(browser.locator('.home-entry-example')).toHaveCount(3);
+    await expect(browser.locator('.home-integration')).toContainText('MCP');
+    const prefix = language === 'ja' ? '' : '/en';
+    await expect(browser.locator('.login-manual-link')).toHaveAttribute('href', `${prefix}/manual`);
+    await expect(browser.locator('#public-projects')).toBeVisible();
+    expect(
+      await browser.evaluate(() => {
+        const selectors = ['.login-copy', '.home-entry', '.home-integration', '#use-cases article'];
+        return selectors.every((selector) =>
+          [...document.querySelectorAll(selector)].every((node) => {
+            const bounds = node.getBoundingClientRect();
+            return (
+              bounds.left >= 0 &&
+              bounds.right <= window.innerWidth &&
+              node.scrollWidth <= node.clientWidth
+            );
+          }),
+        );
+      }),
+    ).toBe(true);
+  };
   await expect(html).toHaveAttribute('data-theme', 'dark');
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
   await checkLogo('dark');
@@ -62,6 +90,7 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   await expect(html).toHaveAttribute('data-theme', 'light');
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await checkLogo('light');
+  await checkHome('ja');
   await app.screenshot('home-theme-light');
   await browser.reload();
   await expect(html).toHaveAttribute('data-theme', 'light');
@@ -70,6 +99,7 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   await expect(html).toHaveAttribute('data-theme', 'dark');
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
   await checkLogo('dark');
+  await checkHome('ja');
   await app.screenshot('home-theme-dark');
   // 設定の応答を保留して起動画面を経由させ、起動中の同名ロゴを検証対象にしない。
   let resumeConfig!: () => void;
@@ -95,7 +125,11 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   const englishToggle = screen.getByRole('switch', 'Dark mode', { exact: true });
   await expect(englishToggle).toHaveAttribute('aria-checked', 'true');
   await checkLogo('dark');
+  await checkHome('en');
+  await app.screenshot('home-theme-en-dark');
   await englishToggle.click();
+  await checkHome('en');
+  await app.screenshot('home-theme-en-light');
   await expect(html).toHaveAttribute('data-theme', 'light');
   await browser.keyboard.press('Space');
   await expect(html).toHaveAttribute('data-theme', 'dark');

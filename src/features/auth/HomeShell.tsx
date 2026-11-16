@@ -3,11 +3,11 @@ import { homePath, manualPath } from '../../../shared/site-paths';
 import BrandLogo from '../../components/BrandLogo';
 import { translateUi } from '../../i18n/i18n';
 import LegalLinks from '../legal/LegalLinks';
+import HomeSections from './HomeSections';
 
 /** Crawlable marketing shell for `/` and `/en`. React App replaces this after JS loads. */
 export default function HomeShell({ language }: { language: Language }) {
   const tr = (key: string) => translateUi(language, key);
-  const headline = `${tr('ui.app.turn_collected_knowledge')}${tr('ui.app.into_connected')}${tr('ui.app.memory_2')}${tr('ui.app.separator')}`;
   return (
     <div className="public-page">
       <header className="public-header">
@@ -25,13 +25,14 @@ export default function HomeShell({ language }: { language: Language }) {
         </nav>
       </header>
       <main className="manual-main">
-        <h1>{headline}</h1>
+        <h1>{tr('home.headline')}</h1>
         <p>
-          {tr('ui.app.save_interesting_articles_to_projects')}{' '}
-          {tr('ui.app.connect_their_key_points_with_your_interests')}{' '}
-          {tr('ui.app.and_grow_them_into_a_shared_memory')}
+          {tr('home.description_intro')}
+          <br />
+          {tr('home.description_body')}
         </p>
-        <p>{tr('site.description')}</p>
+        <a href={manualPath(language)}>{tr('home.view_manual')}</a>
+        <HomeSections language={language} />
         <LegalLinks language={language} />
         <noscript>
           {language === 'en'

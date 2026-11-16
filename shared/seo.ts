@@ -63,8 +63,8 @@ export function homeJsonLd(language: Language, origin?: string | null) {
   const url = absoluteUrl(homePath(language), root);
   const description =
     language === 'en'
-      ? 'Collect articles, explore questions and develop your next idea. Pufu Lens connects your interests and knowledge into memory.'
-      : '記事をプロジェクトにストック。集めた知識と関心を、あなたのメモリに。';
+      ? 'Things you research, questions that pop up, things you want to try. PufuLens is a place where you and AI keep thinking together. Start with stocks, questions, insights, or Pufu and find your next step.'
+      : '調べたこと、ふと浮かんだ疑問、やってみたいこと。PufuLensは、あなたとAIが一緒に考え続ける場所です。ストック・問い・気づき・プ譜の好きな入口から、次の一歩へ。';
   return {
     '@context': 'https://schema.org',
     '@graph': [
