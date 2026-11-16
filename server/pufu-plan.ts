@@ -123,7 +123,6 @@ Elements are already fixed and inserted by the server; never output elements. Do
     schema,
     2000,
     24000,
-    'high',
   );
   const node = (value: string) => ({
     uuid: crypto.randomUUID(),

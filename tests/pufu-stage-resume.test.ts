@@ -245,24 +245,23 @@ it('DeepSeekで全段階を生成し、保存するモデル名を重複させ�
 it('本文抽出と短い構成に別モデルを使い、両モデルを保存する', async () => {
   const ai = mockPufuAi(draft);
   app.env.AI = { run: ai };
-  app.env.AI_PUFU_MODEL = '@cf/zai-org/glm-5.3-flash';
-  app.env.AI_PUFU_PLAN_MODEL = '@cf/moonshotai/kimi-k2.6';
+  app.env.AI_PUFU_MODEL = '@cf/deepseek-ai/deepseek-v4.1-flash-1017';
+  app.env.AI_PUFU_PLAN_MODEL = '@cf/google/gemma-4-26b-a4b-it';
   const job = await create();
   await runPufu(app.env, job, mockStep());
   expect(ai.mock.calls.map(([model]) => model)).toEqual([
-    '@cf/zai-org/glm-5.3-flash',
-    '@cf/moonshotai/kimi-k2.6',
-    '@cf/moonshotai/kimi-k2.6',
-    '@cf/moonshotai/kimi-k2.6',
+    '@cf/deepseek-ai/deepseek-v4.1-flash-1017',
+    '@cf/google/gemma-4-26b-a4b-it',
+    '@cf/google/gemma-4-26b-a4b-it',
+    '@cf/google/gemma-4-26b-a4b-it',
   ]);
   expect(ai.mock.calls[1][1]).toMatchObject({
     max_tokens: 2000,
-    reasoning_effort: 'none',
     chat_template_kwargs: { enable_thinking: false },
     response_format: { json_schema: { name: 'pufu', strict: true } },
   });
   expect((await get(job.target_id)).model).toBe(
-    '@cf/zai-org/glm-5.3-flash + @cf/moonshotai/kimi-k2.6',
+    '@cf/deepseek-ai/deepseek-v4.1-flash-1017 + @cf/google/gemma-4-26b-a4b-it',
   );
 });
 

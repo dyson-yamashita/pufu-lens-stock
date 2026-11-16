@@ -80,7 +80,7 @@ async function generate<T>(
     ],
     max_tokens: 3000,
     temperature: 0,
-    ...reasoningOptions(env.AI_MODEL, 'none'),
+    ...reasoningOptions(env.AI_MODEL),
     response_format: structuredOutput(env.AI_MODEL, schema, 'result'),
   });
   return parseAiJson(response, schema);

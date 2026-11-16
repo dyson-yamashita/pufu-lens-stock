@@ -92,7 +92,6 @@ Then write winCondition as ONE sentence of at most 140 characters describing wha
     schema,
     2000,
     24000,
-    'high',
   );
   if (draft.contributions.some((value, index) => value.purpose !== index + 1))
     throw new Error('中間目的の統合対象が揃っていません。再試行してください。');

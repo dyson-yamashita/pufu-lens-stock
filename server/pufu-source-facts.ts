@@ -105,7 +105,6 @@ cases: three slots, at most ONE fact each. materials=actual materials/equipment;
     pufuSourceFactsSchema,
     6000,
     limit,
-    'low',
   );
   const eligible = (values: z.infer<typeof fact>[], path: string) =>
     values.filter((value, index) => {

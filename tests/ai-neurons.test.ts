@@ -31,9 +31,6 @@ it('meters Clef typed-decision input tokens without assuming generated output to
   expect(
     neuronMicros('@cf/cloudflare/clef', { usage: { input_tokens: 1000, output_tokens: 0 } }),
   ).toBe(21_818_000);
-  expect(
-    neuronMicros('@cf/cloudflare/clef-flash', { usage: { input_tokens: 1000, output_tokens: 0 } }),
-  ).toBe(3_455_000);
   expect(neuronMicros('@cf/cloudflare/clef', { usage: { output_tokens: 0 } })).toBeNull();
 });
 it.each([

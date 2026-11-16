@@ -152,7 +152,7 @@ async function assessFeedback(env: Env, row: FeedbackRecord, finish: boolean) {
           ],
           max_tokens: conversational ? 2200 : 1500,
           temperature: 0,
-          ...reasoningOptions(env.AI_MODEL, 'none'),
+          ...reasoningOptions(env.AI_MODEL),
           response_format: structuredOutput(env.AI_MODEL, schema, 'feedback_assessment'),
         }),
       ),
