@@ -7,6 +7,8 @@ import { testApp } from './helpers';
 import worker from '../server/index';
 import { mcpToken } from './mcp-helpers';
 import type { Principal } from '../server/env';
+import { searchBindings } from './search-helpers';
+import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
 
 let app: Awaited<ReturnType<typeof testApp>>;
 let originalDelete: R2Bucket['delete'];
@@ -70,6 +72,47 @@ async function saved() {
   return ((await response.json()) as { image: StockImage }).image;
 }
 const objects = async () => (await app.env.CONTENT.list({ prefix: 'alice/stock-images/' })).objects;
+
+it.each(['keyword', 'semantic', 'hybrid'])(
+  '一覧に保存済み画像だけを添付順で返し、ストック・所有者を分離する: %s',
+  async (mode) => {
+    const first = await saved();
+    const second = await saved();
+    await app.env.DB.batch([
+      app.env.DB.prepare('UPDATE stock_images SET created_at=? WHERE id=?').bind(
+        '2026-11-01T00:00:00Z',
+        first.id,
+      ),
+      app.env.DB.prepare('UPDATE stock_images SET created_at=? WHERE id=?').bind(
+        '2026-11-02T00:00:00Z',
+        second.id,
+      ),
+      app.env.DB.prepare(
+        "INSERT INTO stock_images(id,stock_id,content_key,filename,content_type,size,content_hash,status) VALUES ('pending','stock','pending-key','未保存.png','image/png',1,'hash','pending')",
+      ),
+    ]);
+    searchBindings(app.env);
+    await syncSearchIndex(app.env);
+    const response = await app.request(`/api/v1/stocks?q=画像&mode=${mode}`);
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as {
+      stocks: { id: string; image_previews: { id: string; filename: string }[] }[];
+    };
+    expect(data.stocks).toHaveLength(2);
+    expect(data.stocks.find((stock) => stock.id === 'stock')?.image_previews).toEqual(
+      [first, second].map(({ id, filename }) => ({ id, filename })),
+    );
+    expect(data.stocks.find((stock) => stock.id === 'other')?.image_previews).toEqual([]);
+    expect(await (await app.request('/api/v1/stocks', { user: 'bob' })).json()).toMatchObject({
+      stocks: [],
+    });
+    const compact = await app.request(`/api/v1/stocks?q=画像&mode=${mode}&detail=compact`);
+    expect(compact.status).toBe(200);
+    const compactData = (await compact.json()) as { stocks: Record<string, unknown>[] };
+    expect(compactData.stocks).toHaveLength(2);
+    for (const stock of compactData.stocks) expect(stock).not.toHaveProperty('image_previews');
+  },
+);
 
 it('画像と名前を保存し、再取得・ストック移動でも保持し、同じ記事の別ストックとは分離する', async () => {
   const image = await saved();

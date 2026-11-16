@@ -58,6 +58,21 @@ export function ArticleCard({
                 ? t('ui.app.summarizing_the_key_points_from_your_saved_text')
                 : t('ui.app.retrieving_the_article_and_summarizing_its_key_points_you')))}
         </p>
+        {!!stock.image_previews?.length && (
+          <div className="article-image-previews" role="group" aria-label={t('stock_images.title')}>
+            {stock.image_previews.map((image) => (
+              <img
+                key={image.id}
+                src={`/api/v1/stocks/${encodeURIComponent(stock.id)}/images/${encodeURIComponent(image.id)}`}
+                alt={image.filename}
+                width={56}
+                height={56}
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+          </div>
+        )}
       </div>
       {youtube && (
         <button

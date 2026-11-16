@@ -46,7 +46,10 @@ function filter(options: StockSearch) {
 function columns(detail: StockSearch['detail']) {
   return detail === 'compact'
     ? "s.id,s.project_id,p.name AS project_name,s.created_at,COALESCE(s.title,a.title) AS title,a.status,CASE WHEN a.status!='failed' THEN substr(json_extract(a.summary_json,'$.overview'),1,201) END AS summary_excerpt"
-    : 's.id,s.is_favorite,s.article_id,s.project_id,p.name AS project_name,s.note,s.created_at,COALESCE(s.title,a.title) AS title,a.source_type,a.source_url,a.domain,a.status,a.summary_json,a.error,a.model';
+    : `s.id,s.is_favorite,s.article_id,s.project_id,p.name AS project_name,s.note,s.created_at,COALESCE(s.title,a.title) AS title,a.source_type,a.source_url,a.domain,a.status,a.summary_json,a.error,a.model,
+       (SELECT json_group_array(json_object('id',id,'filename',filename)) FROM
+         (SELECT id,filename FROM stock_images WHERE stock_id=s.id AND status='ready' ORDER BY created_at,id)
+       ) AS image_previews_json`;
 }
 function serialize(row: Record<string, unknown>, detail: StockSearch['detail']) {
   const data = { ...row };
@@ -68,10 +71,11 @@ function serialize(row: Record<string, unknown>, detail: StockSearch['detail']) 
       summary_truncated: truncated,
     };
   }
-  const { summary_json, ...stock } = data;
+  const { summary_json, image_previews_json, ...stock } = data;
   return {
     ...stock,
     summary: stock.status !== 'failed' && summary_json ? JSON.parse(String(summary_json)) : null,
+    image_previews: JSON.parse(String(image_previews_json)),
   };
 }
 async function keyword(env: Env, options: StockSearch) {

@@ -193,6 +193,20 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.article-image-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.article-image-previews img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: var(--wash);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
 .article-tags {
   display: flex;
   flex-wrap: wrap;

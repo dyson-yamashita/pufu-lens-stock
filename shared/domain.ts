@@ -179,6 +179,7 @@ export type Stock = {
   note: string;
   status: 'queued' | 'extracting' | 'summarizing' | 'ready' | 'failed';
   summary: ArticleSummary | null;
+  image_previews?: { id: string; filename: string }[];
   error: string | null;
   created_at: string;
   model: string | null;

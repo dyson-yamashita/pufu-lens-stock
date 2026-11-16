@@ -833,7 +833,9 @@ describe('MCPによるストックと問いの取得・追加', () => {
     });
     const detail = (await call(token, 'get_stock', { stock_id: 'stock-only' })).result
       .structuredContent;
-    expect(detail.stock).toEqual(full.stocks[0]);
+    const { image_previews, ...fullStock } = full.stocks[0];
+    expect(image_previews).toEqual([]);
+    expect(detail.stock).toEqual(fullStock);
     expect(detail).not.toHaveProperty('content');
     expect(
       (await call(token, 'get_stock', { stock_id: 'stock-only', include_content: true })).result
