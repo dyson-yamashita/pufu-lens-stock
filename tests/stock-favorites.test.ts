@@ -218,6 +218,8 @@ describe('ストックのお気に入り', () => {
     await applyMigration(app.env.DB, '0010_stock_favorites.sql');
     const after = await app.env.DB.prepare('SELECT * FROM stocks ORDER BY id').all();
     expect(after.results).toEqual(before.results.map((stock) => ({ ...stock, is_favorite: 0 })));
+    // お気に入りの移行結果を確認した後、現在の一覧APIが参照するOGP列を用意する。
+    await applyMigration(app.env.DB, '0053_stock_og_images.sql');
     expect((await list()).total).toBe(2);
     expect((await favorite('stock-old-web', true)).status).toBe(200);
   });
