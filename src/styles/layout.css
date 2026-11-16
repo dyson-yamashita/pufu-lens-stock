@@ -132,8 +132,8 @@
   padding-bottom: 12px;
 }
 .sidebar-bottom .nav-item {
-  min-height: 40px;
-  padding: 8px 12px;
+  min-height: 32px;
+  padding: 4px 12px;
   margin: 2px 0;
 }
 .user-row {
