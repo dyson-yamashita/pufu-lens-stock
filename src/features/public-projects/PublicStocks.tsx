@@ -27,7 +27,13 @@ function StockTopics({ stock }: { stock: PublicStock }) {
   );
 }
 
-function StockCard({ stock }: { stock: PublicStock }) {
+export function PublicStockCard({
+  stock,
+  heading: Heading = 'h3',
+}: {
+  stock: PublicStock;
+  heading?: 'h3' | 'h4';
+}) {
   useLanguage();
   const youtube = Boolean(stock.source_url && isYouTubeUrl(stock.source_url));
   return (
@@ -40,7 +46,9 @@ function StockCard({ stock }: { stock: PublicStock }) {
         {stock.domain || t('ui.app.text')}
         <time>{new Date(stock.created_at).toLocaleDateString(intlLocale())}</time>
       </p>
-      <h3>{youtube ? youtubeDisplayTitle(stock.title) : stock.title}</h3>
+      <Heading className="public-stock-card-title">
+        {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
+      </Heading>
       {youtube && <YouTubeThumbnail url={stock.source_url!} />}
       <p className="public-summary">
         {youtube
@@ -48,9 +56,6 @@ function StockCard({ stock }: { stock: PublicStock }) {
           : stock.summary?.overview || t('ui.public_projects.no_summary_yet')}
       </p>
       <StockTopics stock={stock} />
-      <div className="public-card-footer">
-        <span>{t('ui.public_projects.view_stock_details')}</span>
-      </div>
     </a>
   );
 }
@@ -148,7 +153,7 @@ export function PublicStockList({ root, page, onPageChange }: PublicListProps) {
     <>
       <div className="public-content-grid">
         {data.items.map((stock) => (
-          <StockCard key={stock.id} stock={stock} />
+          <PublicStockCard key={stock.id} stock={stock} />
         ))}
       </div>
       {!data.items.length && (

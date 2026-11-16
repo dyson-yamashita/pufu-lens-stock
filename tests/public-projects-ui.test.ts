@@ -227,6 +227,7 @@ it('一覧のストックは詳細へのリンクで、要点は詳細で関連�
   expect(document.body.textContent).not.toContain('要点を見る');
   expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
   expect(card?.querySelector('a,details')).toBeNull();
+  expect(card?.textContent).not.toContain('詳細を見る');
   await navigate('#stock/stock');
   expect(document.body.textContent).toContain('詳細で確認する記事の要点');
   expect(document.body.textContent).toContain('関連する問い・気づき');
@@ -239,7 +240,7 @@ it('一覧のストックは詳細へのリンクで、要点は詳細で関連�
   );
   expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
 });
-it('本文採用モードは一覧・詳細・問いの関連ストックに原文を表示し空の要点を出さない', async () => {
+it('本文採用モードはストック詳細に原文を表示し、問いの関連ストックは一覧カードで案内する', async () => {
   const text =
     '\n  原文 <img src=x onerror=alert(1)>\n https://example.com/a?x=1&y=2。\n' +
     '内容を省略しない。'.repeat(200) +
@@ -257,28 +258,38 @@ it('本文採用モードは一覧・詳細・問いの関連ストックに原�
   });
   await render();
   expect(document.querySelector('.public-stock-card .public-summary')?.textContent).toBe(text);
-  for (const hash of ['#stock/stock', '#question/ai']) {
-    await navigate(hash);
-    const detail = document.querySelector('.public-stock-detail')!;
-    expect(detail.querySelector('.public-summary')?.textContent).toBe(text);
-    const link = detail.querySelector('.public-summary a')!;
-    expect(link.getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
-    expect(link.getAttribute('target')).toBe('_blank');
-    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(detail.textContent).not.toContain('要約はまだありません。');
-    expect(detail.querySelector('.public-stock-points')).toBeNull();
-    expect(detail.querySelector('img[onerror]')).toBeNull();
-  }
+  await navigate('#stock/stock');
+  const detail = document.querySelector('.public-stock-detail')!;
+  expect(detail.querySelector('.public-summary')?.textContent).toBe(text);
+  const link = detail.querySelector('.public-summary a')!;
+  expect(link.getAttribute('href')).toBe('https://example.com/a?x=1&y=2');
+  expect(link.getAttribute('target')).toBe('_blank');
+  expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  expect(detail.textContent).not.toContain('要約はまだありません。');
+  expect(detail.querySelector('.public-stock-points')).toBeNull();
+  expect(detail.querySelector('img[onerror]')).toBeNull();
+  await navigate('#question/ai');
+  const card = document.querySelector('.public-stock-card')!;
+  expect(card.getAttribute('href')).toBe('#stock/stock');
+  expect(card.querySelector('.public-summary')?.textContent).toBe(text);
+  expect(card.querySelector('a,img[onerror]')).toBeNull();
+  expect(document.querySelector('.public-stock-detail,.public-stock-points')).toBeNull();
 });
-it('問い一覧にはAI・プ譜のラベルを表示し、要点は問いの詳細に表示する', async () => {
+it('問い一覧にはAI・プ譜のラベルを表示し、問いの詳細にはストックの概要カードを表示する', async () => {
   await render('#questions');
   const cards = document.querySelectorAll('.public-question-card');
   expect(cards[0].querySelector('.question-labels')?.textContent).toBe('AIプ譜');
   expect(cards[1].querySelector('.question-labels')?.textContent).toBe('ユーザー');
+  expect(cards[0].querySelector('.public-card-footer')?.textContent).toContain('1件のプ譜');
+  expect(cards[1].querySelector('.public-card-footer')).toBeNull();
+  expect(document.body.textContent).not.toContain('詳細を見る');
   expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
   expect(document.body.textContent).not.toContain('要点を見る');
   await navigate('#question/ai');
-  expect(document.body.textContent).toContain('詳細で確認する記事の要点');
+  expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
+  expect(document.querySelector('.public-stock-card .public-summary')?.textContent).toBe(
+    '記事の要約',
+  );
   expect(document.body.textContent).toContain('問いから考える課題');
   expect(document.querySelector('.question-labels')?.textContent).toBe('AIプ譜');
 });
@@ -310,6 +321,7 @@ it('公開した問いの複数のストックを表示し、プ譜カードの�
     return load(url, options);
   });
   await render('#question/ai');
+  expect(document.querySelectorAll('.public-stock-card')).toHaveLength(2);
   expect(document.querySelector('a[href="#stock/second"]')?.textContent).toContain('二つ目の記事');
   expect(document.querySelector('.pufu-list-item .lucide-arrow-right')).toBeNull();
 });

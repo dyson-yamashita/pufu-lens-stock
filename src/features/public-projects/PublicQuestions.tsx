@@ -11,7 +11,7 @@ import { intlLocale, t, useLanguage } from '../../i18n/i18n';
 import QuestionLabels from '../questions/QuestionLabels';
 import { initialPublicPage, publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
-import { StockDetails } from './PublicStocks';
+import { PublicStockCard } from './PublicStocks';
 import { ResourceState } from './ResourceState';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
@@ -35,13 +35,11 @@ export function PublicQuestionCard({ question }: { question: PublicQuestion }) {
           {stock.title}
         </p>
       ))}
-      <div className="public-card-footer">
-        <span>
-          {question.pufu_count
-            ? t('ui.public_projects.value_pufu', { value0: question.pufu_count })
-            : t('ui.public_projects.view_question_or_insight_details')}
-        </span>
-      </div>
+      {question.pufu_count > 0 && (
+        <div className="public-card-footer">
+          <span>{t('ui.public_projects.value_pufu', { value0: question.pufu_count })}</span>
+        </div>
+      )}
     </a>
   );
 }
@@ -88,6 +86,7 @@ export function PublicQuestionDetail({
     pufus: PublicPufuSummary[];
     has_more: boolean;
   }>(`${root}/questions/${encodeURIComponent(id)}?page=${page}`);
+  const stocks = data?.stocks ?? (data?.stock ? [data.stock] : []);
   return !data ? (
     <ResourceState error={error} retry={reload} />
   ) : (
@@ -172,19 +171,16 @@ export function PublicQuestionDetail({
         </div>
       )}
       <Pagination page={page} hasMore={data.has_more} onChange={setPage} />
-      {(data.stocks ?? (data.stock ? [data.stock] : [])).map((stock) => (
-        <div key={stock.id}>
+      {stocks.length > 0 && (
+        <section aria-label={t('ui.app.source_articles')}>
           <h3 className="public-detail-title">{t('ui.app.source_articles')}</h3>
-          <StockDetails stock={stock} heading="h4" />
-          <a
-            className="text-link public-detail-link"
-            href={publicLink(`#stock/${encodeURIComponent(stock.id)}`)}
-          >
-            {t('ui.public_projects.view_stock_details_2')}
-            <ArrowRight size={16} aria-hidden="true" />
-          </a>
-        </div>
-      ))}
+          <div className="public-content-grid">
+            {stocks.map((stock) => (
+              <PublicStockCard key={stock.id} stock={stock} heading="h4" />
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   );
 }

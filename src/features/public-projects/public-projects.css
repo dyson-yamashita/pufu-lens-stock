@@ -77,11 +77,12 @@
   margin: 10px 0 6px;
 }
 /* ログイン時のストック・問いの一覧カードと文字組みを揃える。 */
-.public-stock-card h3 {
+.public-stock-card .public-stock-card-title {
   font-size: 16px;
   font-weight: 600;
   line-height: 1.8;
-  margin-bottom: 11px;
+  margin: 18px 0 11px;
+  white-space: pre-wrap;
 }
 .public-question-card h3 {
   font-size: 16px;
@@ -506,8 +507,8 @@
 .public-stock-points li + li {
   margin-top: 8px;
 }
-.public-detail-link {
-  margin-top: 16px;
+.public-stock-detail .stock-image-caption {
+  display: none;
 }
 
 .public-question-detail .question-card-footer {
