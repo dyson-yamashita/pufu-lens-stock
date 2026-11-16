@@ -188,8 +188,8 @@ dialog.dialog:has(.pufi-feedback) {
   max-height: 110px;
   font-size: max(16px, 1rem);
   border-radius: 15px;
-  /* Keep every text line clear of the inset 44px send button. */
-  padding: 10px 60px 10px 10px;
+  /* Keep every text line clear of the inset 40px send button. */
+  padding: 10px 56px 10px 10px;
 }
 .pufi-send {
   position: absolute;
@@ -197,9 +197,9 @@ dialog.dialog:has(.pufi-feedback) {
   bottom: 8px;
   display: grid;
   place-items: center;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
   padding: 0;
   border: none;
   border-radius: 50%;
