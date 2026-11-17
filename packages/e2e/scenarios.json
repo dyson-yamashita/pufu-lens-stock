@@ -663,6 +663,7 @@
     "title": "お知らせの閲覧と通知設定",
     "sources": [
       "src/features/announcements/Announcements.tsx",
+      "src/features/legal/LegalLinks.tsx",
       "src/features/settings/PushSettings.tsx",
       "shared/announcements.ts",
       "server/features/announcements/push.ts",
@@ -673,6 +674,7 @@
       "src/features/settings/settings.css"
     ],
     "aspects": [
+      "ストック・問い・プ譜・メモリの全体/プロジェクト別画面にフッターを1つ表示し、プライバシーポリシー・利用規約・お知らせのリンク先と別タブ指定を確認。両画面幅・light/darkでフッターの横はみ出しなし",
       "一覧・詳細・戻る・再読込・プロフィール内だけの通知設定とマニュアルの導線。管理者未設定時は通知スイッチを無効にする。両画面幅light/darkで横はみ出しなし。メニュー下部はプロフィール→お知らせ→ユーザーマニュアルの順。サイドバー（スマホはメニューを開いて）からお知らせへ移動",
       "権限要求がボタン操作だけで起きること・許可拒否・解除失敗はVitestで検証。Web Push暗号化・配信台帳・再試行・失効・認証と所有権をVitestで確認。実機Safari・本番配信は別途確認",
       "お知らせはD1登録データを表示。通知有無・公開前/下書きの非表示と管理者入力の検証はVitest、登録スキルで通知あり/なしを明示選択",

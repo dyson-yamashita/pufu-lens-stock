@@ -13,6 +13,7 @@ import '../styles/styles.css';
 import FeedbackSurface from '../features/feedback/FeedbackSurface';
 import Integrations, { isIntegrationTab } from '../features/integrations/Integrations';
 import { Shortcuts } from '../features/integrations/Shortcuts';
+import LegalLinks from '../features/legal/LegalLinks';
 import { MemoryPanel } from '../features/memory/MemoryPanel';
 import { ProjectForm } from '../features/projects/ProjectForm';
 import PufuPage from '../features/pufu/PufuPage';
@@ -531,6 +532,14 @@ export default function App({
                 <MemoryPanel response={memoryResponse} project={selected} onEvidence={evidence} />
               </aside>
             </div>
+          )}
+          {(route.view === 'stocks' ||
+            route.view === 'questions' ||
+            route.view === 'pufus' ||
+            route.view === 'memory') && (
+            <footer className="library-footer">
+              <LegalLinks newTab />
+            </footer>
           )}
         </div>
       </main>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isDocumentationPath } from '../change-scope.ts';
 
 export type E2EMode = 'ci' | 'record' | 'bootstrap';
 export type Scenario = { id: string; sources: string[]; estimatedSeconds?: number };
@@ -44,6 +45,7 @@ export function runnerEnvironment(input: NodeJS.ProcessEnv, mode: E2EMode): Node
 }
 
 export function selectScenarios(scenarios: Scenario[], changedPaths: string[]): string[] {
+  changedPaths = changedPaths.filter((path) => !isDocumentationPath(path));
   const all = () => scenarios.map(({ id }) => id);
   const common =
     /^(?:src\/(?:app\/|components\/|lib\/|i18n\/|styles\/|features\/auth\/useAppSession\.|main\.)|server\/(?:api\/(?:app\.|middleware\/)|features\/auth\/|infrastructure\/|(?:env|index)\.)|shared\/|migrations\/|packages\/|scripts\/|package\.json|pnpm-|\.github\/|vite\.|vitest\.|tsconfig\.|wrangler\.|index\.html|public\/)/;

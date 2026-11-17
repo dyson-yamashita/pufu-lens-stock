@@ -101,6 +101,15 @@ describe('E2Eの実行ポリシー', () => {
   it('局所的な変更は担当シナリオを選ぶ', () => {
     expect(selectScenarios(scenarios, ['src/features/pufu/PufuEditor.tsx'])).toEqual(['PUFU-001']);
   });
+  it.each(['README.md', 'docs/SPEC.md', 'packages/e2e/README.md', 'packages/pufu-image/README.md'])(
+    '通常の文書 %s だけではブラウザーを起動しない',
+    (path) => expect(selectScenarios(scenarios, [path])).toEqual([]),
+  );
+  it('文書と実装の混在では実装の担当シナリオを残す', () => {
+    expect(
+      selectScenarios(scenarios, ['packages/e2e/README.md', 'src/features/pufu/PufuEditor.tsx']),
+    ).toEqual(['PUFU-001']);
+  });
   it.each([
     'src/app/App.tsx',
     'src/lib/api.ts',

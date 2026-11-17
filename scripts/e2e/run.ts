@@ -32,16 +32,19 @@ if (values.related) {
     cwd: repo,
     encoding: 'utf8',
   }).trim();
-  const paths = execFileSync('git', ['diff', '--name-only', base], { cwd: repo, encoding: 'utf8' })
-    .trim()
-    .split('\n');
+  const paths = execFileSync('git', ['diff', '--name-only', '--no-renames', '-z', base], {
+    cwd: repo,
+    encoding: 'utf8',
+  })
+    .split('\0')
+    .filter(Boolean);
   paths.push(
-    ...execFileSync('git', ['ls-files', '--others', '--exclude-standard'], {
+    ...execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], {
       cwd: repo,
       encoding: 'utf8',
     })
-      .trim()
-      .split('\n'),
+      .split('\0')
+      .filter(Boolean),
   );
   selected = selectScenarios(ledger, paths);
 }
