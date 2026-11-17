@@ -24,6 +24,7 @@ it.each([
   vi.stubGlobal('window', { location: { pathname, hash: '' } });
   vi.stubGlobal('document', parseHTML('<div id="root"></div>').document);
   await import('../src/main');
+  await vi.dynamicImportSettled();
   const { document } = parseHTML(renderToStaticMarkup(render.mock.calls[0][0]));
   expect(document.querySelector('h1')?.textContent).toBe(title);
   expect(document.body.textContent).not.toContain('認証付きアプリ');
@@ -51,6 +52,7 @@ it.each([
       parseHTML('<html><head></head><body><div id="root"></div></body></html>').document,
     );
     await import('../src/main');
+    await vi.dynamicImportSettled();
     const { document } = parseHTML(renderToStaticMarkup(render.mock.calls[0][0]));
     expect(document.querySelector('h1')?.textContent).toBe(title);
   },

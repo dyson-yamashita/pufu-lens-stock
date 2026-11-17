@@ -1,12 +1,5 @@
-.withdrawal-notice {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--wash);
-  padding: 12px 16px;
-  font-size: 14px;
-  line-height: 1.8;
-  margin-top: 20px;
-}
+@import '../../components/search-field.css';
+
 .content-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 292px;
@@ -19,38 +12,6 @@
   display: flex;
   align-items: center;
   gap: 9px;
-}
-.search-field {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 3px;
-  background: var(--card);
-  flex: 1;
-  color: var(--muted);
-  min-width: 0;
-}
-.search-field .icon-button {
-  flex-shrink: 0;
-  min-width: 44px;
-  min-height: 44px;
-  color: var(--muted);
-}
-.search-field input {
-  border: none;
-  background: none;
-  font-size: 11px;
-  padding-left: 0;
-  min-width: 0;
-}
-.search-field:focus-within {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-.search-field input:focus-visible {
-  outline: none;
 }
 .filter-row {
   display: flex;

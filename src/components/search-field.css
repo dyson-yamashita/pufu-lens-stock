@@ -1,0 +1,32 @@
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 3px;
+  background: var(--card);
+  flex: 1;
+  color: var(--muted);
+  min-width: 0;
+}
+.search-field .icon-button {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--muted);
+}
+.search-field input {
+  border: none;
+  background: none;
+  font-size: 11px;
+  padding-left: 0;
+  min-width: 0;
+}
+.search-field:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.search-field input:focus-visible {
+  outline: none;
+}

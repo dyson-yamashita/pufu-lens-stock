@@ -31,6 +31,8 @@ test('NEWS-001 お知らせの閲覧と通知設定の入口を確認する', as
     }
   }
   await app.open('/');
+  // The authenticated app loads asynchronously; inspect its menu after it mounts.
+  await expect(browser.locator('.app-shell')).toBeVisible();
   const menu = screen.getByRole('button', 'メニューを開く', { exact: true });
   if (await menu.isVisible()) await menu.click();
   await screen.getByRole('button', 'お知らせ', { exact: true }).click();

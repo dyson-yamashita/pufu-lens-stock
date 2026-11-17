@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import App from '../src/app/App';
+import App from './app-root';
 import { api, send } from '../src/lib/api';
 import type { Stock } from '../shared/domain';
 import type { EntityComment } from '../shared/comments';

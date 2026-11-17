@@ -1,5 +1,5 @@
 import { ArrowLeft, BookOpen, Check } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Stock, User } from '../../shared/domain';
 import { feedbackScreens, type FeedbackScreen } from '../../shared/feedback';
 import { BootMessage } from '../components/BootMessage';
@@ -8,7 +8,8 @@ import { Spinner } from '../components/Spinner';
 import Announcements from '../features/announcements/Announcements';
 import { Login } from '../features/auth/Login';
 import Onboarding from '../features/auth/Onboarding';
-import { useAppSession } from '../features/auth/useAppSession';
+import type { useAppSession } from '../features/auth/useAppSession';
+import '../styles/styles.css';
 import FeedbackSurface from '../features/feedback/FeedbackSurface';
 import Integrations, { isIntegrationTab } from '../features/integrations/Integrations';
 import { Shortcuts } from '../features/integrations/Shortcuts';
@@ -23,13 +24,7 @@ import Profile from '../features/settings/Profile';
 import { StockDetail } from '../features/stocks/StockDetail';
 import { StockList } from '../features/stocks/StockList';
 import type { SavedStock } from '../features/stocks/types';
-import {
-  applicationError,
-  applyAccountLanguage,
-  initializeLanguage,
-  t,
-  useLanguage,
-} from '../i18n/i18n';
+import { applicationError, applyAccountLanguage, t, useLanguage } from '../i18n/i18n';
 import { api, send } from '../lib/api';
 import { AppBreadcrumbs } from './AppBreadcrumbs';
 import { AppLibraryTabs } from './AppLibraryTabs';
@@ -41,8 +36,15 @@ import { useAppData } from './useAppData';
 import { useAppLayout } from './useAppLayout';
 import { useAppNavigation } from './useAppNavigation';
 
-export default function App() {
-  useState(initializeLanguage);
+export default function App({
+  session,
+  error,
+  setError,
+}: {
+  session: ReturnType<typeof useAppSession>;
+  error: string;
+  setError: Dispatch<SetStateAction<string>>;
+}) {
   useLanguage();
   const [modal, setModal] = useState<ModalState>(null);
   const [creatingPufu, setCreatingPufu] = useState(false);
@@ -51,10 +53,8 @@ export default function App() {
   const [stockSource, setStockSource] = useState('all');
   const [page, setPage] = useState(1);
   const [questionCreation, setQuestionCreation] = useState(0);
-  const [error, setError] = useState('');
   const [notice, setNotice] = useState<{ message: string; stock?: SavedStock } | null>(null);
   const layout = useAppLayout(() => setPage(1));
-  const session = useAppSession(setError);
   const navigation = useAppNavigation({
     resetPage: () => setPage(1),
     resetFilters: () => {

@@ -137,4 +137,66 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   await browser.keyboard.press('Enter');
   await expect(html).toHaveAttribute('data-theme', 'light');
   await expect(englishToggle).toHaveAttribute('aria-checked', 'false');
+  // The anonymous bundle must retain styles for infrequent account states too.
+  await app.open('/en/?login_error=1&withdrawn=pending');
+  await expect(browser.locator('.form-error')).toBeVisible();
+  await expect(browser.locator('.withdrawal-notice')).toBeVisible();
+  expect(
+    await browser.evaluate(() => {
+      const error = getComputedStyle(document.querySelector('.form-error')!);
+      const notice = getComputedStyle(document.querySelector('.withdrawal-notice')!);
+      return (
+        error.padding === '10px' &&
+        error.marginTop === '15px' &&
+        notice.padding === '12px 16px' &&
+        notice.borderTopWidth === '1px'
+      );
+    }),
+  ).toBe(true);
+
+  // A refused JS or CSS chunk must offer a user-controlled recovery, never a blank root.
+  let blocked: 'app' | 'css' | 'faq' | null = 'app';
+  await browser.route('**/assets/**', async (route) => {
+    const path = new URL(route.request.url).pathname;
+    const refuse =
+      (blocked === 'app' && /\/App-[^/]+\.js$/.test(path)) ||
+      (blocked === 'css' && /\/styles-[^/]+\.css$/.test(path)) ||
+      (blocked === 'faq' && /\/FaqPage-[^/]+\.js$/.test(path));
+    if (refuse) await route.abort();
+    else await route.continue();
+  });
+  const recover = async (language: 'ja' | 'en') => {
+    await expect(html).toHaveAttribute('lang', language);
+    await expect(screen.getByRole('alert')).toHaveText(
+      language === 'ja'
+        ? '画面を読み込めませんでした。再読み込みして、もう一度お試しください。'
+        : 'Could not load the page. Please reload and try again.',
+    );
+    blocked = null;
+    await screen
+      .getByRole('button', language === 'ja' ? '再読み込み' : 'Reload', { exact: true })
+      .click();
+  };
+  await browser.locator('.demo-login').click();
+  await expect(browser.locator('.boot [role="alert"]')).toBeVisible();
+  // Other scenarios may have completed onboarding for the same local demo account.
+  // Its persisted language must win after sign-in; a new account still follows /en.
+  const accountLanguage = await browser.evaluate(async () => {
+    const response = await fetch('/api/v1/me');
+    if (!response.ok) throw new Error('Demo identity lookup failed');
+    const { user } = (await response.json()) as {
+      user: { language: 'ja' | 'en'; onboarding_completed_at: string | null };
+    };
+    return user.onboarding_completed_at ? user.language : 'en';
+  });
+  await recover(accountLanguage);
+  await expect(browser.locator('.onboarding-page, .app-shell')).toBeVisible();
+  blocked = 'css';
+  await browser.reload();
+  await recover(accountLanguage);
+  await expect(browser.locator('.onboarding-page, .app-shell')).toBeVisible();
+  blocked = 'faq';
+  await app.open('/en/faq');
+  await recover('en');
+  await expect(browser.locator('.faq-item')).toHaveCount(27);
 });

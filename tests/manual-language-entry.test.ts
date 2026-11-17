@@ -79,6 +79,7 @@ it.each([
     });
     await act(async () => {
       await import('../src/main');
+      await vi.dynamicImportSettled();
     });
     expect(document.querySelector('h1')?.textContent).toBe(heading);
     expect(document.querySelector(`a[href="${privacy}"]`)).not.toBeNull();
@@ -109,6 +110,7 @@ it('keeps the manual public without showing a feedback entry when signed out', a
   vi.mocked(api).mockRejectedValue(new Error('Unauthorized'));
   await act(async () => {
     await import('../src/main');
+    await vi.dynamicImportSettled();
   });
   expect(document.querySelector('h1')?.textContent).toBe('ユーザーマニュアル');
   expect(document.querySelector('.pufi-feedback')).toBeNull();

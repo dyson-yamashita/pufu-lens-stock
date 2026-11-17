@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import App from '../src/app/App';
+import App from './app-root';
 import QuestionPage from '../src/features/questions/QuestionPage';
 import PufuPage from '../src/features/pufu/PufuPage';
 import XIntegration from '../src/features/integrations/XIntegration';

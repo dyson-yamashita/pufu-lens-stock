@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import App from '../src/app/App';
+import App from './app-root';
 import Pufus from '../src/features/pufu/Pufus';
 import { api, send } from '../src/lib/api';
 import type { Project } from '../shared/domain';

@@ -57,3 +57,14 @@
   });
   apply();
 })();
+
+// Register before the font link is parsed: even a cached response cannot race this listener.
+// Keep fonts off the render-blocking path, retaining the existing display=swap behavior.
+document.addEventListener(
+  'load',
+  (event) => {
+    const link = event.target;
+    if (link?.tagName === 'LINK' && link.id === 'site-fonts') link.media = 'all';
+  },
+  true,
+);
