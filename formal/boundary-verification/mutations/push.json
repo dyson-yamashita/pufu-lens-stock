@@ -36,6 +36,18 @@
       "old": "  count < 20 || (s.subscription.any fun p => p.owner == user)",
       "new": "  count < 21 || (s.subscription.any fun p => p.owner == user)",
       "theorem": "new_device_limit_rejected"
+    },
+    {
+      "name": "B13-principal-owner",
+      "old": "⟨r.principal.userId, r.principal.sessionHash, r.principal.expiresAt⟩ }",
+      "new": "⟨r.principal.userId + 1, r.principal.sessionHash, r.principal.expiresAt⟩ }",
+      "theorem": "authenticated_registration_matches_session_row"
+    },
+    {
+      "name": "B13-principal-session",
+      "old": "⟨r.principal.userId, r.principal.sessionHash, r.principal.expiresAt⟩ }",
+      "new": "⟨r.principal.userId, r.principal.sessionHash + 1, r.principal.expiresAt⟩ }",
+      "theorem": "authenticated_registration_matches_session_row"
     }
   ]
 }

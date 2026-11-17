@@ -1,4 +1,4 @@
-import Std
+import BoundaryVerification.Auth
 
 namespace BoundaryVerification.Push
 
@@ -14,9 +14,7 @@ structure Registration where
   configured : Bool
   endpointAllowed : Bool
   keyValid : Bool
-  user : Nat
-  session : Nat
-  expiresAt : Nat
+  principal : Auth.SessionPrincipal
   deriving DecidableEq, Repr
 
 structure DeviceState where
@@ -44,8 +42,9 @@ def deviceLimitAllows (s : DeviceState) (user count : Nat) : Bool :=
 def register (s : DeviceState) (r : Registration) (now countAfterCleanup : Nat) : DeviceState :=
   if registrationValid r then
     let cleaned := cleanExpired s now
-    if ownsOrUnused cleaned r.user && deviceLimitAllows cleaned r.user countAfterCleanup then
-      { cleaned with subscription := some ⟨r.user, r.session, r.expiresAt⟩ }
+    if ownsOrUnused cleaned r.principal.userId &&
+        deviceLimitAllows cleaned r.principal.userId countAfterCleanup then
+      { cleaned with subscription := some ⟨r.principal.userId, r.principal.sessionHash, r.principal.expiresAt⟩ }
     else cleaned
   else s
 
@@ -69,14 +68,31 @@ theorem invalid_registration_unchanged (s : DeviceState) (r : Registration) (now
 
 theorem register_binds_current_session (s : DeviceState) (r : Registration) (now count : Nat)
     (valid : registrationValid r = true)
-    (owner : ownsOrUnused (cleanExpired s now) r.user = true)
-    (limit : deviceLimitAllows (cleanExpired s now) r.user count = true) :
-    (register s r now count).subscription = some ⟨r.user, r.session, r.expiresAt⟩ := by
+    (owner : ownsOrUnused (cleanExpired s now) r.principal.userId = true)
+    (limit : deviceLimitAllows (cleanExpired s now) r.principal.userId count = true) :
+    (register s r now count).subscription = some
+      ⟨r.principal.userId, r.principal.sessionHash, r.principal.expiresAt⟩ := by
   simp [register, valid, owner, limit]
+
+theorem authenticated_registration_matches_session_row (s : DeviceState)
+    (row : Auth.SessionRow) (user : Auth.SessionUser) (presentedHash authTime : Nat)
+    (r : Registration) (registrationTime count : Nat)
+    (success : Auth.authenticateSession (some row) (some user) presentedHash authTime =
+      some r.principal)
+    (valid : registrationValid r = true)
+    (owner : ownsOrUnused (cleanExpired s registrationTime) r.principal.userId = true)
+    (limit : deviceLimitAllows (cleanExpired s registrationTime) r.principal.userId count = true) :
+    (register s r registrationTime count).subscription =
+      some ⟨row.owner, row.tokenHash, row.expiresAt⟩ := by
+  have identity := Auth.authenticated_session_matches_row row user presentedHash authTime r.principal success
+  have bound : (register s r registrationTime count).subscription =
+      some ⟨r.principal.userId, r.principal.sessionHash, r.principal.expiresAt⟩ := by
+    simp [register, valid, owner, limit]
+  simpa [identity.1, identity.2.1, identity.2.2.1] using bound
 
 theorem other_owner_registration_rejected (s : DeviceState) (r : Registration)
     (now count : Nat) (p : Subscription) (row : s.subscription = some p)
-    (live : now < p.expiresAt) (other : p.owner ≠ r.user) : register s r now count = s := by
+    (live : now < p.expiresAt) (other : p.owner ≠ r.principal.userId) : register s r now count = s := by
   have expiry : ¬ p.expiresAt ≤ now := by omega
   cases valid : registrationValid r <;>
     simp [register, valid, cleanExpired, row, expiry, ownsOrUnused, other]
@@ -245,12 +261,19 @@ theorem notification_changed_before_preflight_rejects (p : Preflight) (now stamp
   simp [maySend, h]
 
 def emptyDevice : DeviceState := ⟨none, 7⟩
-def sessionRegistration : Registration := ⟨true, true, true, true, true, 1, 11, 100⟩
+def sessionRegistration : Registration := ⟨true, true, true, true, true, ⟨1, 11, 100, true⟩⟩
 
 theorem reachable_register_logout_and_denial :
     (register emptyDevice sessionRegistration 10 0).subscription = some ⟨1, 11, 100⟩ ∧
     (logout (register emptyDevice sessionRegistration 10 0) 11).subscription = none ∧
     register ⟨some ⟨2, 22, 100⟩, 7⟩ sessionRegistration 10 1 = ⟨some ⟨2, 22, 100⟩, 7⟩ := by
+  decide
+
+theorem reachable_authenticated_registration :
+    Auth.authenticateSession (some ⟨1, 11, 100⟩) (some ⟨1, true⟩) 11 10 =
+      some sessionRegistration.principal ∧
+    (register emptyDevice sessionRegistration 20 0).subscription = some ⟨1, 11, 100⟩ ∧
+    register emptyDevice { sessionRegistration with sessionPrincipal := false } 20 0 = emptyDevice := by
   decide
 
 theorem reachable_delivery_success_and_denial :

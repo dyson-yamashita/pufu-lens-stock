@@ -103,18 +103,40 @@ def revoke (m : Manager) (g : Grant) (s : State) : State :=
     { s with settings := replace g ⟨g.id, g.owner, [], none, true⟩ s.settings }
   else s
 
--- providerValid abstracts provider token validation; the callback reads current settings.
-def refreshAllowed (providerValid : Bool) (g : Grant) (rows : List Settings) : Bool :=
+-- Lower-level callback guard: the provider has already validated a credential.
+-- With settings present, the callback itself checks only the latest offline scope.
+def refreshAllowed (g : Grant) (rows : List Settings) : Bool :=
   let setting := lookup rows g
   let allowed := match setting with | none => g.scopes | some s => s.scopes
-  providerValid && !revoked setting && allowed.contains .offline
+  !revoked setting && allowed.contains .offline
 
 def refreshTTL (g : Grant) (rows : List Settings) : Nat :=
-  if g.scopes.contains .offline && refreshAllowed true g rows then 30 else 0
+  let allowed := match lookup rows g with | none => g.scopes | some s => s.scopes
+  if g.scopes.contains .offline && allowed.contains .offline then 30 else 0
 
-def refresh (providerValid : Bool) (g : Grant) (s : State) : State :=
-  if refreshAllowed providerValid g s.settings then { s with refreshCount := s.refreshCount + 1 }
+def refreshCallback (g : Grant) (s : State) : State :=
+  if refreshAllowed g s.settings then { s with refreshCount := s.refreshCount + 1 }
   else s
+
+-- Issuance retains the provider's original grant, independently of later DB settings.
+structure RefreshCredential where
+  grant : Grant
+  deriving DecidableEq, Repr
+
+def mintRefresh (g : Grant) (issuanceRows : List Settings) : Option RefreshCredential :=
+  if !revoked (lookup issuanceRows g) && refreshTTL g issuanceRows != 0 then some ⟨g⟩
+  else none
+
+-- The remaining validation (current/previous token, client, expiry, unwrap) is external.
+-- A true Bool cannot manufacture a credential absent from authorization-code issuance.
+def validateRefresh (providerValid : Bool) (credential : Option RefreshCredential) : Option Grant :=
+  if providerValid then credential.map RefreshCredential.grant else none
+
+-- Public entry: issuance settings and callback-time settings can differ arbitrarily.
+def refresh (providerValid : Bool) (g : Grant) (issuanceRows : List Settings) (s : State) : State :=
+  match validateRefresh providerValid (mintRefresh g issuanceRows) with
+  | none => s
+  | some originalGrant => refreshCallback originalGrant s
 
 def tool (required : Scope) (access : Access) (s : State) : State :=
   if access.scopes.contains required then { s with business := s.business + 1 } else s
@@ -139,19 +161,66 @@ theorem revoked_access_rejected (r : Request) (g : Grant) (rows : List Settings)
     resolve r g rows projects = none := by
   simp [resolve, h]
 
-theorem revoked_refresh_rejected (valid : Bool) (g : Grant) (s : State)
-    (h : revoked (lookup s.settings g) = true) : refresh valid g s = s := by
-  simp [refresh, refreshAllowed, h]
+theorem revoked_refresh_rejected (valid : Bool) (g : Grant) (issuanceRows : List Settings) (s : State)
+    (h : revoked (lookup s.settings g) = true) : refresh valid g issuanceRows s = s := by
+  cases valid <;>
+    by_cases minted : (!revoked (lookup issuanceRows g) && refreshTTL g issuanceRows != 0) = true <;>
+    simp [refresh, mintRefresh, validateRefresh, minted, refreshCallback, refreshAllowed, h]
+
+theorem original_offline_missing_zero_ttl (g : Grant) (rows : List Settings)
+    (h : .offline ∉ g.scopes) : refreshTTL g rows = 0 := by
+  simp [refreshTTL, h]
+
+theorem original_offline_missing_no_credential (g : Grant) (issuanceRows : List Settings)
+    (h : .offline ∉ g.scopes) : mintRefresh g issuanceRows = none := by
+  simp [mintRefresh, original_offline_missing_zero_ttl g issuanceRows h]
+
+theorem minted_credential_preserves_original (g : Grant) (issuanceRows : List Settings)
+    (credential : RefreshCredential) (h : mintRefresh g issuanceRows = some credential) :
+    credential.grant = g := by
+  unfold mintRefresh at h
+  split at h
+  · have original : (⟨g⟩ : RefreshCredential) = credential := Option.some.inj h
+    rw [← original]
+  · contradiction
+
+theorem original_offline_missing_refresh_rejected (valid : Bool) (g : Grant)
+    (issuanceRows : List Settings) (s : State) (h : .offline ∉ g.scopes) :
+    refresh valid g issuanceRows s = s := by
+  simp [refresh, original_offline_missing_no_credential g issuanceRows h, validateRefresh]
+
+theorem latest_offline_missing_refresh_rejected (valid : Bool) (g : Grant)
+    (issuanceRows : List Settings) (s : State) (setting : Settings)
+    (found : lookup s.settings g = some setting) (h : .offline ∉ setting.scopes) :
+    refresh valid g issuanceRows s = s := by
+  cases valid <;>
+    by_cases minted : (!revoked (lookup issuanceRows g) && refreshTTL g issuanceRows != 0) = true <;>
+    simp [refresh, mintRefresh, validateRefresh, minted, refreshCallback, refreshAllowed, found, h]
+
+theorem provider_denial_preserves_all (g : Grant) (issuanceRows : List Settings) (s : State) :
+    refresh false g issuanceRows s = s := by
+  simp [refresh, validateRefresh]
 
 theorem revoked_settings_cannot_revive (m : Manager) (g : Grant) (scopes : List Scope)
     (selected : Option (List Nat)) (projects : List Project) (s : State)
     (h : revoked (lookup s.settings g) = true) : edit m g scopes selected projects s = s := by
   simp [edit, h]
 
-theorem refresh_preserves_business (valid : Bool) (g : Grant) (s : State) :
-    (refresh valid g s).business = s.business := by
+theorem refresh_preserves_business (valid : Bool) (g : Grant) (issuanceRows : List Settings) (s : State) :
+    (refresh valid g issuanceRows s).business = s.business := by
   unfold refresh
-  split <;> rfl
+  split
+  · rfl
+  · unfold refreshCallback
+    split <;> rfl
+
+theorem refresh_preserves_settings (valid : Bool) (g : Grant) (issuanceRows : List Settings) (s : State) :
+    (refresh valid g issuanceRows s).settings = s.settings := by
+  unfold refresh
+  split
+  · rfl
+  · unfold refreshCallback
+    split <;> rfl
 
 theorem management_denial_preserves_all (m : Manager) (g : Grant) (scopes : List Scope)
     (selected : Option (List Nat)) (projects : List Project) (s : State)
@@ -196,13 +265,33 @@ theorem ungranted_scope_removed_example :
 theorem revoked_denial_example :
     resolve request grant (revoke manager grant changed).settings projects = none := by decide
 
-theorem refresh_success_example : refresh true grant changed = { changed with refreshCount := 1 } := by decide
+theorem refresh_success_example : refresh true grant initial.settings changed = { changed with refreshCount := 1 } := by decide
 
 theorem offline_removal_blocks_refresh_example :
-    refresh true grant (edit manager grant [.projectsRead] none projects changed) =
+    refresh true grant initial.settings (edit manager grant [.projectsRead] none projects changed) =
       edit manager grant [.projectsRead] none projects changed := by decide
 
 theorem offline_removal_zero_ttl_example :
     refreshTTL grant (edit manager grant [.projectsRead] none projects changed).settings = 0 := by decide
+
+def noOfflineGrant : Grant := ⟨7, 1, [.projectsRead], some [10]⟩
+def offlineAdded : State := ⟨[⟨7, 1, [.projectsRead, .offline], some [10], false⟩], 0, 9⟩
+
+-- The callback alone has no credential/provenance guard, matching the implementation.
+-- The public entry excludes this case through issuance and provider validation.
+theorem callback_alone_accepts_added_offline_example :
+    refreshCallback noOfflineGrant offlineAdded = { offlineAdded with refreshCount := 1 } := by decide
+
+theorem added_offline_cannot_mint_example :
+    mintRefresh noOfflineGrant offlineAdded.settings = none := by decide
+
+theorem added_offline_zero_ttl_example :
+    refreshTTL noOfflineGrant offlineAdded.settings = 0 := by decide
+
+theorem added_offline_cannot_refresh_example :
+    refresh true noOfflineGrant offlineAdded.settings offlineAdded = offlineAdded := by decide
+
+theorem added_offline_after_issuance_cannot_refresh_example :
+    refresh true noOfflineGrant initial.settings offlineAdded = offlineAdded := by decide
 
 end BoundaryVerification.Connection

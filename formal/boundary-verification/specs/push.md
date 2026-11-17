@@ -2,6 +2,10 @@
 
 [Push.lean](../BoundaryVerification/Push.lean) はセッションに結び付く購読、所有者と20端末上限、ログアウト・期限、配信claim/lease/再送、送信直前の同意再確認を扱う。外部サービスへの厳密な一度だけの配送と、既に渡った通知の取消しは保証しない。
 
+`Registration.principal` は [Auth.lean](../BoundaryVerification/Auth.lean) のセッション認証結果であり、owner・session・期限を別々の登録入力として受け取らない。`register` は `principal.userId/sessionHash/expiresAt` から購読を作る。`authenticated_registration_matches_session_row` は、提示Cookieハッシュ・JOINしたユーザー・認証時刻の検査を経たprincipalから、保存した購読のowner/sessionが認証元セッション行のowner/tokenHashと一致することを示す。認証成功とAPI認可は別であり、Origin・onboarding・PUT許可は既存の共通middleware（B01）を通過したという前提を維持する。`registrationValid` のsession種別・sessionHash存在・設定・endpoint・鍵のguardも保持する。
+
+追加照合「bodyのowner・session指定を使わず、Cookieを照会した本人とセッションへ購読を結び付ける」は実HTTP入口からsessions JOIN usersを通し、body内の別人のuser_id/sessionHash/session_hashが保存先に影響しないことを確認する。同じAliceの別Cookieへ切り替えた更新では対応する別sessionHashへ変わり、BobのCookieで別endpointを登録すればBob自身のowner/sessionHashになる。principalの内部注入は用いない。
+
 ## 実装・定理・テストの対応
 
 | 境界・実装                                                                                                                                                                          | モデル・定理                                                                                                                                                             | 実経路の照合                                                                                                                                                                                                                                           |
@@ -14,11 +18,11 @@
 | 完了UPDATEのlease一致条件                                                                                                                                                           | `stale_lease_cannot_complete`                                                                                                                                            | 新規「送信後にleaseが置き換わったとき、古い完了結果で新しい配信状態を上書きしない」。fetch stub内でDB leaseを置換し、古い完了後も新lease/attempts/statusを保持                                                                                         |
 | 暗号化後の最終SQL: 購読存在・session期限・お知らせ存在・notify=1・notify_at一致・公開時刻                                                                                           | `Preflight`、`send_requires_current_consent`、`unsubscribe_before_preflight_rejects`、`expiry_before_preflight_rejects`、`notification_changed_before_preflight_rejects` | 新規パラメーター化テスト「暗号化後・送信直前の%sを再確認し、外部へ送信しない」が解除・logout・期限・非公開化・通知停止・notify_at変更の6ケースを実暗号化後に挿入し、fetch 0回を確認                                                                    |
 
-`reachable_register_logout_and_denial` と `reachable_delivery_success_and_denial` は正常登録・削除、owner拒否、201成功、5回目の503終了、同意あり/なしを具体値で到達させる。
+`reachable_register_logout_and_denial` と `reachable_delivery_success_and_denial` は正常登録・削除、owner拒否、201成功、5回目の503終了、同意あり/なしを具体値で到達させる。`reachable_authenticated_registration` は認証時刻10・登録時刻20を区別し、認証元行と同じowner/sessionでの登録成功と非session拒否を到達させる。
 
 ## 判定時点と保護する状態
 
-認証は共通middlewareのセッション照会時点で行い、登録に使うsessionHashはその認証結果に由来する。モデルは認証成功済みという入力を使い、認証後にセッションが失効・削除された登録要求の原子的取消しは保証しない。`Subscription.expiresAt` は結合されたセッション行の期限を投影した値であり、実装が購読表に期限を複製しているという意味ではない。期限ちょうどは有効としない。
+認証は共通middlewareのセッション照会時刻 `authTime` に行い、登録に使うsessionHashはその認証結果に由来する。登録時刻 `registrationTime` は既存購読のcleanupにだけ使い、登録前に認証を再照会する規則は加えない。したがって認証後にセッションが失効・削除された登録要求の原子的取消しは保証しない。`Subscription.expiresAt` は結合されたセッション行の期限を投影した値であり、実装が購読表に期限を複製しているという意味ではない。期限ちょうどは有効としない。
 
 登録拒否では、期限前の他owner購読を更新せず、業務revisionも変更しない。ただし、正しい入力を受けた登録処理は、競合・上限による409より先に期限切れの購読を掃除する。このため「409なら全DB不変」は主張しない。上限拒否テストの表全体不変は、事前に期限切れ購読がないケースに限定する。解除・logoutで購読が消えると紐付いた配信台帳もCASCADE削除される。
 
@@ -37,7 +41,7 @@
 
 ## 変異と実行
 
-[変異定義](../mutations/push.json) はowner、完了lease、5回上限、購読同意、notify_at一致、20端末上限の6箇所を一つずつ弱め、指定した安全性定理の証明失敗で検出する。
+[変異定義](../mutations/push.json) はowner、完了lease、5回上限、購読同意、notify_at一致、20端末上限に加え、保存owner・sessionを認証principal以外の値へ置換する8変異を持つ。指定した安全性定理の証明失敗で検出する。
 
 ```sh
 cd formal/boundary-verification
