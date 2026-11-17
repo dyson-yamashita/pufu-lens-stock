@@ -14,7 +14,7 @@ env:
 
 jobs:
   formal:
-    name: Lean MCP proofs and mutation checks
+    name: Lean proofs, axiom audit and mutation checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -30,8 +30,10 @@ jobs:
           tar -xzf "$RUNNER_TEMP/elan.tar.gz" -C "$RUNNER_TEMP/elan-installer"
           "$RUNNER_TEMP/elan-installer/elan-init" -y --default-toolchain none --no-modify-path
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
-      - name: Verify pinned Lean model and reject unsafe mutations
-        run: python3 formal/mcp-verification/check.py
+      - name: Verify every registered Lean target
+        run: python3 formal/verify.py
+      - name: Test registry and axiom audit rejection paths
+        run: python3 -m unittest discover -s formal -p 'test_*.py' -v
 
   quality:
     name: Types, lint, format, build and audit
