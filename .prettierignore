@@ -6,3 +6,6 @@ pnpm-lock.yaml
 
 # Browser traces contain generated HTML/JSON and dummy session data
 **/.e2e/
+
+# Generated Lean build output
+formal/mcp-verification/.lake/

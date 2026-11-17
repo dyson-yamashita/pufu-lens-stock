@@ -13,6 +13,26 @@ env:
   CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
 
 jobs:
+  formal:
+    name: Lean MCP proofs and mutation checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install elan 4.1.2
+        run: |
+          curl --fail --location --retry 3 https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz -o "$RUNNER_TEMP/elan.tar.gz"
+          echo "f81c2e48c1588d4612cd2c8851947898a45ac8d72748a07dff3a5694f1cf589b  $RUNNER_TEMP/elan.tar.gz" | sha256sum --check
+          mkdir "$RUNNER_TEMP/elan-installer"
+          tar -xzf "$RUNNER_TEMP/elan.tar.gz" -C "$RUNNER_TEMP/elan-installer"
+          "$RUNNER_TEMP/elan-installer/elan-init" -y --default-toolchain none --no-modify-path
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Verify pinned Lean model and reject unsafe mutations
+        run: python3 formal/mcp-verification/check.py
+
   quality:
     name: Types, lint, format, build and audit
     runs-on: ubuntu-24.04
