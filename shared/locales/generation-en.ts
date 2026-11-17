@@ -5,7 +5,7 @@ export const generationEn = {
   'memory.empty': 'Interests and knowledge will appear here as article summaries are completed.',
   'memory.interests': 'Interests',
   'memory.knowledge': 'Knowledge from articles',
-  'memory.questions': 'Open questions',
+  'memory.questions': 'Themes organized by AI from knowledge',
   'question.template':
     'What conditions or tests would be needed to apply “{{point}}” to “{{project}}”{{note}}?',
   'question.note': ', considering the saved note',

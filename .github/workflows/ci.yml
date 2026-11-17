@@ -12,17 +12,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  changes:
+    name: Classify changed paths
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      application: ${{ steps.scope.outputs.application }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Classify pull request changes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-changes.ts "$BASE_SHA" "$HEAD_SHA"
+
   validate:
+    needs: changes
     uses: ./.github/workflows/validate.yml
+    with:
+      application: ${{ needs.changes.outputs.application != 'false' }}
 
   check:
     name: Check
-    needs: validate
+    needs: [changes, validate]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require all validation jobs to pass
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
           VALIDATION_RESULT: ${{ needs.validate.result }}
-        run: test "$VALIDATION_RESULT" = success
+        run: test "$CHANGES_RESULT" = success && test "$VALIDATION_RESULT" = success

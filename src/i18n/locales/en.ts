@@ -494,7 +494,7 @@ export const en: Record<string, string> = {
   'ui.app.your_interests_and_knowledge_connect_here': 'your interests and knowledge connect here.',
   'ui.app.interest_patterns': 'Interest patterns',
   'ui.app.knowledge_from_articles': 'Knowledge from articles',
-  'ui.app.open_questions': 'Open questions',
+  'ui.app.open_questions': 'Themes organized by AI from knowledge',
   'ui.app.generated_from_value_articles_updated_value':
     'Generated from {{value0}} articles · Updated {{value1}}',
   'ui.app.updates_after_article_summaries': 'Updates after article summaries',

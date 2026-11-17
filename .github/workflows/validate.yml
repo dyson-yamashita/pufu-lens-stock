@@ -2,6 +2,11 @@ name: Validate application
 
 on:
   workflow_call:
+    inputs:
+      application:
+        description: Run application validation in addition to formatting
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -14,6 +19,7 @@ env:
 
 jobs:
   formal:
+    if: ${{ inputs.application }}
     name: Lean proofs, axiom audit and mutation checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -36,7 +42,7 @@ jobs:
         run: python3 -m unittest discover -s formal -p 'test_*.py' -v
 
   quality:
-    name: Types, lint, format, build and audit
+    name: Formatting and application quality
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -57,17 +63,22 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Type check
+        if: ${{ inputs.application }}
         run: pnpm run typecheck
       - name: Lint
+        if: ${{ inputs.application }}
         run: pnpm run lint
       - name: Check formatting
         run: pnpm run format:check
       - name: Build application
+        if: ${{ inputs.application }}
         run: pnpm run build
       - name: Audit dependencies
+        if: ${{ inputs.application }}
         run: pnpm run audit
 
   tests:
+    if: ${{ inputs.application }}
     name: Tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -96,6 +107,7 @@ jobs:
         run: pnpm run test --shard=${{ matrix.shard }}/4
 
   e2e:
+    if: ${{ inputs.application }}
     name: Browser E2E (${{ matrix.target }}, ${{ matrix.shard }}/2, recorded actions, no AI)
     runs-on: ubuntu-24.04
     timeout-minutes: 20

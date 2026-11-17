@@ -1,0 +1,47 @@
+{
+  "module": "BoundaryVerification.McpWrites",
+  "mutations": [
+    {
+      "name": "B04-create-request-shape",
+      "old": "if row.original = p then ⟨true, false, s⟩ else ⟨false, false, s⟩",
+      "new": "if { row.original with explicitRelations := p.explicitRelations } = p then ⟨true, false, s⟩ else ⟨false, false, s⟩",
+      "theorem": "create_request_shape_conflict"
+    },
+    {
+      "name": "B04-create-payload",
+      "old": "if row.original = p then ⟨true, false, s⟩ else ⟨false, false, s⟩",
+      "new": "if row.original = row.original then ⟨true, false, s⟩ else ⟨false, false, s⟩",
+      "theorem": "create_payload_conflict"
+    },
+    {
+      "name": "B04-receipt-before-revision",
+      "old": "if canWrite a then\n    match receiptFor s r with",
+      "new": "if canWrite a && decide (s.ready = true ∧ r.revision = s.revision) then\n    match receiptFor s r with",
+      "theorem": "append_replay_original_result"
+    },
+    {
+      "name": "B04-receipt-payload",
+      "old": "if receipt.request = r then",
+      "new": "if receipt.request.requestId = r.requestId then",
+      "theorem": "append_changed_payload_denied"
+    },
+    {
+      "name": "B04-revision",
+      "old": "if s.ready = true ∧ r.revision = s.revision then",
+      "new": "if s.ready = true then",
+      "theorem": "append_stale_revision"
+    },
+    {
+      "name": "B04-revision-increment",
+      "old": "revision := s.revision + 1",
+      "new": "revision := s.revision",
+      "theorem": "commit_revision"
+    },
+    {
+      "name": "B04-old-phase",
+      "old": "phases := fun n => if n = s.currentPhase + 1 then some data else s.phases n",
+      "new": "phases := fun n => if n = s.currentPhase + 1 then some data else some data",
+      "theorem": "commit_keeps_old_phase"
+    }
+  ]
+}
