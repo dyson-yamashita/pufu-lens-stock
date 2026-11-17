@@ -315,11 +315,22 @@
   min-height: 320px;
 }
 .public-skeleton-card {
+  position: relative;
+  overflow: hidden;
   min-height: 148px;
   border: 1px solid var(--border);
   border-radius: 14px;
+  background: var(--wash);
+}
+.public-skeleton-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -300%;
+  width: 500%;
   background: linear-gradient(90deg, var(--wash) 25%, var(--card) 50%, var(--wash) 75%);
-  background-size: 200% 100%;
+  background-size: 40% 100%;
   animation: public-skeleton-shimmer 1.4s ease-in-out infinite;
 }
 .public-pufu-score-skeleton {
@@ -333,14 +344,14 @@
 }
 @keyframes public-skeleton-shimmer {
   0% {
-    background-position: 100% 0;
+    transform: translateX(0);
   }
   100% {
-    background-position: -100% 0;
+    transform: translateX(40%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .public-skeleton-card {
+  .public-skeleton-card::before {
     animation: none;
   }
 }

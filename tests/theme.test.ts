@@ -142,3 +142,19 @@ it('状態の変更だけを通知し、購読を解除できる', () => {
   app.theme.setPreference('dark');
   expect(listener).toHaveBeenCalledTimes(1);
 });
+
+it('フォントのCSSはload後にだけ画面用に切り替え、無関係なリソースには触らない', () => {
+  const { document } = start();
+  const font = document.createElement('link');
+  font.id = 'site-fonts';
+  font.media = 'print';
+  document.head.appendChild(font);
+  expect(font.media).toBe('print');
+  font.dispatchEvent(new document.defaultView!.Event('load', { bubbles: true }));
+  expect(font.media).toBe('all');
+  const other = document.createElement('link');
+  other.media = 'print';
+  document.head.appendChild(other);
+  other.dispatchEvent(new document.defaultView!.Event('load', { bubbles: true }));
+  expect(other.media).toBe('print');
+});

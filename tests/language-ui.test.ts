@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
-import App from '../src/app/App';
+import App from './app-root';
 import Profile from '../src/features/settings/Profile';
 import PageLanguage from '../src/i18n/PageLanguage';
 import UserManual from '../src/features/manual/UserManual';

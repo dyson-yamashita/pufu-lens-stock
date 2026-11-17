@@ -1,0 +1,15 @@
+/* Keep the same relative cascade as styles.css for every prerendered public page. */
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import '../components/search-field.css';
+@import '../components/stock-image-list.css';
+@import '../components/skill-command.css';
+@import '../features/auth/login.css';
+@import './responsive.css';
+@import '../features/public-projects/public-projects.css';
+@import '../features/manual/manual.css';
+@import '../features/legal/legal.css';
+@import '../features/faq/faq.css';
+@import '../i18n/language-select.css';
+@import '../features/manual/target.css';

@@ -16,7 +16,7 @@ import {
 } from '../../i18n/i18n';
 import LanguageSelect from '../../i18n/LanguageSelect';
 import LegalLinks from '../legal/LegalLinks';
-import { PublicProjectDirectory } from '../public-projects';
+import { PublicProjectDirectory } from '../public-projects/PublicProjectDirectory';
 import ThemeToggle from '../settings/ThemeToggle';
 import HomeSections from './HomeSections';
 

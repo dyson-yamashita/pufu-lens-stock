@@ -1,4 +1,6 @@
 export const ja: Record<string, string> = {
+  'ui.page_load_error.message':
+    '画面を読み込めませんでした。再読み込みして、もう一度お試しください。',
   'faq.link': 'FAQ',
   'faq.title': 'よくある質問（FAQ）',
   'faq.description':

@@ -1,4 +1,5 @@
 export const en: Record<string, string> = {
+  'ui.page_load_error.message': 'Could not load the page. Please reload and try again.',
   'faq.link': 'FAQ',
   'faq.title': 'Frequently asked questions (FAQ)',
   'faq.description':

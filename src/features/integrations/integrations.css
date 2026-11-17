@@ -1,3 +1,5 @@
+@import '../../components/skill-command.css';
+
 .shortcuts-page {
   max-width: 970px;
 }
@@ -25,17 +27,6 @@
   gap: 10px;
   margin: 20px 0 0;
   padding-left: 1.5em;
-}
-.skill-command {
-  max-width: 100%;
-  padding: 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  border-radius: 8px;
-  background: var(--wash);
-  color: var(--text);
-  font-size: 0.85rem;
-  line-height: 1.7;
 }
 .mcp-endpoint-field {
   margin: 24px 0;

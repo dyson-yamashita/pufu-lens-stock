@@ -1,0 +1,11 @@
+.skill-command {
+  max-width: 100%;
+  padding: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: 8px;
+  background: var(--wash);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}

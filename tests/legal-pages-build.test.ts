@@ -94,7 +94,9 @@ it.each([
   );
   expect(document.querySelector('link[hreflang="x-default"]')).not.toBeNull();
   expect(document.querySelector('script[type="application/ld+json"]')).not.toBeNull();
-  const stylesheet = document.querySelector('link[rel="stylesheet"]')?.getAttribute('href');
+  const stylesheet = [...document.querySelectorAll('link[rel="stylesheet"]')]
+    .map((link) => link.getAttribute('href'))
+    .find((href) => href?.startsWith('/assets/'));
   expect(assets.has(stylesheet!.slice(1))).toBe(true);
   expect(document.querySelector('script[src="/theme.js"]')).not.toBeNull();
   expect(document.querySelector('script[type="module"]')).toBeNull();
