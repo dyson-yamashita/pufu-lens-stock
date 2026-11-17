@@ -14,8 +14,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(typeof data?.title === 'string' ? data.title : 'Pufu Lens', {
       body: typeof data?.body === 'string' ? data.body : 'Pufu Lens',
-      icon: '/pufu-lens-logo.png',
-      badge: '/pufu-lens-logo.png',
+      icon: '/pufu-lens-logo.jpg',
+      badge: '/pufu-lens-logo.jpg',
       tag: typeof data?.tag === 'string' ? data.tag : 'pufu-announcement',
       data: { url },
     }),

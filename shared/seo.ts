@@ -73,7 +73,7 @@ export function homeJsonLd(language: Language, origin?: string | null) {
         '@id': `${root}/#organization`,
         name: 'Pufu Lens',
         url: `${root}/`,
-        logo: `${root}/pufu-lens-logo.png`,
+        logo: `${root}/pufu-lens-logo.jpg`,
       },
       {
         '@type': 'WebSite',
@@ -252,7 +252,7 @@ export function articleJsonLd(input: {
       name: 'Pufu Lens',
       logo: {
         '@type': 'ImageObject',
-        url: `${root}/pufu-lens-logo.png`,
+        url: `${root}/pufu-lens-logo.jpg`,
       },
     },
     ...(input.datePublished ? { datePublished: input.datePublished } : {}),

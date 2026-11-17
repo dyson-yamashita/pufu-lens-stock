@@ -14,7 +14,7 @@ let logoVersion: string;
 
 beforeAll(async () => {
   vi.stubEnv('APP_URL', 'https://ogp.example.test');
-  const logo = await readFile(new URL('../public/pufu-lens-logo.png', import.meta.url));
+  const logo = await readFile(new URL('../public/pufu-lens-logo.jpg', import.meta.url));
   logoVersion = createHash('sha256').update(logo).digest('hex').slice(0, 16);
   root = await realpath(await mkdtemp(join(tmpdir(), 'pufu-legal-build-')));
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
@@ -149,7 +149,7 @@ it.each([
 ])('%s の初期HTMLに言語別のOGPとXカードを含める', (file, path, locale, alternate, title) => {
   const { document } = parseHTML(assets.get(file)!);
   const description = document.querySelector('meta[name="description"]')!.getAttribute('content');
-  const image = `https://ogp.example.test/pufu-lens-logo.png?v=${logoVersion}`;
+  const image = `https://ogp.example.test/pufu-lens-logo.jpg?v=${logoVersion}`;
   for (const [property, content] of Object.entries({
     'og:type': 'website',
     'og:site_name': 'Pufu Lens',
@@ -157,7 +157,7 @@ it.each([
     'og:description': description,
     'og:url': `https://ogp.example.test${path}`,
     'og:image': image,
-    'og:image:type': 'image/png',
+    'og:image:type': 'image/jpeg',
     'og:image:width': '1254',
     'og:image:height': '1254',
     'og:image:alt': 'Pufu Lens',
