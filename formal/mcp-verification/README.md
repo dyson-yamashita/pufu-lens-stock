@@ -50,14 +50,17 @@ Lean 4の抽象モデルの数学的証明と、実際のTypeScript MCPハンド
 
 ## 実行
 
-Lean **4.24.0** を `lean-toolchain` に固定。外部Leanライブラリ・Mathlibには依存しない。elan（CIは4.1.2）、Python 3、リポジトリ所定のNode.js/pnpmが必要。
+Lean **4.36.0** を `lean-toolchain` に固定。外部Leanライブラリ・Mathlibには依存しない。elan（CIは4.1.2）、Python 3、リポジトリ所定のNode.js/pnpmが必要。
 
 ```sh
 # 初回のみ、リポジトリルートで依存を取得
 pnpm install --frozen-lockfile
 
-# リポジトリルート。正しいモデルのビルド＋7種の意図的違反
-python3 formal/mcp-verification/check.py
+# リポジトリルート。登録・全モジュールビルド・公理監査・7種の意図的違反
+python3 formal/verify.py
+
+# 監査・登録漏れ検出自体の回帰テスト
+python3 -m unittest discover -s formal -p 'test_*.py' -v
 
 # 証明だけを検証
 cd formal/mcp-verification
@@ -74,7 +77,7 @@ elanのbinディレクトリをPATHに含める。ビルドは警告をエラー
 
 ## CI
 
-既存の [.github/workflows/validate.yml](../../.github/workflows/validate.yml) にLean専用jobを追加する。SHA-256も固定したelanを導入し、固定Leanで `check.py` を実行する。関連TypeScriptテストは既存の全テスト4分割jobに自動で含まれ、依存インストールやテスト基盤を重複させない。
+既存の [.github/workflows/validate.yml](../../.github/workflows/validate.yml) にLean専用jobを追加する。SHA-256も固定したelanを導入し、固定Leanで共通の `formal/verify.py` と検査機構の回帰テストを実行する。関連TypeScriptテストは既存の全テスト4分割jobに自動で含まれ、依存インストールやテスト基盤を重複させない。
 
 PRの `ci.yml` とmain用 `cloudflare-deploy.yml` はこの再利用workflowを呼ぶため、Lean・変異検出・TypeScriptのいずれかが失敗すれば、既存の集約 `Check` も失敗する。新しい本番アクセス権限やSecretsは不要。
 
@@ -90,6 +93,10 @@ PRの `ci.yml` とmain用 `cloudflare-deploy.yml` はこの再利用workflowを�
 ユーザーマニュアル更新なし: 基本操作・利用条件・既存の権限仕様に変更なし。
 
 ## ローカル検証結果
+
+Lean 4.36.0への更新では、既存18定理に正常系・拒否系の存在証明2定理（Examples.lean）を加えてビルドした。共通ランナーは生成された補助定理も含む37定理の公理依存を検査し、7変異すべてを拒否した。公理監査・登録の回帰テスト6件（間接的独自公理、間接的sorryAx、native_decide・private宣言の4失敗fixtureを含む）も成功した。関連するTypeScript結合テスト4ファイル75件、型チェック・lintも成功した。スキーマ・局面存在・DB成功の抽象化は引き続き前提であり、この存在証明でTypeScript実装との同値性が証明されたわけではない。
+
+以下の全体テスト・E2Eは、初回PoC（Lean 4.24.0）時点の記録である。
 
 - Lean: 18定理のビルド成功、7変異すべての証明失敗を確認。
 - 新規照合テスト: 15/15成功。隣接する既存MCPの3ファイルは60/60成功。

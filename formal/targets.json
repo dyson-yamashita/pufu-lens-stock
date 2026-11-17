@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "toolchain": "leanprover/lean4:v4.36.0",
+  "targets": [
+    {
+      "ids": ["B00"],
+      "directory": "mcp-verification",
+      "modules": [
+        "McpVerification",
+        "McpVerification.Access",
+        "McpVerification.State",
+        "McpVerification.Proofs",
+        "McpVerification.Examples"
+      ],
+      "build": ["lake", "build"],
+      "mutations": ["python3", "check.py"],
+      "tests": [
+        "tests/mcp-update-pufu-verification.test.ts",
+        "tests/mcp.test.ts",
+        "tests/mcp-pufu-phases.test.ts",
+        "tests/mcp-relations.test.ts"
+      ]
+    }
+  ]
+}

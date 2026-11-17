@@ -46,6 +46,7 @@ dumps/
 .idea/
 .vscode/
 *.tsbuildinfo
+__pycache__/
 playwright-report/
 test-results/
 
