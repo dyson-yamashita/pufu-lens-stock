@@ -1,0 +1,88 @@
+# 境界処理の形式検証
+
+MCPやiOSショートカットなど、外部入力・認証主体・権限・公開範囲・処理世代が切り替わる場所で、守るべき条件をLean 4のモデルと実装のテストで確認する。開発時の必須ルールは [AGENTS.md](../AGENTS.md#境界処理の形式検証) に置く。
+
+この文書は、必須となる変更の判断方法と、既存実装から調べた検証候補を記録する。対象一覧の作成は形式証明の実施ではない。今回のルール追加で新しいモデル・証明や本番コードの修正は行っていない。
+
+## 適用する変更
+
+| 変更                                                                       | 必要な対応                                                                                     |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| MCPツール、ショートカット用APIなどの入口を新設する                         | 許可・拒否・状態遷移をモデル化し、証明・変異検出・実経路の照合テストを追加する                 |
+| 認証、スコープ、所有者、許可プロジェクト、期限、失効、公開条件を変更する   | 影響する入口を列挙し、共通モデルを更新する。各入口が同じ条件を使うことを実装のテストで確認する |
+| revision、request_id、再送、非同期ジョブの世代、削除後の書込条件を変更する | 成功・拒否・再送・競合の状態遷移と、守るデータの範囲を更新する                                 |
+| 共通ヘルパー、SQL、DBトリガー、キャッシュキー等を通じて上記条件を変える    | 入口のファイルを変えなくても適用する。モデル・テストへの影響を調査する                         |
+| 説明文、レイアウト、表示だけのキーボード操作を変更する                     | 新しい形式証明は対象外。判断理由と通常の確認結果をPRに記載する                                 |
+| このルールや対象一覧を更新する                                             | 参照先・記述の整合性を確認する。新しい製品モデルの証明は不要                                   |
+
+「ショートカット」は本サービスのiPhone共有シート連携を指す。キーボードショートカットという名前だけを根拠に検証対象にはしない。ただし保存・削除・権限判断の経路を変える操作は適用対象となる。
+
+変更しない既存境界を一度にすべて証明することは要求しない。一方、既存境界の許可条件や遷移を今回変更する場合は、その対象が未着手でも検証を追加する。既存モデルを再利用できる場合は、同じ証明を入口ごとに複製せず、モデルの適用範囲と各実装の照合を追加する。
+
+## 各対象で残すもの
+
+1. **仕様の根拠:** 対象一覧のID、操作、実際の入口、認証・認可、DB/ストレージ/外部通信までの経路。コードと既存テストを確認してから性質を確定する。
+2. **最小モデル:** 認証主体、必要な権限、許可・拒否、保護する状態と遷移。暗号や外部サービス、SQLトランザクション等を抽象化する場合は、その前提を明示する。新しい権限ルールや正常系の仕様を作らない。
+3. **定理と変異検出:** 正常系、権限不足、期限・世代・revision等の不一致を、対象に応じて証明する。`sorry` / `admit` を残さず、検証する結論を公理として導入しない。安全条件を除いたモデルでも同じ定理が通る場合は、モデル・定理を見直す。環境・依存取得・構文の失敗だけでは、意図した証明失敗の確認としない。
+4. **実装の照合:** 既存のVitest・Miniflare等を使い、実際のHTTP/MCP入口とローカルDB等を通す。正常系・拒否系・再送を観測し、モデルの条件が実装でも使われているか確認する。外部サービスはダミー応答や送信直前の観測で代替し、実サービスの安全性まで保証したとは書かない。
+5. **CIと結果:** 新設・変更した全モデルの証明・変異検出、関連テストの実行コマンドを共通workflowに組み込み、必須 `Check` へ失敗を伝える。モデルをファイルとして追加するだけで、既存のビルドや変異検出から漏らさない。対象のREADMEとPRにコマンド、結果、未検証事項を記載する。
+
+実行環境が用意できない、証明が失敗する、テストが中断される等の場合は、実施した範囲と阻害要因を記録し、検証完了・マージ可能とは報告しない。既存実装の問題は修正案とともに報告し、無断の仕様変更や期待値の緩和で解消しない。
+
+### 拒否時の不変性を定義する注意点
+
+拒否時に守る状態を「DB全体」と一括指定せず、操作に応じて列挙する。
+
+- [authenticate](../server/features/auth/auth.ts) は有効なショートカットトークンを認証すると `api_tokens.last_used_at` の更新を予約する。その後にAPIの許可判定で拒否されても、利用記録は業務データと区別する必要がある。
+- [ストック保存](../server/api/routes/stock-collection.ts) は、保存先を指定しない全プロジェクト許可の要求を本人の全プロジェクトへ保存する。単一プロジェクトへの保存だけを正常系と仮定しない。`Idempotency-Key` も任意であり、省略時に同じ再送規則を仮定しない。
+- [MCP接続設定](../server/mcp/oauth.ts) は、スコープを元の認可との積集合で制限する一方、対象プロジェクトは本人が接続設定で選び直せる。「初回に選んだプロジェクトから拡張できない」という規則を追加しない。実際の制約と最新設定の適用を調べる。
+- [既存update_pufuモデル](../formal/mcp-verification/README.md) の任意の拒否時不変性は、局面が初期化・同期済みという前提を持つ。権限のある要求のrevision競合でも旧局面の同期が走る既存挙動を、ほかの境界へ無条件に一般化しない。
+
+## 既存の対象と優先順位
+
+調査基準は `b9424c7`（PR #263を取り込んだmain）。以下は主な境界の候補一覧であり、全機能の網羅的なセキュリティ監査や、不具合の認定ではない。
+
+- **P0:** 複数入口に共通する権限や、外部・匿名から本人データに届く条件。最初に整備する。
+- **P1:** 再送・競合・旧結果・削除・資源予約など、条件の組合せで状態が壊れ得る境界。P0のモデルを使って段階的に追加する。
+- **P2:** ほかの境界にも対象を広げる候補。関連仕様を変更するときは、優先度に関係なく必須ルールを適用する。
+
+`B00` のみ既存の抽象モデル・証明がある。`B01`〜`B11` とP2候補は**形式検証未着手**。記載したTypeScriptテストの存在は数学的証明を意味せず、候補の性質をすべて網羅しているとも限らない。各項目に着手するときに、仕様・対象差分とテスト内容を再確認する。
+
+| ID / 優先度 | 境界・操作                                    | 検証する性質の候補                                                                                                                                                                                                                                        | 実装 / 既存テストの入口                                                                                                                                                                                                                                                           |
+| ----------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B00 / 維持  | MCP `update_pufu`                             | 未認証・必要権限なしでは更新不可。権限拒否でプ譜データ・revisionを維持。正常更新でrevision+1、過去局面編集で最新JSONを維持。既存モデルの前提と限界は維持する                                                                                              | [既存モデル・証明・対応表](../formal/mcp-verification/README.md)、[照合テスト](../tests/mcp-update-pufu-verification.test.ts)                                                                                                                                                     |
+| B01 / P0    | 共通認証・API許可表                           | `session` / `token` / `mcp` ごとの許可メソッド・パスを分離する。未登録・無効な認証情報では保護操作に到達しない。ショートカット用トークンをMCP認証として受け入れない。セッション変更操作ではOrigin確認を通す                                               | [認証](../server/features/auth/auth.ts)、[API許可表](../server/api/middleware/authentication.ts)、[security](../tests/security.test.ts)、[onboarding](../tests/onboarding.test.ts)、[mcp](../tests/mcp.test.ts)                                                                   |
+| B02 / P0    | iOSショートカット: トークンと保存先           | 失効・期限切れでは保存不可（無期限トークンは別条件）。許可APIは `GET /api/v1/projects` と `POST /api/v1/stocks`。所有者・トークンの保存先制限に従い、指定省略時の既存仕様を守る。権限拒否時に他人・対象外の業務データを変更しない                         | [トークン管理](../server/api/routes/tokens.ts)、[保存](../server/api/routes/stock-collection.ts)、[プロジェクト一覧](../server/api/routes/projects.ts)、[tokens](../tests/tokens.test.ts)、[text-stocks](../tests/text-stocks.test.ts)、[request-id](../tests/request-id.test.ts) |
+| B03 / P0    | MCP認可・接続変更・失効・refresh              | ツールに必要なスコープがない場合は拒否。保存設定を反映したスコープは元の認可を超えない。プロジェクトは最新設定と本人の所有条件で解決し、`null` と空配列を区別する。失効した接続や `offline_access` を取り消した接続をrefreshで復活・延長しない            | [OAuth/設定/refresh](../server/mcp/oauth.ts)、[handleMcp](../server/mcp/server.ts)、[run](../server/mcp/tool-context.ts)、[mcp-oauth](../tests/mcp-oauth.test.ts)、[connection-settings](../tests/mcp-connection-settings.test.ts)                                                |
+| B04 / P1    | MCP `create_pufu` / `add_pufu_phase`          | 同じrequest_id・同じ内容の再送は元の結果を返し、局面・理由コメントを重複追加しない。異なる内容での再使用は競合。正常な追加はcurrent_phase/revisionが1増え、既存局面を維持する。作成と局面追加は別の遷移として扱う                                         | [ツール](../server/mcp/tools/pufu.ts)、[作成](../server/features/pufu/pufu-write.ts)、[局面追加](../server/features/pufu/pufu-phases.ts)、[mcp-pufu-phases](../tests/mcp-pufu-phases.test.ts)、[mcp](../tests/mcp.test.ts)                                                        |
+| B05 / P1    | その他のMCP読み取り・書き込み                 | projects/stocks/questions/memory/comments等で、スコープ・所有者・許可プロジェクトを同時に守る。一覧・検索・ページ件数・関連先にも条件を適用する。書込許可だけで、応答から既存の私的情報を追加取得できるとは仮定しない                                     | [MCPツール群](../server/mcp/tools)、[所有判定](../server/api/context.ts)、[project-access](../server/features/projects/project-access.ts)、[mcp-memory](../tests/mcp-memory.test.ts)、[mcp-relations](../tests/mcp-relations.test.ts)、[mcp](../tests/mcp.test.ts)                |
+| B06 / P0    | 匿名公開API・ページ・公開キャッシュ           | 非公開に切り替えた後の読み取りで本文・添付画像・プ譜を返さない。公開条件と返却フィールドを守り、古い公開キャッシュから再露出させない。公開設定の変更は本人のセッションでのみ許可する。既に利用者へ渡ったデータの回収は証明対象にしない                    | [公開処理](../server/features/public-projects/public-projects.ts)、[公開ページ](../server/features/public-projects/public-pages.ts)、[public-projects](../tests/public-projects.test.ts)、[public-directory-cache](../tests/public-directory-cache.test.ts)                       |
+| B07 / P1    | 秘密のプ譜画像リンク: 発行と匿名取得          | 発行時の所有者・許可範囲、取得時の期限・ready・対象・局面・revisionを守る。R2読込後の再確認に失敗した場合は応答しない。これはプロジェクト公開とは別の期限付き権限であり、非公開プロジェクトなら常に拒否という規則を作らない                               | [画像リンク](../server/features/pufu/images/pufu-image-links.ts)、[pufu-image-links](../tests/pufu-image-links.test.ts)、[pufu-images](../tests/pufu-images.test.ts)                                                                                                              |
+| B08 / P1    | API受付 → 非同期Workflow → DB/R2保存          | 古いgeneration/revisionのジョブが新しいデータ・履歴を上書きしない。再試行・多重配信で同じ保存を重複確定しない。メモリ対象プロジェクトの変更や削除後に遅れて完了した結果を、現行の結果として採用しない                                                     | [dispatch](../server/infrastructure/jobs/jobs.ts)、[workflows](../server/infrastructure/jobs/workflows.ts)、[メモリ保存・履歴](../server/features/memory/memory-history.ts)、[workflowsテスト](../tests/workflows.test.ts)、[memory-history](../tests/memory-history.test.ts)     |
+| B09 / P1    | URL/リダイレクト → 外部HTTP取得               | URL判定と名前解決結果が公開宛先の条件を満たした場合だけ取得し、リダイレクト先も再検証する。URL文字列の判定だけで安全とはしない。モデルは公開IP分類・名前解決・接続先の関係の前提を示し、実ネットワークやDNS rebinding対策まで自動的に証明したとは書かない | [宛先検証](../server/infrastructure/security.ts)、[取得処理](../server/features/stocks/ingest.ts)、[OG画像](../server/features/stocks/og-image.ts)、[securityテスト](../tests/security.test.ts)                                                                                   |
+| B10 / P1    | 退会 → セッション/トークン失効 → 非同期後処理 | 本人以外の削除を許可しない。削除後の認証情報を受け入れず、遅れて完了したジョブやR2保存からデータを復活させない。後処理の再実行と削除世代をモデル化し、DBと外部ストレージの同時削除を仮定しない                                                            | [退会API](../server/api/routes/account.ts)、[削除後処理](../server/features/auth/account.ts)、[account-deletion](../tests/account-deletion.test.ts)、[privacy-cleanup](../tests/privacy-cleanup.test.ts)                                                                          |
+| B11 / P1    | 利用枠の予約 → AI呼出し → 完了/再試行         | 予約なしの呼出し、同一操作の重複予約、並行要求での上限超過を防ぐ条件を調べる。待機・失敗・再試行を含む遷移と窓時間を定義する。利用記録や予約は拒否時にも変化し得るため、全DB不変ではなく残高・件数・操作状態の性質を選ぶ                                  | [利用枠](../server/features/usage/usage.ts)、[AIアクセス](../server/infrastructure/ai/ai-access.ts)、[usage-limits](../tests/usage-limits.test.ts)、[ai-neurons](../tests/ai-neurons.test.ts)                                                                                     |
+
+P2の追加候補は次のとおり。いずれも形式検証未着手であり、対象に取り込む際に独立したIDと検証条件を追加する。
+
+- **Xの外部認証情報:** 本人のセッションによる登録・削除、ユーザーIDと暗号化トークンの対応、外部取得時に使う資格情報の所有者を検証する。[integrations API](../server/api/routes/integrations.ts)、[X取得・資格情報](../server/features/integrations/x.ts)、[x-integrationテスト](../tests/x-integration.test.ts)。暗号方式自体の正しさは別の前提とする。
+- **Pushの登録・解除・配信:** セッションに結び付く同意と購読の所有者、解除・ログアウト後の配信判定、再試行時の二重配信条件を検証する。[配信](../server/features/announcements/push-delivery.ts)、[pushテスト](../tests/push.test.ts)、[push-delivery](../tests/push-delivery.test.ts)。外部Pushサービスへ渡った通知の回収や厳密な一度だけの到達は仮定しない。
+- **添付画像/PDF・AI出力の取込み:** 所有者、入力サイズ・形式・状態、ストレージ保存を確定する条件を先にモデル化する。画像/PDFパーサーやLLMの内容全体の正しさを小さなモデルで証明したとは書かない。[stock-images](../server/features/stocks/stock-images.ts)、[PDF](../server/features/stocks/pdf/pdf.ts)、[stock-imagesテスト](../tests/stock-images.test.ts)。
+
+## 最初に進める順序
+
+1. B01/B02を最初の追加モデルにする。認証種別・HTTP操作の許可表と、ショートカットトークンの有効性・保存先を扱う。B00のMCP用Accessをそのまま流用せず、`session` / `token` / `mcp` の違いを表現する。
+2. B03でMCP接続設定の更新・失効・refreshを加える。最初は逐次遷移を証明し、同時実行を未検証のまま含めて説明しない。
+3. B06で公開状態とキャッシュ世代をモデル化する。B07の秘密画像リンクとは別の取得条件として保つ。
+4. B04でrequest_idと局面追加を検証し、その考え方をショートカットのIdempotency-Keyに適用できるか、既存の省略・保存先・再送仕様と照合する。
+5. B05/B08〜B11は関連機能の変更時にも整備し、並行処理を証明する場合は、状態の読み取り・条件付き書込・失効/世代変更のどこを遷移として扱うか明示する。
+
+各項目の着手・完了時にはこの一覧の状態、対象のモデル・定理・照合テスト・CIコマンドへのリンクを更新する。実装のテストが成功しただけで状態を「形式検証済み」に変更しない。
+
+## 既存の実行基盤と保証の限界
+
+現在のLean 4.24.0プロジェクト、ビルド・変異検出の実行方法は [MCP PoC README](../formal/mcp-verification/README.md#実行) を参照する。外部Leanライブラリを増やす前に、既存の最小構成で表現できるか確認する。新しい対象の追加時には同READMEの適用範囲も更新する。
+
+[共通validate workflow](../.github/workflows/validate.yml) の `formal` ジョブは、現在は `formal/mcp-verification/check.py` のみを実行する。対象を別のLeanプロジェクトへ追加した場合は、実行コマンドをこのジョブへ追加するか、共通の実行入口を用意する。既存の `check.py` も変異対象はupdate_pufu専用であり、追加ファイルがあるだけで新しい性質の変異検出が済むわけではない。TypeScriptテストは既存の4分割テストジョブを再利用する。
+
+Leanが証明するのは、明示した前提の下の抽象モデルの性質である。TypeScript/SQLとの自動的な同値性、暗号・OAuthライブラリ、DNSと実接続、D1/R2の障害・原子性、外部サービスやブラウザー/OSの挙動は、モデルに含めて証明しない限り保証されない。実装との照合、実環境の設定確認、通常のテスト・レビュー・セキュリティ監査を引き続き行う。
