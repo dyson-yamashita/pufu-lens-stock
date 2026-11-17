@@ -8,4 +8,4 @@ pnpm-lock.yaml
 **/.e2e/
 
 # Generated Lean build output
-formal/mcp-verification/.lake/
+formal/**/.lake/

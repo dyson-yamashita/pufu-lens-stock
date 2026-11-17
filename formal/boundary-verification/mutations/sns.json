@@ -1,0 +1,41 @@
+{
+  "module": "BoundaryVerification.Sns",
+  "mutations": [
+    {
+      "name": "B12-session",
+      "old": "  r.principal == .session && r.onboarded",
+      "new": "  true && r.onboarded",
+      "theorem": "management_requires_session"
+    },
+    {
+      "name": "B12-owner",
+      "old": "        if owner == user then some ⟨user, secret, true, stamp⟩ else s.credentials owner",
+      "new": "        if true then some ⟨user, secret, true, stamp⟩ else s.credentials owner",
+      "theorem": "put_owner_only"
+    },
+    {
+      "name": "B12-aad",
+      "old": "      if cipher.aadUser == user && cipher.authentic then some cipher.secret else none",
+      "new": "      if cipher.authentic then some cipher.secret else none",
+      "theorem": "copied_cipher_rejected"
+    },
+    {
+      "name": "B12-http",
+      "old": "  if token.isSome && (200 ≤ r.status && r.status < 300) &&",
+      "new": "  if token.isSome && true &&",
+      "theorem": "unauthorized_rejected"
+    },
+    {
+      "name": "B12-public-secret",
+      "old": "    updatedAt := (s.credentials user).map Cipher.updatedAt }",
+      "new": "    updatedAt := (s.credentials user).map Cipher.secret }",
+      "theorem": "public_status_ignores_secret"
+    },
+    {
+      "name": "B12-manual-redirect",
+      "old": "def outgoing (secret : Nat) : Outgoing := ⟨.xApi, .manual, secret⟩",
+      "new": "def outgoing (secret : Nat) : Outgoing := ⟨.xApi, .follow, secret⟩",
+      "theorem": "outgoing_fixed_manual"
+    }
+  ]
+}
