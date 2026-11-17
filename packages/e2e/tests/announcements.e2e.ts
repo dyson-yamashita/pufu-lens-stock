@@ -7,7 +7,30 @@ test('NEWS-001 お知らせの閲覧と通知設定の入口を確認する', as
   browser,
   fixture,
 }) => {
-  void fixture;
+  for (const scope of ['', `/${fixture.projectId}`]) {
+    for (const view of ['stocks', 'questions', 'pufus', 'memory']) {
+      const hash = view === 'stocks' ? (scope ? `project${scope}` : '') : `${view}${scope}`;
+      await app.open(`/#${hash}`);
+      const footer = browser.locator('.library-footer');
+      await expect(footer).toHaveCount(1);
+      for (const href of ['/privacy', '/terms', '/#announcements']) {
+        const link = browser.locator(`.library-footer a[href="${href}"]`);
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute('target', '_blank');
+        await expect(link).toHaveAttribute('rel', 'noreferrer');
+      }
+      for (const theme of ['light', 'dark'] as const) {
+        await browser.emulateMedia({ colorScheme: theme });
+        expect(
+          await browser.evaluate(() => {
+            const rect = document.querySelector('.library-footer')!.getBoundingClientRect();
+            return rect.left >= 0 && rect.right <= window.innerWidth;
+          }),
+        ).toBe(true);
+      }
+    }
+  }
+  await app.open('/');
   const menu = screen.getByRole('button', 'メニューを開く', { exact: true });
   if (await menu.isVisible()) await menu.click();
   await screen.getByRole('button', 'お知らせ', { exact: true }).click();

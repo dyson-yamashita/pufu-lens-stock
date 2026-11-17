@@ -5,7 +5,6 @@ import type { ModalState } from '../../app/types';
 import SearchField from '../../components/SearchField';
 import { Spinner } from '../../components/Spinner';
 import { applicationError, t } from '../../i18n/i18n';
-import LegalLinks from '../legal/LegalLinks';
 import FirstSteps from '../onboarding/FirstSteps';
 import { ArticleCard } from './ArticleCard';
 
@@ -196,9 +195,6 @@ export function StockList({
             </button>
           </div>
         )}
-        <footer className="library-footer">
-          <LegalLinks newTab />
-        </footer>
       </section>
     </>
   );
