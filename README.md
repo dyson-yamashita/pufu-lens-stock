@@ -36,7 +36,7 @@ pnpm run dev
 | 開発環境・認証・AI設定           | [ローカル開発](docs/SPEC.md#ローカル開発)                                                                              |
 | 本番環境の構築・デプロイ         | [本番設定](docs/SPEC.md#cloudflareの本番設定)                                                                          |
 | 開発・検証・E2E                  | [開発と検証](docs/SPEC.md#開発と検証) / [ブラウザーE2E](packages/e2e/README.md)                                        |
-| 境界処理の形式検証               | [適用条件・検証対象・優先順位](docs/FORMAL_VERIFICATION.md)                                                            |
+| 境界処理の形式検証               | [適用条件・検証対象・優先順位](docs/FORMAL_VERIFICATION.md) / [共通基盤・実行方法](formal/README.md)                   |
 | 配色・レイアウト・画面設計       | [デザイン仕様](docs/DESIGN.md)                                                                                         |
 | お知らせ・Push通知の運用         | [運用手順](docs/ANNOUNCEMENTS.md)                                                                                      |
 | フィードバック保守               | [保守手順](docs/FEEDBACK.md)                                                                                           |

@@ -1,5 +1,7 @@
 # MCP update_pufu 形式検証PoC
 
+形式検証全体の環境・配置・対象追加・CI登録は [共通README](../README.md) を参照する。このREADMEはB00のupdate_pufu固有の仕様・証明・実装との対応・実行手順を記載する。
+
 Lean 4の抽象モデルの数学的証明と、実際のTypeScript MCPハンドラーの結合テストを組み合わせる。**Leanの証明はTypeScript・SQL・OAuth実装全体の正しさの証明ではない。** API・認証・認可・本番コードは変更しない。本番データ、外部AI、Cloudflare本番環境は使用しない。
 
 ## 調査した実装と処理フロー
