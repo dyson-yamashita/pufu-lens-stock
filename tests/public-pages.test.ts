@@ -179,6 +179,8 @@ it('robotsと分割サイトマップには掲載を許可した公開ページ�
   expect(xml).toContain(`/p/${key}/stocks/`);
   expect(xml).toContain('<lastmod>');
   expect(xml).toContain(`${app.env.APP_URL}/manual</loc>`);
+  expect(xml).toContain(`${app.env.APP_URL}/faq</loc>`);
+  expect(xml).toContain(`${app.env.APP_URL}/en/faq</loc>`);
   expect(xml).not.toContain('hidden');
   await allow(false);
   expect(await sitemapUrls()).toEqual(['/sitemaps/site.xml']);
@@ -201,8 +203,8 @@ it('サイトマップを固定範囲1000行以下で分割し、削除したプ
     expect(urls.length).toBeLessThanOrEqual(1000);
     all.push(...urls);
   }
-  // site.xml (8) + project + 1001 questions + 1 pufu + existing stocks in fixture
-  expect(all.length).toBeGreaterThanOrEqual(1003 + 8);
+  // site.xml (10) + project + 1001 questions + 1 pufu + existing stocks in fixture
+  expect(all.length).toBeGreaterThanOrEqual(1003 + 10);
   expect(paths).toContain(`/sitemaps/${key}/questions-2.xml`);
   await app.env.DB.prepare("DELETE FROM pufu_scores WHERE id='pf'").run();
   expect((await read(`/p/${key}/pufus/pf`)).status).toBe(404);
@@ -258,6 +260,13 @@ it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.t
   expect(home.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
   const manual = await read('/manual');
   expect(manual.headers.get('Strict-Transport-Security')).toContain('max-age=');
+  for (const path of ['/faq', '/faq/', '/en/faq', '/en/faq/']) {
+    const faq = await read(path);
+    expect(faq.status).toBe(200);
+    expect(faq.headers.get('Strict-Transport-Security')).toContain('max-age=');
+    expect(faq.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+    expect((await read(path, 'HEAD')).status).toBe(200);
+  }
   const english = await read('/en');
   expect(english.headers.get('Strict-Transport-Security')).toContain('max-age=');
   const llms = await read('/llms.txt');

@@ -7,6 +7,7 @@ import { FormError } from '../../components/FormError';
 import { Spinner } from '../../components/Spinner';
 import {
   applicationError,
+  faqHref,
   homeHref,
   manualHref,
   setLanguage as persistLanguage,
@@ -47,6 +48,9 @@ export function Login({ config, onLogin }: { config: Config; onLogin: () => Prom
           <a className="text-link" href={manualHref(language)}>
             <BookOpen size={17} aria-hidden="true" />
             {t('ui.app.manual')}
+          </a>
+          <a className="text-link" href={faqHref(language)}>
+            {t('faq.link')}
           </a>
           <LanguageSelect id="site-language" value={language} onChange={onLanguageChange} />
           <ThemeToggle />

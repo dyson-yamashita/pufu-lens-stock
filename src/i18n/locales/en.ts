@@ -1,4 +1,17 @@
 export const en: Record<string, string> = {
+  'faq.link': 'FAQ',
+  'faq.title': 'Frequently asked questions (FAQ)',
+  'faq.description':
+    'Find answers about PufuLens features, pricing, getting started, and how your information is handled.',
+  'faq.search_label': 'Search FAQ',
+  'faq.search_placeholder': 'e.g. free, Google, privacy',
+  'faq.search_hint':
+    'Filter categories, questions, and answers by keyword. Separate multiple words with spaces.',
+  'faq.results': 'Questions: {{value0}}',
+  'faq.categories': 'FAQ categories',
+  'faq.empty': 'No matching questions. Try different keywords or clear the search.',
+  'faq.no_script': 'Enable JavaScript to search. You can still read all questions and answers.',
+
   'announcements.description':
     'New features, maintenance updates, and important news from Pufu Lens.',
   'push.loading': 'Loading…',

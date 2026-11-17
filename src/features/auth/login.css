@@ -17,6 +17,8 @@
   font-size: 11px;
 }
 .login-header-links {
+  flex-wrap: wrap;
+  justify-content: flex-end;
   display: flex;
   align-items: center;
   gap: 24px;
@@ -392,5 +394,15 @@
   .login-copy h1 {
     font-size: clamp(28px, 7.6vw, 38px);
     letter-spacing: -1px;
+  }
+}
+
+@media (max-width: 760px) {
+  .login-page > header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .login-header-links {
+    gap: 8px 16px;
   }
 }

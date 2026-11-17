@@ -1,5 +1,5 @@
 import type { Language } from '../../../shared/locale';
-import { homePath, manualPath } from '../../../shared/site-paths';
+import { faqPath, homePath, manualPath } from '../../../shared/site-paths';
 import BrandLogo from '../../components/BrandLogo';
 import { translateUi } from '../../i18n/i18n';
 import LegalLinks from '../legal/LegalLinks';
@@ -16,6 +16,7 @@ export default function HomeShell({ language }: { language: Language }) {
         </a>
         <nav className="legal-links" aria-label={language === 'en' ? 'Site links' : 'サイトリンク'}>
           <a href={manualPath(language)}>{tr('ui.app.manual')}</a>
+          <a href={faqPath(language)}>{tr('faq.link')}</a>
           <a
             href={homePath(language === 'en' ? 'ja' : 'en')}
             lang={language === 'en' ? 'ja' : 'en'}

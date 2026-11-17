@@ -13,6 +13,10 @@ export function homePath(language: Language): string {
   return language === 'en' ? '/en' : '/';
 }
 
+export function faqPath(language: Language): string {
+  return language === 'en' ? '/en/faq' : '/faq';
+}
+
 export function manualPath(language: Language): string {
   return language === 'en' ? '/en/manual' : '/manual';
 }
@@ -30,7 +34,7 @@ export function absoluteUrl(path: string, origin?: string | null): string {
 /** Language forced by a public documentation / marketing URL. Null for app or /p routes. */
 export function pathLanguage(pathname: string): Language | null {
   if (/^\/en(?:\/|$)/.test(pathname)) return 'en';
-  if (pathname === '/' || /^\/(?:manual|privacy|terms)\/?$/.test(pathname) || pathname === '') {
+  if (pathname === '/' || /^\/(?:faq|manual|privacy|terms)\/?$/.test(pathname) || pathname === '') {
     return 'ja';
   }
   return null;
