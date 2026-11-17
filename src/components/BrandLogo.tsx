@@ -1,5 +1,5 @@
 export function BrandMark() {
-  return <img className="brand-mark" src="/pufu-lens-logo.png" alt="" width="38" height="38" />;
+  return <img className="brand-mark" src="/pufu-lens-logo.jpg" alt="" width="38" height="38" />;
 }
 
 /** The page theme chooses a fixed-color SVG, including in browsers without SVG theme inheritance. */

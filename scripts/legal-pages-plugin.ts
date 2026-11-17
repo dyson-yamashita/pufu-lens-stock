@@ -86,7 +86,7 @@ function prepareDocument(
       'og:description': options.description,
       'og:url': absoluteUrl(options.path, origin()),
       'og:image': image,
-      'og:image:type': 'image/png',
+      'og:image:type': 'image/jpeg',
       'og:image:width': '1254',
       'og:image:height': '1254',
       'og:image:alt': 'Pufu Lens',

@@ -612,13 +612,13 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
         ?.getAttribute('content') ?? null,
     publicHtml,
   );
-  const logo = await readFile(new URL('../../../public/pufu-lens-logo.png', import.meta.url));
+  const logo = await readFile(new URL('../../../public/pufu-lens-logo.jpg', import.meta.url));
   const logoVersion = createHash('sha256').update(logo).digest('hex').slice(0, 16);
-  const logoUrl = `${fixture.url}/pufu-lens-logo.png?v=${logoVersion}`;
+  const logoUrl = `${fixture.url}/pufu-lens-logo.jpg?v=${logoVersion}`;
   expect(ogImage).toBe(logoUrl);
   const logoResponse = await fetch(logoUrl);
   expect(logoResponse.status).toBe(200);
-  expect(logoResponse.headers.get('Content-Type')).toContain('image/png');
+  expect(logoResponse.headers.get('Content-Type')).toContain('image/jpeg');
   expect(Buffer.from(await logoResponse.arrayBuffer()).equals(logo)).toBe(true);
   expect(await (await fetch(`${fixture.url}/sitemaps/${publicId}/pufus-1.xml`)).text()).toContain(
     `/p/${publicId}/pufus/${pufu.id}`,
