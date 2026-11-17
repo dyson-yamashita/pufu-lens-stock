@@ -3,7 +3,7 @@ export const generationJa = {
   'memory.empty': '記事の要約が完了すると、関心と知識がここに蓄積されます。',
   'memory.interests': '興味の傾向',
   'memory.knowledge': '記事から得た知識',
-  'memory.questions': '未解決の論点',
+  'memory.questions': 'AIが知識から整理したテーマ',
   'question.template':
     '「{{point}}」を「{{project}}」に取り入れるなら、{{note}}どのような条件や検証が必要だろう？',
   'question.note': '保存時のメモを踏まえ、',

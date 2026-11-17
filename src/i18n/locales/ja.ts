@@ -486,7 +486,7 @@ export const ja: Record<string, string> = {
   'ui.app.your_interests_and_knowledge_connect_here': '関心と知識がここにつながります。',
   'ui.app.interest_patterns': '興味の傾向',
   'ui.app.knowledge_from_articles': '記事から得た知識',
-  'ui.app.open_questions': '未解決の論点',
+  'ui.app.open_questions': 'AIが知識から整理したテーマ',
   'ui.app.generated_from_value_articles_updated_value': '{{value0}}記事から生成 · {{value1}}更新',
   'ui.app.updates_after_article_summaries': '記事の要約後に更新',
   'ui.app.saving_an_article_does_not_imply_agreement_with_its':
