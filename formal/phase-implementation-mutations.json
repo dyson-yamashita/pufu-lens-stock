@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "mutations": [
+    {
+      "name": "remove-write-scope",
+      "expectedCase": "scope-denied",
+      "edits": [
+        {
+          "file": "server/mcp/tool-context.ts",
+          "old": "if (!ctx.auth.scope.includes(scope))",
+          "new": "if (false)"
+        }
+      ]
+    },
+    {
+      "name": "remove-owner-check",
+      "expectedCase": "owner-denied",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "pf.id=? AND pf.user_id=? AND EXISTS",
+          "new": "pf.id=? AND (? IS NOT NULL) AND EXISTS"
+        }
+      ]
+    },
+    {
+      "name": "remove-project-scope",
+      "expectedCase": "project-denied",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "(? IS NULL OR pf.project_id IN (SELECT value FROM json_each(?)))",
+          "new": "(? IS NULL OR ? IS NOT NULL)"
+        }
+      ]
+    },
+    {
+      "name": "remove-revision-checks",
+      "expectedCase": "stale-revision",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "if (pufu.status !== 'ready' || pufu.revision !== data.revision)",
+          "new": "if (pufu.status !== 'ready')"
+        },
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "AND pf.revision=? AND pf.current_phase=?",
+          "new": "AND (? IS NOT NULL) AND pf.current_phase=?"
+        }
+      ]
+    },
+    {
+      "name": "remove-ready-checks",
+      "expectedCase": "not-ready",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "if (pufu.status !== 'ready' || pufu.revision !== data.revision)",
+          "new": "if (pufu.revision !== data.revision)"
+        },
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "AND pf.status='ready' AND pf.revision=?",
+          "new": "AND pf.revision=?"
+        }
+      ]
+    },
+    {
+      "name": "ignore-receipt-payload",
+      "expectedCase": "changed-payload",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "if (receipt.pufu_id !== data.pufu_id || receipt.request_hash !== requestHash)",
+          "new": "if (receipt.pufu_id !== data.pufu_id)"
+        }
+      ]
+    },
+    {
+      "name": "reject-late-replay",
+      "expectedCase": "late-replay",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "if (previous) return response(previous, false);",
+          "new": "if (previous && pufu.revision === data.revision) return response(previous, false);"
+        }
+      ]
+    },
+    {
+      "name": "do-not-increment-revision",
+      "expectedCase": "copy",
+      "edits": [
+        {
+          "file": "server/features/pufu/pufu-phases.ts",
+          "old": "SET score_json=?,task=?,current_phase=current_phase+1,revision=revision+1,updated_at=?",
+          "new": "SET score_json=?,task=?,current_phase=current_phase+1,revision=revision,updated_at=?"
+        }
+      ]
+    }
+  ]
+}

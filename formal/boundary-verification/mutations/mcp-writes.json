@@ -3,20 +3,20 @@
   "mutations": [
     {
       "name": "B04-create-request-shape",
-      "old": "if row.original = p then ⟨true, false, s⟩ else ⟨false, false, s⟩",
-      "new": "if { row.original with explicitRelations := p.explicitRelations } = p then ⟨true, false, s⟩ else ⟨false, false, s⟩",
+      "old": "if row.original = p then \u27e8true, false, s\u27e9 else \u27e8false, false, s\u27e9",
+      "new": "if { row.original with explicitRelations := p.explicitRelations } = p then \u27e8true, false, s\u27e9 else \u27e8false, false, s\u27e9",
       "theorem": "create_request_shape_conflict"
     },
     {
       "name": "B04-create-payload",
-      "old": "if row.original = p then ⟨true, false, s⟩ else ⟨false, false, s⟩",
-      "new": "if row.original = row.original then ⟨true, false, s⟩ else ⟨false, false, s⟩",
+      "old": "if row.original = p then \u27e8true, false, s\u27e9 else \u27e8false, false, s\u27e9",
+      "new": "if row.original = row.original then \u27e8true, false, s\u27e9 else \u27e8false, false, s\u27e9",
       "theorem": "create_payload_conflict"
     },
     {
       "name": "B04-receipt-before-revision",
       "old": "if canWrite a then\n    match receiptFor s r with",
-      "new": "if canWrite a && decide (s.ready = true ∧ r.revision = s.revision) then\n    match receiptFor s r with",
+      "new": "if canWrite a && decide (s.ready = true \u2227 r.revision = s.revision) then\n    match receiptFor s r with",
       "theorem": "append_replay_original_result"
     },
     {
@@ -27,7 +27,7 @@
     },
     {
       "name": "B04-revision",
-      "old": "if s.ready = true ∧ r.revision = s.revision then",
+      "old": "if s.ready = true \u2227 r.revision = s.revision then",
       "new": "if s.ready = true then",
       "theorem": "append_stale_revision"
     },
@@ -42,6 +42,12 @@
       "old": "phases := fun n => if n = s.currentPhase + 1 then some data else s.phases n",
       "new": "phases := fun n => if n = s.currentPhase + 1 then some data else some data",
       "theorem": "commit_keeps_old_phase"
+    },
+    {
+      "name": "B04-oracle-entrance",
+      "old": "if BoundaryVerification.Auth.mcpEntrance (entranceRequest a) then",
+      "new": "if true then",
+      "theorem": "entrance_denial_reachable"
     }
   ]
 }

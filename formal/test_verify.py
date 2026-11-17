@@ -40,6 +40,19 @@ class RegistryTests(unittest.TestCase):
     def test_registered_project(self):
         self.assertEqual(load_targets(self.root)[0]['ids'], ['B00'])
 
+    def test_conformance_command_is_registered(self):
+        self.config['targets'][0]['conformance'] = ['python3', 'export.py', '--check']
+        self.save()
+        self.assertEqual(load_targets(self.root)[0]['conformance'], ['python3', 'export.py', '--check'])
+
+    def test_invalid_conformance_command_is_rejected(self):
+        for value in ([], 'python3 export.py', ['python3', '']):
+            with self.subTest(value=value):
+                self.config['targets'][0]['conformance'] = value
+                self.save()
+                with self.assertRaisesRegex(VerificationError, 'Conformance'):
+                    load_targets(self.root)
+
     def test_unregistered_source_is_rejected(self):
         (self.root / 'example' / 'Forgotten.lean').write_text('theorem omitted : True := True.intro\n')
         with self.assertRaisesRegex(VerificationError, 'Unregistered Lean source'):

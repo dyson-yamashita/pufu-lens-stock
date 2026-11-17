@@ -42,4 +42,8 @@
 
 ## 検証
 
-Lean 4.36.0標準ライブラリだけを使用。定理29件。`sorry` / `admit` / 独自公理 / `native_decide` は使わない。[変異7件](../mutations/mcp-writes.json) は作成payload、関係フィールド形の同一性、レシート優先順、再送payload、revision照合・増分、旧局面の保持を破り、各指定定理の証明失敗で検出する。
+Lean 4.36.0標準ライブラリだけを使用。定理31件。`sorry` / `admit` / 独自公理 / `native_decide` は使わない。[変異8件](../mutations/mcp-writes.json) は作成payload、関係フィールド形の同一性、レシート優先順、再送payload、revision照合・増分、旧局面の保持・oracleの認証入口を破り、各指定定理の証明失敗で検出する。
+
+## モデルと実装の同入力比較
+
+`McpWrites.Oracle` が16ケース・25ステップの期待値を既存Auth/appendから生成する。実MCP・D1との自動照合と8種類の実装変異の詳細は[モデルと実装の自動照合](phase-conformance.md)を参照する。生成JSONは共有CIでLeanから再評価して照合し、TypeScript側に別の遷移アルゴリズムは置かない。これは有限の実装照合であり、実装の形式的同値性の証明ではない。

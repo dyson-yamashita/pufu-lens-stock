@@ -1,4 +1,6 @@
 import Std
+import Lean
+import BoundaryVerification.Auth
 
 namespace BoundaryVerification.McpWrites
 
@@ -282,5 +284,193 @@ theorem append_late_replay_reachable :
     (append permitted later sampleRequest).created = false ∧
     (append permitted later sampleRequest).phase = 2 ∧
     (append permitted later sampleRequest).revision = 2 := by decide
+
+-- The oracle serializes evaluations of the existing transition; it does not
+-- implement a second append/commit algorithm. Opaque data/reason IDs are mapped
+-- to concrete API payloads by the conformance test.
+namespace Oracle
+
+structure AccessJSON where
+  authenticated : Bool
+  writeScope : Bool
+  ownsTarget : Bool
+  projectAllowed : Bool
+  deriving Lean.ToJson
+
+structure PhaseJSON where
+  number : Nat
+  data : Nat
+  deriving Lean.ToJson
+
+structure CommentJSON where
+  phase : Nat
+  reason : Nat
+  deriving Lean.ToJson
+
+structure ReceiptJSON where
+  requestId : Nat
+  pufuId : Nat
+  requestRevision : Nat
+  replacement : Option Nat
+  reason : Option Nat
+  phase : Nat
+  revision : Nat
+  deriving Lean.ToJson
+
+structure StateJSON where
+  ready : Bool
+  revision : Nat
+  currentPhase : Nat
+  latestData : Nat
+  phases : List PhaseJSON
+  comments : List CommentJSON
+  relations : List Nat
+  receipts : List ReceiptJSON
+  deriving Lean.ToJson
+
+instance : Lean.ToJson PhaseRequest where
+  toJson r := Lean.Json.mkObj [
+    ("requestId", Lean.toJson r.requestId),
+    ("pufuId", Lean.toJson r.pufuId),
+    ("revision", Lean.toJson r.revision),
+    ("replacement", Lean.toJson r.replacement),
+    ("reason", Lean.toJson r.reason)]
+
+structure ExpectedJSON where
+  status : Nat
+  accepted : Bool
+  created : Bool
+  phase : Nat
+  revision : Nat
+  state : StateJSON
+  deriving Lean.ToJson
+
+structure StepJSON where
+  access : AccessJSON
+  request : PhaseRequest
+  expected : ExpectedJSON
+  deriving Lean.ToJson
+
+structure CaseJSON where
+  id : String
+  initial : StateJSON
+  steps : List StepJSON
+  deriving Lean.ToJson
+
+structure FixtureJSON where
+  version : Nat
+  cases : List CaseJSON
+  deriving Lean.ToJson
+
+def normalizeState (s : PhaseState) : StateJSON :=
+  { ready := s.ready
+    revision := s.revision
+    currentPhase := s.currentPhase
+    latestData := s.latestData
+    phases := (List.range (s.currentPhase + 1)).filterMap fun number =>
+      (s.phases number).map fun data => ⟨number, data⟩
+    comments := s.comments.map fun (phase, reason) => ⟨phase, reason⟩
+    relations := s.relations
+    receipts := (s.receipts.mergeSort fun a b =>
+      a.request.requestId <= b.request.requestId).map fun receipt =>
+        ⟨receipt.request.requestId, receipt.request.pufuId, receipt.request.revision,
+          receipt.request.replacement, receipt.request.reason, receipt.phase, receipt.revision⟩ }
+
+-- The input bit abstracts provider verification. The existing Auth model sees
+-- a verified MCP principal or an anonymous principal at the MCP entrance.
+def entranceRequest (a : AccessJSON) : BoundaryVerification.Auth.Request :=
+  ⟨if a.authenticated then .mcp else .anonymous,
+    true, true, true, true, .post, .pufus⟩
+
+def run (a : AccessJSON) (s : PhaseState) (r : PhaseRequest) : PhaseResult :=
+  if BoundaryVerification.Auth.mcpEntrance (entranceRequest a) then
+    append ⟨a.writeScope, a.ownsTarget, a.projectAllowed⟩ s r
+  else denied s
+
+-- HTTP status is an adapter to the implementation's observable error classes:
+-- entrance 401, scope 403, hidden owner/project 404, transition conflict 409.
+-- Acceptance and every post-state still come exclusively from Auth/append.
+def status (a : AccessJSON) (result : PhaseResult) : Nat :=
+  if !BoundaryVerification.Auth.mcpEntrance (entranceRequest a) then 401
+  else if !a.writeScope then 403
+  else if !a.ownsTarget || !a.projectAllowed then 404
+  else if result.accepted then 200
+  else 409
+
+def normalizeResult (a : AccessJSON) (result : PhaseResult) : ExpectedJSON :=
+  ⟨status a result, result.accepted, result.created, result.phase, result.revision,
+    normalizeState result.state⟩
+
+def steps (s : PhaseState) : List (AccessJSON × PhaseRequest) → List StepJSON
+  | [] => []
+  | (a, r) :: rest =>
+      let result := run a s r
+      ⟨a, r, normalizeResult a result⟩ :: steps result.state rest
+
+def scenario (id : String) (initial : PhaseState)
+    (inputs : List (AccessJSON × PhaseRequest)) : CaseJSON :=
+  ⟨id, normalizeState initial, steps initial inputs⟩
+
+def allowed : AccessJSON := ⟨true, true, true, true⟩
+
+def initial : PhaseState :=
+  ⟨true, 1, 1, 1, fun n => if n = 1 then some 1 else none, [], [1, 2], []⟩
+
+def copyRequest : PhaseRequest := ⟨1, 1, 1, none, none⟩
+def replaceRequest : PhaseRequest := ⟨1, 1, 1, some 2, some 7⟩
+
+def cases : List CaseJSON := [
+  scenario "unauthenticated" initial
+    [({ allowed with authenticated := false }, replaceRequest)],
+  scenario "scope-denied" initial
+    [({ allowed with writeScope := false }, replaceRequest)],
+  scenario "owner-denied" initial
+    [({ allowed with ownsTarget := false }, replaceRequest)],
+  scenario "project-denied" initial
+    [({ allowed with projectAllowed := false }, replaceRequest)],
+  scenario "not-ready" { initial with ready := false }
+    [(allowed, replaceRequest)],
+  scenario "stale-revision" { initial with revision := 2 }
+    [(allowed, replaceRequest)],
+  scenario "copy" initial [(allowed, copyRequest)],
+  scenario "replace-and-reason" initial [(allowed, replaceRequest)],
+  scenario "replay" initial [(allowed, replaceRequest), (allowed, replaceRequest)],
+  scenario "late-replay" initial [
+    (allowed, replaceRequest),
+    (allowed, ⟨2, 1, 2, some 3, some 8⟩),
+    (allowed, replaceRequest)],
+  scenario "changed-payload" initial [
+    (allowed, replaceRequest),
+    (allowed, { replaceRequest with replacement := some 3 })],
+  scenario "changed-reason" initial [
+    (allowed, replaceRequest),
+    (allowed, { replaceRequest with reason := some 8 })],
+  scenario "changed-revision" initial [
+    (allowed, replaceRequest),
+    (allowed, { replaceRequest with revision := 2 })],
+  scenario "scope-denied-replay" initial [
+    (allowed, replaceRequest),
+    ({ allowed with writeScope := false }, replaceRequest)],
+  scenario "project-denied-replay" initial [
+    (allowed, replaceRequest),
+    ({ allowed with projectAllowed := false }, replaceRequest)],
+  scenario "owner-denied-replay" initial [
+    (allowed, replaceRequest),
+    ({ allowed with ownsTarget := false }, replaceRequest)] ]
+
+def fixture : FixtureJSON := ⟨1, cases⟩
+def json : String := (Lean.toJson fixture).compress
+
+theorem success_reachable :
+    (run allowed initial replaceRequest).created = true ∧
+    (run allowed initial replaceRequest).phase = 2 ∧
+    (run allowed initial replaceRequest).revision = 2 := by decide
+
+theorem entrance_denial_reachable :
+    let result := run { allowed with authenticated := false } initial replaceRequest
+    result.accepted = false ∧ normalizeState result.state = normalizeState initial := by
+  simp [run, entranceRequest, BoundaryVerification.Auth.mcpEntrance, denied]
+
+end Oracle
 
 end BoundaryVerification.McpWrites

@@ -100,8 +100,10 @@
         "tests/api.test.ts",
         "tests/public-pages.test.ts",
         "tests/mcp-pufu-viewer.test.ts",
-        "tests/ai-neurons-runtime.test.ts"
-      ]
+        "tests/ai-neurons-runtime.test.ts",
+        "tests/mcp-add-pufu-phase-model.test.ts"
+      ],
+      "conformance": ["python3", "export_phase_cases.py", "--check"]
     }
   ]
 }

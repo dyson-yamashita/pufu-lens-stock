@@ -14,7 +14,7 @@ Leanは **4.36.0** に固定する。バージョンの正本は [targets.json](
 
 ## 対象の登録と配置
 
-機械的な登録表は [targets.json](targets.json)。対象ID、プロジェクトのディレクトリ、全Leanモジュール、ビルド・変異検出のコマンド、実装の照合テストを一緒に管理する。共通コードを共有する複数の対象IDは同じプロジェクトの `ids` に記録できる。
+機械的な登録表は [targets.json](targets.json)。対象ID、プロジェクトのディレクトリ、全Leanモジュール、ビルド・変異検出のコマンド、実装の照合テストを一緒に管理する。任意の `conformance` コマンドは、Leanの実行評価から生成した照合fixtureの鮮度を検査する。共通コードを共有する複数の対象IDは同じプロジェクトの `ids` に記録できる。
 
 現在の実装済み対象は **B00〜B14の最小モデル**。B00は[MCP update_pufu](mcp-verification/README.md)、B01〜B14は[認証・ショートカット・SNS等の境界処理](boundary-verification/README.md)に仕様と検証範囲を記載する。[対象一覧](../docs/FORMAL_VERIFICATION.md#既存の対象と優先順位)の全機能を完全に検証したとは主張しない。
 
@@ -65,3 +65,7 @@ PRの [ci.yml](../.github/workflows/ci.yml) は全検証結果を `Check` に集
 設定の記録: PR #264時点の設定API書込は403で拒否され、PR #265の初回確認時にもチェックの配列は空だった。その後の管理者設定を受け、2026-11-17にmainの有効ルールを再度APIで読み戻し、`Check`（GitHub Actions、integration_id: 15368）が必須登録され、最新ブランチを要求する`strict_required_status_checks_policy=true`であることを確認した。これは設定の読み戻しであり、失敗したPRを実際にマージする実験や、従来のブランチ保護・全バイパス設定の網羅確認ではない。
 
 Leanが保証するのは、明示した前提の下での抽象モデルの性質である。実装テスト、実環境の確認、実行中要求の取消し等の未検証範囲とは分けて記録する。
+
+## 実装側の変異とモデルベース照合
+
+B04 `add_pufu_phase` は[自動照合の仕様](boundary-verification/specs/phase-conformance.md)に従い、Leanから生成した16入力列の期待結果を実MCP→D1と比較する。`conformance` を共通Leanランナー、関連テストを既存Vitest、8種類のTypeScript/SQL変異を専用Nodeジョブへ登録した。全ての結果を既存 `Check` に集約する。Leanの数学的証明、実行評価によるfixture生成、有限の実装テストと変異検出は別の保証として扱う。

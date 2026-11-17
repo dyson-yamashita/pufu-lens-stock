@@ -52,6 +52,8 @@ def load_targets(root=ROOT):
         require((directory / 'lean-toolchain').read_text().strip() == toolchain, f'Toolchain mismatch: {relative}')
         require((directory / 'lakefile.toml').is_file() or (directory / 'lakefile.lean').is_file(), 'Lake configuration is required')
         require(target.get('build') == ['lake', 'build'], 'Build must use lake build')
+        conformance = target.get('conformance')
+        require(conformance is None or (isinstance(conformance, list) and conformance and all(isinstance(x, str) and x for x in conformance)), 'Conformance must be a nonempty command')
         command = target.get('mutations')
         require(isinstance(command, list) and command and all(isinstance(x, str) and x for x in command), 'Mutation command is required')
         modules = target.get('modules')
@@ -136,6 +138,8 @@ def main():
         directory = ROOT / target['directory']
         print(build(directory, target['modules']), end='', flush=True)
         print(audit_axioms(directory, target['modules']), end='', flush=True)
+        if target.get('conformance'):
+            print(run(target['conformance'], directory), end='', flush=True)
         # A project may now contain dozens of independent mutation compiles.
         print(run(target['mutations'], directory, timeout=300), end='', flush=True)
     if args.tests:

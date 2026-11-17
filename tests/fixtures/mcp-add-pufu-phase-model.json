@@ -1,0 +1,1640 @@
+{
+  "cases": [
+    {
+      "id": "unauthenticated",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": false,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [],
+              "currentPhase": 1,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                }
+              ],
+              "ready": true,
+              "receipts": [],
+              "relations": [1, 2],
+              "revision": 1
+            },
+            "status": 401
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "scope-denied",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": false
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [],
+              "currentPhase": 1,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                }
+              ],
+              "ready": true,
+              "receipts": [],
+              "relations": [1, 2],
+              "revision": 1
+            },
+            "status": 403
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "owner-denied",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": false,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [],
+              "currentPhase": 1,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                }
+              ],
+              "ready": true,
+              "receipts": [],
+              "relations": [1, 2],
+              "revision": 1
+            },
+            "status": 404
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "project-denied",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": false,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [],
+              "currentPhase": 1,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                }
+              ],
+              "ready": true,
+              "receipts": [],
+              "relations": [1, 2],
+              "revision": 1
+            },
+            "status": 404
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-ready",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": false,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [],
+              "currentPhase": 1,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                }
+              ],
+              "ready": false,
+              "receipts": [],
+              "relations": [1, 2],
+              "revision": 1
+            },
+            "status": 409
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "stale-revision",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 2
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [],
+              "currentPhase": 1,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                }
+              ],
+              "ready": true,
+              "receipts": [],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 409
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "copy",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [],
+              "currentPhase": 2,
+              "latestData": 1,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 1,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": null,
+                  "replacement": null,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": null,
+            "replacement": null,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "replace-and-reason",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "replay",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": false,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "late-replay",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 3,
+            "revision": 3,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                },
+                {
+                  "phase": 3,
+                  "reason": 8
+                }
+              ],
+              "currentPhase": 3,
+              "latestData": 3,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                },
+                {
+                  "data": 3,
+                  "number": 3
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                },
+                {
+                  "phase": 3,
+                  "pufuId": 1,
+                  "reason": 8,
+                  "replacement": 3,
+                  "requestId": 2,
+                  "requestRevision": 2,
+                  "revision": 3
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 3
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 8,
+            "replacement": 3,
+            "requestId": 2,
+            "revision": 2
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": false,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                },
+                {
+                  "phase": 3,
+                  "reason": 8
+                }
+              ],
+              "currentPhase": 3,
+              "latestData": 3,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                },
+                {
+                  "data": 3,
+                  "number": 3
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                },
+                {
+                  "phase": 3,
+                  "pufuId": 1,
+                  "reason": 8,
+                  "replacement": 3,
+                  "requestId": 2,
+                  "requestRevision": 2,
+                  "revision": 3
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 3
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "changed-payload",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 409
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 3,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "changed-reason",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 409
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 8,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "changed-revision",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 409
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "scope-denied-replay",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": false
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 403
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "project-denied-replay",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": false,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 404
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "owner-denied-replay",
+      "initial": {
+        "comments": [],
+        "currentPhase": 1,
+        "latestData": 1,
+        "phases": [
+          {
+            "data": 1,
+            "number": 1
+          }
+        ],
+        "ready": true,
+        "receipts": [],
+        "relations": [1, 2],
+        "revision": 1
+      },
+      "steps": [
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": true,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": true,
+            "created": true,
+            "phase": 2,
+            "revision": 2,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 200
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        },
+        {
+          "access": {
+            "authenticated": true,
+            "ownsTarget": false,
+            "projectAllowed": true,
+            "writeScope": true
+          },
+          "expected": {
+            "accepted": false,
+            "created": false,
+            "phase": 0,
+            "revision": 0,
+            "state": {
+              "comments": [
+                {
+                  "phase": 2,
+                  "reason": 7
+                }
+              ],
+              "currentPhase": 2,
+              "latestData": 2,
+              "phases": [
+                {
+                  "data": 1,
+                  "number": 1
+                },
+                {
+                  "data": 2,
+                  "number": 2
+                }
+              ],
+              "ready": true,
+              "receipts": [
+                {
+                  "phase": 2,
+                  "pufuId": 1,
+                  "reason": 7,
+                  "replacement": 2,
+                  "requestId": 1,
+                  "requestRevision": 1,
+                  "revision": 2
+                }
+              ],
+              "relations": [1, 2],
+              "revision": 2
+            },
+            "status": 404
+          },
+          "request": {
+            "pufuId": 1,
+            "reason": 7,
+            "replacement": 2,
+            "requestId": 1,
+            "revision": 1
+          }
+        }
+      ]
+    }
+  ],
+  "version": 1
+}
