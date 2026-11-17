@@ -14,7 +14,7 @@ import type {
 import { publicPathPattern } from '../../../shared/public-route';
 import { elementKeys, pufuDisplayTitle, type PufuScore } from '../../../shared/pufu';
 import { articleJsonLd } from '../../../shared/seo';
-import { homePath, legalPath, manualPath, siteOrigin } from '../../../shared/site-paths';
+import { faqPath, homePath, legalPath, manualPath, siteOrigin } from '../../../shared/site-paths';
 import { textLinks } from '../../../shared/text-links';
 import type { AppEnv } from '../../env';
 import { documentSecureHeaders } from './document-headers';
@@ -312,14 +312,15 @@ Pufu Lens is a web app at ${root}/. Product terms: Stock, Pufu, Memory, MCP.
 
 ## Languages
 
-- Japanese (default): ${root}/ , ${root}/manual , ${root}/privacy , ${root}/terms
-- English: ${root}/en , ${root}/en/manual , ${root}/en/privacy , ${root}/en/terms
+- Japanese (default): ${root}/ , ${root}/manual , ${root}/faq , ${root}/privacy , ${root}/terms
+- English: ${root}/en , ${root}/en/manual , ${root}/en/faq , ${root}/en/privacy , ${root}/en/terms
 - Language is selected by URL. Responses do not auto-redirect based on Accept-Language.
 
 ## Key public paths
 
 - Home: ${root}/ and ${root}/en
 - User manual: ${root}/manual and ${root}/en/manual
+- FAQ: ${root}/faq and ${root}/en/faq
 - Public projects: ${root}/p/<public-id>
 - Public stocks / questions / Pufu: ${root}/p/<public-id>/stocks/<id> , .../questions/<id> , .../pufus/<id>
 - Privacy / Terms: ${root}/privacy , ${root}/terms and /en/... variants
@@ -402,6 +403,8 @@ export function publicPagesApp() {
       homePath('en'),
       manualPath('ja'),
       manualPath('en'),
+      faqPath('ja'),
+      faqPath('en'),
       legalPath('privacy', 'ja'),
       legalPath('privacy', 'en'),
       legalPath('terms', 'ja'),

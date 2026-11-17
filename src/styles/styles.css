@@ -23,6 +23,7 @@
 @import '../features/public-projects/public-projects.css';
 @import '../features/manual/manual.css';
 @import '../features/legal/legal.css';
+@import '../features/faq/faq.css';
 @import '../features/comments/comments.css';
 @import '../i18n/language-select.css';
 @import '../features/pufu/title.css';

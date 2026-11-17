@@ -181,6 +181,8 @@ it.each([
 
 it('トップページの共有メタ情報をマニュアルや規約ページへ流用しない', () => {
   for (const file of [
+    'faq/index.html',
+    'en/faq/index.html',
     'manual/index.html',
     'en/manual/index.html',
     'privacy/index.html',
@@ -194,6 +196,47 @@ it('トップページの共有メタ情報をマニュアルや規約ページ�
     );
   }
 });
+
+it.each([
+  ['faq/index.html', 'ja', '/faq'],
+  ['en/faq/index.html', 'en', '/en/faq'],
+] as const)(
+  '%s に全FAQを静的出力し、検索用JavaScriptと本文に一致する構造化データを含める',
+  (file, language, path) => {
+    const { document } = parseHTML(assets.get(file)!);
+    expect(document.documentElement.lang).toBe(language);
+    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      `https://ogp.example.test${path}`,
+    );
+    expect(document.querySelectorAll('.faq-item')).toHaveLength(27);
+    expect(document.querySelectorAll('main section')).toHaveLength(6);
+    expect(document.querySelector('script[type="module"]')).not.toBeNull();
+    expect(document.querySelector('link[hreflang="en"]')?.getAttribute('href')).toBe(
+      'https://ogp.example.test/en/faq',
+    );
+    const data = [...document.querySelectorAll('script[type="application/ld+json"]')]
+      .map((node) => JSON.parse(node.textContent!))
+      .find((value) => value['@type'] === 'FAQPage');
+    expect(data.mainEntity).toHaveLength(27);
+    expect(data.mainEntity[0].name).toBe(
+      document.querySelector('.faq-item summary span:last-child')?.textContent,
+    );
+    const prefix = language === 'en' ? '/en' : '';
+    expect(document.querySelector(`#faq-policies a[href="${prefix}/privacy"]`)).not.toBeNull();
+    expect(document.querySelector('#faq-contact a')?.getAttribute('href')).toBe(
+      'mailto:pufu-lens@haluworks.com',
+    );
+    const { document: home } = parseHTML(
+      assets.get(language === 'en' ? 'en/index.html' : 'index.html')!,
+    );
+    expect(
+      home.querySelector(`.public-header a[href="${prefix}/manual"] + a`)?.getAttribute('href'),
+    ).toBe(path);
+    expect(
+      home.querySelector(`main > .legal-links a[href="${path}"] + a`)?.getAttribute('href'),
+    ).toBe(`${prefix || '/'}#announcements`);
+  },
+);
 
 it('マニュアルの日英HTMLに本文・HowTo/FAQとログイン済み案内用のmoduleを含める', () => {
   for (const [file, lang, title] of [

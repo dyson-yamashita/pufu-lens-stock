@@ -2,6 +2,7 @@ import { createInstance } from 'i18next';
 import { useSyncExternalStore } from 'react';
 import { browserLanguage, languages, resolveLanguage, type Language } from '../../shared/locale';
 import {
+  faqPath,
   homePath,
   legalPath,
   manualPath,
@@ -53,6 +54,9 @@ export function legalHref(page: LegalPage, language = getLanguage()): string {
 }
 export function homeHref(language = getLanguage()): string {
   return homePath(language);
+}
+export function faqHref(language = getLanguage()): string {
+  return faqPath(language);
 }
 export function manualHref(language = getLanguage()): string {
   return manualPath(language);

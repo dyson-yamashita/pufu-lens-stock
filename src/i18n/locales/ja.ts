@@ -1,4 +1,19 @@
 export const ja: Record<string, string> = {
+  'faq.link': 'FAQ',
+  'faq.title': 'よくある質問（FAQ）',
+  'faq.description':
+    'PufuLensの機能・料金・使い方・個人情報の取り扱いなど、よくある質問をまとめました。',
+  'faq.search_label': 'FAQを検索',
+  'faq.search_placeholder': '例：無料、Google、個人情報',
+  'faq.search_hint':
+    'カテゴリ・質問・回答をキーワードで絞り込みます。複数の語はスペースで区切ってください。',
+  'faq.results': '{{value0}}件の質問',
+  'faq.categories': 'FAQのカテゴリ',
+  'faq.empty':
+    '一致する質問が見つかりませんでした。キーワードを変えるか、検索をクリアしてください。',
+  'faq.no_script':
+    '検索を使うにはJavaScriptを有効にしてください。質問と回答はそのまま閲覧できます。',
+
   'announcements.description': 'Pufu Lensの新機能やメンテナンス、重要なご案内をお届けします。',
   'push.loading': '読み込み中…',
   'announcements.title': 'お知らせ',

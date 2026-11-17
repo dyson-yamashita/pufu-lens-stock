@@ -1,5 +1,27 @@
 [
   {
+    "id": "FAQ-001",
+    "estimatedSeconds": 8,
+    "title": "未ログインのFAQ導線とキーワード検索",
+    "sources": [
+      "src/features/faq/FaqPage.tsx",
+      "src/features/faq/faq.css",
+      "shared/faq.ts",
+      "shared/locales/faq-ja.ts",
+      "shared/locales/faq-en.ts",
+      "src/features/auth/Login.tsx",
+      "src/features/auth/HomeShell.tsx",
+      "src/features/legal/LegalLinks.tsx",
+      "shared/site-paths.ts",
+      "shared/public-document-routes.ts",
+      "server/features/public-projects/public-pages.ts"
+    ],
+    "aspects": [
+      "未ログイントップのヘッダーでマニュアルの直後、フッターでお知らせの直前からFAQへ移動。全6カテゴリ27問を閲覧し、質問の開閉・回答中の語・全角英数・複数語の検索、0件案内、クリアとフォーカス復帰、再読込を確認",
+      "日英URLとマニュアル・規約・メールのリンク、両画面幅light/darkで横はみ出しなしを確認。静的HTML本文・構造化データ・サイトマップとWorker配信のセキュリティヘッダーはVitestで検証。実機Safari・本番配信は対象外"
+    ]
+  },
+  {
     "id": "USAGE-001",
     "estimatedSeconds": 10,
     "title": "プロフィールの利用状況",

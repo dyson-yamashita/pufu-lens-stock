@@ -1,5 +1,5 @@
 import type { Language } from '../../../shared/locale';
-import { homeHref, legalHref, translateUi, useLanguage } from '../../i18n/i18n';
+import { faqHref, homeHref, legalHref, translateUi, useLanguage } from '../../i18n/i18n';
 export default function LegalLinks({
   newTab = false,
   language,
@@ -16,6 +16,7 @@ export default function LegalLinks({
       {[
         { href: legalHref('privacy', locale), label: text('ui.legal_links.privacy_policy') },
         { href: legalHref('terms', locale), label: text('ui.legal_links.terms_of_service') },
+        { href: faqHref(locale), label: text('faq.link') },
         { href: `${homeHref(locale)}#announcements`, label: text('announcements.title') },
       ].map(({ href, label }) => {
         return (

@@ -2,11 +2,14 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseHTML } from 'linkedom';
 import type { Plugin } from 'vite';
+import FaqPage from '../src/features/faq/FaqPage';
+import { faqAnswerText, faqCategories } from '../shared/faq';
 import LegalPage from '../src/features/legal/LegalPage';
 import UserManual from '../src/features/manual/UserManual';
 import HomeShell from '../src/features/auth/HomeShell';
 import { setServerLanguage, translateUi } from '../src/i18n/i18n';
 import {
+  hreflangLinks,
   homeHreflang,
   homeJsonLd,
   jsonLdScript,
@@ -16,6 +19,7 @@ import {
 } from '../shared/seo';
 import {
   absoluteUrl,
+  faqPath,
   homePath,
   legalPath,
   manualPath,
@@ -168,6 +172,40 @@ export function legalPagesPlugin(): Plugin {
             hreflang: manualHreflang(site),
             jsonLd: manualJsonLd(language, site),
             body: manualBody,
+            keepModule: true,
+          }),
+        });
+
+        this.emitFile({
+          type: 'asset',
+          fileName: `${language === 'en' ? 'en/' : ''}faq/index.html`,
+          source: prepareDocument(template, {
+            language,
+            title: `${translateUi(language, 'faq.title')} | Pufu Lens`,
+            description: translateUi(language, 'faq.description'),
+            path: faqPath(language),
+            hreflang: hreflangLinks(
+              [
+                { language: 'ja', path: faqPath('ja') },
+                { language: 'en', path: faqPath('en') },
+                { language: 'x-default', path: faqPath('ja') },
+              ],
+              site,
+            ),
+            jsonLd: {
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              url: absoluteUrl(faqPath(language), site),
+              inLanguage: language,
+              mainEntity: faqCategories(language).flatMap((category) =>
+                category.entries.map((entry) => ({
+                  '@type': 'Question',
+                  name: entry.question,
+                  acceptedAnswer: { '@type': 'Answer', text: faqAnswerText(entry.answer) },
+                })),
+              ),
+            },
+            body: renderToStaticMarkup(createElement(FaqPage, { language })),
             keepModule: true,
           }),
         });
