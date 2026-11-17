@@ -1,0 +1,53 @@
+{
+  "module": "BoundaryVerification.McpVisibility",
+  "mutations": [
+    {
+      "name": "B05-list-filter",
+      "old": "access p required row && requestedAllowed requested row && visible p requested projectListing row",
+      "new": "true && requestedAllowed requested row && visible p requested projectListing row",
+      "theorem": "filtered_subset_permitted"
+    },
+    {
+      "name": "B05-scope",
+      "old": "decide (required ∈ p.scopes) && decide (row.owner = p.user) && projectAllowed p row.project",
+      "new": "true && decide (row.owner = p.user) && projectAllowed p row.project",
+      "theorem": "detail_missing_scope"
+    },
+    {
+      "name": "B05-owner",
+      "old": "decide (required ∈ p.scopes) && decide (row.owner = p.user) && projectAllowed p row.project",
+      "new": "decide (required ∈ p.scopes) && true && projectAllowed p row.project",
+      "theorem": "detail_wrong_owner"
+    },
+    {
+      "name": "B05-project",
+      "old": "decide (required ∈ p.scopes) && decide (row.owner = p.user) && projectAllowed p row.project",
+      "new": "decide (required ∈ p.scopes) && decide (row.owner = p.user) && true",
+      "theorem": "detail_outside_project"
+    },
+    {
+      "name": "B05-empty-selection",
+      "old": "| some ids => decide (project ∈ ids)",
+      "new": "| some ids => if ids.isEmpty then true else decide (project ∈ ids)",
+      "theorem": "empty_selection_no_rows"
+    },
+    {
+      "name": "B05-hidden-global",
+      "old": "projectListing || requested.isSome || p.projects.isSome || row.showInAll",
+      "new": "projectListing || requested.isSome || p.projects.isSome || true",
+      "theorem": "hidden_global_excluded"
+    },
+    {
+      "name": "B05-comment-scope",
+      "old": "| _, true => .questionsWrite",
+      "new": "| _, true => .pufusWrite",
+      "theorem": "pufu_comment_requires_questions_write"
+    },
+    {
+      "name": "B05-question-response",
+      "old": "⟨true, some submitted, { s with savedInputs := s.savedInputs ++ [submitted] }⟩",
+      "new": "⟨true, some target.privateData, { s with savedInputs := s.savedInputs ++ [submitted] }⟩",
+      "theorem": "question_response_only_submitted"
+    }
+  ]
+}

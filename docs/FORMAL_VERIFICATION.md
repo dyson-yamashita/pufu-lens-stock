@@ -2,7 +2,7 @@
 
 MCP・iOSショートカット・SNS連携など、外部入力・認証主体・権限・公開範囲・処理世代が切り替わる場所で、守るべき条件をLean 4のモデルと実装のテストで確認する。開発時の必須ルールは [AGENTS.md](../AGENTS.md#境界処理の形式検証) に置く。
 
-この文書は、必須となる変更の判断方法と、既存実装から調べた検証候補を記録する。対象一覧の作成は形式証明の実施ではない。今回のルール追加で新しいモデル・証明や本番コードの修正は行っていない。
+この文書は、必須となる変更の判断方法と、既存実装から調べた検証候補を記録する。対象一覧の作成自体は形式証明の実施ではない。現在はB00に加えてB01〜B14の最小モデル・証明と照合テストを追加しており、本番コードは変更していない。
 
 ## 適用する変更
 
@@ -53,13 +53,13 @@ MCP・iOSショートカット・SNS連携など、外部入力・認証主体�
 
 ## 既存の対象と優先順位
 
-調査基準は `b9424c7`（PR #263を取り込んだmain）。以下は主な境界の候補一覧であり、全機能の網羅的なセキュリティ監査や、不具合の認定ではない。
+調査基準は `d77cf52`（PR #264を取り込んだmain）。以下は主な境界の候補一覧であり、全機能の網羅的なセキュリティ監査や、不具合の認定ではない。
 
 - **P0:** 複数入口に共通する権限、外部・匿名から本人データに届く条件、外部サービスの資格情報の所有者と利用条件。最初に整備する。
 - **P1:** 再送・競合・旧結果・削除・資源予約など、条件の組合せで状態が壊れ得る境界。P0のモデルを使って段階的に追加する。
 - **P2:** ほかの境界にも対象を広げる候補。関連仕様を変更するときは、優先度に関係なく必須ルールを適用する。
 
-`B00` のみ既存の抽象モデル・証明がある。`B01`〜`B12` とP2候補は**形式検証未着手**。記載したTypeScriptテストの存在は数学的証明を意味せず、候補の性質をすべて網羅しているとも限らない。各項目に着手するときに、仕様・対象差分とテスト内容を再確認する。
+`B00`を維持し、`B01`〜`B12`とP2候補を採番した`B13`/`B14`に**最小モデル・証明・変異検出・照合テストを追加**した。各IDの全実装を完全検証したという意味ではない。証明した個別条件、定理と実装/テストの対応、残る未検証範囲は[モデル別の仕様一覧](../formal/boundary-verification/README.md#対象と対応表)を参照する。TypeScriptテストの成功は数学的証明とは区別する。
 
 | ID / 優先度 | 境界・操作                                         | 検証する性質の候補                                                                                                                                                                                                                                                                                                                                                 | 実装 / 既存テストの入口                                                                                                                                                                                                                                                           |
 | ----------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -67,7 +67,7 @@ MCP・iOSショートカット・SNS連携など、外部入力・認証主体�
 | B01 / P0    | 共通認証・API許可表                                | `session` / `token` / `mcp` ごとの許可メソッド・パスを分離する。未登録・無効な認証情報では保護操作に到達しない。ショートカット用トークンをMCP認証として受け入れない。セッション変更操作ではOrigin確認を通す                                                                                                                                                        | [認証](../server/features/auth/auth.ts)、[API許可表](../server/api/middleware/authentication.ts)、[security](../tests/security.test.ts)、[onboarding](../tests/onboarding.test.ts)、[mcp](../tests/mcp.test.ts)                                                                   |
 | B02 / P0    | iOSショートカット: トークンと保存先                | 認証時のDB照会で失効・期限切れなら拒否（無期限トークンは別条件）。認証後の実行中要求の取消しは未検証。許可APIは `GET /api/v1/projects` と `POST /api/v1/stocks`。所有者・トークンの保存先制限に従い、指定省略時の既存仕様を守る。権限拒否時に他人・対象外の業務データを変更しない                                                                                  | [トークン管理](../server/api/routes/tokens.ts)、[保存](../server/api/routes/stock-collection.ts)、[プロジェクト一覧](../server/api/routes/projects.ts)、[tokens](../tests/tokens.test.ts)、[text-stocks](../tests/text-stocks.test.ts)、[request-id](../tests/request-id.test.ts) |
 | B03 / P0    | MCP認可・接続変更・失効・refresh                   | ツールに必要なスコープがない場合は拒否。保存設定を反映したスコープは元の認可を超えない。プロジェクトは最新設定と本人の所有条件で解決し、`null` と空配列を区別する。認証/refresh時の設定照会で失効やoffline_access取消を反映し、refreshで復活・延長しない。設定読込後の実行中要求の取消しは未検証                                                                   | [OAuth/設定/refresh](../server/mcp/oauth.ts)、[handleMcp](../server/mcp/server.ts)、[run](../server/mcp/tool-context.ts)、[mcp-oauth](../tests/mcp-oauth.test.ts)、[connection-settings](../tests/mcp-connection-settings.test.ts)                                                |
-| B04 / P1    | MCP `create_pufu` / `add_pufu_phase`               | 同じrequest_id・同じ内容の再送は元の結果を返し、局面・理由コメントを重複追加しない。異なる内容での再使用は競合。正常な追加はcurrent_phase/revisionが1増え、既存局面を維持する。作成と局面追加は別の遷移として扱う                                                                                                                                                  | [ツール](../server/mcp/tools/pufu.ts)、[作成](../server/features/pufu/pufu-write.ts)、[局面追加](../server/features/pufu/pufu-phases.ts)、[mcp-pufu-phases](../tests/mcp-pufu-phases.test.ts)、[mcp](../tests/mcp.test.ts)                                                        |
+| B04 / P1    | MCP `create_pufu` / `add_pufu_phase`               | 同じrequest_id・同じ内容の再送は新規書込をせず、局面・理由コメントを重複追加しない。局面追加は元レシートの結果を返すが、作成再送の応答には現在のrevision等が含まれる。異なる内容での再使用は競合。正常な追加はcurrent_phase/revisionが1増え、既存局面を維持する。作成と局面追加は別の遷移として扱う                                                                | [ツール](../server/mcp/tools/pufu.ts)、[作成](../server/features/pufu/pufu-write.ts)、[局面追加](../server/features/pufu/pufu-phases.ts)、[mcp-pufu-phases](../tests/mcp-pufu-phases.test.ts)、[mcp](../tests/mcp.test.ts)                                                        |
 | B05 / P1    | その他のMCP読み取り・書き込み                      | projects/stocks/questions/memory/comments等で、スコープ・所有者・許可プロジェクトを同時に守る。一覧・検索・ページ件数・関連先にも条件を適用する。書込許可だけで、応答から既存の私的情報を追加取得できるとは仮定しない                                                                                                                                              | [MCPツール群](../server/mcp/tools)、[所有判定](../server/api/context.ts)、[project-access](../server/features/projects/project-access.ts)、[mcp-memory](../tests/mcp-memory.test.ts)、[mcp-relations](../tests/mcp-relations.test.ts)、[mcp](../tests/mcp.test.ts)                |
 | B06 / P0    | 匿名公開API・ページ・公開キャッシュ                | 公開条件・キャッシュ世代の照会で非公開と判定した読み取りでは本文・添付画像・プ譜を返さない。判定後の非公開化と送信の競合は未検証。公開条件と返却フィールドを守り、古い公開キャッシュから再露出させない。公開設定の変更は本人のセッションでのみ許可する。既に利用者へ渡ったデータの回収は証明対象にしない                                                           | [公開処理](../server/features/public-projects/public-projects.ts)、[公開ページ](../server/features/public-projects/public-pages.ts)、[public-projects](../tests/public-projects.test.ts)、[public-directory-cache](../tests/public-directory-cache.test.ts)                       |
 | B07 / P1    | 秘密のプ譜画像リンク: 発行と匿名取得               | 発行時の所有者・許可範囲、取得時の期限・ready・対象・局面・revisionを守る。R2読込後の再確認に失敗した場合は応答しない。これはプロジェクト公開とは別の期限付き権限であり、非公開プロジェクトなら常に拒否という規則を作らない                                                                                                                                        | [画像リンク](../server/features/pufu/images/pufu-image-links.ts)、[pufu-image-links](../tests/pufu-image-links.test.ts)、[pufu-images](../tests/pufu-images.test.ts)                                                                                                              |
@@ -79,25 +79,21 @@ MCP・iOSショートカット・SNS連携など、外部入力・認証主体�
 
 SNSはB12として主要対象に含める。現行のX連携は利用者がBearer Tokenを登録する方式であり、SNS用OAuth認可・refreshや投稿機能はこの調査では仮定しない。`configured` はローカルの登録状態で、X側でのトークンの有効性を保証しない。暗号方式自体の正しさ、X側の失効、削除前に読み出し済みの資格情報を使う実行中リクエストの取消しは未検証として分ける。ほかのSNSを導入するときは、プロバイダーごとの所有者・必要権限・失効・取得/投稿等の操作範囲を調べ、同じルールで対象一覧を更新する。
 
-P2の追加候補は次のとおり。いずれも形式検証未着手であり、対象に取り込む際に独立したIDと検証条件を追加する。
+P2の追加候補も次のIDで最小モデルを追加した。
 
-- **Pushの登録・解除・配信:** セッションに結び付く同意と購読の所有者、解除・ログアウト後の配信判定、再試行時の二重配信条件を検証する。[配信](../server/features/announcements/push-delivery.ts)、[pushテスト](../tests/push.test.ts)、[push-delivery](../tests/push-delivery.test.ts)。外部Pushサービスへ渡った通知の回収や厳密な一度だけの到達は仮定しない。
-- **添付画像/PDF・AI出力の取込み:** 所有者、入力サイズ・形式・状態、ストレージ保存を確定する条件を先にモデル化する。画像/PDFパーサーやLLMの内容全体の正しさを小さなモデルで証明したとは書かない。[stock-images](../server/features/stocks/stock-images.ts)、[PDF](../server/features/stocks/pdf/pdf.ts)、[stock-imagesテスト](../tests/stock-images.test.ts)。
+- **B13 / P2 — Pushの登録・解除・配信:** セッションに結び付く同意と購読の所有者、解除・ログアウト後の配信判定、再試行時の二重配信条件を検証する。[配信](../server/features/announcements/push-delivery.ts)、[pushテスト](../tests/push.test.ts)、[push-delivery](../tests/push-delivery.test.ts)。外部Pushサービスへ渡った通知の回収や厳密な一度だけの到達は仮定しない。
+- **B14 / P2 — 添付画像/PDF・AI出力の取込み:** 所有者、入力サイズ・形式・状態、ストレージ保存を確定する条件を先にモデル化する。画像/PDFパーサーやLLMの内容全体の正しさを小さなモデルで証明したとは書かない。[stock-images](../server/features/stocks/stock-images.ts)、[PDF](../server/features/stocks/pdf/pdf.ts)、[stock-imagesテスト](../tests/stock-images.test.ts)。
 
-## 最初に進める順序
+## 今回の実施範囲と今後の拡張
 
-1. B01/B02を最初の追加モデルにする。認証種別・HTTP操作の許可表と、ショートカットトークンの有効性・保存先を扱う。B00のMCP用Accessをそのまま流用せず、`session` / `token` / `mcp` の違いを表現する。
-2. B03でMCP接続設定の更新・失効・refresh、B12でSNS資格情報の登録・更新・削除と外部取得のユーザー対応を加える。最初は逐次遷移を証明し、同時実行を未検証のまま含めて説明しない。
-3. B06で公開状態とキャッシュ世代をモデル化する。B07の秘密画像リンクとは別の取得条件として保つ。
-4. B04でrequest_idと局面追加を検証し、その考え方をショートカットのIdempotency-Keyに適用できるか、既存の省略・保存先・再送仕様と照合する。
-5. B05/B08〜B11は関連機能の変更時にも整備し、並行処理を証明する場合は、状態の読み取り・条件付き書込・失効/世代変更のどこを遷移として扱うか明示する。
+B01〜B14の証明対象と限界は[各境界のREADME・詳細仕様](../formal/boundary-verification/README.md)に分けた。既存の候補文を、そのまま全機能の証明完了という意味で扱わない。共通CIは登録したすべてのモデルをビルドし、公理依存・安全条件の変異検出を行う。登録テストは既存のVitestジョブに含まれる。
 
-各項目の着手・完了時にはこの一覧の状態、対象のモデル・定理・照合テスト・CIコマンドへのリンクを更新する。実装のテストが成功しただけで状態を「形式検証済み」に変更しない。
+今後は境界の仕様を変更する際に、今回の抽象化から外れる条件・状態・判定時点を追加する。たとえば失効後の実行中要求を止める保証、DBとR2をまたぐ全並行性、全ツールの応答情報量、外部Pushの重複配送は、最小モデルの成功だけで検証済みにしない。実装の問題を見つけた場合は問題と修正案を報告し、仕様を無断で変更しない。
 
 ## 既存の実行基盤と保証の限界
 
 Leanの固定バージョン、配置方針、ビルド・変異検出の実行対象、CIへの登録方法は [形式検証の共通README](../formal/README.md) を参照する。新しい対象を追加するときは、共通READMEの対象表と、その対象固有のREADME、本書の対象一覧を更新する。外部Leanライブラリを増やす前に、既存の最小構成で表現できるか確認する。
 
-現時点の実装済みモデルはB00のupdate_pufuのみである。[MCP PoC README](../formal/mcp-verification/README.md) はこの対象固有の仕様・証明・実装との対応を説明する。MCP以外の対象を追加するために、MCP PoCの適用範囲を広げることは求めない。
+実装済みの最小モデルはB00〜B14である。B01〜B14は[境界処理プロジェクト](../formal/boundary-verification/README.md)で扱う。[MCP PoC README](../formal/mcp-verification/README.md) はこの対象固有の仕様・証明・実装との対応を説明する。MCP以外の対象を追加するために、MCP PoCの適用範囲を広げることは求めない。
 
 Leanが証明するのは、明示した前提の下の抽象モデルの性質である。TypeScript/SQLとの自動的な同値性、暗号・OAuthライブラリ、DNSと実接続、D1/R2の障害・原子性、外部サービスやブラウザー/OSの挙動は、モデルに含めて証明しない限り保証されない。実装との照合、実環境の設定確認、通常のテスト・レビュー・セキュリティ監査を引き続き行う。

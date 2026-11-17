@@ -79,8 +79,8 @@ def load_targets(root=ROOT):
     return targets
 
 
-def run(command, directory):
-    result = subprocess.run(command, cwd=directory, text=True, capture_output=True, timeout=180)
+def run(command, directory, timeout=180):
+    result = subprocess.run(command, cwd=directory, text=True, capture_output=True, timeout=timeout)
     output = result.stdout + result.stderr
     if result.returncode:
         raise VerificationError(output)
@@ -136,10 +136,11 @@ def main():
         directory = ROOT / target['directory']
         print(build(directory, target['modules']), end='', flush=True)
         print(audit_axioms(directory, target['modules']), end='', flush=True)
-        print(run(target['mutations'], directory), end='', flush=True)
+        # A project may now contain dozens of independent mutation compiles.
+        print(run(target['mutations'], directory, timeout=300), end='', flush=True)
     if args.tests:
         tests = sorted({test for target in targets for test in target['tests']})
-        print(run(['pnpm', 'exec', 'vitest', 'run', *tests], ROOT.parent), end='', flush=True)
+        print(run(['pnpm', 'exec', 'vitest', 'run', *tests, '--maxWorkers=2'], ROOT.parent, timeout=1800), end='', flush=True)
 
 
 if __name__ == '__main__':

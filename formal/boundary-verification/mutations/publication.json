@@ -1,0 +1,23 @@
+{
+  "module": "BoundaryVerification.Publication",
+  "mutations": [
+    {
+      "name": "B06-private",
+      "old": "s.present = true ∧ s.isPublic = true ∧ s.publicId = some key",
+      "new": "s.present = true ∧ True ∧ s.publicId = some key",
+      "theorem": "detail_requires_public"
+    },
+    {
+      "name": "B06-cache-generation",
+      "old": "if entry.generation = current ∧ entry.page = page then .cached current page",
+      "new": "if True ∧ entry.page = page then .cached current page",
+      "theorem": "cached_requires_current_generation"
+    },
+    {
+      "name": "B06-missing-revision",
+      "old": "| none => .denied",
+      "new": "| none => .database",
+      "theorem": "missing_revision_fail_closed"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "module": "BoundaryVerification.Connection",
+  "mutations": [
+    {
+      "name": "B03-latest-scope-intersection",
+      "old": "g.scopes.filter (fun scope => s.scopes.contains scope)",
+      "new": "g.scopes",
+      "theorem": "latest_scope_required"
+    },
+    {
+      "name": "B03-revoked-access",
+      "old": "else if revoked setting then none",
+      "new": "else if false then none",
+      "theorem": "revoked_access_rejected"
+    },
+    {
+      "name": "B03-project-owner",
+      "old": "p.owner == g.owner && permitted.contains p.id",
+      "new": "permitted.contains p.id",
+      "theorem": "foreign_project_rejected_example"
+    },
+    {
+      "name": "B03-offline-refresh",
+      "old": "providerValid && !revoked setting && allowed.contains .offline",
+      "new": "providerValid && !revoked setting",
+      "theorem": "offline_removal_blocks_refresh_example"
+    },
+    {
+      "name": "B03-tombstone-edit",
+      "old": "managerAllowed m g && !revoked (lookup s.settings g) &&",
+      "new": "managerAllowed m g &&",
+      "theorem": "revoked_settings_cannot_revive"
+    }
+  ]
+}
