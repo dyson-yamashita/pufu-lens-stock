@@ -1,7 +1,8 @@
 import * as webPush from '@block65/webcrypto-web-push';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchXPost } from '../server/features/integrations/x';
+import { fetchXPost, xToken } from '../server/features/integrations/x';
 import { deliverAnnouncements } from '../server/features/announcements/push-delivery';
+import { hash } from '../server/infrastructure/security';
 import { saveAnnouncement, testAnnouncement } from './announcement-fixture';
 import { testApp } from './helpers';
 
@@ -55,6 +56,52 @@ async function pushSetup() {
 }
 
 describe('B12 SNS資格情報の照合', () => {
+  it('両者の資格情報が存在してもAliceの更新・削除はBobの暗号文と更新時刻を維持する', async () => {
+    app = await testApp();
+    app.env.INTEGRATION_ENCRYPTION_KEY = 'cd'.repeat(32);
+    for (const user of ['alice', 'bob']) {
+      expect(
+        (
+          await app.request('/api/v1/integrations/x', {
+            method: 'PUT',
+            user,
+            body: { token: `${user}-original-secret` },
+          })
+        ).status,
+      ).toBe(200);
+    }
+    await app.env.DB.prepare(
+      "UPDATE external_integrations SET updated_at='2001-01-01T00:00:00.000Z' WHERE user_id='bob' AND provider='x'",
+    ).run();
+    const bobCredential = () =>
+      app.env.DB.prepare(
+        "SELECT encrypted_token,updated_at FROM external_integrations WHERE user_id='bob' AND provider='x'",
+      ).first();
+    const original = await bobCredential();
+    expect(original).toMatchObject({
+      encrypted_token: expect.any(String),
+      updated_at: '2001-01-01T00:00:00.000Z',
+    });
+    expect(
+      (
+        await app.request('/api/v1/integrations/x', {
+          method: 'PUT',
+          body: { token: 'alice-replacement-secret' },
+        })
+      ).status,
+    ).toBe(200);
+    expect(await xToken(app.env, 'alice')).toBe('alice-replacement-secret');
+    expect(await bobCredential()).toEqual(original);
+    expect((await app.request('/api/v1/integrations/x', { method: 'DELETE' })).status).toBe(200);
+    expect(
+      await app.env.DB.prepare(
+        "SELECT user_id FROM external_integrations WHERE user_id='alice' AND provider='x'",
+      ).first(),
+    ).toBeNull();
+    expect(await bobCredential()).toEqual(original);
+    expect(await xToken(app.env, 'bob')).toBe('bob-original-secret');
+  });
+
   it('configuredはXの有効性を主張せず、削除後の新たな取得は資格情報を送信しない', async () => {
     app = await testApp();
     app.env.INTEGRATION_ENCRYPTION_KEY = 'cd'.repeat(32);
@@ -102,6 +149,58 @@ describe('B12 SNS資格情報の照合', () => {
 });
 
 describe('B13 Push同意と配信の照合', () => {
+  it('bodyのowner・session指定を使わず、Cookieを照会した本人とセッションへ購読を結び付ける', async () => {
+    const { body } = await pushSetup();
+    const aliceHash = await hash('alice-session');
+    const bobHash = await hash('bob-session');
+    const otherAliceHash = await hash('alice-other-session');
+    await app.env.DB.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES (?,?,?)')
+      .bind(otherAliceHash, 'alice', new Date(Date.now() + 86400000).toISOString())
+      .run();
+    const stored = (device: string) =>
+      app.env.DB.prepare('SELECT user_id,session_hash FROM push_subscriptions WHERE endpoint=?')
+        .bind(device)
+        .first();
+    const spoofed = { ...body, user_id: 'bob', sessionHash: bobHash, session_hash: bobHash };
+    expect(
+      (
+        await app.request('/api/v1/push/subscription', {
+          method: 'PUT',
+          body: spoofed,
+        })
+      ).status,
+    ).toBe(200);
+    expect(await stored(endpoint)).toEqual({ user_id: 'alice', session_hash: aliceHash });
+    expect(
+      (
+        await app.request('/api/v1/push/subscription', {
+          method: 'PUT',
+          headers: { Cookie: 'stock_session=alice-other-session' },
+          body: spoofed,
+        })
+      ).status,
+    ).toBe(200);
+    expect(await stored(endpoint)).toEqual({ user_id: 'alice', session_hash: otherAliceHash });
+    const bobEndpoint = `${endpoint}-bob`;
+    expect(
+      (
+        await app.request('/api/v1/push/subscription', {
+          method: 'PUT',
+          headers: { Cookie: 'stock_session=bob-session' },
+          body: {
+            ...body,
+            endpoint: bobEndpoint,
+            user_id: 'alice',
+            sessionHash: otherAliceHash,
+            session_hash: otherAliceHash,
+          },
+        })
+      ).status,
+    ).toBe(200);
+    expect(await stored(bobEndpoint)).toEqual({ user_id: 'bob', session_hash: bobHash });
+    expect(await stored(endpoint)).toEqual({ user_id: 'alice', session_hash: otherAliceHash });
+  });
+
   it('期限切れセッションの購読を登録時に掃除し、新しい所有者のセッションへ結び付ける', async () => {
     const { body } = await pushSetup();
     await app.env.DB.prepare(

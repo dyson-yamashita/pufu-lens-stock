@@ -1,4 +1,4 @@
-import Std
+import BoundaryVerification.Auth
 
 namespace BoundaryVerification.Sns
 
@@ -8,12 +8,12 @@ inductive Principal where
 
 structure Management where
   principal : Principal
-  onboarded : Bool
+  identity : Auth.SessionPrincipal
   originTrusted : Bool
   deriving DecidableEq, Repr
 
 def mayInspect (r : Management) : Bool :=
-  r.principal == .session && r.onboarded
+  r.principal == .session && r.identity.onboarded
 
 def mayChange (r : Management) : Bool :=
   mayInspect r && r.originTrusted
@@ -31,16 +31,17 @@ structure State where
   businessRevision : Nat
 
 /-- The database lookup is keyed by the authenticated user's ID and provider x. -/
-def put (s : State) (r : Management) (user secret stamp : Nat) : State :=
+def put (s : State) (r : Management) (secret stamp : Nat) : State :=
   if mayChange r then
     { s with credentials := fun owner =>
-        if owner == user then some ⟨user, secret, true, stamp⟩ else s.credentials owner }
+        if owner == r.identity.userId then
+          some ⟨r.identity.userId, secret, true, stamp⟩ else s.credentials owner }
   else s
 
-def erase (s : State) (r : Management) (user : Nat) : State :=
+def erase (s : State) (r : Management) : State :=
   if mayChange r then
     { s with credentials := fun owner =>
-        if owner == user then none else s.credentials owner }
+        if owner == r.identity.userId then none else s.credentials owner }
   else s
 
 def load (s : State) (user : Nat) : Option Nat :=
@@ -63,42 +64,71 @@ def inspect (s : State) (user : Nat) (keyAvailable : Bool) : PublicStatus :=
 
 theorem management_requires_session (r : Management) (h : mayInspect r = true) :
     r.principal = .session := by
-  have guards : r.principal = .session ∧ r.onboarded = true := by
+  have guards : r.principal = .session ∧ r.identity.onboarded = true := by
     simpa [mayInspect] using h
   exact guards.1
 
-theorem rejected_management_unchanged (s : State) (r : Management) (u secret stamp : Nat)
-    (h : mayChange r = false) : put s r u secret stamp = s ∧ erase s r u = s := by
+theorem rejected_management_unchanged (s : State) (r : Management) (secret stamp : Nat)
+    (h : mayChange r = false) : put s r secret stamp = s ∧ erase s r = s := by
   simp [put, erase, h]
 
-theorem put_owner_only (s : State) (r : Management) (u other secret stamp : Nat)
-    (h : other ≠ u) : (put s r u secret stamp).credentials other = s.credentials other := by
+theorem put_owner_only (s : State) (r : Management) (other secret stamp : Nat)
+    (h : other ≠ r.identity.userId) :
+    (put s r secret stamp).credentials other = s.credentials other := by
   cases decision : mayChange r <;> simp [put, decision, h]
 
-theorem put_loads_same_user (s : State) (r : Management) (u secret stamp : Nat)
-    (h : mayChange r = true) : load (put s r u secret stamp) u = some secret := by
+theorem erase_owner_only (s : State) (r : Management) (other : Nat)
+    (h : other ≠ r.identity.userId) :
+    (erase s r).credentials other = s.credentials other := by
+  cases decision : mayChange r <;> simp [erase, decision, h]
+
+theorem put_loads_same_user (s : State) (r : Management) (secret stamp : Nat)
+    (h : mayChange r = true) :
+    load (put s r secret stamp) r.identity.userId = some secret := by
   simp [put, load, h]
+
+theorem authenticated_put_binds_owner (s : State) (row : Auth.SessionRow)
+    (user : Auth.SessionUser) (presentedHash authTime secret stamp : Nat)
+    (p : Auth.SessionPrincipal) (origin : Bool)
+    (success : Auth.authenticateSession (some row) (some user) presentedHash authTime = some p)
+    (allowed : mayChange ⟨.session, p, origin⟩ = true) :
+    (put s ⟨.session, p, origin⟩ secret stamp).credentials row.owner =
+      some ⟨row.owner, secret, true, stamp⟩ := by
+  have identity := (Auth.authenticated_session_matches_row row user presentedHash authTime p success).1
+  simp [put, allowed, identity]
+
+theorem authenticated_other_owner_unchanged (s : State) (row : Auth.SessionRow)
+    (user : Auth.SessionUser) (presentedHash authTime secret stamp other : Nat)
+    (p : Auth.SessionPrincipal) (origin : Bool)
+    (success : Auth.authenticateSession (some row) (some user) presentedHash authTime = some p)
+    (different : other ≠ row.owner) :
+    (put s ⟨.session, p, origin⟩ secret stamp).credentials other = s.credentials other ∧
+    (erase s ⟨.session, p, origin⟩).credentials other = s.credentials other := by
+  have identity := (Auth.authenticated_session_matches_row row user presentedHash authTime p success).1
+  have otherActor : other ≠ p.userId := by simpa [identity] using different
+  exact ⟨put_owner_only s _ other secret stamp otherActor, erase_owner_only s _ other otherActor⟩
 
 theorem copied_cipher_rejected (s : State) (u : Nat) (c : Cipher)
     (row : s.credentials u = some c) (h : c.aadUser ≠ u) : load s u = none := by
   simp [load, row, h]
 
-theorem erased_new_load_rejected (s : State) (r : Management) (u : Nat)
-    (h : mayChange r = true) : load (erase s r u) u = none := by
+theorem erased_new_load_rejected (s : State) (r : Management)
+    (h : mayChange r = true) : load (erase s r) r.identity.userId = none := by
   simp [erase, load, h]
 
-theorem put_business_unchanged (s : State) (r : Management) (u secret stamp : Nat) :
-    (put s r u secret stamp).businessRevision = s.businessRevision := by
+theorem put_business_unchanged (s : State) (r : Management) (secret stamp : Nat) :
+    (put s r secret stamp).businessRevision = s.businessRevision := by
   cases decision : mayChange r <;> simp [put, decision]
 
-theorem public_status_ignores_secret (s : State) (r : Management) (u a b stamp : Nat)
+theorem public_status_ignores_secret (s : State) (r : Management) (a b stamp : Nat)
     (h : mayChange r = true) (available : Bool) :
-    inspect (put s r u a stamp) u available = inspect (put s r u b stamp) u available := by
+    inspect (put s r a stamp) r.identity.userId available =
+      inspect (put s r b stamp) r.identity.userId available := by
   simp [inspect, put, h]
 
-theorem registered_is_configured (s : State) (r : Management) (u secret stamp : Nat)
+theorem registered_is_configured (s : State) (r : Management) (secret stamp : Nat)
     (h : mayChange r = true) (available : Bool) :
-    (inspect (put s r u secret stamp) u available).configured = true := by
+    (inspect (put s r secret stamp) r.identity.userId available).configured = true := by
   simp [inspect, put, h]
 
 inductive FetchResult where
@@ -159,15 +189,24 @@ theorem outgoing_fixed_manual (secret : Nat) :
   exact ⟨rfl, rfl⟩
 
 def empty : State := ⟨fun _ => none, 7⟩
-def session : Management := ⟨.session, true, true⟩
+def session : Management := ⟨.session, ⟨1, 11, 100, true⟩, true⟩
 
 theorem reachable_registered_and_erased :
-    load (put empty session 1 123 9) 1 = some 123 ∧
-    load (erase (put empty session 1 123 9) session 1) 1 = none := by
+    load (put empty session 123 9) 1 = some 123 ∧
+    load (erase (put empty session 123 9) session) 1 = none := by
   decide
 
 theorem reachable_mcp_denial :
-    (put empty ⟨.mcp, true, true⟩ 1 123 9).credentials 1 = none := by
+    (put empty { session with principal := .mcp } 123 9).credentials 1 = none := by
+  decide
+
+theorem reachable_authenticated_update_preserves_other :
+    Auth.authenticateSession (some ⟨1, 11, 100⟩) (some ⟨1, true⟩) 11 10 =
+      some session.identity ∧
+    let initial := put empty { session with identity := ⟨2, 22, 100, true⟩ } 222 8
+    load (put initial session 123 9) 1 = some 123 ∧
+      (put initial session 123 9).credentials 2 = initial.credentials 2 ∧
+      (erase (put initial session 123 9) session).credentials 2 = initial.credentials 2 := by
   decide
 
 theorem reachable_fetch_and_auth_denial :

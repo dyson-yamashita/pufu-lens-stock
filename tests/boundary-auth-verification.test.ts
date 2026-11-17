@@ -258,4 +258,112 @@ describe('B01/B02/B03 境界モデルと実HTTP・OAuth・DBの照合', () => {
     ).toEqual({ revoked: 1, scopes: '[]' });
     expect(await business()).toEqual(before);
   });
+
+  it('B03 元認可にofflineがなければ後付け設定でもrefreshを発行せず不正な更新を拒否する', async () => {
+    // 交換前のDB設定を変更するため、実PKCE認可をコード発行の時点で止める。
+    const registered = await request('/oauth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_name: '元認可のrefresh境界',
+        redirect_uris: ['https://chatgpt.com/callback'],
+        token_endpoint_auth_method: 'none',
+        grant_types: ['authorization_code', 'refresh_token'],
+      }),
+    });
+    expect(registered.status).toBe(201);
+    const { client_id } = (await registered.json()) as { client_id: string };
+    const verifier = 'original-offline-boundary-'.padEnd(64, 'a');
+    const challenge = Buffer.from(
+      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)),
+    ).toString('base64url');
+    const params = new URLSearchParams({
+      client_id,
+      response_type: 'code',
+      redirect_uri: 'https://chatgpt.com/callback',
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      resource: `${app.env.APP_URL}/mcp`,
+      scope: 'projects:read',
+    });
+    const page = await request(`/oauth/authorize?${params}`, { headers: session() });
+    expect(page.status).toBe(200);
+    const handle = /name="handle" value="([^"]+)"/.exec(await page.text())![1];
+    const approved = await request('/oauth/authorize', {
+      method: 'POST',
+      headers: {
+        ...session(),
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: `stock_session=alice-session; ${page.headers
+          .getSetCookie()
+          .map((value) => value.split(';')[0])
+          .join('; ')}`,
+      },
+      body: new URLSearchParams({
+        handle,
+        decision: 'approve',
+        project_id: 'alice-project',
+        scope: 'projects:read',
+      }),
+    });
+    expect(approved.status).toBe(302);
+    const code = new URL(approved.headers.get('Location')!).searchParams.get('code')!;
+    const id = await connectionId();
+    expect((await settings(id, ['alice-project'], ['projects:read'])).status).toBe(200);
+    // 管理APIが拒否する元scope外の権限を、テスト用D1にだけ直接混ぜる。
+    await app.env.DB.prepare(
+      'UPDATE mcp_connection_settings SET scopes=? WHERE user_id=? AND grant_id=?',
+    )
+      .bind('["projects:read","offline_access","stocks:write"]', 'alice', id)
+      .run();
+    const grantKey = `grant:alice:${id}`;
+    const readGrant = () =>
+      app.env.OAUTH_KV!.get<{ scope: string[]; refreshTokenId?: string }>(grantKey, 'json');
+    expect(await readGrant()).toMatchObject({ scope: ['projects:read'] });
+    const before = await business();
+    const exchanged = await request('/oauth/token', {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id,
+        redirect_uri: 'https://chatgpt.com/callback',
+        code_verifier: verifier,
+        resource: `${app.env.APP_URL}/mcp`,
+      }),
+    });
+    expect(exchanged.status).toBe(200);
+    const token = (await exchanged.json()) as { access_token: string; refresh_token?: string };
+    expect(token.access_token).toBeTruthy();
+    expect(token).not.toHaveProperty('refresh_token');
+    const stored = await readGrant();
+    expect(stored).toMatchObject({ scope: ['projects:read'] });
+    expect(stored).not.toHaveProperty('refreshTokenId');
+    expect(stored).not.toHaveProperty('previousRefreshTokenId');
+    const refreshed = await request('/oauth/token', {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: `alice:${id}:${crypto.randomUUID()}`,
+        client_id,
+        resource: `${app.env.APP_URL}/mcp`,
+        scope: 'offline_access stocks:write',
+      }),
+    });
+    expect(refreshed.status).toBe(400);
+    expect(await refreshed.json()).toMatchObject({ error: 'invalid_grant' });
+    expect(await readGrant()).toEqual(stored);
+    expect((await call(token.access_token, 'list_projects')).structuredContent.projects).toEqual([
+      expect.objectContaining({ id: 'alice-project' }),
+    ]);
+    expect(
+      await call(token.access_token, 'add_stock', {
+        type: 'text',
+        text: '後付けscopeでは保存できない',
+        project_id: 'alice-project',
+        request_id: crypto.randomUUID(),
+      }),
+    ).toMatchObject({ isError: true, structuredContent: { status: 403 } });
+    expect(await business()).toEqual(before);
+  });
 });

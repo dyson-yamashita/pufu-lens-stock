@@ -14,6 +14,10 @@
 
 `registered`と`live`は照会時の資格情報一致・存在・有効性を個別に抽象化する。`onboarded`・`sameOrigin`・認証種別・HTTP操作を別々に判定する。`State.business`は許可された変更操作の抽象版カウンタ、`usage`は有効トークンの利用日時更新予約の回数。個々の業務ハンドラーを再現するモデルではない。読み取りメソッドは業務版を変えない。
 
+セッションの主体対応は別に `SessionRow`（owner・tokenHash・期限）と `SessionUser`（id・同意状態）で表す。`authenticateSession` は提示Cookieのハッシュ一致、`sessions.user_id = users.id` のJOIN一致、認証時刻 `authTime < expiresAt` を個別に確認し、欠けた行・不一致・期限切れを拒否する。成功時だけJOIN先ユーザーのID・同意状態と提示ハッシュ・照会した期限を `SessionPrincipal` に投影する。`authenticated_session_matches_row` は生成principalのuser/sessionが元セッション行のowner/tokenHashに一致することを証明し、B12/B13の保存定理から利用する。単に入力のuser/sessionを一つのrecordにまとめる前提ではない。
+
+この関数は認証時のSQLスナップショットであり、API全体の認可成功を表さない。Origin・onboarding・認証種別の許可表は既存の `apiAllowed` と各境界の条件で扱う。保存時の再照会や認証後失効の原子的取消しは加えない。
+
 トークンの`last_used_at`は認証成功直後に`waitUntil`で更新を予約する。後続のonboarding/API許可拒否でも利用記録は変化し得るため、拒否時にDB全体不変とはしない。認証照会後に失効した実行中要求を取り消す性質は含めない。
 
 ## 定理と照合
@@ -30,7 +34,9 @@
 
 PUTの固有定理`put_session_requires_origin`は任意のRouteでOrigin不一致のセッション変更を拒否し、`put_token_and_mcp_denied`は任意のRouteでtoken/MCPのPUTを拒否する。実装との照合は既存[x-integration.test.ts](../../../tests/x-integration.test.ts)「秘密キー未設定・未認証・CSRF・MCP・共有トークンを拒否する」と[push.test.ts](../../../tests/push.test.ts)「内部URL・リダイレクト先・無効な暗号鍵・クロスオリジン・匿名の登録を拒否する」を再利用する。
 
-4変異は認証・CSRF・onboarding・許可表のguardをそれぞれ外し、対応する拒否定理の証明失敗を要求する。[auth.json](../mutations/auth.json)に一意の置換箇所と対象定理を登録する。
+8変異は認証・CSRF・onboarding・許可表に加え、セッションのJOIN一致・提示ハッシュ一致・認証時刻期限のguardとprincipalのuser投影をそれぞれ壊し、対応する安全性定理の証明失敗を要求する。[auth.json](../mutations/auth.json)に一意の置換箇所と対象定理を登録する。
+
+セッション主体の定理は `authenticated_session_matches_row`、`session_join_mismatch_rejected`、`session_hash_mismatch_rejected`、`session_expired_at_authentication_rejected`。`session_identity_success_and_denial_example` は成功とJOIN・hash・期限・行欠落拒否を具体値で到達させる。照合には追加 [boundary-social-verification.test.ts](../../../tests/boundary-social-verification.test.ts)「bodyのowner・session指定を使わず、Cookieを照会した本人とセッションへ購読を結び付ける」を使う。Cookie→実hash→sessions JOIN users→principal→購読SQLまで通し、保存したowner/sessionHashを比較する。
 
 ## 未検証の前提・限界
 

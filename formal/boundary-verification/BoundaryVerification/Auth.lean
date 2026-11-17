@@ -2,6 +2,75 @@ import Std
 
 namespace BoundaryVerification.Auth
 
+/-- Rows selected by the session hash and joined through sessions.user_id = users.id. -/
+structure SessionRow where
+  owner : Nat
+  tokenHash : Nat
+  expiresAt : Nat
+  deriving DecidableEq, Repr
+
+structure SessionUser where
+  id : Nat
+  onboarded : Bool
+  deriving DecidableEq, Repr
+
+structure SessionPrincipal where
+  userId : Nat
+  sessionHash : Nat
+  expiresAt : Nat
+  onboarded : Bool
+  deriving DecidableEq, Repr
+
+/-- The hash is already computed. This is the authentication-time SQL snapshot,
+    not a second session lookup when a later handler commits its changes. -/
+def authenticateSession (row : Option SessionRow) (user : Option SessionUser)
+    (presentedHash authTime : Nat) : Option SessionPrincipal :=
+  match row, user with
+  | some s, some u =>
+      if s.tokenHash == presentedHash && s.owner == u.id && authTime < s.expiresAt then
+        some ⟨u.id, presentedHash, s.expiresAt, u.onboarded⟩
+      else none
+  | _, _ => none
+
+theorem authenticated_session_matches_row (row : SessionRow) (user : SessionUser)
+    (presentedHash authTime : Nat) (p : SessionPrincipal)
+    (success : authenticateSession (some row) (some user) presentedHash authTime = some p) :
+    p.userId = row.owner ∧ p.sessionHash = row.tokenHash ∧
+      p.expiresAt = row.expiresAt ∧ p.onboarded = user.onboarded ∧
+      row.tokenHash = presentedHash ∧ row.owner = user.id ∧ authTime < row.expiresAt := by
+  simp only [authenticateSession] at success
+  split at success
+  next guard =>
+    simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at guard
+    cases Option.some.inj success
+    simp_all
+  next => contradiction
+
+theorem session_join_mismatch_rejected (row : SessionRow) (user : SessionUser)
+    (presentedHash authTime : Nat) (other : row.owner ≠ user.id) :
+    authenticateSession (some row) (some user) presentedHash authTime = none := by
+  simp [authenticateSession, other]
+
+theorem session_hash_mismatch_rejected (row : SessionRow) (user : SessionUser)
+    (presentedHash authTime : Nat) (other : row.tokenHash ≠ presentedHash) :
+    authenticateSession (some row) (some user) presentedHash authTime = none := by
+  simp [authenticateSession, other]
+
+theorem session_expired_at_authentication_rejected (row : SessionRow) (user : SessionUser)
+    (presentedHash authTime : Nat) (expired : row.expiresAt ≤ authTime) :
+    authenticateSession (some row) (some user) presentedHash authTime = none := by
+  have dead : ¬ authTime < row.expiresAt := by omega
+  simp [authenticateSession, dead]
+
+theorem session_identity_success_and_denial_example :
+    authenticateSession (some ⟨1, 11, 100⟩) (some ⟨1, true⟩) 11 10 =
+      some ⟨1, 11, 100, true⟩ ∧
+    authenticateSession (some ⟨1, 11, 100⟩) (some ⟨2, true⟩) 11 10 = none ∧
+    authenticateSession (some ⟨1, 11, 100⟩) (some ⟨1, true⟩) 22 10 = none ∧
+    authenticateSession (some ⟨1, 11, 100⟩) (some ⟨1, true⟩) 11 100 = none ∧
+    authenticateSession none (some ⟨1, true⟩) 11 10 = none := by
+  decide
+
 inductive Kind where
   | anonymous | session | token | mcp
   deriving DecidableEq, Repr

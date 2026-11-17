@@ -21,9 +21,15 @@
     },
     {
       "name": "B03-offline-refresh",
-      "old": "providerValid && !revoked setting && allowed.contains .offline",
-      "new": "providerValid && !revoked setting",
+      "old": "!revoked setting && allowed.contains .offline",
+      "new": "!revoked setting",
       "theorem": "offline_removal_blocks_refresh_example"
+    },
+    {
+      "name": "B03-original-offline-issuance",
+      "old": "g.scopes.contains .offline && allowed.contains .offline",
+      "new": "allowed.contains .offline",
+      "theorem": "added_offline_cannot_refresh_example"
     },
     {
       "name": "B03-tombstone-edit",

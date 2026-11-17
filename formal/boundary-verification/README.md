@@ -1,29 +1,37 @@
 # 境界処理の最小モデル: B01〜B14
 
-MCP以外も含む既存境界を、Lean 4.36.0の独立した14モジュールで扱う。[B00 update_pufu](../mcp-verification/README.md)は別プロジェクトとして維持する。製品のAPI・認証・SQLは変更しない。
+MCP以外も含む既存境界を、Lean 4.36.0の14モジュールで扱う。[B00 update_pufu](../mcp-verification/README.md)は別プロジェクトとして維持する。製品のAPI・認証・SQLは変更しない。
 
 ## 対象と対応表
 
 以下の「詳細仕様」に、調査した実装、定理名と実装の判定箇所、実際の入口を通したテスト、保護する状態、判定時点、前提・未検証範囲を記録している。対象IDの全機能を完全再現したモデルではなく、表の性質を扱う最小モデルである。
 
-| ID  | モデル・詳細仕様                                                                           | 数学的に証明する主な性質                                           |
-| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| B01 | [Auth](BoundaryVerification/Auth.lean) / [仕様](specs/auth.md)                             | 認証種別ごとのAPI許可表、セッションの同一Origin、onboarding        |
-| B02 | [Shortcut](BoundaryVerification/Shortcut.lean) / [仕様](specs/shortcut.md)                 | トークンの期限/失効、owner/projectごとの保存先、キー再送           |
-| B03 | [Connection](BoundaryVerification/Connection.lean) / [仕様](specs/connection.md)           | 元のscopeとの積集合、最新設定/owner、失効後refreshの拒否           |
-| B04 | [McpWrites](BoundaryVerification/McpWrites.lean) / [仕様](specs/mcp-writes.md)             | 作成と局面追加の再送/競合、revision、既存局面維持                  |
-| B05 | [McpVisibility](BoundaryVerification/McpVisibility.lean) / [仕様](specs/mcp-visibility.md) | scope/owner/projectの同時条件、フィルタ後の可視集合                |
-| B06 | [Publication](BoundaryVerification/Publication.lean) / [仕様](specs/publication.md)        | 公開ID/公開状態/キャッシュ世代と欠損時の拒否                       |
-| B07 | [ImageLink](BoundaryVerification/ImageLink.lean) / [仕様](specs/image-link.md)             | 秘密リンクの期限/owner/局面/ready、R2後の状態再照会                |
-| B08 | [Jobs](BoundaryVerification/Jobs.lean) / [仕様](specs/jobs.md)                             | 古いメモリ世代/削除ownerの保存拒否、ジョブlease条件                |
-| B09 | [Network](BoundaryVerification/Network.lean) / [仕様](specs/network.md)                    | URL/DNS各条件、リダイレクト各hopの再検査と予算                     |
-| B10 | [Deletion](BoundaryVerification/Deletion.lean) / [仕様](specs/deletion.md)                 | 本人削除、論理データのcascade、cleanup世代の照合                   |
-| B11 | [Quota](BoundaryVerification/Quota.lean) / [仕様](specs/quota.md)                          | 時間窓の利用枠予約、試行/呼出の計上と所有者条件                    |
-| B12 | [Sns](BoundaryVerification/Sns.lean) / [仕様](specs/sns.md)                                | X資格情報の本人対応、削除後の新読込拒否、外部失敗の拒否            |
-| B13 | [Push](BoundaryVerification/Push.lean) / [仕様](specs/push.md)                             | セッション付き購読、配信前の再確認、試行/lease遷移                 |
-| B14 | [Intake](BoundaryVerification/Intake.lean) / [仕様](specs/intake.md)                       | 画像のサイズ/形式/予約、親/scope/key付き確定、PDF/AI出力の採用条件 |
+| ID  | モデル・詳細仕様                                                                           | 数学的に証明する主な性質                                                         |
+| --- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| B01 | [Auth](BoundaryVerification/Auth.lean) / [仕様](specs/auth.md)                             | 認証種別ごとのAPI許可表、セッションの同一Origin/onboarding、本人IDとhashの受渡し |
+| B02 | [Shortcut](BoundaryVerification/Shortcut.lean) / [仕様](specs/shortcut.md)                 | トークンの期限/失効、owner/projectごとの保存先、キー再送                         |
+| B03 | [Connection](BoundaryVerification/Connection.lean) / [仕様](specs/connection.md)           | 元のscopeとの積集合、最新設定/owner、発行・検証・callbackを通したrefreshの拒否   |
+| B04 | [McpWrites](BoundaryVerification/McpWrites.lean) / [仕様](specs/mcp-writes.md)             | 作成と局面追加の再送/競合、revision、既存局面維持                                |
+| B05 | [McpVisibility](BoundaryVerification/McpVisibility.lean) / [仕様](specs/mcp-visibility.md) | scope/owner/projectの同時条件、フィルタ後の可視集合                              |
+| B06 | [Publication](BoundaryVerification/Publication.lean) / [仕様](specs/publication.md)        | 公開ID/公開状態/キャッシュ世代と欠損時の拒否                                     |
+| B07 | [ImageLink](BoundaryVerification/ImageLink.lean) / [仕様](specs/image-link.md)             | 秘密リンクの期限/owner/局面/ready、R2後の状態再照会                              |
+| B08 | [Jobs](BoundaryVerification/Jobs.lean) / [仕様](specs/jobs.md)                             | 古いメモリ世代/削除ownerの保存拒否、ジョブlease条件                              |
+| B09 | [Network](BoundaryVerification/Network.lean) / [仕様](specs/network.md)                    | URL/DNS各条件、リダイレクト各hopの再検査と予算                                   |
+| B10 | [Deletion](BoundaryVerification/Deletion.lean) / [仕様](specs/deletion.md)                 | 本人削除、論理データのcascade、cleanup世代の照合                                 |
+| B11 | [Quota](BoundaryVerification/Quota.lean) / [仕様](specs/quota.md)                          | 時間窓の利用枠予約、試行/呼出の計上と所有者条件                                  |
+| B12 | [Sns](BoundaryVerification/Sns.lean) / [仕様](specs/sns.md)                                | X資格情報の本人対応、削除後の新読込拒否、外部失敗の拒否                          |
+| B13 | [Push](BoundaryVerification/Push.lean) / [仕様](specs/push.md)                             | セッション付き購読、配信前の再確認、試行/lease遷移                               |
+| B14 | [Intake](BoundaryVerification/Intake.lean) / [仕様](specs/intake.md)                       | 画像のサイズ/形式/予約、親/scope/key付き確定、PDF/AI出力の採用条件               |
 
-B01〜B14に288個の名前付き定理と67種の安全条件変異を追加した（B00の20定理・7変異は別）。すべてのモデルに成功と拒否の到達例を置く。抽象化されたスキーマ判定や公開IP分類などの正しさを、その値を受け取る側の定理から逆に保証しない。
+B01〜B14に311個の名前付き定理と76種の安全条件変異を追加した（B00の20定理・7変異は別）。すべてのモデルに成功と拒否の到達例を置く。抽象化されたスキーマ判定や公開IP分類などの正しさを、その値を受け取る側の定理から逆に保証しない。
+
+## 認証主体と各入口の接続
+
+B01のセッション照会から得た本人ID・session hashをB12/B13へ渡し、SNSの保存/削除対象とPushのowner/sessionをその認証結果から選ぶ。対象ユーザーやsessionを独立した任意入力として扱わず、元のセッション行と保存先の対応、他ユーザーの資格情報の不変性を確認する。認証後の失効と保存の競合による実行中要求の取消しは、この接続の証明には含めない。
+
+B03では、refresh tokenの発行・provider側の検証・アプリcallbackの現在設定判定を区別する。発行時に元offline権限がなければcredentialを作れず、後から設定にofflineを追加してもrefreshの入口に到達しないことを、発行時と現在の設定を分けたモデルで扱う。callback自体が元scopeを再検査しているという実装にない説明はしない。暗号・client・期限・KV内部の検証は外部ライブラリの前提として残す。
+
+秘密画像リンクの前後照会が同一token/keyを使う前提、B01と退会処理B10の本人確認を結ぶ証明は引き続き各仕様の前提・今後の拡張であり、今回の接続対象には含めない。
 
 ## 実行
 
