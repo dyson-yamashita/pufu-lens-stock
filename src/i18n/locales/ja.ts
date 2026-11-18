@@ -1414,6 +1414,7 @@ export const ja: Record<string, string> = {
     '本文を取得できませんでした。JavaScript対応のBrowser Runを設定するか、別の公開URLをお試しください。',
   'error.could_not_retrieve_public_article_text': '公開された本文を取得できませんでした。',
   'error.the_page_is_too_large_2_mb_maximum': 'ページが大きすぎます（上限2MB）。',
+  'error.the_page_is_too_large_3_mb_maximum': 'ページが大きすぎます（上限3MB）。',
   'error.too_many_redirects_or_an_invalid_destination':
     'リダイレクトが多すぎるか、移動先が無効です。',
   'error.could_not_complete_the_redirect': 'リダイレクトを完了できませんでした。',

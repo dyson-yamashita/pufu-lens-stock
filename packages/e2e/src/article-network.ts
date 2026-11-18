@@ -50,8 +50,9 @@ globalThis.fetch = async (input: RequestInfo | URL) => {
     return new Response('Fixture unavailable', { status: 503 });
   // The browser releases this after observing the actual extracting state.
   await gate(key).ready;
+  const pageMetadata = `<!--${' '.repeat(2.25 * 1024 * 1024)}-->`;
   return new Response(
-    `<html lang="ja"><head><title>E2EのURL記事</title><meta property="og:image" content="/pufu-e2e/article?key=${key}&amp;image=true"></head><body><article><h1>E2EのURL記事</h1><p>${articleText}</p></article></body></html>`,
+    `<html lang="ja"><head><title>E2EのURL記事</title><meta property="og:image" content="/pufu-e2e/article?key=${key}&amp;image=true">${pageMetadata}</head><body><article><h1>E2EのURL記事</h1><p>${articleText}</p></article></body></html>`,
     { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
   );
 };
