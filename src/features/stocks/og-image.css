@@ -1,17 +1,20 @@
-.stock-og-image {
+.stock-og-image,
+.article-og-preview {
   display: block;
   width: 100%;
+  max-width: 320px;
+  margin-inline: auto;
+}
+.stock-og-image {
   height: auto;
   max-height: 320px;
   aspect-ratio: 1200 / 630;
   object-fit: contain;
   border-radius: 8px;
   background: var(--wash);
-  margin: 0 0 16px;
+  margin-bottom: 16px;
 }
 .article-og-preview {
-  display: block;
-  width: 100%;
   padding: 0;
 }
 .article-og-preview .stock-og-image {
