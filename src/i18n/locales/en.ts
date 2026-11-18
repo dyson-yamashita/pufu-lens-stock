@@ -1435,6 +1435,7 @@ export const en: Record<string, string> = {
     'Could not retrieve the article text. Configure JavaScript-enabled Browser Run or try another public URL.',
   'error.could_not_retrieve_public_article_text': 'Could not retrieve public article text.',
   'error.the_page_is_too_large_2_mb_maximum': 'The page is too large (2 MB maximum).',
+  'error.the_page_is_too_large_3_mb_maximum': 'The page is too large (3 MB maximum).',
   'error.too_many_redirects_or_an_invalid_destination':
     'Too many redirects or an invalid destination.',
   'error.could_not_complete_the_redirect': 'Could not complete the redirect.',

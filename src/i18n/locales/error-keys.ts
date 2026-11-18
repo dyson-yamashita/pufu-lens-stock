@@ -90,6 +90,7 @@ export const errorKeys: Record<string, string> = {
     'error.could_not_retrieve_the_article_text_configure_javascript_enabled_browser',
   '公開された本文を取得できませんでした。': 'error.could_not_retrieve_public_article_text',
   'ページが大きすぎます（上限2MB）。': 'error.the_page_is_too_large_2_mb_maximum',
+  'ページが大きすぎます（上限3MB）。': 'error.the_page_is_too_large_3_mb_maximum',
   'リダイレクトが多すぎるか、移動先が無効です。':
     'error.too_many_redirects_or_an_invalid_destination',
   'リダイレクトを完了できませんでした。': 'error.could_not_complete_the_redirect',

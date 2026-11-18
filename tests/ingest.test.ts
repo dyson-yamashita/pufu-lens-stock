@@ -92,15 +92,19 @@ describe('公開記事の取得', () => {
     expect(requests).toHaveLength(2);
   });
 
-  const htmlPage = (body: string, next = '') =>
-    new Response(
-      `<html><head><title>同じ記事</title>${next ? `<link rel="next" href="${next}">` : ''}</head><body><article><h1>同じ記事</h1><p>${body}</p></article></body></html>`,
-      { headers: { 'Content-Type': 'text/html' } },
-    );
+  const htmlPage = (body: string, next = '', htmlBytes?: number) => {
+    const html = `<html><head><title>同じ記事</title>${next ? `<link rel="next" href="${next}">` : ''}</head><body><article><h1>同じ記事</h1><p>${body}</p></article></body></html>`;
+    const size = new TextEncoder().encode(html).byteLength;
+    return new Response(`${html}${' '.repeat((htmlBytes ?? size) - size)}`, {
+      headers: { 'Content-Type': 'text/html' },
+    });
+  };
   it('同じ記事の次ページを取得し、後半の本文と取得情報を返す', async () => {
     const last = '後半でのみ説明する条件：星や雨の表現を保ち、監督と確認する。'.repeat(10);
     const requests = mockNetwork((url) =>
-      url.pathname.endsWith('/2') ? htmlPage(last) : htmlPage(articleText, '/story/42/page/2'),
+      url.pathname.endsWith('/2')
+        ? htmlPage(last, '', 3 * 1024 * 1024)
+        : htmlPage(articleText, '/story/42/page/2', 3 * 1024 * 1024),
     );
     const result = await fetchArticle(env, 'https://example.com/story/42');
     expect(result.text).toContain(articleText);
@@ -207,21 +211,26 @@ describe('公開記事の取得', () => {
     },
   );
 
-  it.each([true, false])(
-    '2MBを超えるページを拒否する（Content-Lengthあり: %s）',
-    async (declared) => {
-      const size = 2 * 1024 * 1024 + 1;
+  it.each([
+    ['text/html', 3, true],
+    ['application/xhtml+xml', 3, false],
+    ['text/plain', 2, true],
+    ['text/plain', 2, false],
+  ])(
+    '%sは%dMBを超えると拒否する（Content-Lengthあり: %s）',
+    async (contentType, maxMiB, declared) => {
+      const size = maxMiB * 1024 * 1024 + 1;
       mockNetwork(
         () =>
           new Response(declared ? '本文' : new Uint8Array(size), {
             headers: {
-              'Content-Type': 'text/plain',
+              'Content-Type': contentType,
               ...(declared ? { 'Content-Length': String(size) } : {}),
             },
           }),
       );
       await expect(fetchArticle(env, 'https://example.com/large')).rejects.toThrow(
-        'ページが大きすぎます',
+        `ページが大きすぎます（上限${maxMiB}MB）。`,
       );
     },
   );

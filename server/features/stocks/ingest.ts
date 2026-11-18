@@ -8,10 +8,23 @@ import { fetchXPost, xPostId } from '../integrations/x';
 import { isArticlePage, nextArticlePage } from './article-pages';
 import { parsePdf } from './pdf/pdf-client';
 
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_TEXT_BYTES = 2 * 1024 * 1024;
+const MAX_ARTICLE_HTML_BYTES = 3 * 1024 * 1024;
+const ARTICLE_HTML_TOO_LARGE = 'ページが大きすぎます（上限3MB）。';
+
+function isHtmlContentType(contentType: string): boolean {
+  return /^(?:text\/html|application\/xhtml\+xml)(?:\s*;|$)/i.test(contentType);
+}
+
 export async function limitedText(response: Response): Promise<string> {
   return new TextDecoder().decode(
-    await limitedBytes(response, MAX_BYTES, 'ページが大きすぎます（上限2MB）。'),
+    await limitedBytes(response, MAX_TEXT_BYTES, 'ページが大きすぎます（上限2MB）。'),
+  );
+}
+
+async function limitedArticleHtml(response: Response): Promise<string> {
+  return new TextDecoder().decode(
+    await limitedBytes(response, MAX_ARTICLE_HTML_BYTES, ARTICLE_HTML_TOO_LARGE),
   );
 }
 type ArticleContent = { title: string; text: string; ogImageUrl?: string };
@@ -57,6 +70,7 @@ async function renderHtml(env: Env, url: string): Promise<string> {
     );
   const { launch } = await import('@cloudflare/playwright');
   const browser = await launch(env.BROWSER);
+  let articleSizeError: Error | undefined;
   try {
     const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false });
     const page = await context.newPage();
@@ -72,13 +86,26 @@ async function renderHtml(env: Env, url: string): Promise<string> {
           return;
         }
         const { response } = await fetchPublic(request.url());
-        const body = await limitedText(response);
+        const contentType = response.headers.get('Content-Type') ?? 'text/plain';
+        let isArticleDocument = false;
+        if (request.resourceType() === 'document' && isHtmlContentType(contentType)) {
+          try {
+            isArticleDocument = request.frame() === page.mainFrame();
+          } catch {
+            // A navigation can start before Playwright has created its frame.
+          }
+        }
+        const body = await (isArticleDocument
+          ? limitedArticleHtml(response)
+          : limitedText(response));
         await route.fulfill({
           status: response.status,
-          contentType: response.headers.get('Content-Type') ?? 'text/plain',
+          contentType,
           body,
         });
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === ARTICLE_HTML_TOO_LARGE)
+          articleSizeError = error;
         await route.abort().catch(() => undefined);
       }
     });
@@ -94,9 +121,12 @@ async function renderHtml(env: Env, url: string): Promise<string> {
       )
       .catch(() => undefined);
     const html = await page.content();
-    if (new TextEncoder().encode(html).byteLength > MAX_BYTES)
-      throw new Error('ページが大きすぎます（上限2MB）。');
+    if (articleSizeError) throw articleSizeError;
+    if (new TextEncoder().encode(html).byteLength > MAX_ARTICLE_HTML_BYTES)
+      throw new Error(ARTICLE_HTML_TOO_LARGE);
     return html;
+  } catch (error) {
+    throw articleSizeError ?? error;
   } finally {
     await browser.close();
   }
@@ -154,12 +184,13 @@ export async function fetchArticle(
   if (/^application\/(pdf|octet-stream)(?:\s*;|$)/i.test(contentType)) {
     return parsePdf(env, response, url);
   }
-  if (!/text\/(html|plain)|application\/xhtml\+xml/i.test(contentType))
+  const isHtml = isHtmlContentType(contentType);
+  if (!isHtml && !/^text\/plain(?:\s*;|$)/i.test(contentType))
     throw new Error('現在はHTML・テキスト・PDFの記事に対応しています。');
-  let content = await limitedText(response);
-  let result: ArticleContent = contentType.includes('text/plain')
-    ? { title: url.hostname, text: content.trim() }
-    : extractHtml(content, url.href);
+  let content = await (isHtml ? limitedArticleHtml(response) : limitedText(response));
+  let result: ArticleContent = isHtml
+    ? extractHtml(content, url.href)
+    : { title: url.hostname, text: content.trim() };
   if (!result || result.text.length < 200) {
     content = await renderHtml(env, url.href);
     const rendered = extractHtml(content, url.href);
@@ -171,7 +202,7 @@ export async function fetchArticle(
     );
   if (result.text.length > 120000)
     throw new Error('本文が長すぎます（上限12万文字）。URLは保存されています。');
-  if (!/html/i.test(contentType)) return result;
+  if (!isHtml) return result;
   let next = nextArticlePage(content, url);
   if (!next) return result;
   const pages = [url.href];
@@ -185,9 +216,9 @@ export async function fetchArticle(
           throw new Error('同一記事の未取得ページではありません。');
       };
       const page = await fetchPublic(next, guard, deadline);
-      if (!page.response.ok || !/html/i.test(page.response.headers.get('Content-Type') ?? ''))
+      if (!page.response.ok || !isHtmlContentType(page.response.headers.get('Content-Type') ?? ''))
         throw new Error('続きの本文を取得できませんでした。');
-      const html = await limitedText(page.response);
+      const html = await limitedArticleHtml(page.response);
       const extracted = extractHtml(html, page.url.href);
       if (extracted.text.length < 200 || result.text.length + extracted.text.length + 2 > 120000)
         throw new Error('続きの本文の長さが取得条件を満たしません。');
