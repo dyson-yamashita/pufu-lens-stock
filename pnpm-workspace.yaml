@@ -2,6 +2,13 @@ autoInstallPeers: true
 packages:
   - packages/*
 
+audit:
+  ignore:
+    # picomatchの公式修正版が未公開のため、一時的にリスクを受容する。
+    # 脆弱性は未修正で、本番環境で影響を受ける処理への到達性は未確認。
+    # 見直し日: 2026-11-25。公式修正版へ更新し、この除外なしで依存監査が通過したら削除する。
+    - GHSA-fc5q-39xc-vjpf
+
 # 固定・検証済みのバージョンに限り、公開後24時間の待機を除外する。
 minimumReleaseAgeExclude:
   - '@goto-lab/pufu-editor@0.9.19'
