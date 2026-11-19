@@ -1634,7 +1634,7 @@ export const en: Record<string, string> = {
   'manual.stock_images_add':
     'Choose Attach image on a new stock or open Images in a saved stock’s details. PNG, JPEG, GIF, and WebP are supported, up to 5 MB per image and 5 images per stock. If only an image fails to save, the stock is already saved. You can retry the remaining images.',
   'manual.stock_images_view':
-    'Attached images appear below the summary in your stock list and on the details page. Use the previous and next buttons, the arrow keys, or a horizontal swipe to switch between images. Select an image in the list to open the stock details. Select an image in the details to enlarge it, and use Close to return to the details. To remove one, choose Delete in the Images tab.',
+    'Attached images appear below the summary in stock lists and details, including in public projects. Use the previous and next buttons, the arrow keys, or a horizontal swipe to switch between images. Select an image in the list to open the stock details. Select an image in the details to enlarge it, and use Close to return to the details. To remove one of your attachments, choose Delete in the Images tab.',
   'manual.stock_images_visibility':
     'Images in public projects are public. Turning publishing off disables their public URLs. Images stay out of AI summaries, questions, and memory. Deleting a stock, project, or account also deletes its attachments.',
   'manual.stock_images_mcp':
