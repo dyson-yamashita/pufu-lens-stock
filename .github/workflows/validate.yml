@@ -148,6 +148,7 @@ jobs:
         with:
           path: ${{ env.CHROMIUM_APT_ARCHIVES }}/*.deb
           key: chromium-apt-v1-ubuntu-24.04-${{ runner.arch }}-${{ steps.chromium-apt.outputs.image-version }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: chromium-apt-v1-ubuntu-24.04-${{ runner.arch }}-
       - name: Install Chromium
         env:
           E2E_TELEMETRY_DISABLED: '1'
