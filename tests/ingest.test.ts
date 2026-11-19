@@ -19,7 +19,10 @@ describe('公開記事の取得', () => {
   const articleText = '記事の保存と要約を分離し、失敗した処理を再試行する方法を検証します。'.repeat(
     12,
   );
-  function mockNetwork(response: (url: URL, init?: RequestInit) => Response) {
+  function mockNetwork(
+    response: (url: URL, init?: RequestInit) => Response,
+    robots: (url: URL, init?: RequestInit) => Response = () => new Response(null, { status: 404 }),
+  ) {
     const requests: string[] = [];
     vi.stubGlobal(
       'fetch',
@@ -43,6 +46,7 @@ describe('公開記事の取得', () => {
                   : [],
             }),
           );
+        if (url.pathname === '/robots.txt') return robots(url, init);
         requests.push(url.href);
         return response(url, init);
       }),
@@ -99,6 +103,116 @@ describe('公開記事の取得', () => {
       headers: { 'Content-Type': 'text/html' },
     });
   };
+  it.each([
+    ['/article/open', true],
+    ['/article/open?raw=1', false],
+    ['/article/other', false],
+    ['/article/%6Fpen', true],
+    ['/article/日本語', false],
+    ['/news/draft.md', false],
+    ['/news/live', true],
+    ['/shared-policy', false],
+    ['/invalid-agent-policy', false],
+  ])(
+    'robots.txtのUser-agent・最長一致・ワイルドカード・URLの表記を判定する: %s',
+    async (path, allowed) => {
+      const robots = vi.fn((_url: URL, init?: RequestInit) => {
+        expect(new Headers(init?.headers).get('User-Agent')).toMatch(/^PufuLens\//);
+        return new Response(`
+User-agent: *
+Disallow: /
+User-agent: OtherBot
+Disallow: /
+User-agent: pUFULens
+Disallow: /article/
+Disallow: *.md
+Allow: /article/open$ # 完全一致を許可
+User-agent: PufuLens
+Disallow: /article/open$
+Disallow: /article/日本語
+User-agent: invalid agent
+Disallow: /invalid-agent-policy
+User-agent: PufuLens
+Disallow: invalid pattern
+User-agent: OtherBot
+Disallow: /shared-policy
+`);
+      });
+      const requests = mockNetwork(() => htmlPage(articleText), robots);
+      const article = fetchArticle(env, `https://example.com${path}`);
+      if (allowed) await expect(article).resolves.toMatchObject({ text: expect.any(String) });
+      else await expect(article).rejects.toThrow(/robots\.txt.*禁止/);
+      expect(robots).toHaveBeenCalledTimes(1);
+      expect(requests).toEqual(allowed ? [new URL(path, 'https://example.com').href] : []);
+    },
+  );
+
+  it('別オリジンへの移動先は、リダイレクトされたrobots.txtを確認してから取得する', async () => {
+    const robots = vi.fn((url: URL) =>
+      url.hostname === 'example.com'
+        ? new Response(null, { status: 404 })
+        : new Response(null, {
+            status: 302,
+            headers: { Location: 'https://cdn.com/rules.txt' },
+          }),
+    );
+    const requests = mockNetwork((url) => {
+      if (url.pathname === '/start')
+        return new Response(null, {
+          status: 302,
+          headers: { Location: 'https://second.com/blocked' },
+        });
+      if (url.pathname === '/rules.txt') return new Response('User-agent: *\nDisallow: /blocked');
+      return htmlPage(articleText);
+    }, robots);
+    await expect(fetchArticle(env, 'https://example.com/start')).rejects.toThrow(
+      /robots\.txt.*禁止/,
+    );
+    expect(robots.mock.calls.map(([url]) => url.href)).toEqual([
+      'https://example.com/robots.txt',
+      'https://second.com/robots.txt',
+    ]);
+    expect(requests).toEqual(['https://example.com/start', 'https://cdn.com/rules.txt']);
+  });
+
+  it.each([206, 429, 503])(
+    'robots.txtを確認できなければ本文を取得しない: HTTP %s',
+    async (status) => {
+      const requests = mockNetwork(
+        () => htmlPage(articleText),
+        () => new Response(null, { status }),
+      );
+      await expect(fetchArticle(env, 'https://example.com/story')).rejects.toThrow(
+        /robots\.txt.*確認できなかった/,
+      );
+      expect(requests).toEqual([]);
+    },
+  );
+
+  it.each(['/story', '/st%6fry'])(
+    'robots.txtが対象記事へ移動する場合は記事に接続しない: %s',
+    async (location) => {
+      const requests = mockNetwork(
+        () => htmlPage(articleText),
+        () => new Response(null, { status: 302, headers: { Location: location } }),
+      );
+      await expect(fetchArticle(env, 'https://example.com/story')).rejects.toThrow(
+        /robots\.txt.*確認できなかった/,
+      );
+      expect(requests).toEqual([]);
+    },
+  );
+
+  it('robots.txtで禁止された次ページは取得せず、それまでの本文を保持する', async () => {
+    const robots = vi.fn(() => new Response('User-agent: *\nDisallow: /story/42/page/2'));
+    const requests = mockNetwork(() => htmlPage(articleText, '/story/42/page/2'), robots);
+    const result = await fetchArticle(env, 'https://example.com/story/42');
+    expect(result).toMatchObject({ pages: ['https://example.com/story/42'], complete: false });
+    expect(result.text).toContain(articleText);
+    expect(requests).toEqual(result.pages);
+    expect(robots).toHaveBeenCalledTimes(1);
+  });
+
   it('同じ記事の次ページを取得し、後半の本文と取得情報を返す', async () => {
     const last = '後半でのみ説明する条件：星や雨の表現を保ち、監督と確認する。'.repeat(10);
     const requests = mockNetwork((url) =>

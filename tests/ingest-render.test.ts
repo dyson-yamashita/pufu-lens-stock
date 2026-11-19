@@ -8,11 +8,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲーション', '描画後'])(
-  'ブラウザー取得の3MB上限（超過: %s）',
-  async (overflow) => {
-    const lateNavigation = overflow === '描画待ち中のナビゲーション';
-    const navigationOverflow = overflow === '初回ナビゲーション' || lateNavigation;
+it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲーション', '描画後', 'クロール禁止'])(
+  'ブラウザー取得のサイズ上限とクロール禁止（失敗条件: %s）',
+  async (failure) => {
+    const blockedNavigation = failure === 'クロール禁止';
+    const lateNavigation = failure === '描画待ち中のナビゲーション';
+    const navigationOverflow = failure === '初回ナビゲーション' || lateNavigation;
     const text = '描画後に取得できる記事本文と条件です。'.repeat(20);
     const rendered = `<html><head><title>動的記事</title><link rel="next" href="/story/page/2"></head><body><article><h1>動的記事</h1><p>${text}</p></article></body></html>`;
     const mainFrame = {};
@@ -26,6 +27,7 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
       ['/large', 'document', missingFrame, false],
       ['/small', 'document', missingFrame, true],
       ['/large-text', 'document', () => mainFrame, false],
+      ['/render-data', blockedNavigation ? 'document' : 'xhr', () => mainFrame, false],
     ] as const;
     const routeOutcomes: string[][] = [];
     let intercept: (route: Route) => Promise<void>;
@@ -52,7 +54,8 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
     const page = {
       goto: async () => {
         if (!lateNavigation) await requestDocuments();
-        if (overflow === '初回ナビゲーション') throw new Error('net::ERR_FAILED');
+        if (failure === '初回ナビゲーション' || blockedNavigation)
+          throw new Error('net::ERR_FAILED');
         return { ok: () => true };
       },
       mainFrame: () => mainFrame,
@@ -64,7 +67,7 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
         rendered +
         ' '.repeat(
           3 * 1024 * 1024 +
-            Number(overflow === '描画後') -
+            Number(failure === '描画後') -
             new TextEncoder().encode(rendered).byteLength,
         ),
     };
@@ -78,6 +81,7 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
       }),
       close: async () => {},
     } as unknown as Awaited<ReturnType<typeof launch>>);
+    const blockedFetch = vi.fn();
     vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
       const url = new URL(input instanceof Request ? input.url : String(input));
       if (url.hostname === 'cloudflare-dns.com')
@@ -85,6 +89,9 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
           Status: 0,
           Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '8.8.8.8' }] : [],
         });
+      if (url.pathname === '/robots.txt')
+        return new Response('User-agent: *\nDisallow: /render-data');
+      if (url.pathname === '/render-data') blockedFetch();
       if (url.pathname === '/large-text')
         return new Response(new Uint8Array(2 * 1024 * 1024 + 1), {
           headers: { 'Content-Type': 'text/plain' },
@@ -101,7 +108,9 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
       );
     });
     const result = fetchArticle({ BROWSER: {} } as Env, 'https://example.com/story');
-    if (overflow !== 'なし') {
+    if (blockedNavigation) {
+      await expect(result).rejects.toThrow(/robots\.txt.*禁止/);
+    } else if (failure !== 'なし') {
       await expect(result).rejects.toThrow('ページが大きすぎます（上限3MB）。');
     } else {
       const article = await result;
@@ -111,5 +120,6 @@ it.each(['なし', '初回ナビゲーション', '描画待ち中のナビゲ�
     expect(routeOutcomes).toEqual(
       requests.map(([, , , shouldLoad]) => [shouldLoad ? 'loaded' : 'aborted']),
     );
+    expect(blockedFetch).not.toHaveBeenCalled();
   },
 );

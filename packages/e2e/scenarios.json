@@ -123,6 +123,7 @@
     "sources": [
       "src/app/App.tsx",
       "server/features/stocks/ingest.ts",
+      "server/features/stocks/robots.ts",
       "server/infrastructure/jobs/workflows.ts",
       "server/api/app.ts",
       "server/infrastructure/security.ts",
@@ -144,7 +145,7 @@
     "aspects": [
       "URL入力から実際の取得・本文抽出・要約・保存と再読込までを確認。取得中を確認してからテスト専用HTTP fixtureを解放する",
       "2MBを超える記事HTMLの取得・保存を両画面幅で確認。HTMLの3MB境界とプレーンテキストの2MB拒否はVitestで確認",
-      "HTTP 503で取得が失敗した記事を画面から本文補完して再試行し、5秒周期の詳細更新と通信時間を考慮して要約完了を待ち、同じストックID・保存先のまま本文と要約を保持。再読込後も重複がない",
+      "robots.txtで禁止された記事のURLと取得できなかった理由を表示。画面から本文を補完して再試行し、同じストックID・保存先のまま本文と要約を保持。再読込後も重複がない。禁止先へHTTP要求を送らないことはVitestで確認",
       "DNSと外部HTTPだけをscratch Workerのfixtureに置換。実サイト・実AIの品質、PDF・YouTubeは対象外",
       "Web記事のOGP画像を実際の取得処理でR2へ保存し、一覧・詳細・再読込後に表示。取得失敗・内部URL・不正形式・容量制限・公開停止・所有者分離・削除後処理はVitestで確認"
     ]

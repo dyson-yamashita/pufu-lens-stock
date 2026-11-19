@@ -11,12 +11,10 @@ export const ogImageKey = (contentKey: string) => `${contentKey}.ogp`;
 export async function storeOgImage(env: Env, contentKey: string, url?: string): Promise<boolean> {
   if (!url) return false;
   try {
-    const { response } = await fetchPublic(
-      url,
-      undefined,
-      Date.now() + 8000,
-      stockImageTypes.join(','),
-    );
+    const { response } = await fetchPublic(url, {
+      deadline: Date.now() + 8000,
+      accept: stockImageTypes.join(','),
+    });
     if (!response.ok) {
       await response.body?.cancel();
       return false;

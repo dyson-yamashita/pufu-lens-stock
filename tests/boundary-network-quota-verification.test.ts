@@ -52,11 +52,12 @@ describe('B09 外部取得の各リダイレクト境界', () => {
         expect(new Headers(init?.headers).get('Cookie')).toBeNull();
         expect(new Headers(init?.headers).get('Authorization')).toBeNull();
         fetched.push(url.href);
+        if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
         return new Response(null, { status: 302, headers: { Location: next } });
       }),
     );
     await expect(fetchPublic('https://example.com/start')).rejects.toThrow();
-    expect(fetched).toEqual(['https://example.com/start']);
+    expect(fetched).toEqual(['https://example.com/robots.txt', 'https://example.com/start']);
     expect(resolved.filter((host) => host === 'second.com')).toHaveLength(
       next === 'https://second.com/article' ? 2 : 0,
     );
@@ -74,6 +75,7 @@ describe('B09 外部取得の各リダイレクト境界', () => {
         }
         expect(init?.redirect).toBe('manual');
         trace.push(`fetch:${url.pathname}`);
+        if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
         return new Response(null, {
           status: 302,
           headers: { Location: `/hop-${Number(url.pathname.split('-')[1]) + 1}` },
@@ -81,9 +83,12 @@ describe('B09 外部取得の各リダイレクト境界', () => {
       }),
     );
     await expect(fetchPublic('https://example.com/hop-0')).rejects.toThrow('リダイレクト');
-    expect(trace).toEqual(
-      Array.from({ length: 6 }, (_, hop) => ['dns:A', 'dns:AAAA', `fetch:/hop-${hop}`]).flat(),
-    );
+    expect(trace).toEqual([
+      'dns:A',
+      'dns:AAAA',
+      'fetch:/robots.txt',
+      ...Array.from({ length: 6 }, (_, hop) => ['dns:A', 'dns:AAAA', `fetch:/hop-${hop}`]).flat(),
+    ]);
   });
 
   it.each(['empty', 'dns-status', 'dns-http', 'deadline'])(
@@ -114,11 +119,9 @@ describe('B09 外部取得の各リダイレクト境界', () => {
         }),
       );
       await expect(
-        fetchPublic(
-          'https://example.com/article',
-          undefined,
-          failure === 'deadline' ? Date.now() : undefined,
-        ),
+        fetchPublic('https://example.com/article', {
+          deadline: failure === 'deadline' ? Date.now() : undefined,
+        }),
       ).rejects.toThrow();
       expect(http).not.toHaveBeenCalled();
       if (failure === 'deadline') expect(dns).not.toHaveBeenCalled();
@@ -147,6 +150,43 @@ describe('B09/B11 API・Workflowと永続DBの照合', () => {
     ).first<Job>())!;
   }
 
+  it('robots.txtで拒否されたストックはURLと理由を保持し、本文取得も本文保存も開始しない', async () => {
+    const siteFetch = vi.fn<(url: string) => Response>(
+      () => new Response('User-agent: *\nDisallow: /story'),
+    );
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      const url = destination(input);
+      return url.hostname === 'cloudflare-dns.com' ? publicDns(url) : siteFetch(url.href);
+    });
+    const sourceUrl = 'https://example.com/story';
+    const saved = await app.request('/api/v1/stocks', {
+      method: 'POST',
+      body: { project_id: 'alice-project', url: sourceUrl },
+    });
+    expect(saved.status).toBe(202);
+    const job = await app.env.DB.prepare(
+      "SELECT * FROM processing_jobs WHERE kind='article'",
+    ).first<Job>();
+    await expect(
+      new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep()),
+    ).rejects.toThrow(/robots\.txt.*禁止/);
+    expect(siteFetch.mock.calls).toEqual([['https://example.com/robots.txt']]);
+    expect(
+      await app.env.DB.prepare(
+        'SELECT status, source_url, content_key, summary_json, error FROM articles WHERE id=?',
+      )
+        .bind(job!.target_id)
+        .first(),
+    ).toMatchObject({
+      status: 'failed',
+      source_url: sourceUrl,
+      content_key: null,
+      summary_json: null,
+      error: expect.stringMatching(/robots\.txt.*禁止/),
+    });
+    expect((await app.env.CONTENT.list()).objects).toHaveLength(0);
+  });
+
   it('OG画像の移動先が内部DNSなら画像を保存せず記事の処理を完了する', async () => {
     app.env.LOCAL_DEMO_ENABLED = 'true';
     const fetched: string[] = [];
@@ -159,6 +199,7 @@ describe('B09/B11 API・Workflowと永続DBの照合', () => {
             return Response.json({ Status: 0, Answer: [{ type: 1, data: '10.0.0.1' }] });
           return publicDns(url);
         }
+        if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
         fetched.push(url.href);
         if (url.pathname === '/cover.png')
           return new Response(null, {

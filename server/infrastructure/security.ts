@@ -57,6 +57,7 @@ export function canonicalUrl(value: string): string {
 export async function assertPublicDestination(
   url: URL,
   fetcher: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<void> {
   validateUrl(url.href);
   const hostname = url.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '');
@@ -66,9 +67,10 @@ export async function assertPublicDestination(
       const endpoint = new URL('https://cloudflare-dns.com/dns-query');
       endpoint.searchParams.set('name', hostname);
       endpoint.searchParams.set('type', type);
+      const timeout = AbortSignal.timeout(5000);
       const response = await fetcher(endpoint, {
         headers: { Accept: 'application/dns-json' },
-        signal: AbortSignal.timeout(5000),
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       if (!response.ok) throw new Error('URLの接続先を確認できませんでした。');
       return response.json() as Promise<{

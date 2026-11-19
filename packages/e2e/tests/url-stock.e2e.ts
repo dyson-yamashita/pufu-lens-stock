@@ -59,6 +59,7 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
   const failed = before.stocks.find((stock) => stock.source_url === failedUrl)!;
   expect(failed.status).toBe('failed');
   await screen.getByRole('button', 'example.com', { exact: true }).click();
+  await expect(browser.locator('.detail-summary')).toContainText('robots.txt でクロールが禁止');
   // Prime the old/null body cache before retrying; the page stays mounted after success.
   await screen.getByRole('button', '取得した本文', { exact: true }).click();
   await expect(browser.locator('.article-body')).toBeVisible();
