@@ -154,12 +154,9 @@ it('公開ストックでも要約の直後に画像を表示し、公開URLの�
   await act(async () =>
     document.querySelector<HTMLButtonElement>('[aria-label="次の画像"]')!.click(),
   );
-  expect(document.querySelector('.stock-image-carousel img')?.getAttribute('alt')).toBe(
-    'second.png',
-  );
-  expect(document.querySelector('.stock-image-carousel a')?.getAttribute('href')).toBe(
-    stock.images[1].url,
-  );
+  const image = document.querySelector('.stock-image-carousel button[aria-haspopup="dialog"] img');
+  expect(image?.getAttribute('alt')).toBe('second.png');
+  expect(image?.getAttribute('src')).toBe(stock.images[1].url);
 });
 it('プロジェクト取得中は public-main にレイアウト骨格を出し短い loading だけにしない', async () => {
   let resolveProject!: (value: unknown) => void;

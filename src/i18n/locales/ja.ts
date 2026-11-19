@@ -1596,7 +1596,7 @@ export const ja: Record<string, string> = {
   'stock_images.processing': '画像を保存・削除しています…',
   'stock_images.empty': '添付画像はありません。',
   'stock_images.retry': '再読み込み',
-  'stock_images.open': '画像を開く：{{name}}',
+  'stock_images.enlarge': '画像を拡大表示：{{name}}',
   'stock_images.delete': '削除',
   'stock_images.delete_named': '画像を削除：{{name}}',
   'stock_images.confirm_delete': '「{{name}}」を削除しますか？この操作は取り消せません。',
@@ -1607,7 +1607,7 @@ export const ja: Record<string, string> = {
   'manual.stock_images_add':
     '新規ストックでは「画像を添付」、保存済みストックでは詳細画面の「画像」から追加します。PNG・JPEG・GIF・WebPに対応し、1枚5MB、1ストックにつき5枚までです。画像だけ保存に失敗した場合、ストックは保存済みです。未保存の画像だけ再試行できます。',
   'manual.stock_images_view':
-    '自分のストック一覧と詳細では、要約の下に添付画像が表示されます。複数枚ある場合は、前後ボタン・左右キー・横スワイプで切り替えます。一覧で画像を押すと詳細が開き、詳細の画像を押すと元の画像が別タブで開きます。取り除くには「画像」タブで「削除」を押します。',
+    '自分のストック一覧と詳細では、要約の下に添付画像が表示されます。複数枚ある場合は、前後ボタン・左右キー・横スワイプで切り替えます。一覧で画像を押すと詳細が開きます。詳細で画像を押すとその場で拡大でき、「閉じる」で詳細に戻れます。取り除くには「画像」タブで「削除」を押します。',
   'manual.stock_images_visibility':
     '公開プロジェクトでは画像も公開されます。プロジェクトを非公開に戻すと画像の公開URLは使えなくなります。画像はAIの要約・問い・メモリには含まれません。ストック・プロジェクト・アカウントを削除すると、添付画像も削除されます。',
   'manual.stock_images_mcp':
