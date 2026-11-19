@@ -151,18 +151,23 @@
   overflow: hidden;
 }
 .article-image-previews {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 12px;
+  width: min(100%, 320px);
+  margin: 16px auto 0;
 }
 .article-image-previews img {
-  width: 56px;
-  height: 56px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   object-fit: contain;
   background: var(--wash);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
+}
+.article-image-previews img:first-child:nth-last-child(odd) {
+  grid-column: 1 / -1;
 }
 .article-tags {
   display: flex;

@@ -66,8 +66,6 @@ export function ArticleCard({
                 key={image.id}
                 src={`/api/v1/stocks/${encodeURIComponent(stock.id)}/images/${encodeURIComponent(image.id)}`}
                 alt={image.filename}
-                width={56}
-                height={56}
                 loading="lazy"
                 decoding="async"
               />

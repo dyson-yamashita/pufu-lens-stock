@@ -52,10 +52,10 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
       const bounds = image.getBoundingClientRect();
       return (
         image.naturalWidth > 0 &&
-        bounds.width === 56 &&
-        bounds.height === 56 &&
+        Math.abs(bounds.width - Math.min(summary.width, 320)) < 1 &&
+        Math.abs(bounds.left + bounds.right - summary.left - summary.right) < 1 &&
         bounds.top >= summary.bottom &&
-        bounds.right <= window.innerWidth
+        getComputedStyle(image).objectFit === 'contain'
       );
     }),
   ).toBe(true);
@@ -136,6 +136,20 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   expect(images.images).toHaveLength(2);
   await app.open(`/#project/${fixture.projectId}`);
   await expect(previews).toHaveCount(2);
+  expect(
+    await browser.evaluate(() => {
+      const gallery = document.querySelector('.article-image-previews')!;
+      const [first, second] = Array.from(gallery.children, (image) =>
+        image.getBoundingClientRect(),
+      );
+      return (
+        first.top === second.top &&
+        first.right < second.left &&
+        Math.abs(first.width - second.width) < 1 &&
+        Math.abs(second.right - first.left - gallery.getBoundingClientRect().width) < 1
+      );
+    }),
+  ).toBe(true);
   await screen.getByRole('heading', 'E2Eで保存した本文').click();
   await screen.getByRole('button', '画像', { exact: true }).click();
   const imageUrl = `${fixture.url}/api/v1/stocks/${data.stocks[0].id}/images/${images.images[0].id}`;
