@@ -455,13 +455,14 @@ describe('実D1を使うハイブリッド検索と索引同期', () => {
   });
   it('要約完了の変更を索引へ反映し、初回migrationで既存ストックも対象にする', async () => {
     const files = (await readdir(new URL('../migrations/', import.meta.url)))
-      .filter((file) => file.endsWith('.sql') && !file.startsWith('0023'))
+      .filter((file) => file.endsWith('.sql') && !/^00(23|54)_/.test(file))
       .sort();
     await app.dispose();
     app = await testApp({ migrations: files });
     bindings = searchBindings(app.env);
     const id = await searchStock(app, 'legacy');
     await applyMigration(app.env.DB, '0023_stock_search.sql');
+    await applyMigration(app.env.DB, '0054_stock_search_article_link.sql');
     await syncSearchIndex(app.env);
     const old = await searchEntry(app.env, id);
     await app.env.DB.prepare('UPDATE articles SET summary_json=? WHERE id=?')

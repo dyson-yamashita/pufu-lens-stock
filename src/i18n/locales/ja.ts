@@ -1124,10 +1124,14 @@ export const ja: Record<string, string> = {
   'stock.detail_title': 'ストックの詳細',
   'stock.detail_description': 'ストックを見つめ直し、問い・気づきにつなげましょう。',
   'stock.back': '前の画面に戻る',
+  'stock.edit_content': '本文を編集',
+  'stock.content_saved': '本文を保存しました。',
   'manual.stock_detail_navigation':
     'ストックのカードを選ぶと詳細画面が開きます。「前の画面に戻る」で元の一覧や問いに戻れます。詳細画面のURLを直接開いたり、再読み込みしたりすることもできます。',
   'manual.stock_images_heading': '画像を添付・表示する',
   'manual.stock_edit_heading': 'ストックを整理・編集する',
+  'manual.stock_edit_content':
+    'テキストの本文を変えるときは、詳細画面で「入力した本文」を開き、「本文を編集」から「保存」を押します。変更は開いているストックに反映されます。プロジェクトを公開している場合は、更新した要約や本文採用の原文も公開ページに反映されます。',
   'manual.project_lists_heading': 'プロジェクトを全体の一覧から外す',
   'manual.stock_delete_heading': 'ストック・プロジェクトを削除する',
   'ui.user_manual.open_save_article_and_choose_url_or_text':
@@ -1387,6 +1391,10 @@ export const ja: Record<string, string> = {
     '同じリクエストIDで異なる問い・気づきが送信されました。',
   'error.a_stock_to_link_could_not_be_found': '紐づけるストックが見つかりません。',
   'error.the_stock_and_project_do_not_match': 'ストックとプロジェクトが一致しません。',
+  'error.only_text_stock_content_can_be_edited': 'テキストのストックだけ本文を編集できます。',
+  'error.edit_text_stock_from_details': 'テキストの本文は詳細画面から編集してください。',
+  'error.stock_content_changed':
+    '本文が更新されています。入力内容を控えてからページを再読み込みしてください。',
   'error.only_questions_or_insights_with_failed_generation_can_be_retried':
     '生成に失敗した問い・気づきだけ再試行できます。',
   'error.complete_article_retrieval_and_summarization_first':

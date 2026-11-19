@@ -7,6 +7,10 @@
   background: var(--card);
   padding: 28px;
 }
+.stock-content-actions {
+  display: flex;
+  justify-content: flex-end;
+}
 @media (max-width: 760px) {
   .stock-detail-card {
     padding: 22px;

@@ -63,6 +63,10 @@ export const errorKeys: Record<string, string> = {
     'error.different_questions_or_insights_were_sent_with_the_same_request',
   '紐づけるストックが見つかりません。': 'error.a_stock_to_link_could_not_be_found',
   'ストックとプロジェクトが一致しません。': 'error.the_stock_and_project_do_not_match',
+  'テキストのストックだけ本文を編集できます。': 'error.only_text_stock_content_can_be_edited',
+  'テキストの本文は詳細画面から編集してください。': 'error.edit_text_stock_from_details',
+  '本文が更新されています。入力内容を控えてからページを再読み込みしてください。':
+    'error.stock_content_changed',
   '生成に失敗した問い・気づきだけ再試行できます。':
     'error.only_questions_or_insights_with_failed_generation_can_be_retried',
   '先に記事の取得・要約を完了してください。':

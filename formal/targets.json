@@ -36,7 +36,8 @@
         "B11",
         "B12",
         "B13",
-        "B14"
+        "B14",
+        "B15"
       ],
       "directory": "boundary-verification",
       "modules": [
@@ -54,7 +55,8 @@
         "BoundaryVerification.Quota",
         "BoundaryVerification.Sns",
         "BoundaryVerification.Push",
-        "BoundaryVerification.Intake"
+        "BoundaryVerification.Intake",
+        "BoundaryVerification.TextStock"
       ],
       "build": ["lake", "build"],
       "mutations": ["python3", "check.py"],

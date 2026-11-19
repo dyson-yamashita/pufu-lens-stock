@@ -49,6 +49,7 @@ const sections = (tr: typeof t) => [
             <p>{tr('ui.user_manual.to_add_a_note_or_a_title_for_text')}</p>
             <p>{tr('ui.user_manual.star_articles_you_want_to_revisit_use_note_destination')}</p>
             <p>{tr('ui.user_manual.to_change_a_title_press_the_pencil_beside_it')}</p>
+            <p>{tr('manual.stock_edit_content')}</p>
             <p>{tr('manual.stock_note_visibility')}</p>
           </details>
           <details>

@@ -13,6 +13,7 @@ import {
   resolveProjectId,
 } from '../../features/projects/project-access';
 import { listStocks } from '../../features/stocks/stock-search';
+import { textArticleCanonical } from '../../features/stocks/text-stock-content';
 import { SearchError } from '../../infrastructure/ai/search-ai';
 import { dirtyMemoryStatements, now, queueQuestionStatements } from '../../infrastructure/db';
 import { observeOperation } from '../../infrastructure/diagnostics';
@@ -89,12 +90,16 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
         : youtube
           ? 'YouTube'
           : source!.hostname;
-    const sourceCanonical =
-      data.type === 'text'
-        ? `text:${await hash(JSON.stringify([title, data.text]))}`
-        : canonicalUrl(data.url);
     // 要約ありの記事と本文採用の記事は別に保持し、既存の保存内容を変更しない。
-    const canonical = data.skip_summary ? `verbatim:${sourceCanonical}` : sourceCanonical;
+    const canonical =
+      data.type === 'text'
+        ? await textArticleCanonical(title, data.text, data.skip_summary)
+        : `${data.skip_summary ? 'verbatim:' : ''}${canonicalUrl(data.url)}`;
+    const editedPrefix = data.type === 'text' ? `${canonical}:edited:` : null;
+    const canonicalMatches = '(a.canonical_url = ? OR instr(a.canonical_url, ?) = 1)';
+    const matchingStock = `FROM stocks s JOIN articles a ON a.id = s.article_id
+      WHERE s.user_id = ? AND s.project_id = ? AND ${canonicalMatches}
+      ORDER BY a.canonical_url, s.id LIMIT 1`;
     const requestHash = await hash(
       JSON.stringify([
         projectId,
@@ -164,9 +169,6 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
         data.skip_summary ? 1 : 0,
       ),
       ...(youtube ? [unavailableArticle()] : []),
-      c.env.DB.prepare(
-        "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE user_id = ? AND canonical_url = ? AND status = 'queued'",
-      ).bind(user.id, canonical),
     ];
     const stockInsertIndexes: number[] = [];
     for (const project of projects) {
@@ -174,21 +176,53 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
       stockInsertIndexes.push(statements.length);
       statements.push(
         c.env.DB.prepare(
-          'INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note) SELECT ?, ?, ?, id, ? FROM articles WHERE user_id = ? AND canonical_url = ?',
-        ).bind(stockId, user.id, project.id, data.note, user.id, canonical),
+          `INSERT OR IGNORE INTO stocks (id, user_id, project_id, article_id, note)
+          SELECT ?, ?, ?, a.id, ? FROM articles a WHERE a.user_id = ? AND a.canonical_url = ?
+          AND NOT EXISTS (SELECT 1 ${matchingStock})`,
+        ).bind(
+          stockId,
+          user.id,
+          project.id,
+          data.note,
+          user.id,
+          canonical,
+          user.id,
+          project.id,
+          canonical,
+          editedPrefix,
+        ),
         ...(!youtube || data.note.trim()
           ? dirtyMemoryStatements(c.env, user.id, [project.id], stockId)
           : []),
         ...(!youtube ? queueQuestionStatements(c.env, stockId) : []),
       );
     }
+    statements.push(
+      // 編集済みの本文との重複は保存先ごとに判定する。使わなかった記事を残さない。
+      c.env.DB.prepare(
+        'DELETE FROM articles WHERE id = ? AND user_id = ? AND NOT EXISTS (SELECT 1 FROM stocks s WHERE s.article_id = articles.id)',
+      ).bind(articleId, user.id),
+      c.env.DB.prepare(
+        "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT 'a-' || id || '-' || generation, user_id, 'article', id, generation FROM articles WHERE user_id = ? AND canonical_url = ? AND status = 'queued'",
+      ).bind(user.id, canonical),
+    );
     if (key)
       statements.push(
         c.env.DB.prepare(
-          'INSERT INTO idempotency_keys (user_id, key, request_hash, stock_id) SELECT ?, ?, ?, s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
-        ).bind(user.id, key, requestHash, user.id, projects[0].id, canonical),
+          `INSERT INTO idempotency_keys (user_id, key, request_hash, stock_id)
+          SELECT ?, ?, ?, s.id ${matchingStock}`,
+        ).bind(user.id, key, requestHash, user.id, projects[0].id, canonical, editedPrefix),
       );
-    let result: D1Result[];
+    // 本文編集で記事の識別子が変わる前に、この保存の結果を読み取る。
+    statements.push(
+      c.env.DB.prepare(`SELECT s.id, a.status ${matchingStock}`).bind(
+        user.id,
+        projects[0].id,
+        canonical,
+        editedPrefix,
+      ),
+    );
+    let result: D1Result<{ id: string; status: string }>[];
     try {
       result = await c.env.DB.batch(statements);
     } catch (error) {
@@ -196,19 +230,12 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
       if (response) return response;
       throw error;
     }
-    const stock = await c.env.DB.prepare(
-      'SELECT s.id, a.status FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
-    )
-      .bind(user.id, projects[0].id, canonical)
-      .first<{ id: string; status: string }>();
+    const stock = result.at(-1)!.results[0];
     const created = stockInsertIndexes.some((index) => result[index].meta.changes > 0);
     c.executionCtx.waitUntil(
       observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
     );
-    return c.json(
-      { id: stock!.id, status: stock!.status, duplicate: !created },
-      created ? 202 : 200,
-    );
+    return c.json({ id: stock.id, status: stock.status, duplicate: !created }, created ? 202 : 200);
   });
 
   app.get('/api/v1/articles/:id', async (c) => {

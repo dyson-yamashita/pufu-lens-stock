@@ -241,12 +241,13 @@ export async function testApp(
     },
   };
 }
-export const mockStep = (maxResultBytes?: number) => {
+export const mockStep = (maxResultBytes?: number, beforeStep?: (name: string) => Promise<void>) => {
   const names = new Set<string>();
   return {
     do: async (name: string, configOrOperation: unknown, operation?: () => Promise<unknown>) => {
       if (names.has(name)) throw new Error(`Duplicate step: ${name}`);
       names.add(name);
+      if (beforeStep) await beforeStep(name);
       const result = await (
         typeof configOrOperation === 'function'
           ? (configOrOperation as () => Promise<unknown>)

@@ -40,6 +40,7 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
   );
   await screen.getByRole('button', '取得した本文', { exact: true }).click();
   await expect(browser.locator('.article-body')).toContainText('URLから取得した記事です。');
+  await expect(screen.getByRole('button', '本文を編集')).toHaveCount(0);
   await browser.reload();
   await expect(browser.locator('.stock-detail-page')).toBeVisible();
   await expect(browser.locator('.detail-summary .stock-og-image')).toBeVisible();

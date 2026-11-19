@@ -18,6 +18,8 @@ import { StockFavoriteButton } from './StockFavoriteButton';
 import StockImages from './StockImages';
 import YouTubePlayer from './YouTubePlayer';
 
+type StockContent = { content: string | null; version?: string };
+
 export function StockDetail({
   stock,
   projects,
@@ -45,7 +47,9 @@ export function StockDetail({
   const [tab, setTab] = useState<string>(youtube ? 'summary' : initialTab);
   const [note, setNote] = useState(stock.note);
   const [projectId, setProjectId] = useState(stock.project_id);
-  const [content, setContent] = useState<string | null | undefined>();
+  const [content, setContent] = useState<StockContent>();
+  const [contentDraft, setContentDraft] = useState<{ text: string; version: string } | null>(null);
+  const [contentError, setContentError] = useState('');
   const [busy, setBusy] = useState(false);
   const [supplemental, setSupplemental] = useState('');
   const [error, setError] = useState('');
@@ -54,9 +58,17 @@ export function StockDetail({
   const [titleError, setTitleError] = useState('');
   const titleInput = useRef<HTMLInputElement>(null);
   const titleButton = useRef<HTMLButtonElement>(null);
+  const contentInput = useRef<HTMLTextAreaElement>(null);
+  const contentButton = useRef<HTMLButtonElement>(null);
   const noteInput = useRef<HTMLTextAreaElement>(null);
   const noteHintId = useId();
   const titleId = useId();
+  const contentId = useId();
+  const contentHintId = useId();
+  const contentUrl = `/api/v1/stocks/${encodeURIComponent(stock.id)}/content`;
+  const contentVersion = content?.version;
+  const editingContent = contentDraft !== null;
+  const urlStockStatus = stock.source_type === 'url' ? stock.status : null;
   useEffect(() => {
     if (tab === 'note') noteInput.current?.focus();
   }, [tab]);
@@ -71,16 +83,22 @@ export function StockDetail({
     window.requestAnimationFrame(() => titleButton.current?.focus());
   };
   useEffect(() => {
+    if (tab === 'content' && editingContent) contentInput.current?.focus();
+  }, [tab, editingContent]);
+  const finishEditingContent = () => {
+    setContentDraft(null);
+    setContentError('');
+    window.requestAnimationFrame(() => contentButton.current?.focus());
+  };
+  useEffect(() => {
     setContent(undefined);
-  }, [stock.id, stock.status]);
+  }, [contentUrl, urlStockStatus]);
   useEffect(() => {
     let active = true;
     if (tab === 'content' && content === undefined)
-      void api<{
-        content: string | null;
-      }>(`/api/v1/stocks/${stock.id}/content`)
+      void api<StockContent>(contentUrl)
         .then((result) => {
-          if (active) setContent(result.content);
+          if (active) setContent(result);
         })
         .catch((e) => {
           if (active) setError(applicationError((e as Error).message));
@@ -88,7 +106,7 @@ export function StockDetail({
     return () => {
       active = false;
     };
-  }, [tab, content, stock.id, stock.status]);
+  }, [tab, content, contentUrl, urlStockStatus]);
   return (
     <div className="stock-detail">
       <div className="detail-domain">
@@ -221,7 +239,16 @@ export function StockDetail({
             key={value}
             aria-pressed={tab === value}
             className={tab === value ? 'active' : ''}
-            onClick={() => setTab(value)}
+            onClick={() => {
+              if (
+                value === 'content' &&
+                tab !== 'content' &&
+                stock.source_type === 'text' &&
+                !editingContent
+              )
+                setContent(undefined);
+              setTab(value);
+            }}
           >
             {label}
           </button>
@@ -338,17 +365,103 @@ export function StockDetail({
       ) : tab === 'images' ? (
         <StockImages key={stock.id} stockId={stock.id} />
       ) : tab === 'content' ? (
-        content === undefined ? (
+        contentDraft ? (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (busy || !contentDraft.text.trim() || contentDraft.text.length > stockTextLimit)
+                return;
+              setBusy(true);
+              setContentError('');
+              try {
+                setContent(await send<StockContent>(contentUrl, contentDraft, 'PATCH'));
+                finishEditingContent();
+                onDone(t('stock.content_saved'));
+              } catch (e) {
+                setContentError(applicationError((e as Error).message));
+              } finally {
+                setBusy(false);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!busy) finishEditingContent();
+              }
+            }}
+          >
+            <label htmlFor={contentId}>{t('ui.app.content')}</label>
+            <textarea
+              ref={contentInput}
+              id={contentId}
+              value={contentDraft.text}
+              onChange={(event) => setContentDraft({ ...contentDraft, text: event.target.value })}
+              rows={8}
+              maxLength={stockTextLimit}
+              aria-describedby={contentHintId}
+              required
+              disabled={busy}
+            />
+            <p id={contentHintId} className="profile-hint">
+              {t('ui.app.up_to_20_000_characters')}
+            </p>
+            <FormError error={contentError} />
+            <div className="form-actions">
+              <button
+                type="button"
+                className="button secondary"
+                onClick={finishEditingContent}
+                disabled={busy}
+              >
+                {t('ui.app.cancel')}
+              </button>
+              <button
+                className="button primary"
+                disabled={
+                  busy ||
+                  !contentDraft.text.trim() ||
+                  contentDraft.text === content?.content ||
+                  contentDraft.text.length > stockTextLimit
+                }
+              >
+                {busy ? <Spinner /> : <Check size={16} aria-hidden="true" />}
+                {busy ? t('ui.app.saving') : t('ui.app.save')}
+              </button>
+            </div>
+          </form>
+        ) : content === undefined ? (
           <p className="content-loading">
             <Spinner />
             {t('ui.app.loading_article_text')}
           </p>
         ) : (
-          <pre className="article-body">
-            <LinkedText
-              text={content ?? t('ui.app.no_retrieved_text_is_available_for_sample_articles_open')}
-            />
-          </pre>
+          <>
+            {stock.source_type === 'text' && contentVersion && (
+              <div className="stock-content-actions">
+                <button
+                  ref={contentButton}
+                  type="button"
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    setContentDraft({ text: content.content ?? '', version: contentVersion })
+                  }
+                >
+                  <Pencil size={16} aria-hidden="true" />
+                  {t('stock.edit_content')}
+                </button>
+              </div>
+            )}
+            <pre className="article-body">
+              <LinkedText
+                text={
+                  content.content ??
+                  t('ui.app.no_retrieved_text_is_available_for_sample_articles_open')
+                }
+              />
+            </pre>
+          </>
         )
       ) : tab === 'note' ? (
         <form

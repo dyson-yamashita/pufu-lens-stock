@@ -1142,10 +1142,14 @@ export const en: Record<string, string> = {
   'stock.detail_title': 'Stock details',
   'stock.detail_description': 'Reflect on this stock and connect it to questions and insights.',
   'stock.back': 'Back to previous page',
+  'stock.edit_content': 'Edit text',
+  'stock.content_saved': 'Text saved.',
   'manual.stock_detail_navigation':
     'Select a stock card to open its detail page. Use Back to previous page to return to the list or question. You can also open the detail URL directly or reload it.',
   'manual.stock_images_heading': 'Attach and view images',
   'manual.stock_edit_heading': 'Organize and edit stocks',
+  'manual.stock_edit_content':
+    'To change a text stock, open Entered text in its details, choose Edit text, then Save. Your edits apply to the stock you opened. In a public project, the updated summary or verbatim text also appears on the public page.',
   'manual.project_lists_heading': 'Exclude a project from library lists',
   'manual.stock_delete_heading': 'Delete a stock or project',
   'ui.user_manual.open_save_article_and_choose_url_or_text':
@@ -1407,6 +1411,9 @@ export const en: Record<string, string> = {
     'Different questions or insights were sent with the same request ID.',
   'error.a_stock_to_link_could_not_be_found': 'A stock to link could not be found.',
   'error.the_stock_and_project_do_not_match': 'The stock and project do not match.',
+  'error.only_text_stock_content_can_be_edited': 'You can edit the body of text stocks only.',
+  'error.edit_text_stock_from_details': 'Edit the text from the stock details page.',
+  'error.stock_content_changed': 'The text has been updated. Copy your edits before reloading.',
   'error.only_questions_or_insights_with_failed_generation_can_be_retried':
     'Only questions or insights with failed generation can be retried.',
   'error.complete_article_retrieval_and_summarization_first':
