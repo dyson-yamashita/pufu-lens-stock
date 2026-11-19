@@ -126,6 +126,64 @@ theorem stopped_workflow_cannot_restart (job : Job) (now : Nat)
     claimWorkflow job now = job := by
   rcases terminal with terminal | terminal <;> simp [claimWorkflow, terminal]
 
+structure ArticleState where
+  generation : Option Nat
+  belongsToUser : Bool
+  ready : Bool
+  summary : Option Nat
+  memoryRevision : Nat
+  questionQueued : Bool
+  deriving DecidableEq, Repr
+
+-- The generation is shared by the summary and its dependent D1 writes.
+def completeArticle (s : ArticleState) (generation summary : Nat) (autoQuestion : Bool) :
+    ArticleState :=
+  if (s.generation == some generation) && s.belongsToUser then
+    let updated :=
+      if s.ready then s
+      else { s with ready := true, summary := some summary, memoryRevision := s.memoryRevision + 1 }
+    { updated with questionQueued := s.questionQueued || autoQuestion }
+  else s
+
+theorem old_article_cannot_commit (s : ArticleState) (generation summary : Nat) (autoQuestion : Bool)
+    (stale : s.generation ≠ some generation) :
+    completeArticle s generation summary autoQuestion = s := by
+  simp [completeArticle, stale]
+
+theorem article_summary_replay_does_not_advance_memory (s : ArticleState)
+    (generation summary : Nat) (autoQuestion : Bool) (ready : s.ready = true) :
+    (completeArticle s generation summary autoQuestion).memoryRevision = s.memoryRevision := by
+  rcases s with ⟨current, owned, readyFlag, stored, revision, queued⟩
+  cases readyFlag
+  · contradiction
+  · simp [completeArticle] <;> split <;> rfl
+
+theorem article_completion_reachable :
+    completeArticle ⟨some 2, true, false, none, 3, false⟩ 2 42 true =
+      ⟨some 2, true, true, some 42, 4, true⟩ := by decide
+
+theorem article_rejection_reachable :
+    completeArticle ⟨some 3, true, false, none, 3, false⟩ 2 42 true =
+      ⟨some 3, true, false, none, 3, false⟩ := by decide
+
+-- Restricted to jobs whose target has a source revision (article generation here).
+def retireSuperseded (job : Job) (revision : Nat) (current : Option Nat) (now : Nat) : Job :=
+  if job.status == .pending && (current.any (fun actual => decide (revision < actual))) then
+    { job with status := .done, updatedAt := now }
+  else job
+
+theorem running_job_is_not_retired (job : Job) (revision current now : Nat)
+    (running : job.status = .running) :
+    retireSuperseded job revision (some current) now = job := by
+  simp [retireSuperseded, running]
+
+theorem current_job_is_not_retired (job : Job) (revision now : Nat) :
+    retireSuperseded job revision (some revision) now = job := by
+  simp [retireSuperseded]
+
+theorem retirement_reachable :
+    (retireSuperseded ⟨.pending, 0, 1, false⟩ 2 (some 3) 4).status = .done := by decide
+
 theorem memory_success_reachable :
     commitMemory ⟨true, true, 2⟩ 2 20 [7] ⟨1, 10, [3]⟩ = ⟨2, 20, [7]⟩ := by
   decide

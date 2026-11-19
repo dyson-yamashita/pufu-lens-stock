@@ -12,3 +12,4 @@ import BoundaryVerification.Quota
 import BoundaryVerification.Sns
 import BoundaryVerification.Push
 import BoundaryVerification.Intake
+import BoundaryVerification.TextStock

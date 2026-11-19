@@ -24,6 +24,18 @@
       "old": "(facts.cleanup = true ∨ (facts.userExists = true ∧ facts.onboarded = true))",
       "new": "(facts.cleanup = true ∨ facts.onboarded = true)",
       "theorem": "deleted_user_cannot_dispatch"
+    },
+    {
+      "name": "B08-article-generation",
+      "old": "if (s.generation == some generation) && s.belongsToUser then",
+      "new": "if s.belongsToUser then",
+      "theorem": "old_article_cannot_commit"
+    },
+    {
+      "name": "B08-retire-pending",
+      "old": "job.status == .pending && (current.any (fun actual => decide (revision < actual)))",
+      "new": "current.any (fun actual => decide (revision < actual))",
+      "theorem": "running_job_is_not_retired"
     }
   ]
 }

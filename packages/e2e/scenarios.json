@@ -83,9 +83,11 @@
       "src/features/stocks/stock-image-upload.ts",
       "server/features/stocks/stock-images.ts",
       "server/features/stocks/stock-search.ts",
+      "server/features/stocks/text-stock-content.ts",
       "shared/stock-images.ts",
       "server/features/stocks/ingest.ts",
       "server/infrastructure/jobs/workflows.ts",
+      "server/infrastructure/jobs/jobs.ts",
       "server/features/stocks/article-pages.ts",
       "server/infrastructure/ai/ai.ts",
       "server/infrastructure/ai/ai-model.ts",
@@ -96,6 +98,8 @@
       "src/features/stocks/StockList.tsx",
       "server/api/routes/stock-collection.ts",
       "server/api/routes/stock-details.ts",
+      "server/api/middleware/base.ts",
+      "shared/domain.ts",
       "src/features/stocks/detail.css",
       "src/features/stocks/forms.css",
       "src/features/stocks/list.css"
@@ -110,7 +114,7 @@
       "新規保存時の画像選択、画像保存だけ失敗した後の再試行で本文と画像を重複作成しない",
       "画像タブでファイル添付、実画像の表示、再読込後の保持、削除キャンセルと削除後の不在、匿名の画像取得拒否（形式・枚数・権限・障害時の後処理はVitest）",
       "MCPの本文採用と同じ保存APIで長文・改行・空白を保持し、再読込後も要約欄へ原文を表示。本文中のURLは詳細画面で別タブのリンクとして表示（MCPの引数・再送・権限・URL・通常保存との共存はVitest）",
-      "再読込後も本文・保存先が残る",
+      "詳細の入力した本文を編集し、キャンセル時は元の本文、保存失敗時は入力内容を保持。再試行で保存し、要約を更新。再読込後も同じストックに編集した本文・保存先が残る",
       "同じ記事の明示的な次ページを制限付きで取得（取得処理はVitestで検証）",
       "Canvas要素を含む記事でも本文と次ページを取得（本番用ビルド後の取得処理はVitestで検証）",
       "要約・問い・メモリの既定モデルをGemma 4へ移行。JSON Schema・最終回答の検証はVitest、画面の保存・再表示はAIなしのデモで検証"
@@ -143,6 +147,7 @@
     ],
     "aspects": [
       "URL入力から実際の取得・本文抽出・要約・保存と再読込までを確認。取得中を確認してからテスト専用HTTP fixtureを解放する",
+      "取得した本文を表示し、本文を編集するボタンがないことを確認",
       "2MBを超える記事HTMLの取得・保存を両画面幅で確認。HTMLの3MB境界とプレーンテキストの2MB拒否はVitestで確認",
       "HTTP 503で取得が失敗した記事を画面から本文補完して再試行し、5秒周期の詳細更新と通信時間を考慮して要約完了を待ち、同じストックID・保存先のまま本文と要約を保持。再読込後も重複がない",
       "DNSと外部HTTPだけをscratch Workerのfixtureに置換。実サイト・実AIの品質、PDF・YouTubeは対象外",

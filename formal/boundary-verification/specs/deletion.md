@@ -10,6 +10,8 @@
 
 `cleanupIfAccountDeleted` は外部保存後にusersを再照会し、不在ならcleanup要求を再作成/世代更新してから掃除する。古い `cleanupAccount` は最後の `DELETE ... generation=? AND NOT EXISTS(account_deletion_jobs...)` によって新要求を削除できない。モデルの `observeLateWrite` と `old_sweep_cannot_acknowledge_late_write` がこの時点を扱う。userが生存する場合の関数は要求を作らない。
 
+記事本文のR2書き込み完了が退会処理より遅れた場合も `cleanupIfAccountDeleted` を使う。[本文の照合テスト](../../../tests/text-stocks.test.ts) はダミーの退会APIとローカルR2を通し、遅れて書いた本文の掃除と別の所有者の本文の保持を確認する。
+
 [memory-history.ts](../../../server/features/memory/memory-history.ts) はR2 PUT前にcascade外の `memory_history_writes` を登録する。owner不在の未解決intentは削除せず、Cronが繰り返しR2 DELETEする。workerが停止し、先の掃除より遅くprovider PUTが完了するケースも再掃除できる。別系統のprefix要求 `memory_history_cleanup` も、list/delete後の最終DELETEで世代を確認する。
 
 ## 定理・変異・照合の対応

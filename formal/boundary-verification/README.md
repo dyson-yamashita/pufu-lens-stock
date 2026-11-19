@@ -1,6 +1,6 @@
-# 境界処理の最小モデル: B01〜B14
+# 境界処理の最小モデル B01〜B15
 
-MCP以外も含む既存境界を、Lean 4.36.0の14モジュールで扱う。[B00 update_pufu](../mcp-verification/README.md)は別プロジェクトとして維持する。製品のAPI・認証・SQLは変更しない。
+MCP以外も含む既存境界をLean 4.36.0で扱う。[B00 update_pufu](../mcp-verification/README.md)の仕様と検証範囲は専用のREADMEを参照する。
 
 ## 対象と対応表
 
@@ -15,15 +15,16 @@ MCP以外も含む既存境界を、Lean 4.36.0の14モジュールで扱う。[
 | B05 | [McpVisibility](BoundaryVerification/McpVisibility.lean) / [仕様](specs/mcp-visibility.md) | scope/owner/projectの同時条件、フィルタ後の可視集合                              |
 | B06 | [Publication](BoundaryVerification/Publication.lean) / [仕様](specs/publication.md)        | 公開ID/公開状態/キャッシュ世代と欠損時の拒否                                     |
 | B07 | [ImageLink](BoundaryVerification/ImageLink.lean) / [仕様](specs/image-link.md)             | 秘密リンクの期限/owner/局面/ready、R2後の状態再照会                              |
-| B08 | [Jobs](BoundaryVerification/Jobs.lean) / [仕様](specs/jobs.md)                             | 古いメモリ世代/削除ownerの保存拒否、ジョブlease条件                              |
+| B08 | [Jobs](BoundaryVerification/Jobs.lean) / [仕様](specs/jobs.md)                             | 古いメモリ・記事世代の確定拒否、ジョブの終了とlease条件                          |
 | B09 | [Network](BoundaryVerification/Network.lean) / [仕様](specs/network.md)                    | URL/DNS各条件、リダイレクト各hopの再検査と予算                                   |
 | B10 | [Deletion](BoundaryVerification/Deletion.lean) / [仕様](specs/deletion.md)                 | 本人削除、論理データのcascade、cleanup世代の照合                                 |
 | B11 | [Quota](BoundaryVerification/Quota.lean) / [仕様](specs/quota.md)                          | 時間窓の利用枠予約、試行/呼出の計上と所有者条件                                  |
 | B12 | [Sns](BoundaryVerification/Sns.lean) / [仕様](specs/sns.md)                                | X資格情報の本人対応、削除後の新読込拒否、外部失敗の拒否                          |
 | B13 | [Push](BoundaryVerification/Push.lean) / [仕様](specs/push.md)                             | セッション付き購読、配信前の再確認、試行/lease遷移                               |
 | B14 | [Intake](BoundaryVerification/Intake.lean) / [仕様](specs/intake.md)                       | 画像のサイズ/形式/予約、親/scope/key付き確定、PDF/AI出力の採用条件               |
+| B15 | [TextStock](BoundaryVerification/TextStock.lean) / [仕様](specs/text-stock.md)             | 本文の所有者・世代の再確認、共有分離、メモリ世代の失効                           |
 
-B01〜B14に311個の名前付き定理と76種の安全条件変異を追加した（B00の20定理・7変異は別）。すべてのモデルに成功と拒否の到達例を置く。抽象化されたスキーマ判定や公開IP分類などの正しさを、その値を受け取る側の定理から逆に保証しない。
+すべてのモデルに成功と拒否の到達例を置く。各モデルの入力となるスキーマ判定や公開IP分類などの前提は、仕様文書に記載する。
 
 ## 認証主体と各入口の接続
 

@@ -16,7 +16,8 @@ export async function dispatchJobs(env: Env): Promise<void> {
     env.DB.prepare(
       `UPDATE processing_jobs SET status='done', updated_at=? WHERE status='pending'
     AND ((kind='user_memory' AND revision < (SELECT memory_revision FROM users WHERE id=target_id))
-      OR (kind='project_memory' AND revision < (SELECT memory_revision FROM projects WHERE id=target_id)))`,
+      OR (kind='project_memory' AND revision < (SELECT memory_revision FROM projects WHERE id=target_id))
+      OR (kind='article' AND revision < (SELECT generation FROM articles WHERE id=target_id)))`,
     )
       .bind(now())
       .run(),

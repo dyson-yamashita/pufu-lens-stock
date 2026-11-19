@@ -99,6 +99,43 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   };
   expect(data.stocks).toHaveLength(1);
   expect(data.stocks[0].project_id).toBe(fixture.projectId);
+  const editContent = screen.getByRole('button', '本文を編集');
+  const contentInput = screen.getByLabel('本文', { exact: true });
+  await editContent.click();
+  await expect(contentInput).toHaveValue(sourceText);
+  await contentInput.fill('保存しない本文');
+  await screen.getByRole('button', 'キャンセル', { exact: true }).click();
+  await expect(browser.locator('.article-body')).toContainText(sourceText);
+
+  let failFirstEdit = true;
+  await browser.route('**/api/v1/stocks/*/content', async (route) => {
+    if (route.request.method === 'PATCH' && failFirstEdit) {
+      failFirstEdit = false;
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'E2E一時的な本文保存失敗' }),
+      });
+    }
+    await route.continue();
+  });
+  await editContent.click();
+  const revisedText = 'E2Eで本文を編集しました。\n編集後の内容を再読み込みして確認します。';
+  await contentInput.fill(revisedText);
+  const saveContent = screen.getByRole('button', '保存', { exact: true });
+  await saveContent.click();
+  await expect(screen.getByText('E2E一時的な本文保存失敗', { exact: true })).toBeVisible();
+  await expect(contentInput).toHaveValue(revisedText);
+  await saveContent.click();
+  await expect(browser.locator('.article-body')).toContainText(revisedText);
+  await screen.getByRole('button', '要約', { exact: true }).click();
+  await expect(browser.locator('.detail-summary')).toContainText('E2Eで本文を編集しました。', {
+    timeout: 15000,
+  });
+  await browser.reload();
+  await screen.getByRole('button', '入力した本文').click();
+  await expect(browser.locator('.article-body')).toHaveText(revisedText);
+
   await screen.getByRole('button', '画像', { exact: true }).click();
   await expect(browser.locator('.stock-image-list img')).toHaveAttribute('alt', 'stock-image.png');
   await browser

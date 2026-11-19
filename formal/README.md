@@ -16,7 +16,7 @@ Leanは **4.36.0** に固定する。バージョンの正本は [targets.json](
 
 機械的な登録表は [targets.json](targets.json)。対象ID、プロジェクトのディレクトリ、全Leanモジュール、ビルド・変異検出のコマンド、実装の照合テストを一緒に管理する。共通コードを共有する複数の対象IDは同じプロジェクトの `ids` に記録できる。
 
-現在の実装済み対象は **B00〜B14の最小モデル**。B00は[MCP update_pufu](mcp-verification/README.md)、B01〜B14は[認証・ショートカット・SNS等の境界処理](boundary-verification/README.md)に仕様と検証範囲を記載する。[対象一覧](../docs/FORMAL_VERIFICATION.md#既存の対象と優先順位)の全機能を完全に検証したとは主張しない。
+現在の実装済み対象は **B00〜B15の最小モデル**。B00は[MCP update_pufu](mcp-verification/README.md)、B01〜B15は[認証・ショートカット・SNS等の境界処理](boundary-verification/README.md)に仕様と検証範囲を記載する。
 
 新しい対象は、その責務に応じて `formal/` 配下へ配置する。固定版の `lean-toolchain` とLake設定を含め、共有できるコードは再利用する。MCP以外を追加したためにMCP PoCの適用範囲を広げる必要はない。
 

@@ -5,6 +5,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from verify import load_targets
+
 _spec = importlib.util.spec_from_file_location('boundary_check', Path(__file__).parent / 'boundary-verification/check.py')
 check = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(check)
@@ -69,8 +71,12 @@ class BoundaryMutationTests(unittest.TestCase):
 
     def test_all_boundary_modules_have_valid_cases(self):
         cases = check.load_cases()
-        self.assertEqual(len({module for module, _, _ in cases}), 14)
-        self.assertEqual({case['name'][:3] for _, _, case in cases}, {f'B{i:02}' for i in range(1, 15)})
+        target = next(target for target in load_targets() if target['directory'] == 'boundary-verification')
+        self.assertEqual(
+            {module for module, _, _ in cases},
+            set(target['modules']) - {'BoundaryVerification'},
+        )
+        self.assertEqual({case['name'][:3] for _, _, case in cases}, set(target['ids']))
 
 
 if __name__ == '__main__':
