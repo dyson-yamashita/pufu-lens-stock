@@ -1590,7 +1590,7 @@ export const ja: Record<string, string> = {
   'stock_images.request_id': '画像のリクエストIDを確認してください。',
   'stock_images.request_conflict': '画像を保存中か、同じリクエストIDで異なる画像が送信されました。',
   'stock_images.hint':
-    'PNG・JPEG・GIF・WebP、1枚5MBまで、5枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。画像を押すと別タブで開きます。',
+    'PNG・JPEG・GIF・WebP、1枚5MBまで、5枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。',
   'stock_images.attach': '画像を添付',
   'stock_images.loading': '画像を読み込んでいます…',
   'stock_images.processing': '画像を保存・削除しています…',

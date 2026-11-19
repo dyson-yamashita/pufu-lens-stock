@@ -1616,7 +1616,7 @@ export const en: Record<string, string> = {
   'stock_images.request_conflict':
     'The image is still uploading or a different image was sent with the same request ID.',
   'stock_images.hint':
-    'Attach up to 5 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory. Select an image to open it in a new tab.',
+    'Attach up to 5 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory.',
   'stock_images.attach': 'Attach image',
   'stock_images.loading': 'Loading images…',
   'stock_images.processing': 'Saving or deleting image…',

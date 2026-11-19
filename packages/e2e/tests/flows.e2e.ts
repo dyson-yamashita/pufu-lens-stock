@@ -172,22 +172,27 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   );
   await enlarge.click();
   await expect(enlargedImage).toBeVisible();
-  expect(
-    await browser.evaluate(async () => {
+  const viewport = await browser.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  const imageFits = () =>
+    browser.evaluate(async () => {
       const thumbnail = document.querySelector<HTMLImageElement>('.stock-image-slide img')!;
       const image = document.querySelector<HTMLImageElement>('dialog[open] img')!;
       await image.decode();
       const bounds = image.getBoundingClientRect();
       return (
         image.src === thumbnail.src &&
+        getComputedStyle(image).objectFit === 'contain' &&
         bounds.height > thumbnail.getBoundingClientRect().height &&
         bounds.left >= 0 &&
         bounds.top >= 0 &&
-        bounds.right <= window.innerWidth &&
-        bounds.bottom <= window.innerHeight
+        bounds.right <= innerWidth &&
+        bounds.bottom <= innerHeight
       );
-    }),
-  ).toBe(true);
+    });
+  expect(await imageFits()).toBe(true);
+  await browser.setViewport({ width: 568, height: 320 });
+  expect(await imageFits()).toBe(true);
+  await browser.setViewport(viewport);
   await browser.keyboard.press('ArrowLeft');
   await expect(browser.locator('dialog[open] img')).toHaveAttribute('alt', 'detail-image.png');
   await browser.keyboard.press('Escape');

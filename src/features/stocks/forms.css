@@ -123,11 +123,16 @@
 html:has(.stock-image-dialog[open]) {
   overflow: hidden;
 }
-.dialog.stock-image-dialog {
+.dialog.stock-image-dialog[open] {
+  display: flex;
+  flex-direction: column;
   width: min(1100px, calc(100% - 24px));
   max-height: calc(100dvh - 24px);
-  padding: clamp(12px, 3vw, 24px);
+  padding: clamp(12px, 3vmin, 24px);
   overscroll-behavior: contain;
+}
+.stock-image-dialog .dialog-head {
+  flex-shrink: 0;
 }
 .stock-image-dialog .dialog-head h2 {
   min-width: 0;
@@ -141,7 +146,7 @@ html:has(.stock-image-dialog[open]) {
 .stock-image-dialog img {
   display: block;
   width: 100%;
-  max-height: calc(100dvh - 136px);
+  min-height: 0;
   object-fit: contain;
 }
 .stock-detail-title {
