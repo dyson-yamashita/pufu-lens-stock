@@ -154,6 +154,15 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
       return Boolean(image?.complete && image.naturalWidth > 0);
     }),
   ).toBe(true);
+  const detailHash = await browser.evaluate(() => window.location.hash);
+  const enlargedImage = screen.getByRole('dialog', 'detail-image.png', { exact: true });
+  const enlarge = screen.getByRole('button', '画像を拡大表示：detail-image.png', { exact: true });
+  await enlarge.click();
+  await expect(enlargedImage).toBeVisible();
+  await expect(browser.locator('dialog[open] img')).toHaveAttribute('alt', 'detail-image.png');
+  await screen.getByRole('button', '閉じる', { exact: true }).click();
+  await expect(enlargedImage).toBeHidden();
+  expect(await browser.evaluate(() => window.location.hash)).toBe(detailHash);
   await screen.getByRole('button', '要約', { exact: true }).click();
   await expect(browser.locator('.stock-image-position')).toHaveText('1 / 2');
   await screen.getByRole('button', '次の画像').click();
@@ -161,6 +170,38 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
     'alt',
     'detail-image.png',
   );
+  await enlarge.click();
+  await expect(enlargedImage).toBeVisible();
+  const viewport = await browser.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  const imageFits = () =>
+    browser.evaluate(async () => {
+      const thumbnail = document.querySelector<HTMLImageElement>('.stock-image-slide img')!;
+      const image = document.querySelector<HTMLImageElement>('dialog[open] img')!;
+      await image.decode();
+      const bounds = image.getBoundingClientRect();
+      return (
+        image.src === thumbnail.src &&
+        getComputedStyle(image).objectFit === 'contain' &&
+        bounds.height > thumbnail.getBoundingClientRect().height &&
+        bounds.left >= 0 &&
+        bounds.top >= 0 &&
+        bounds.right <= innerWidth &&
+        bounds.bottom <= innerHeight
+      );
+    });
+  expect(await imageFits()).toBe(true);
+  await browser.setViewport({ width: 568, height: 320 });
+  expect(await imageFits()).toBe(true);
+  await browser.setViewport(viewport);
+  await browser.keyboard.press('ArrowLeft');
+  await expect(browser.locator('dialog[open] img')).toHaveAttribute('alt', 'detail-image.png');
+  await browser.keyboard.press('Escape');
+  await expect(enlargedImage).toBeHidden();
+  expect(await browser.evaluate(() => window.location.hash)).toBe(detailHash);
+  expect(
+    await browser.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? null),
+  ).toBe('画像を拡大表示：detail-image.png');
+  await expect(browser.locator('.stock-image-position')).toHaveText('2 / 2');
   await screen.getByRole('button', '前の画像').click();
   await expect(browser.locator('.stock-image-carousel img')).toHaveAttribute(
     'alt',
@@ -813,6 +854,15 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     'stock-image.png',
   );
   await expect(browser.locator('.public-stock-detail .stock-image-caption')).toBeHidden();
+  await screen.getByRole('button', '画像を拡大表示：stock-image.png', { exact: true }).click();
+  const enlargedStock = screen.getByRole('dialog', 'stock-image.png', { exact: true });
+  await expect(enlargedStock).toBeVisible();
+  await expect(browser.locator('dialog[open] img')).toHaveAttribute(
+    'src',
+    new URL(publicImageUrl).pathname,
+  );
+  await screen.getByRole('button', '閉じる', { exact: true }).click();
+  await expect(enlargedStock).toBeHidden();
   await app.screenshot('public-stock-detail-light');
   await browser.emulateMedia({ colorScheme: 'dark' });
   await expect(browser.locator('html')).toHaveAttribute('data-theme', 'dark');

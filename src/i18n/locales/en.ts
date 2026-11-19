@@ -1616,13 +1616,13 @@ export const en: Record<string, string> = {
   'stock_images.request_conflict':
     'The image is still uploading or a different image was sent with the same request ID.',
   'stock_images.hint':
-    'Attach up to 5 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory. Select an image to open it in a new tab.',
+    'Attach up to 5 PNG, JPEG, GIF or WebP images, each up to 5 MB. Images follow the destination project’s visibility and are public in public projects. They are excluded from AI summaries, questions and memory.',
   'stock_images.attach': 'Attach image',
   'stock_images.loading': 'Loading images…',
   'stock_images.processing': 'Saving or deleting image…',
   'stock_images.empty': 'No attached images.',
   'stock_images.retry': 'Reload',
-  'stock_images.open': 'Open image: {{name}}',
+  'stock_images.enlarge': 'Enlarge image: {{name}}',
   'stock_images.delete': 'Delete',
   'stock_images.delete_named': 'Delete image: {{name}}',
   'stock_images.confirm_delete': 'Delete “{{name}}”? This cannot be undone.',
@@ -1634,7 +1634,7 @@ export const en: Record<string, string> = {
   'manual.stock_images_add':
     'Choose Attach image on a new stock or open Images in a saved stock’s details. PNG, JPEG, GIF, and WebP are supported, up to 5 MB per image and 5 images per stock. If only an image fails to save, the stock is already saved. You can retry the remaining images.',
   'manual.stock_images_view':
-    'Attached images appear below the summary in your stock list and on the details page. Use the previous and next buttons, the arrow keys, or a horizontal swipe to switch between images. Select an image in the list to open the stock details. Select an image in the details to open the original in a new tab. To remove one, choose Delete in the Images tab.',
+    'Attached images appear below the summary in your stock list and on the details page. Use the previous and next buttons, the arrow keys, or a horizontal swipe to switch between images. Select an image in the list to open the stock details. Select an image in the details to enlarge it, and use Close to return to the details. To remove one, choose Delete in the Images tab.',
   'manual.stock_images_visibility':
     'Images in public projects are public. Turning publishing off disables their public URLs. Images stay out of AI summaries, questions, and memory. Deleting a stock, project, or account also deletes its attachments.',
   'manual.stock_images_mcp':

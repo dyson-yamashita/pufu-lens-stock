@@ -5,6 +5,7 @@ import { applicationError, t, useLanguage } from '../../i18n/i18n';
 import { api, createRequestId } from '../../lib/api';
 import { stockImageFileError, uploadStockImage } from './stock-image-upload';
 import StockImageCarousel from './StockImageCarousel';
+import StockImageDialog from './StockImageDialog';
 
 export default function StockImages({
   stockId,
@@ -15,12 +16,14 @@ export default function StockImages({
 }) {
   useLanguage();
   const [images, setImages] = useState<StockImage[] | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [revision, setRevision] = useState(0);
   const inputId = useId();
   const hintId = useId();
   const base = `/api/v1/stocks/${encodeURIComponent(stockId)}/images`;
+  const imageUrl = (id: string) => `${base}/${encodeURIComponent(id)}`;
   useEffect(() => {
     let active = true;
     void api<{ images: StockImage[] }>(base)
@@ -39,7 +42,7 @@ export default function StockImages({
       <StockImageCarousel
         images={images.map((image) => ({
           ...image,
-          url: `${base}/${encodeURIComponent(image.id)}`,
+          url: imageUrl(image.id),
         }))}
       />
     ) : error ? (
@@ -57,6 +60,7 @@ export default function StockImages({
         </button>
       </div>
     ) : null;
+  const expandedImage = images?.find((image) => image.id === expandedId);
   return (
     <section className="stock-images" aria-label={t('stock_images.title')} aria-busy={busy}>
       <p id={hintId} className="local-model-note">
@@ -118,18 +122,18 @@ export default function StockImages({
           <ul className="stock-image-list">
             {images.map((image) => (
               <li key={image.id}>
-                <a
-                  href={`${base}/${encodeURIComponent(image.id)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t('stock_images.open', { name: image.filename })}
+                <button
+                  type="button"
+                  className="stock-image-open"
+                  aria-label={t('stock_images.enlarge', { name: image.filename })}
+                  aria-haspopup="dialog"
+                  onClick={(event) => {
+                    event.currentTarget.focus({ preventScroll: true });
+                    setExpandedId(image.id);
+                  }}
                 >
-                  <img
-                    src={`${base}/${encodeURIComponent(image.id)}`}
-                    alt={image.filename}
-                    loading="lazy"
-                  />
-                </a>
+                  <img src={imageUrl(image.id)} alt={image.filename} loading="lazy" />
+                </button>
                 <span className="stock-image-name">{image.filename}</span>
                 <button
                   type="button"
@@ -142,7 +146,7 @@ export default function StockImages({
                     setBusy(true);
                     setError('');
                     try {
-                      await api(`${base}/${encodeURIComponent(image.id)}`, { method: 'DELETE' });
+                      await api(imageUrl(image.id), { method: 'DELETE' });
                       setImages((current) => current!.filter((item) => item.id !== image.id));
                     } catch (e) {
                       setError(applicationError((e as Error).message));
@@ -157,6 +161,12 @@ export default function StockImages({
               </li>
             ))}
           </ul>
+          {expandedImage && (
+            <StockImageDialog
+              image={{ filename: expandedImage.filename, url: imageUrl(expandedImage.id) }}
+              onClose={() => setExpandedId(null)}
+            />
+          )}
         </>
       )}
       {error && (
