@@ -3,7 +3,7 @@ import { articleMemoryStatements, now } from '../../infrastructure/db';
 import { hash } from '../../infrastructure/security';
 
 export async function textArticleCanonical(title: string, text: string, skipSummary: boolean) {
-  const source = `text:${await hash(JSON.stringify([title, text]))}`;
+  const source = `text:${await hash(JSON.stringify([title, skipSummary ? text : text.trim()]))}`;
   return skipSummary ? `verbatim:${source}` : source;
 }
 

@@ -123,6 +123,9 @@ describe('URLとテキストのストック', () => {
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual(await content(id));
     expect(await content(id)).toEqual({ content: revised, version: expect.any(String) });
+    const duplicate = await save({ title: '元のタイトル', text: revised });
+    expect(duplicate.status).toBe(200);
+    expect(await duplicate.json()).toMatchObject({ id, duplicate: true });
     expect((await detail(id)).stock).toMatchObject({
       id,
       article_id: original.target_id,
