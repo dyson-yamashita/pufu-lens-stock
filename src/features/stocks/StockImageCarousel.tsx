@@ -4,7 +4,13 @@ import { t, useLanguage } from '../../i18n/i18n';
 
 export type CarouselImage = { id: string; filename: string; url: string };
 
-export default function StockImageCarousel({ images }: { images: CarouselImage[] }) {
+export default function StockImageCarousel({
+  images,
+  preview,
+}: {
+  images: CarouselImage[];
+  preview?: { onOpen: () => void; openLabel: string };
+}) {
   useLanguage();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const gesture = useRef<{ x: number; y: number } | null>(null);
@@ -17,9 +23,18 @@ export default function StockImageCarousel({ images }: { images: CarouselImage[]
   const multiple = images.length > 1;
   const move = (offset: number) =>
     setSelectedId(images[(selected + offset + images.length) % images.length].id);
+  const image = (
+    <img
+      src={current.url}
+      alt={current.filename}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+    />
+  );
   return (
     <section
-      className="stock-image-carousel"
+      className={preview ? 'stock-image-carousel article-image-previews' : 'stock-image-carousel'}
       aria-label={t('stock_images.title')}
       aria-roledescription={multiple ? t('stock_images.carousel') : undefined}
       onKeyDown={(event) => {
@@ -53,14 +68,25 @@ export default function StockImageCarousel({ images }: { images: CarouselImage[]
           }
         }}
       >
-        <a
-          href={current.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('stock_images.open', { name: current.filename })}
-        >
-          <img src={current.url} alt={current.filename} loading="lazy" draggable={false} />
-        </a>
+        {preview ? (
+          <button
+            type="button"
+            onClick={preview.onOpen}
+            aria-label={preview.openLabel}
+            aria-description={current.filename}
+          >
+            {image}
+          </button>
+        ) : (
+          <a
+            href={current.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('stock_images.open', { name: current.filename })}
+          >
+            {image}
+          </a>
+        )}
       </div>
       {multiple && (
         <div className="stock-image-controls">
@@ -90,7 +116,7 @@ export default function StockImageCarousel({ images }: { images: CarouselImage[]
           </button>
         </div>
       )}
-      <p className="stock-image-caption">{current.filename}</p>
+      {!preview && <p className="stock-image-caption">{current.filename}</p>}
     </section>
   );
 }
