@@ -135,10 +135,25 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check scenario ledger
         run: pnpm run e2e:check
+      - name: Identify Ubuntu runner image
+        id: ubuntu-image
+        run: printf 'version=%s\n' "$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Cache Chromium system packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/chromium-apt/*.deb
+          key: chromium-apt-v1-ubuntu-24.04-${{ runner.arch }}-${{ steps.ubuntu-image.outputs.version }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install Chromium
         env:
           E2E_TELEMETRY_DISABLED: '1'
-        run: pnpm --filter @pufu-lens/e2e exec e2e-web install chromium --with-deps
+        run: |
+          archives="$RUNNER_TEMP/chromium-apt"
+          mkdir -p "$archives"
+          sudo tee /etc/apt/apt.conf.d/99-pufu-e2e-cache >/dev/null <<EOF
+          Dir::Cache::archives "$archives";
+          APT::Update::Post-Invoke { "bash '$GITHUB_WORKSPACE/scripts/e2e/verify-apt-archives.sh' '$archives'"; };
+          EOF
+          pnpm --filter @pufu-lens/e2e exec e2e-web install chromium --with-deps
       - name: Replay browser tests without AI
         run: pnpm run e2e:ci --target ${{ matrix.target }} --shard ${{ matrix.shard }}/2
       - name: Keep failure reports and traces
