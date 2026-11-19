@@ -35,6 +35,7 @@ export default function StockImageCarousel({
   return (
     <section
       className={preview ? 'stock-image-carousel article-image-previews' : 'stock-image-carousel'}
+      role={preview ? 'group' : undefined}
       aria-label={t('stock_images.title')}
       aria-roledescription={multiple ? t('stock_images.carousel') : undefined}
       onKeyDown={(event) => {

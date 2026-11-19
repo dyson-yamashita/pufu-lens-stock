@@ -42,6 +42,7 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await app.open(`/#project/${fixture.projectId}`);
   const previews = browser.locator('.article-image-previews img');
   const previewPosition = browser.locator('.article-image-previews .stock-image-position');
+  await expect(screen.getByRole('group', '画像', { exact: true })).toHaveCount(1);
   await expect(previews).toHaveCount(1);
   await expect(previews).toHaveAttribute('alt', 'stock-image.png');
   await expect(screen.getByRole('button', '次の画像')).toHaveCount(0);
