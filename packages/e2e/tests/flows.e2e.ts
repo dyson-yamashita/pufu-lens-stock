@@ -41,21 +41,24 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(screen.getByRole('heading', 'E2Eで保存した本文')).toBeVisible();
   await app.open(`/#project/${fixture.projectId}`);
   const previews = browser.locator('.article-image-previews img');
+  const previewPosition = browser.locator('.article-image-previews .stock-image-position');
+  await expect(screen.getByRole('group', '画像', { exact: true })).toHaveCount(1);
   await expect(previews).toHaveCount(1);
   await expect(previews).toHaveAttribute('alt', 'stock-image.png');
+  await expect(screen.getByRole('button', '次の画像')).toHaveCount(0);
   expect(
     await browser.evaluate(async () => {
       const image = document.querySelector<HTMLImageElement>('.article-image-previews img')!;
       await image.decode();
       image.scrollIntoView({ block: 'center' });
       const summary = document.querySelector('.article-summary')!.getBoundingClientRect();
-      const bounds = image.getBoundingClientRect();
+      const bounds = image.closest('.stock-image-slide')!.getBoundingClientRect();
       return (
         image.naturalWidth > 0 &&
-        bounds.width === 56 &&
-        bounds.height === 56 &&
+        Math.abs(bounds.width - Math.min(summary.width, 320)) < 1 &&
+        Math.abs(bounds.left + bounds.right - summary.left - summary.right) < 1 &&
         bounds.top >= summary.bottom &&
-        bounds.right <= window.innerWidth
+        getComputedStyle(image).objectFit === 'contain'
       );
     }),
   ).toBe(true);
@@ -135,8 +138,49 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   };
   expect(images.images).toHaveLength(2);
   await app.open(`/#project/${fixture.projectId}`);
-  await expect(previews).toHaveCount(2);
-  await screen.getByRole('heading', 'E2Eで保存した本文').click();
+  await expect(previews).toHaveCount(1);
+  await expect(previews).toHaveAttribute('alt', 'stock-image.png');
+  await expect(previewPosition).toHaveText('1 / 2');
+  const previewHeight = await browser.evaluate(
+    () =>
+      document.querySelector('.article-image-previews .stock-image-slide')!.getBoundingClientRect()
+        .height,
+  );
+  await screen.getByRole('button', '次の画像').click();
+  await expect(previewPosition).toHaveText('2 / 2');
+  await expect(previews).toHaveAttribute('alt', 'detail-image.png');
+  expect(
+    await browser.evaluate(async () => {
+      const image = document.querySelector<HTMLImageElement>('.article-image-previews img')!;
+      await image.decode();
+      return {
+        portrait: image.naturalHeight > image.naturalWidth,
+        fit: getComputedStyle(image).objectFit,
+        height: image.closest('.stock-image-slide')!.getBoundingClientRect().height,
+      };
+    }),
+  ).toEqual({ portrait: true, fit: 'contain', height: previewHeight });
+  await browser.keyboard.press('ArrowLeft');
+  await expect(previewPosition).toHaveText('1 / 2');
+  const swipeHandled = await browser.evaluate(() => {
+    const image = document.querySelector('.article-image-previews img')!;
+    const touch = (clientX: number) =>
+      new Touch({ identifier: 1, target: image, clientX, clientY: 80 });
+    image.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [touch(160)] }));
+    return !image.dispatchEvent(
+      new TouchEvent('touchend', {
+        bubbles: true,
+        cancelable: true,
+        changedTouches: [touch(30)],
+      }),
+    );
+  });
+  expect(swipeHandled).toBe(true);
+  await expect(previewPosition).toHaveText('2 / 2');
+  await expect(previews).toHaveAttribute('alt', 'detail-image.png');
+  await screen.getByRole('button', '前の画像').click();
+  await expect(previewPosition).toHaveText('1 / 2');
+  await screen.getByRole('button', 'E2Eで保存した本文の詳細を開く', { exact: true }).click();
   await screen.getByRole('button', '画像', { exact: true }).click();
   const imageUrl = `${fixture.url}/api/v1/stocks/${data.stocks[0].id}/images/${images.images[0].id}`;
   expect((await fetch(imageUrl)).status).toBe(401);
@@ -159,6 +203,7 @@ test('STOCK-001 テキストを保存して再読込しても本文と保存先�
   await expect(browser.locator('.article-card')).toBeVisible();
   await expect(previews).toHaveCount(1);
   await expect(previews).toHaveAttribute('alt', 'stock-image.png');
+  await expect(previewPosition).toHaveCount(0);
   // MCPと同じ保存APIで本文採用したストックの表示を確認する。引数・権限・再送はVitestで検証。
   const verbatimText =
     '  原文の段落を保ちます。https://example.com/source?x=1&y=2\n\n' +

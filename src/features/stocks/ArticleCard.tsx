@@ -5,6 +5,7 @@ import { isYouTubeUrl, youtubeDisplayTitle } from '../../../shared/youtube';
 import { applicationError, intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { statusLabels } from './stock-labels';
 import { StockFavoriteButton } from './StockFavoriteButton';
+import StockImageCarousel from './StockImageCarousel';
 import YouTubeThumbnail from './YouTubeThumbnail';
 
 export function ArticleCard({
@@ -20,6 +21,8 @@ export function ArticleCard({
 }) {
   useLanguage();
   const youtube = stock.source_type === 'url' && isYouTubeUrl(stock.source_url);
+  const title = youtube ? youtubeDisplayTitle(stock.title) : stock.title;
+  const openLabel = t('ui.app.open_details_for_value', { value0: title });
   return (
     <article className="article-card">
       <div className="article-meta">
@@ -47,7 +50,7 @@ export function ArticleCard({
       <div className="article-content">
         <h2 className="article-title">
           <button type="button" className="article-open" onClick={onOpen}>
-            {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
+            {title}
           </button>
         </h2>
         <p className="article-summary">
@@ -59,41 +62,28 @@ export function ArticleCard({
                 ? t('ui.app.summarizing_the_key_points_from_your_saved_text')
                 : t('ui.app.retrieving_the_article_and_summarizing_its_key_points_you')))}
         </p>
-        {!!stock.image_previews?.length && (
-          <div className="article-image-previews" role="group" aria-label={t('stock_images.title')}>
-            {stock.image_previews.map((image) => (
-              <img
-                key={image.id}
-                src={`/api/v1/stocks/${encodeURIComponent(stock.id)}/images/${encodeURIComponent(image.id)}`}
-                alt={image.filename}
-                width={56}
-                height={56}
-                loading="lazy"
-                decoding="async"
-              />
-            ))}
-          </div>
-        )}
       </div>
+      {!!stock.image_previews?.length && (
+        <StockImageCarousel
+          images={stock.image_previews.map((image) => ({
+            ...image,
+            url: `/api/v1/stocks/${encodeURIComponent(stock.id)}/images/${encodeURIComponent(image.id)}`,
+          }))}
+          preview={{ onOpen, openLabel }}
+        />
+      )}
       {!youtube && !!stock.has_og_image && (
         <button
           type="button"
           className="article-og-preview"
           onClick={onOpen}
-          aria-label={t('ui.app.open_details_for_value', { value0: stock.title })}
+          aria-label={openLabel}
         >
           <OgImage src={`/api/v1/stocks/${encodeURIComponent(stock.id)}/og-image`} />
         </button>
       )}
       {youtube && (
-        <button
-          type="button"
-          className="youtube-thumbnail"
-          aria-label={t('ui.app.open_details_for_value', {
-            value0: youtubeDisplayTitle(stock.title),
-          })}
-          onClick={onOpen}
-        >
+        <button type="button" className="youtube-thumbnail" aria-label={openLabel} onClick={onOpen}>
           <YouTubeThumbnail url={stock.source_url} />
         </button>
       )}
