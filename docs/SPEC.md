@@ -812,7 +812,7 @@ pnpm 11の公開後24時間の待機設定を維持しつつ、ロックファ�
 
 Googleの `GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET` はCloudflareのWorker Secretに保持し、GitHubへ複製しません。古いActions実行を再実行すると当時のコミットがデプロイされるため、対象コミットを確認してください。`.dev.vars*`・`.env*`・`.wrangler/`・`dist/` は引き続きGit管理対象外です。D1のIDや公開URLは接続先を識別する情報で、アクセス権を与える認証情報ではありません。新しい秘密をWranglerの `vars` やViteの `VITE_*` に設定しないでください。
 
-Actionsはcheckout/setup-node/pnpm/action-setupをコミットSHAで固定し、`GITHUB_TOKEN` は `contents: read` のみに制限しています。checkoutの認証情報保持と依存キャッシュを無効にし、ビルド成果物やログファイルをArtifactsへアップロードしません。PRの検証に本番Secretsは不要です。公開リポジトリではActionsログも公開される前提で、環境変数の一覧表示やshellのトレースを追加しないでください。[GitHubの安全な利用ガイド](https://docs.github.com/en/actions/reference/security/secure-use)
+ActionsはコミットSHAで固定し、`GITHUB_TOKEN` は `contents: read` のみに制限しています。checkoutの認証情報保持とpnpmの依存キャッシュを無効にし、ビルド成果物やログファイルをArtifactsへアップロードしません。Chromium用のUbuntuパッケージキャッシュはブラウザーE2Eジョブで使い、再利用前にAPTが更新した索引と照合します。PRの検証に本番Secretsは不要です。公開リポジトリではActionsログも公開される前提で、環境変数の一覧表示やshellのトレースを追加しないでください。[GitHubの安全な利用ガイド](https://docs.github.com/en/actions/reference/security/secure-use)
 
 ## iOSショートカット
 
