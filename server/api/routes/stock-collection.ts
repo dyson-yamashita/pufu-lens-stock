@@ -188,7 +188,13 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
           'INSERT INTO idempotency_keys (user_id, key, request_hash, stock_id) SELECT ?, ?, ?, s.id FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
         ).bind(user.id, key, requestHash, user.id, projects[0].id, canonical),
       );
-    let result: D1Result[];
+    // 本文編集で記事の識別子が変わる前に、この保存の結果を読み取る。
+    statements.push(
+      c.env.DB.prepare(
+        'SELECT s.id, a.status FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
+      ).bind(user.id, projects[0].id, canonical),
+    );
+    let result: D1Result<{ id: string; status: string }>[];
     try {
       result = await c.env.DB.batch(statements);
     } catch (error) {
@@ -196,19 +202,12 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
       if (response) return response;
       throw error;
     }
-    const stock = await c.env.DB.prepare(
-      'SELECT s.id, a.status FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.user_id = ? AND s.project_id = ? AND a.canonical_url = ?',
-    )
-      .bind(user.id, projects[0].id, canonical)
-      .first<{ id: string; status: string }>();
+    const stock = result.at(-1)!.results[0];
     const created = stockInsertIndexes.some((index) => result[index].meta.changes > 0);
     c.executionCtx.waitUntil(
       observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
     );
-    return c.json(
-      { id: stock!.id, status: stock!.status, duplicate: !created },
-      created ? 202 : 200,
-    );
+    return c.json({ id: stock.id, status: stock.status, duplicate: !created }, created ? 202 : 200);
   });
 
   app.get('/api/v1/articles/:id', async (c) => {

@@ -25,6 +25,17 @@ describe('URLとテキストのストック', () => {
     });
   const detail = async (id: string) =>
     (await (await app.request(`/api/v1/stocks/${id}`)).json()) as { stock: Stock };
+  const content = async (id: string) =>
+    (await (await app.request(`/api/v1/stocks/${id}/content`)).json()) as {
+      content: string;
+      version: string;
+    };
+  const edit = (id: string, version: string, text: string, options = {}) =>
+    app.request(`/api/v1/stocks/${id}/content`, {
+      method: 'PATCH',
+      body: { version, text },
+      ...options,
+    });
   async function run(kind: string, target?: string) {
     const job = await app.env.DB.prepare(
       'SELECT * FROM processing_jobs WHERE kind = ? AND (? IS NULL OR target_id = ?) ORDER BY revision DESC LIMIT 1',
@@ -50,9 +61,7 @@ describe('URLとテキストのストック', () => {
       source_url: '',
       status: 'queued',
     });
-    expect(await (await app.request(`/api/v1/stocks/${id}/content`)).json()).toEqual({
-      content: text,
-    });
+    expect(await content(id)).toEqual({ content: text, version: expect.any(String) });
     const list = (await (await app.request('/api/v1/stocks')).json()) as { stocks: Stock[] };
     expect(list.stocks[0].source_type).toBe('text');
     const article = (await (
@@ -98,6 +107,122 @@ describe('URLとテキストのストック', () => {
       expect(memory.article_count).toBe(1);
       expect(JSON.parse(memory.data_json).knowledge[0].articleIds).toEqual([job.target_id]);
     }
+  });
+
+  it('同じストックで本文・要約を更新し、タイトル・メモ・生成済みの問いを保持する', async () => {
+    const { id } = (await (await save({ title: '元のタイトル', note: '元のメモ' })).json()) as {
+      id: string;
+    };
+    const original = await run('article');
+    await run('question', id);
+    const question = await (await app.request(`/api/v1/stocks/${id}/question`)).json();
+    const { version } = await content(id);
+    const revised = '  編集済みの本文\n改行と空白を保持します。\n ';
+    const response = await edit(id, version, revised);
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual(await content(id));
+    expect(await content(id)).toEqual({ content: revised, version: expect.any(String) });
+    expect((await detail(id)).stock).toMatchObject({
+      id,
+      article_id: original.target_id,
+      title: '元のタイトル',
+      project_id: 'alice-project',
+      note: '元のメモ',
+      summary: null,
+    });
+    const article = await app.env.DB.prepare('SELECT content_key FROM articles WHERE id = ?')
+      .bind(original.target_id)
+      .first();
+    expect(article?.content_key).toBeNull();
+    expect((await edit(id, version, revised)).status).toBe(200);
+    const updated = await run('article', original.target_id);
+    expect(updated.revision).toBe(original.revision + 1);
+    expect((await detail(id)).stock.summary?.overview).toBe(revised.trim());
+    expect(await (await app.request(`/api/v1/stocks/${id}/question`)).json()).toEqual(question);
+    await run('cleanup');
+    expect(await app.env.CONTENT.get(`alice/${original.target_id}/1.txt`)).toBeNull();
+    expect(await (await app.env.CONTENT.get(`alice/${original.target_id}/2.txt`))!.text()).toBe(
+      revised,
+    );
+  });
+
+  it('非公開の保存先から編集しても、同じ文章を保存した公開先の原文は変わらない', async () => {
+    const { id } = (await (await save({ skip_summary: true })).json()) as { id: string };
+    const { id: publicStockId } = (await (
+      await save({ skip_summary: true, project_id: 'alice-second' })
+    ).json()) as { id: string };
+    const original = await run('article');
+    const searchEntry = (stockId: string) =>
+      app.env.DB.prepare('SELECT id FROM stock_search_entries WHERE stock_id=? AND current=1')
+        .bind(stockId)
+        .first<string>('id');
+    const originalEntry = await searchEntry(id);
+    const publicEntry = await searchEntry(publicStockId);
+    const { publication } = (await (
+      await app.request('/api/v1/projects/alice-second/publication', {
+        method: 'PATCH',
+        body: { is_public: true, public_description: '' },
+      })
+    ).json()) as { publication: { public_id: string } };
+
+    const before = await content(id);
+    const revised = '\n  編集した非公開の原文。\n  ';
+    expect((await edit(id, before.version, revised)).status).toBe(202);
+    const updated = (await detail(id)).stock;
+    expect(updated.article_id).not.toBe(original.target_id);
+    expect(await searchEntry(id)).not.toBe(originalEntry);
+    expect(await searchEntry(publicStockId)).toBe(publicEntry);
+    await run('article', updated.article_id);
+    expect((await detail(id)).stock.summary).toMatchObject({
+      overview: revised,
+      verbatim: true,
+    });
+    expect(await content(publicStockId)).toEqual(before);
+    const response = await app.request(
+      `/api/public/projects/${publication.public_id}/stocks/${publicStockId}`,
+      { headers: { Cookie: '' } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      stock: { summary: { overview: text, verbatim: true } },
+    });
+  });
+
+  it('要約前に編集でき、同じ版への並行編集は先に確定した本文を保持する', async () => {
+    const { id } = (await (await save()).json()) as { id: string };
+    const { version } = await content(id);
+    const texts = ['並行編集した本文A', '並行編集した本文B'];
+    const responses = await Promise.all(texts.map((text) => edit(id, version, text)));
+    expect(responses.map((response) => response.status).sort()).toEqual([202, 409]);
+    const revised = texts[responses.findIndex((response) => response.status === 202)];
+    await run('article', (await detail(id)).stock.article_id);
+    expect((await content(id)).content).toBe(revised);
+    expect((await detail(id)).stock.summary?.overview).toBe(revised);
+  });
+
+  it('入力上限を検証し、他ユーザー・別サイト・URLストックからの編集を拒否する', async () => {
+    const { id } = (await (await save()).json()) as { id: string };
+    const { version } = await content(id);
+    for (const invalid of [' \n\t ', 'あ'.repeat(20001)])
+      expect((await edit(id, version, invalid)).status).toBe(400);
+    expect((await edit(id, version, 'あ'.repeat(100000))).status).toBe(413);
+    expect((await edit(id, version, '別の利用者', { user: 'bob' })).status).toBe(404);
+    expect((await edit(id, version, '未認証', { headers: { Cookie: '' } })).status).toBe(401);
+    expect(
+      (await edit(id, version, '別サイト', { headers: { Origin: 'https://other.example.com' } }))
+        .status,
+    ).toBe(403);
+    const { id: urlId } = (await (
+      await app.request('/api/v1/stocks', {
+        method: 'POST',
+        body: { url: 'https://example.com', project_id: 'alice-project' },
+      })
+    ).json()) as { id: string };
+    expect((await edit(urlId, version, 'URL記事の変更')).status).toBe(409);
+    expect((await content(id)).content).toBe(text);
+    const maxLength = 'あ'.repeat(20000);
+    expect((await edit(id, version, maxLength)).status).toBe(202);
+    expect((await content(id)).content).toBe(maxLength);
   });
 
   it('同じテキストの再送・別プロジェクト保存・別ユーザー保存を扱う', async () => {
@@ -162,9 +287,15 @@ describe('URLとテキストのストック', () => {
     app.env.LOCAL_DEMO_ENABLED = 'false';
     await expect(run('article')).rejects.toThrow('Workers AI');
     expect((await detail(id)).stock.status).toBe('failed');
-    expect(await (await app.request(`/api/v1/stocks/${id}/content`)).json()).toEqual({
-      content: longText,
-    });
+    expect((await content(id)).content).toBe(longText);
+    expect(
+      (
+        await app.request(`/api/v1/stocks/${id}/retry`, {
+          method: 'POST',
+          body: { supplemental_text: 'テキストの本文は編集APIで変更する' },
+        })
+      ).status,
+    ).toBe(400);
     expect((await app.request(`/api/v1/stocks/${id}/retry`, { method: 'POST' })).status).toBe(202);
     app.env.LOCAL_DEMO_ENABLED = 'true';
     const job = await run('article');

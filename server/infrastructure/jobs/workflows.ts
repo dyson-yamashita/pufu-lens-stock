@@ -175,12 +175,21 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         throw new Error(youtubeUnavailableMessage);
       const key = `${job.user_id}/${article.id}/${job.revision}.txt`;
       const title = await step.do('fetch-and-store-content', retry, async () => {
+        // 世代交代や削除がR2書き込みと重なっても、古い本文の削除を後続ジョブで再試行できるようにする。
+        const queueStaleContentCleanup = async () => {
+          await this.env.DB.prepare(
+            "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT ?, id, 'cleanup', ?, ? FROM users WHERE id = ?",
+          )
+            .bind(`gc-stale-${job.id}`, key, job.revision, job.user_id)
+            .run();
+          return null;
+        };
         const current = await this.env.DB.prepare(
           'SELECT id, content_key FROM articles WHERE id = ? AND generation = ?',
         )
           .bind(article.id, job.revision)
           .first<{ id: string; content_key: string | null }>();
-        if (!current) return null;
+        if (!current) return queueStaleContentCleanup();
         if (article.source_type === 'text' && !article.input_text)
           throw new Error('保存したテキスト本文が見つかりません。');
         const content = article.input_text
@@ -228,14 +237,12 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
           );
         }
         const result = await this.env.DB.batch(statements);
-        if (!result[0].meta.changes) {
-          await this.env.CONTENT.delete([key, ogImageKey(key)]);
-          return null;
-        }
+        if (!result[0].meta.changes) return queueStaleContentCleanup();
         return content.title;
       });
       if (!title) {
         await step.do('finish-deleted-article', () => done(this.env, job.id));
+        await step.do('dispatch-stale-content-cleanup', () => dispatchJobs(this.env));
         return;
       }
       const text = await step.do('read-article-body', async () => {

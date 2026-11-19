@@ -25,9 +25,11 @@ export function registerBaseMiddleware(app: Hono<AppEnv>) {
                 (c.req.method === 'POST' && c.req.path === '/api/v1/pufus') ||
                 (c.req.method === 'POST' && /^\/api\/v1\/pufus\/[^/]+\/phases$/.test(c.req.path))
               ? 262144
-              : c.req.method === 'POST' &&
-                  (c.req.path === '/api/v1/stocks' ||
-                    /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))
+              : (c.req.method === 'POST' &&
+                    (c.req.path === '/api/v1/stocks' ||
+                      /^\/api\/v1\/stocks\/[^/]+\/retry$/.test(c.req.path))) ||
+                  (c.req.method === 'PATCH' &&
+                    /^\/api\/v1\/stocks\/[^/]+\/content$/.test(c.req.path))
                 ? 163840
                 : c.req.method === 'POST' &&
                     (/^\/api\/v1\/projects\/[^/]+\/pufus\/generate$/.test(c.req.path) ||

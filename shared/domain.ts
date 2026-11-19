@@ -23,6 +23,10 @@ export const stockSearchOptionsSchema = z.object({
   min_score: z.number().min(0).max(1).default(0.35),
 });
 export const stockTextLimit = 20000;
+export const stockTextSchema = z
+  .string()
+  .refine((text) => text.trim().length > 0, '本文を入力してください。')
+  .max(stockTextLimit, '本文は20,000文字以内で入力してください。');
 const stockFields = {
   project_id: z.string().min(1).max(100).optional(),
   note: z.string().max(2000).default(''),
@@ -42,10 +46,7 @@ export const stockInputSchema = z.union([
       ...stockFields,
       type: z.literal('text'),
       title: z.string().trim().max(200).default(''),
-      text: z
-        .string()
-        .refine((text) => text.trim().length > 0, '本文を入力してください。')
-        .max(stockTextLimit, '本文は20,000文字以内で入力してください。'),
+      text: stockTextSchema,
     })
     .strict()
     .transform((data) => ({ ...data, text: data.skip_summary ? data.text : data.text.trim() })),

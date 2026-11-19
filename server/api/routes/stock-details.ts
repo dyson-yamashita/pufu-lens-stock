@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
-import { type Question, type Stock } from '../../../shared/domain';
+import { stockTextSchema, type Question, type Stock } from '../../../shared/domain';
 import { isYouTubeUrl, youtubeUnavailableMessage } from '../../../shared/youtube';
 import type { AppEnv } from '../../env';
 import { canAccessProject } from '../../features/projects/project-access';
 import { withRelations } from '../../features/relations/relations';
 import { ogImageResponse } from '../../features/stocks/og-image';
 import { cleanupStockImages } from '../../features/stocks/stock-images';
+import { updateTextStockContent } from '../../features/stocks/text-stock-content';
 import { assertOperation, reserveOperation } from '../../features/usage/usage';
 import {
   dirtyMemoryStatements,
@@ -21,6 +22,8 @@ import { dispatchJobs } from '../../infrastructure/jobs/jobs';
 import { ownedProject, ownedStock } from '../context';
 import { questionColumns, questionJoins } from '../queries';
 import { body } from '../validation';
+
+const contentVersion = (id: string, generation: number) => `${id}:${generation}`;
 
 export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/stocks/:id', async (c) => {
@@ -119,8 +122,49 @@ export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
     const stock = await ownedStock(c);
     if (stock.source_type === 'url' && isYouTubeUrl(stock.source_url))
       return c.json({ content: null });
-    const object = stock.content_key ? await c.env.CONTENT.get(stock.content_key) : null;
-    return c.json({ content: object ? await object.text() : stock.input_text });
+    // テキストでは要約処理中もD1の手入力本文を優先する。URL取得の本文は従来どおりR2を使う。
+    const inputText = stock.source_type === 'text' ? stock.input_text : null;
+    const object =
+      inputText === null && stock.content_key ? await c.env.CONTENT.get(stock.content_key) : null;
+    return c.json({
+      content: object ? await object.text() : stock.input_text,
+      ...(stock.source_type === 'text'
+        ? { version: contentVersion(stock.article_id, stock.generation) }
+        : {}),
+    });
+  });
+
+  app.patch('/api/v1/stocks/:id/content', async (c) => {
+    const stock = await ownedStock(c);
+    if (stock.source_type !== 'text')
+      throw new HTTPException(409, { message: 'テキストのストックだけ本文を編集できます。' });
+    const { version, text } = await body(
+      c,
+      z.strictObject({ version: z.string().min(1).max(200), text: stockTextSchema }),
+    );
+    const currentVersion = contentVersion(stock.article_id, stock.generation);
+    if (text === stock.input_text) return c.json({ content: text, version: currentVersion });
+
+    const updated =
+      version === currentVersion &&
+      (await updateTextStockContent(c.env, {
+        stockId: stock.id,
+        articleId: stock.article_id,
+        generation: stock.generation,
+        userId: c.get('principal').user.id,
+        text,
+      }));
+    if (!updated)
+      throw new HTTPException(409, {
+        message: '本文が更新されています。入力内容を控えてからページを再読み込みしてください。',
+      });
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
+    return c.json(
+      { content: text, version: contentVersion(updated.articleId, updated.generation) },
+      202,
+    );
   });
 
   app.patch('/api/v1/stocks/:id', async (c) => {
@@ -206,6 +250,8 @@ export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
     if (!parsed.success)
       throw new HTTPException(400, { message: '補完本文は1〜20,000文字で入力してください。' });
     const supplemental = parsed.data.supplemental_text;
+    if (supplemental !== undefined && stock.source_type === 'text')
+      throw new HTTPException(400, { message: 'テキストの本文は詳細画面から編集してください。' });
     if (stock.status !== 'failed')
       throw new HTTPException(409, { message: '取得に失敗した記事だけ再試行できます。' });
     const article = await c.env.DB.prepare('SELECT generation FROM articles WHERE id=?')
