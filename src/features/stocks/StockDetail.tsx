@@ -239,7 +239,16 @@ export function StockDetail({
             key={value}
             aria-pressed={tab === value}
             className={tab === value ? 'active' : ''}
-            onClick={() => setTab(value)}
+            onClick={() => {
+              if (
+                value === 'content' &&
+                tab !== 'content' &&
+                stock.source_type === 'text' &&
+                !editingContent
+              )
+                setContent(undefined);
+              setTab(value);
+            }}
           >
             {label}
           </button>

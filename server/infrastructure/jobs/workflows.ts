@@ -4,6 +4,7 @@ import { resolveLanguage } from '../../../shared/locale';
 import { isYouTubeUrl, youtubeUnavailableMessage } from '../../../shared/youtube';
 import type { Env, Job } from '../../env';
 import { isDemo } from '../../env';
+import { cleanupIfAccountDeleted } from '../../features/auth/account';
 import {
   loadMemoryInputPage,
   memoryUpdateState,
@@ -177,11 +178,12 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
       const title = await step.do('fetch-and-store-content', retry, async () => {
         // 世代交代や削除がR2書き込みと重なっても、古い本文の削除を後続ジョブで再試行できるようにする。
         const queueStaleContentCleanup = async () => {
-          await this.env.DB.prepare(
+          const result = await this.env.DB.prepare(
             "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision) SELECT ?, id, 'cleanup', ?, ? FROM users WHERE id = ?",
           )
             .bind(`gc-stale-${job.id}`, key, job.revision, job.user_id)
             .run();
+          if (!result.meta.changes) await cleanupIfAccountDeleted(this.env, job.user_id);
           return null;
         };
         const current = await this.env.DB.prepare(
@@ -260,18 +262,16 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
             resolveLanguage(job.language),
           );
       await step.do('commit-summary', async () => {
-        const current = await this.env.DB.prepare(
-          'SELECT status FROM articles WHERE id = ? AND generation = ?',
-        )
-          .bind(article.id, job.revision)
-          .first<{ status: string }>();
-        if (!current || current.status === 'ready') {
-          await done(this.env, job.id);
-          return;
-        }
+        const language = resolveLanguage(job.language);
         await this.env.DB.batch([
+          ...articleMemoryStatements(
+            this.env,
+            job.user_id,
+            { id: article.id, generation: job.revision, queue: true },
+            language,
+          ),
           this.env.DB.prepare(
-            "UPDATE articles SET summary_json = ?, model = ?, status = 'ready', error = NULL, updated_at = ? WHERE id = ? AND generation = ?",
+            "UPDATE articles SET summary_json = ?, model = ?, status = 'ready', error = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready'",
           ).bind(
             JSON.stringify(summary),
             summary.verbatim
@@ -281,15 +281,10 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
                 : modelName(this.env),
             now(),
             article.id,
+            job.user_id,
             job.revision,
           ),
-          ...articleMemoryStatements(
-            this.env,
-            job.user_id,
-            article.id,
-            resolveLanguage(job.language),
-          ),
-          ...queueQuestionStatements(this.env, null, article.id, resolveLanguage(job.language)),
+          ...queueQuestionStatements(this.env, null, article.id, language, job.revision),
           this.env.DB.prepare(
             "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
           ).bind(now(), job.id),

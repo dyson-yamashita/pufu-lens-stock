@@ -1,13 +1,27 @@
 import type { Env } from '../../env';
-import { now } from '../../infrastructure/db';
+import { articleMemoryStatements, now } from '../../infrastructure/db';
+import { hash } from '../../infrastructure/security';
+
+export async function textArticleCanonical(title: string, text: string, skipSummary: boolean) {
+  const source = `text:${await hash(JSON.stringify([title, text]))}`;
+  return skipSummary ? `verbatim:${source}` : source;
+}
 
 export async function updateTextStockContent(
   env: Env,
-  input: { stockId: string; articleId: string; generation: number; userId: string; text: string },
+  input: {
+    stockId: string;
+    articleId: string;
+    generation: number;
+    userId: string;
+    text: string;
+    canonical: string;
+  },
 ) {
   const { stockId, articleId, generation, userId, text } = input;
   const forkId = crypto.randomUUID();
-  const canonical = `text:edited:${forkId}`;
+  // 新規保存は本文のハッシュで重複を探す。編集時の分岐・更新は独立した識別子を使う。
+  const canonical = `${input.canonical}:edited:${forkId}`;
   const updatedAt = now();
   const original = `id = ? AND user_id = ? AND generation = ? AND source_type = 'text'
     AND EXISTS (SELECT 1 FROM stocks s WHERE s.id = ? AND s.user_id = ? AND s.article_id = articles.id)`;
@@ -47,8 +61,13 @@ export async function updateTextStockContent(
     env.DB.prepare(
       `UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ?
       WHERE stock_id = ? AND source = 'ai' AND status != 'ready'
-        AND EXISTS (SELECT 1 FROM articles WHERE user_id = ? AND canonical_url = ?)`,
+        AND EXISTS (
+          SELECT 1 FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id
+          WHERE s.id = questions.stock_id AND a.user_id = ? AND a.canonical_url = ?
+            AND (questions.status != 'failed' OR p.auto_generate_questions = 1)
+        )`,
     ).bind(updatedAt, stockId, userId, canonical),
+    ...articleMemoryStatements(env, userId, { canonical, queue: false }),
   ]);
   if (fork.meta.changes) return { articleId: forkId, generation: 1 };
   if (update.meta.changes) return { articleId, generation: generation + 1 };

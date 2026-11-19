@@ -8,7 +8,10 @@ import { canAccessProject } from '../../features/projects/project-access';
 import { withRelations } from '../../features/relations/relations';
 import { ogImageResponse } from '../../features/stocks/og-image';
 import { cleanupStockImages } from '../../features/stocks/stock-images';
-import { updateTextStockContent } from '../../features/stocks/text-stock-content';
+import {
+  textArticleCanonical,
+  updateTextStockContent,
+} from '../../features/stocks/text-stock-content';
 import { assertOperation, reserveOperation } from '../../features/usage/usage';
 import {
   dirtyMemoryStatements,
@@ -153,6 +156,11 @@ export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
         generation: stock.generation,
         userId: c.get('principal').user.id,
         text,
+        canonical: await textArticleCanonical(
+          stock.article_title,
+          text,
+          Boolean(stock.skip_summary),
+        ),
       }));
     if (!updated)
       throw new HTTPException(409, {

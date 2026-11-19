@@ -7,22 +7,24 @@ export function queueQuestionJobStatement(
   stockId: string | null = null,
   articleId: string | null = null,
   language?: Language,
+  articleGeneration?: number,
 ): D1PreparedStatement {
   return env.DB.prepare(
-    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation, ? FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
-  ).bind(language ?? '', stockId, stockId, articleId, articleId);
+    "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation, ? FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?) AND a.generation = COALESCE(?, a.generation)",
+  ).bind(language ?? '', stockId, stockId, articleId, articleId, articleGeneration ?? null);
 }
 export function queueQuestionStatements(
   env: Env,
   stockId: string | null = null,
   articleId: string | null = null,
   language?: Language,
+  articleGeneration?: number,
 ): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?)",
-    ).bind(stockId, stockId, articleId, articleId),
-    queueQuestionJobStatement(env, stockId, articleId, language),
+      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?) AND a.generation = COALESCE(?, a.generation)",
+    ).bind(stockId, stockId, articleId, articleId, articleGeneration ?? null),
+    queueQuestionJobStatement(env, stockId, articleId, language, articleGeneration),
   ];
 }
 export function jobFailureStatements(
@@ -74,17 +76,22 @@ function userMemoryStatements(
   env: Env,
   userId: string,
   guard = '',
-  guardParams: string[] = [],
+  guardParams: (string | number)[] = [],
   language?: Language,
+  enqueue = true,
 ): D1PreparedStatement[] {
-  return [
+  const statements = [
     env.DB.prepare(
       `UPDATE users SET memory_revision = memory_revision + 1 WHERE id = ?${guard}`,
     ).bind(userId, ...guardParams),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision, ? FROM users WHERE id = ?${guard}`,
-    ).bind(language ?? '', userId, ...guardParams),
   ];
+  if (enqueue)
+    statements.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'um-' || id || '-' || memory_revision, id, 'user_memory', id, memory_revision, ? FROM users WHERE id = ?${guard}`,
+      ).bind(language ?? '', userId, ...guardParams),
+    );
+  return statements;
 }
 export function dirtyMemoryStatements(
   env: Env,
@@ -116,23 +123,37 @@ export function dirtyMemoryStatements(
 export function articleMemoryStatements(
   env: Env,
   userId: string,
-  articleId: string,
+  article: { id: string; generation: number; queue: true } | { canonical: string; queue: false },
   language?: Language,
 ): D1PreparedStatement[] {
-  // 要約確定と同じトランザクション内で最新の所属を読み、同時保存を取りこぼさない。
+  // 要約確定時は更新前の世代とstatusを照合する。編集直後は旧メモリの確定だけを止める。
+  const match = article.queue
+    ? "a.id = ? AND a.generation = ? AND a.status != 'ready'"
+    : 'a.canonical_url = ?';
+  const params = article.queue ? [article.id, article.generation] : [article.canonical];
+  const memberships = 'FROM stocks s JOIN articles a ON a.id = s.article_id';
+  const projectGuard = `user_id = ? AND id IN (SELECT s.project_id ${memberships} WHERE a.user_id = ? AND ${match})`;
   return [
     env.DB.prepare(
-      'UPDATE projects SET memory_revision = memory_revision + 1 WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)',
-    ).bind(userId, articleId),
-    env.DB.prepare(
-      "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision, ? FROM projects WHERE user_id = ? AND id IN (SELECT project_id FROM stocks WHERE article_id = ?)",
-    ).bind(language ?? '', userId, articleId),
+      `UPDATE projects SET memory_revision = memory_revision + 1 WHERE ${projectGuard}`,
+    ).bind(userId, userId, ...params),
+    ...(article.queue
+      ? [
+          env.DB.prepare(
+            `INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language)
+            SELECT 'pm-' || id || '-' || memory_revision, user_id, 'project_memory', id, memory_revision, ?
+            FROM projects WHERE ${projectGuard}`,
+          ).bind(language ?? '', userId, userId, ...params),
+        ]
+      : []),
     ...userMemoryStatements(
       env,
       userId,
-      ' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id=s.project_id WHERE s.article_id=? AND p.include_in_user_memory=1)',
-      [articleId],
+      ` AND EXISTS (SELECT 1 ${memberships} JOIN projects p ON p.id = s.project_id
+        WHERE a.user_id = ? AND ${match} AND p.include_in_user_memory = 1)`,
+      [userId, ...params],
       language,
+      article.queue,
     ),
   ];
 }

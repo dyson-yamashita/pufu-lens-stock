@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type { Stock } from '../shared/domain';
+import { createApp } from '../server/api/app';
 import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
 
 describe('URLとテキストのストック', () => {
@@ -36,7 +37,7 @@ describe('URLとテキストのストック', () => {
       body: { version, text },
       ...options,
     });
-  async function run(kind: string, target?: string) {
+  async function run(kind: string, target?: string, step = mockStep()) {
     const job = await app.env.DB.prepare(
       'SELECT * FROM processing_jobs WHERE kind = ? AND (? IS NULL OR target_id = ?) ORDER BY revision DESC LIMIT 1',
     )
@@ -46,7 +47,7 @@ describe('URLとテキストのストック', () => {
     const workflow = ['article', 'question', 'cleanup'].includes(kind)
       ? new ArticleWorkflow(app.ctx, app.env)
       : new MemoryWorkflow(app.ctx, app.env);
-    await workflow.run(mockEvent(job!.id), mockStep());
+    await workflow.run(mockEvent(job!.id), step);
     return job!;
   }
 
@@ -186,6 +187,18 @@ describe('URLとテキストのストック', () => {
     expect(await response.json()).toMatchObject({
       stock: { summary: { overview: text, verbatim: true } },
     });
+    const { token } = (await (
+      await app.request('/api/v1/tokens', {
+        method: 'POST',
+        body: { name: '別の保存先', project_id: 'alice-second' },
+      })
+    ).json()) as { token: string };
+    const scopedSave = await save(
+      { title: '非同期処理の設計', text: revised, skip_summary: true, project_id: 'alice-second' },
+      { Authorization: `Bearer ${token}`, Cookie: '', Origin: '' },
+    );
+    expect(scopedSave.status).toBe(202);
+    expect(await scopedSave.json()).toMatchObject({ duplicate: false, status: 'queued' });
   });
 
   it('要約前に編集でき、同じ版への並行編集は先に確定した本文を保持する', async () => {
@@ -198,6 +211,97 @@ describe('URLとテキストのストック', () => {
     await run('article', (await detail(id)).stock.article_id);
     expect((await content(id)).content).toBe(revised);
     expect((await detail(id)).stock.summary?.overview).toBe(revised);
+    const existing = await save({ title: '非同期処理の設計', text: revised });
+    expect(existing.status).toBe(200);
+    expect(await existing.json()).toMatchObject({ id, duplicate: true });
+    expect((await edit(id, (await content(id)).version, text)).status).toBe(202);
+    expect(await (await save()).json()).toMatchObject({ id, duplicate: true });
+  });
+
+  it('B08 編集と競合した旧要約は本文・メモリ世代・問いの処理を確定しない', async () => {
+    const { id } = (await (await save()).json()) as { id: string };
+    const { version } = await content(id);
+    const { article_id: articleId } = (await detail(id)).stock;
+    const revised = '要約の確定前に編集した本文';
+    const revision = () =>
+      app.env.DB.prepare("SELECT memory_revision FROM projects WHERE id='alice-project'").first(
+        'memory_revision',
+      );
+    const before = Number(await revision());
+    await run(
+      'article',
+      articleId,
+      mockStep(undefined, async (name) => {
+        if (name === 'commit-summary') expect((await edit(id, version, revised)).status).toBe(202);
+      }),
+    );
+    expect((await detail(id)).stock).toMatchObject({ status: 'queued', summary: null });
+    expect(await revision()).toBe(before + 1);
+    expect(
+      await app.env.DB.prepare("SELECT id FROM processing_jobs WHERE kind='question'").first(),
+    ).toBeNull();
+    await run('article', articleId);
+    expect((await detail(id)).stock.summary?.overview).toBe(revised);
+    expect(await revision()).toBe(before + 2);
+  });
+
+  it('B08 本文変更前に計算したメモリを編集中に確定しない', async () => {
+    const { id } = (await (await save()).json()) as { id: string };
+    const { version } = await content(id);
+    await run('article');
+    const revised = 'メモリの確定前に編集した本文';
+    await run(
+      'project_memory',
+      'alice-project',
+      mockStep(undefined, async (name) => {
+        if (name === 'save-if-revision-current')
+          expect((await edit(id, version, revised)).status).toBe(202);
+      }),
+    );
+    expect(await app.env.DB.prepare('SELECT revision FROM memories').first()).toBeNull();
+    expect(await app.env.DB.prepare('SELECT revision FROM memory_versions').first()).toBeNull();
+    expect((await content(id)).content).toBe(revised);
+  });
+
+  it('問いの自動生成が無効な保存先では、本文を編集しても失敗済みの問いを待機に戻さない', async () => {
+    const { id } = (await (await save()).json()) as { id: string };
+    await app.env.DB.prepare("UPDATE questions SET status='failed' WHERE stock_id=?")
+      .bind(id)
+      .run();
+    expect(
+      (
+        await app.request('/api/v1/projects/alice-project', {
+          method: 'PATCH',
+          body: { name: 'Alice project', description: '', auto_generate_questions: false },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await edit(id, (await content(id)).version, '更新した本文')).status).toBe(202);
+    const response = await app.request(`/api/v1/stocks/${id}/question`);
+    expect(await response.json()).toMatchObject({ question: { status: 'failed' } });
+  });
+
+  it('B10 退会後に本文書き込みが完了しても非公開本文を削除する', async () => {
+    await save();
+    vi.mocked(app.env.ARTICLE_WORKFLOW.get).mockResolvedValue({
+      status: async () => ({ status: 'complete' }),
+    } as WorkflowInstance);
+    const bucket = app.env.CONTENT;
+    await bucket.put('bob/keep.txt', '別のユーザーの本文');
+    app.env.CONTENT = new Proxy(bucket, {
+      get(target, property) {
+        if (property === 'put')
+          return async (...args: Parameters<R2Bucket['put']>) => {
+            expect((await app.request('/api/v1/me', { method: 'DELETE' })).status).toBe(200);
+            return target.put(...args);
+          };
+        const original = Reflect.get(target, property, target);
+        return typeof original === 'function' ? original.bind(target) : original;
+      },
+    });
+    await run('article');
+    expect((await bucket.list({ prefix: 'alice/' })).objects).toEqual([]);
+    expect(await bucket.get('bob/keep.txt')).not.toBeNull();
   });
 
   it('入力上限を検証し、他ユーザー・別サイト・URLストックからの編集を拒否する', async () => {
@@ -211,6 +315,34 @@ describe('URLとテキストのストック', () => {
     expect(
       (await edit(id, version, '別サイト', { headers: { Origin: 'https://other.example.com' } }))
         .status,
+    ).toBe(403);
+    const { token } = (await (
+      await app.request('/api/v1/tokens', { method: 'POST', body: { name: 'iPhone' } })
+    ).json()) as { token: string };
+    expect(
+      (await edit(id, version, '委任トークン', { headers: { Authorization: `Bearer ${token}` } }))
+        .status,
+    ).toBe(403);
+    const mcp = createApp({
+      kind: 'mcp',
+      tokenProjectId: null,
+      user: {
+        id: 'alice',
+        name: 'Alice',
+        onboarding_completed_at: '2026-10-30T00:00:00Z',
+        bio: '',
+        avatar_url: null,
+      },
+    });
+    expect(
+      (
+        await mcp.request(
+          `${app.env.APP_URL}/api/v1/stocks/${id}/content`,
+          { method: 'PATCH', body: JSON.stringify({ version, text: '委任されたMCP' }) },
+          app.env,
+          app.ctx,
+        )
+      ).status,
     ).toBe(403);
     const { id: urlId } = (await (
       await app.request('/api/v1/stocks', {
