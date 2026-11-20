@@ -1,7 +1,0 @@
-name = "boundaryVerification"
-version = "0.1.0"
-defaultTargets = ["BoundaryVerification"]
-
-[[lean_lib]]
-name = "BoundaryVerification"
-leanOptions = { warningAsError = true }

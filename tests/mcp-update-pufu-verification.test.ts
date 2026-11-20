@@ -4,7 +4,7 @@ import score from './fixtures/pufu-sparse.json';
 import { testApp } from './helpers';
 import { mcpToken } from './mcp-helpers';
 
-// Integration correspondence for formal/mcp-verification; no auth or SQL mocks.
+// Checks B00 in formal/verification/specs/mcp-update.md through the MCP and database entry points.
 describe('update_pufu: Leanモデルと実装の照合', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
   let pufuId: string;

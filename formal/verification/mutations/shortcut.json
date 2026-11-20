@@ -1,0 +1,29 @@
+{
+  "module": "Verification.Shortcut",
+  "mutations": [
+    {
+      "name": "B02-expiry",
+      "old": "t.registered && t.ownerExists && !t.revoked && beforeExpiry now t.expires",
+      "new": "t.registered && t.ownerExists && !t.revoked",
+      "theorem": "expiry_equality_rejected"
+    },
+    {
+      "name": "B02-project-owner",
+      "old": "projects.filter (fun p => p.owner == t.owner)",
+      "new": "projects",
+      "theorem": "foreign_owner_rejected"
+    },
+    {
+      "name": "B02-project-bound",
+      "old": "if !boundAllowed t requested then none else",
+      "new": "if false then none else",
+      "theorem": "different_bound_rejected"
+    },
+    {
+      "name": "B02-replay-payload",
+      "old": "r.fingerprint == fingerprint && r.liveStock",
+      "new": "r.liveStock",
+      "theorem": "changed_payload_conflicts_example"
+    }
+  ]
+}

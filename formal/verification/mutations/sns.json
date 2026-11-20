@@ -1,0 +1,53 @@
+{
+  "module": "Verification.Sns",
+  "mutations": [
+    {
+      "name": "B12-session",
+      "old": "  r.principal == .session && r.identity.onboarded",
+      "new": "  true && r.identity.onboarded",
+      "theorem": "management_requires_session"
+    },
+    {
+      "name": "B12-owner",
+      "old": "        if owner == r.identity.userId then\n          some ⟨r.identity.userId, secret, true, stamp⟩ else s.credentials owner",
+      "new": "        if true then\n          some ⟨r.identity.userId, secret, true, stamp⟩ else s.credentials owner",
+      "theorem": "put_owner_only"
+    },
+    {
+      "name": "B12-aad",
+      "old": "      if cipher.aadUser == user && cipher.authentic then some cipher.secret else none",
+      "new": "      if cipher.authentic then some cipher.secret else none",
+      "theorem": "copied_cipher_rejected"
+    },
+    {
+      "name": "B12-http",
+      "old": "  if token.isSome && (200 ≤ r.status && r.status < 300) &&",
+      "new": "  if token.isSome && true &&",
+      "theorem": "unauthorized_rejected"
+    },
+    {
+      "name": "B12-public-secret",
+      "old": "    updatedAt := (s.credentials user).map Cipher.updatedAt }",
+      "new": "    updatedAt := (s.credentials user).map Cipher.secret }",
+      "theorem": "public_status_ignores_secret"
+    },
+    {
+      "name": "B12-manual-redirect",
+      "old": "def outgoing (secret : Nat) : Outgoing := ⟨.xApi, .manual, secret⟩",
+      "new": "def outgoing (secret : Nat) : Outgoing := ⟨.xApi, .follow, secret⟩",
+      "theorem": "outgoing_fixed_manual"
+    },
+    {
+      "name": "B12-put-actor",
+      "old": "if owner == r.identity.userId then\n          some",
+      "new": "if owner == r.identity.userId + 1 then\n          some",
+      "theorem": "put_owner_only"
+    },
+    {
+      "name": "B12-erase-actor",
+      "old": "if owner == r.identity.userId then none else s.credentials owner",
+      "new": "if owner == r.identity.userId + 1 then none else s.credentials owner",
+      "theorem": "erase_owner_only"
+    }
+  ]
+}

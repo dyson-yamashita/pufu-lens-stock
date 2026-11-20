@@ -3,26 +3,8 @@
   "toolchain": "leanprover/lean4:v4.36.0",
   "targets": [
     {
-      "ids": ["B00"],
-      "directory": "mcp-verification",
-      "modules": [
-        "McpVerification",
-        "McpVerification.Access",
-        "McpVerification.State",
-        "McpVerification.Proofs",
-        "McpVerification.Examples"
-      ],
-      "build": ["lake", "build"],
-      "mutations": ["python3", "check.py"],
-      "tests": [
-        "tests/mcp-update-pufu-verification.test.ts",
-        "tests/mcp.test.ts",
-        "tests/mcp-pufu-phases.test.ts",
-        "tests/mcp-relations.test.ts"
-      ]
-    },
-    {
       "ids": [
+        "B00",
         "B01",
         "B02",
         "B03",
@@ -40,29 +22,31 @@
         "B15",
         "B16"
       ],
-      "directory": "boundary-verification",
+      "directory": "verification",
       "modules": [
-        "BoundaryVerification",
-        "BoundaryVerification.Auth",
-        "BoundaryVerification.Shortcut",
-        "BoundaryVerification.Connection",
-        "BoundaryVerification.McpWrites",
-        "BoundaryVerification.McpVisibility",
-        "BoundaryVerification.Publication",
-        "BoundaryVerification.ImageLink",
-        "BoundaryVerification.Jobs",
-        "BoundaryVerification.Network",
-        "BoundaryVerification.Deletion",
-        "BoundaryVerification.Quota",
-        "BoundaryVerification.Sns",
-        "BoundaryVerification.Push",
-        "BoundaryVerification.Intake",
-        "BoundaryVerification.TextStock",
-        "BoundaryVerification.Reflections"
+        "Verification",
+        "Verification.McpUpdate",
+        "Verification.Auth",
+        "Verification.Shortcut",
+        "Verification.Connection",
+        "Verification.McpWrites",
+        "Verification.McpVisibility",
+        "Verification.Publication",
+        "Verification.ImageLink",
+        "Verification.Jobs",
+        "Verification.Network",
+        "Verification.Deletion",
+        "Verification.Quota",
+        "Verification.Sns",
+        "Verification.Push",
+        "Verification.Intake",
+        "Verification.TextStock",
+        "Verification.Reflections"
       ],
       "build": ["lake", "build"],
       "mutations": ["python3", "check.py"],
       "tests": [
+        "tests/mcp-update-pufu-verification.test.ts",
         "tests/boundary-auth-verification.test.ts",
         "tests/boundary-mcp-verification.test.ts",
         "tests/boundary-public-verification.test.ts",
