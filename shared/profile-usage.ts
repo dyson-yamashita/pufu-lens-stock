@@ -3,6 +3,7 @@ export type UsageCounts = {
   stocks: number;
   questions: number;
   pufus: number;
+  phases: number;
   ai_neurons: number;
   ai_unmeasured_calls: number;
 };

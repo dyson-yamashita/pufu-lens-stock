@@ -35,6 +35,10 @@ export default function ProfileUsage({ userId }: { userId: string }) {
     { key: 'ai_neurons', label: t('ui.usage.ai_neurons'), icon: Sparkles },
   ] as const;
   const selected = usage?.periods[period];
+  const phaseCount =
+    typeof selected?.phases === 'number'
+      ? t('ui.usage.phase_count', { value0: selected.phases })
+      : null;
   const unmeasured = selected && selected.ai_neurons === 0 && selected.ai_unmeasured_calls > 0;
   const formatNeurons = (value: number) =>
     value.toLocaleString(intlLocale(), { maximumFractionDigits: 0 });
@@ -99,6 +103,11 @@ export default function ProfileUsage({ userId }: { userId: string }) {
                     </strong>
                     {!(key === 'ai_neurons' && unmeasured) && (
                       <span>{key === 'ai_neurons' ? 'Neurons' : t('ui.usage.items_unit')}</span>
+                    )}
+                    {key === 'pufus' && phaseCount && (
+                      <span className="usage-phase-count">
+                        {t('ui.usage.phase_label')} <b>{phaseCount}</b>
+                      </span>
                     )}
                   </dd>
                 </div>

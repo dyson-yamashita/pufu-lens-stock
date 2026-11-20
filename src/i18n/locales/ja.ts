@@ -175,6 +175,8 @@ export const ja: Record<string, string> = {
   'ui.usage.stocks': 'ストック登録数',
   'ui.usage.questions': '問い登録数',
   'ui.usage.pufus': 'プ譜登録数',
+  'ui.usage.phase_label': '局面',
+  'ui.usage.phase_count': '{{value0}}件',
   'ui.usage.ai_neurons': 'AI使用量',
   'ui.usage.unmeasured': '未計測',
   'ui.usage.items_unit': '件',
@@ -183,7 +185,7 @@ export const ja: Record<string, string> = {
   'ui.usage.retry': '再読み込み',
   'ui.usage.timezone_note': '日本時間で集計します。今週は月曜、今月は1日からです。',
   'manual.usage':
-    '「プロフィール」の「利用状況」から、今週・今月・全体のストック・問い・プ譜の登録数とAI使用量を確認できます。登録数は削除済みを除きます。AI使用量はモデル別にNeuronsへ換算した目安で、計測開始後の取得できた分だけを集計します。日本時間の月曜・月初を区切りに集計します。',
+    '「プロフィール」の「利用状況」から、今週・今月・全体のストック・問い・プ譜・局面の登録数とAI使用量を確認できます。局面は最初の局面も含めて、それぞれの登録日で集計します。登録数は削除済みを除きます。AI使用量はモデル別にNeuronsへ換算した目安で、計測開始後の取得できた分だけを集計します。日本時間の月曜・月初を区切りに集計します。',
   'pufu.creation_method': '作成方法',
   'pufu.create_with_ai': 'AIで作成',
   'pufu.create_from_json': 'JSONから作成',

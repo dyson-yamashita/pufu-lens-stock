@@ -17,6 +17,11 @@ export async function profileUsage(env: Env, userId: string): Promise<ProfileUsa
     'SELECT created_at FROM stocks WHERE user_id=?',
     'SELECT q.created_at FROM questions q JOIN projects p ON p.id=q.project_id WHERE p.user_id=?',
     'SELECT created_at FROM pufu_scores WHERE user_id=?',
+    // Older completed scores can have their first phase materialized on first read.
+    `SELECT COALESCE(ph.created_at,pf.created_at) AS created_at
+      FROM pufu_scores pf LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id
+      WHERE pf.user_id=?
+        AND (ph.pufu_id IS NOT NULL OR (pf.status='ready' AND pf.current_phase=1 AND pf.score_json IS NOT NULL))`,
   ];
   const rows = await env.DB.batch<{ week: number; month: number; all: number }>(
     sources.map((source) =>
@@ -49,6 +54,7 @@ export async function profileUsage(env: Env, userId: string): Promise<ProfileUsa
     stocks: rows[0].results[0][period],
     questions: rows[1].results[0][period],
     pufus: rows[2].results[0][period],
+    phases: rows[3].results[0][period],
     ai_neurons: ai![period] / 1_000_000,
     ai_unmeasured_calls: ai![`${period}_missing`],
   });
