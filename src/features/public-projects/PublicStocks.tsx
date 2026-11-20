@@ -1,10 +1,10 @@
-import OgImage from '../stocks/OgImage';
 import { ArrowLeft, BookOpen, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import type { PublicList, PublicStock, PublicStockDetail } from '../../../shared/public-project';
 import { isYouTubeUrl, youtubeDisplayTitle } from '../../../shared/youtube';
 import LinkedText from '../../components/LinkedText';
 import { intlLocale, t, useLanguage } from '../../i18n/i18n';
+import OgImage from '../stocks/OgImage';
 import StockImageCarousel from '../stocks/StockImageCarousel';
 import YouTubePlayer from '../stocks/YouTubePlayer';
 import YouTubeThumbnail from '../stocks/YouTubeThumbnail';
@@ -37,28 +37,42 @@ export function PublicStockCard({
 }) {
   useLanguage();
   const youtube = Boolean(stock.source_url && isYouTubeUrl(stock.source_url));
+  const site = stock.domain || t('ui.app.text');
+  const title = (youtube ? youtubeDisplayTitle(stock.title) : stock.title).trim() || site;
+  const href = publicLink(`#stock/${encodeURIComponent(stock.id)}`);
   return (
-    <a
-      className="public-content-card public-stock-card"
-      href={publicLink(`#stock/${encodeURIComponent(stock.id)}`)}
-    >
+    <article className="public-content-card public-stock-card">
       <p className="public-meta">
         <BookOpen size={16} aria-hidden="true" />
-        {stock.domain || t('ui.app.text')}
+        {site}
         <time>{new Date(stock.created_at).toLocaleDateString(intlLocale())}</time>
       </p>
       <Heading className="public-stock-card-title">
-        {youtube ? youtubeDisplayTitle(stock.title) : stock.title}
+        <a className="public-stock-card-link" href={href}>
+          {title}
+        </a>
       </Heading>
-      {!youtube && <OgImage src={stock.og_image_url} />}
-      {youtube && <YouTubeThumbnail url={stock.source_url!} />}
       <p className="public-summary">
         {youtube
           ? t('ui.public_projects.youtube_link_saved')
           : stock.summary?.overview || t('ui.public_projects.no_summary_yet')}
       </p>
+      <StockImageCarousel
+        images={stock.images ?? []}
+        preview={{ href, openLabel: t('ui.app.open_details_for_value', { value0: title }) }}
+      />
+      {!youtube && stock.og_image_url && (
+        <div className="article-og-preview">
+          <OgImage src={stock.og_image_url} />
+        </div>
+      )}
+      {youtube && (
+        <div className="youtube-thumbnail">
+          <YouTubeThumbnail url={stock.source_url!} />
+        </div>
+      )}
       <StockTopics stock={stock} />
-    </a>
+    </article>
   );
 }
 

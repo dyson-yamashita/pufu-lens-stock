@@ -291,6 +291,7 @@ describe('公開プロジェクトの参照専用API', () => {
       id: 'stock',
       title: '公開する記事',
       og_image_url: null,
+      images: [],
       source_url: 'https://example.com/a',
       domain: 'example.com',
       created_at: expect.any(String),

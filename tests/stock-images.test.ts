@@ -136,6 +136,52 @@ it('画像と名前を保存し、再取得・ストック移動でも保持し�
   expect((await app.request(`${base}/${image.id}`)).status).toBe(200);
 });
 
+it('公開ストック一覧は公開中のストックに添付された保存済み画像だけを添付順で返す', async () => {
+  const first = await saved();
+  const second = await saved();
+  const privateUpload = await upload(png, 'image/png', {}, '/api/v1/stocks/other/images');
+  expect(privateUpload.status).toBe(201);
+  await app.env.DB.batch([
+    app.env.DB.prepare('UPDATE stock_images SET created_at=? WHERE id=?').bind(
+      '2026-11-01T00:00:00Z',
+      first.id,
+    ),
+    app.env.DB.prepare('UPDATE stock_images SET created_at=? WHERE id=?').bind(
+      '2026-11-02T00:00:00Z',
+      second.id,
+    ),
+    app.env.DB.prepare(
+      "INSERT INTO stock_images(id,stock_id,content_key,filename,content_type,size,content_hash,status) VALUES ('pending','stock','pending-key','未保存.png','image/png',1,'hash','pending')",
+    ),
+  ]);
+  const { publication } = (await (
+    await app.request('/api/v1/projects/alice-project/publication', {
+      method: 'PATCH',
+      body: { is_public: true, public_description: '' },
+    })
+  ).json()) as { publication: { public_id: string } };
+  const list = `/api/public/projects/${publication.public_id}/stocks`;
+  const headers = { Cookie: '' };
+  const { items } = (await (await app.request(list, { headers })).json()) as {
+    items: { id: string; images: (StockImage & { url: string })[] }[];
+  };
+  expect(items.map((stock) => stock.id)).toEqual(['stock']);
+  expect(items[0].images).toEqual(
+    [first, second].map((image, i) => ({
+      ...image,
+      created_at: `2026-11-0${i + 1}T00:00:00Z`,
+      url: `${list}/stock/images/${image.id}`,
+    })),
+  );
+  expect((await app.request(items[0].images[0].url, { headers })).status).toBe(200);
+  await app.request('/api/v1/projects/alice-project/publication', {
+    method: 'PATCH',
+    body: { is_public: false, public_description: '' },
+  });
+  expect((await app.request(list, { headers })).status).toBe(404);
+  expect((await app.request(items[0].images[0].url, { headers })).status).toBe(404);
+});
+
 it('他人・未認証・別ストック・別サイト・token・MCPの許可範囲外を拒否し、公開状態に従う', async () => {
   const image = await saved();
   for (const method of ['GET', 'DELETE']) {

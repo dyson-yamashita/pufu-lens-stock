@@ -99,4 +99,37 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
     project_id: fixture.projectId,
     status: 'ready',
   });
+
+  const { publication } = (await fixture.request(
+    `/projects/${fixture.projectId}/publication`,
+    'PATCH',
+    {
+      is_public: true,
+      public_description: '',
+    },
+  )) as { publication: { public_id: string } };
+  await app.clearState();
+  await app.open(`/p/${publication.public_id}`);
+  const preview = browser.locator('.public-stock-card .public-summary + .article-og-preview img');
+  const stockId = after.stocks.find((stock) => stock.source_url === sourceUrl)!.id;
+  await expect(preview).toHaveAttribute(
+    'src',
+    `/api/public/projects/${publication.public_id}/stocks/${stockId}/og-image`,
+  );
+  const publicPreview = await browser.evaluate(async () => {
+    const image = document.querySelector<HTMLImageElement>('.public-stock-card .stock-og-image')!;
+    image.scrollIntoView({ block: 'center' });
+    await image.decode();
+    const { x, y, width, height } = image.getBoundingClientRect();
+    return {
+      x: x + width / 2,
+      y: y + height / 2,
+      displayed: image.naturalWidth > 0 && width > 0 && width <= 320,
+    };
+  });
+  expect(publicPreview.displayed).toBe(true);
+  await browser.mouse.move(publicPreview.x, publicPreview.y);
+  await browser.mouse.down();
+  await browser.mouse.up();
+  await expect(browser.locator('.public-stock-detail .stock-og-image')).toBeVisible();
 });

@@ -76,6 +76,11 @@ it('OGP画像を保存して一覧・本人・公開閲覧へ配信し、公開�
     })
   ).json()) as { publication: { public_id: string } };
   const root = `/api/public/projects/${published.publication.public_id}`;
+  expect(
+    await (await app.request(`${root}/stocks`, { headers: { Cookie: '' } })).json(),
+  ).toMatchObject({
+    items: [{ id, og_image_url: `${root}/stocks/${id}/og-image` }],
+  });
   const data = (await (
     await app.request(`${root}/stocks/${id}`, { headers: { Cookie: '' } })
   ).json()) as { stock: { og_image_url: string } };
