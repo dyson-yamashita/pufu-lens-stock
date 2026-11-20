@@ -20,7 +20,7 @@ structure Entry where
   deriving DecidableEq, Repr
 
 def read (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry) : Option Entry :=
-  if allowed r .get owner user && !entry.dismissed then some entry else none
+  if allowed r .get owner user && !entry.dismissed && entry.text.isSome then some entry else none
 
 theorem foreign_read_denied (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry)
     (foreign : owner ≠ some user) : read r owner user entry = none := by
@@ -33,40 +33,45 @@ theorem non_session_read_denied (r : Auth.Request) (owner : Option Nat) (user : 
     simp [read, allowed, Auth.apiAllowed, Auth.authenticated, Auth.routeAllowed,
       Auth.tokenRoute, Auth.mcpRoute, h]
 
-structure RequestStore where
-  selection : Option Nat
+inductive Period where
+  | weekly | biweekly | monthly
+  deriving DecidableEq, Repr
+
+def configurePeriod (r : Auth.Request) (owner : Option Nat) (user : Nat)
+    (current proposed : Period) : Period :=
+  if allowed r .patch owner user then proposed else current
+
+theorem foreign_period_update_denied (r : Auth.Request) (owner : Option Nat)
+    (user : Nat) (current proposed : Period) (foreign : owner ≠ some user) :
+    configurePeriod r owner user current proposed = current := by
+  simp [configurePeriod, allowed, foreign]
+
+structure Regeneration where
+  entry : Entry
   jobs : Nat
   reserved : Nat
   deriving DecidableEq, Repr
 
-inductive Acceptance where
-  | replay | created | refused
-  deriving DecidableEq, Repr
+def regenerate (r : Auth.Request) (owner : Option Nat) (user generation : Nat)
+    (retry busy quotaAvailable : Bool) (before : Regeneration) : Regeneration :=
+  let entry := before.entry
+  if allowed r .patch owner user && (entry.generation == generation) && entry.text.isSome &&
+      entry.answer.isNone && !entry.dismissed && (entry.status == (if retry then .failed else .ready)) &&
+      !busy && quotaAvailable then
+    ⟨{ entry with generation := generation + 1, status := .queued },
+      before.jobs + 1, before.reserved + 1⟩
+  else before
 
-def request (r : Auth.Request) (owner : Option Nat) (user selection : Nat)
-    (periodValid hasStock busy quotaAvailable : Bool) (before : RequestStore) :
-    Acceptance × RequestStore :=
-  if allowed r .post owner user && periodValid then
-    match before.selection with
-    | some prior => if prior == selection then (.replay, before) else (.refused, before)
-    | none =>
-      if hasStock && !busy && quotaAvailable then
-        (.created, ⟨some selection, before.jobs + 1, before.reserved + 1⟩)
-      else (.refused, before)
-  else (.refused, before)
+theorem quota_denial_preserves_regeneration (r : Auth.Request) (owner : Option Nat)
+    (user generation : Nat) (retry busy : Bool) (before : Regeneration) :
+    regenerate r owner user generation retry busy false before = before := by
+  simp [regenerate]
 
-theorem replay_keeps_job_and_reservation (r : Auth.Request) (owner : Option Nat)
-    (user selection : Nat) (periodValid hasStock busy quotaAvailable : Bool)
-    (before : RequestStore) (same : before.selection = some selection) :
-    (request r owner user selection periodValid hasStock busy quotaAvailable before).2 = before := by
-  unfold request
-  split <;> simp [same]
-
-theorem quota_denial_keeps_request (r : Auth.Request) (owner : Option Nat)
-    (user selection : Nat) (periodValid hasStock busy : Bool)
-    (before : RequestStore) (new : before.selection = none) :
-    request r owner user selection periodValid hasStock busy false before = (.refused, before) := by
-  simp [request, new]
+theorem stale_regeneration_denied (r : Auth.Request) (owner : Option Nat) (user generation : Nat)
+    (retry busy quotaAvailable : Bool) (before : Regeneration)
+    (stale : before.entry.generation ≠ generation) :
+    regenerate r owner user generation retry busy quotaAvailable before = before := by
+  simp [regenerate, stale]
 
 def answer (r : Auth.Request) (owner : Option Nat) (user generation value : Nat)
     (entry : Entry) : Entry :=
@@ -80,34 +85,46 @@ theorem stale_answer_denied (r : Auth.Request) (owner : Option Nat)
     answer r owner user generation value entry = entry := by
   simp [answer, stale]
 
-structure Weekly where
+structure Schedule where
   autoEnabled : Bool
   onboarded : Bool
-  alreadyScheduled : Bool
+  latestEnd : Nat
   unanswered : Bool
   generating : Bool
   eligibleStocks : Nat
   changedMaterials : Bool
   deriving DecidableEq, Repr
 
-def schedule (s : Weekly) : Weekly :=
-  if s.autoEnabled && s.onboarded && !s.alreadyScheduled && !s.unanswered && !s.generating &&
+def schedule (s : Schedule) (cutoff : Nat) : Schedule :=
+  if s.autoEnabled && s.onboarded && decide (s.latestEnd < cutoff) && !s.unanswered && !s.generating &&
       (decide (3 ≤ s.eligibleStocks)) && s.changedMaterials then
-    { s with alreadyScheduled := true, generating := true }
+    { s with latestEnd := cutoff, generating := true }
   else s
 
-theorem existing_week_keeps_schedule (s : Weekly) (existing : s.alreadyScheduled = true) :
-    schedule s = s := by
-  simp [schedule, existing]
+theorem closed_period_keeps_schedule (s : Schedule) (cutoff : Nat)
+    (closed : cutoff ≤ s.latestEnd) : schedule s cutoff = s := by
+  simp [schedule, Nat.not_lt_of_ge closed]
 
-theorem unanswered_blocks_schedule (s : Weekly) (unanswered : s.unanswered = true) :
-    schedule s = s := by
+theorem disabled_blocks_schedule (s : Schedule) (cutoff : Nat) (off : s.autoEnabled = false) :
+    schedule s cutoff = s := by
+  simp [schedule, off]
+
+theorem unanswered_blocks_schedule (s : Schedule) (cutoff : Nat) (unanswered : s.unanswered = true) :
+    schedule s cutoff = s := by
   simp [schedule, unanswered]
 
-theorem fewer_than_three_cannot_schedule (s : Weekly) (sparse : s.eligibleStocks < 3) :
-    schedule s = s := by
+theorem fewer_than_three_cannot_schedule (s : Schedule) (cutoff : Nat)
+    (sparse : s.eligibleStocks < 3) : schedule s cutoff = s := by
   have enough : ¬ 3 ≤ s.eligibleStocks := Nat.not_le_of_gt sparse
   simp [schedule, enough]
+
+def mayStartAutomatic (enabled : Bool) (reservedEnd currentCutoff : Nat) : Bool :=
+  enabled && (reservedEnd == currentCutoff)
+
+theorem mismatched_cutoff_cancels (enabled : Bool) (reservedEnd currentCutoff : Nat)
+    (mismatch : reservedEnd ≠ currentCutoff) :
+    mayStartAutomatic enabled reservedEnd currentCutoff = false := by
+  simp [mayStartAutomatic, mismatch]
 
 structure Candidate where
   text : Nat
@@ -155,24 +172,26 @@ theorem moved_stock_preserves_previous_question (entry : Entry) (candidate : Can
     adopt entry candidate false pufuRefsCurrent = { entry with status := .empty } := by
   simp [adopt]
 
-def web : Auth.Request := ⟨.session, true, true, true, true, .post, .other⟩
+def web : Auth.Request := ⟨.session, true, true, true, true, .patch, .other⟩
 def initial : Entry := ⟨1, .queued, none, [], [], none, false⟩
 def generated : Entry := ⟨1, .ready, some 10, [20], [30], none, false⟩
 
 theorem success_reachable :
-    request web (some 1) 1 42 true true false true ⟨none, 0, 0⟩ =
-      (.created, ⟨some 42, 1, 1⟩) ∧
-    (schedule ⟨true, true, false, false, false, 3, true⟩).alreadyScheduled = true ∧
+    configurePeriod web (some 1) 1 .weekly .monthly = .monthly ∧
+    (schedule ⟨true, true, 7, false, false, 3, true⟩ 14).latestEnd = 14 ∧
+    mayStartAutomatic true 14 14 = true ∧
     commit (some 1) 1 1 true (some ⟨10, [20], [30]⟩) true true (some initial) = some generated ∧
+    regenerate web (some 1) 1 1 false false true ⟨generated, 0, 0⟩ =
+      ⟨{ generated with status := .queued, generation := 2 }, 1, 1⟩ ∧
     read web (some 1) 1 (answer web (some 1) 1 1 12 generated) =
       some { generated with answer := some 12 } := by
   decide
 
 theorem rejection_reachable :
-    request { web with sameOrigin := false } (some 1) 1 42 true true false true ⟨none, 0, 0⟩ =
-      (.refused, ⟨none, 0, 0⟩) ∧
-    request web (some 1) 1 43 true true false true ⟨some 42, 1, 1⟩ =
-      (.refused, ⟨some 42, 1, 1⟩) ∧
+    configurePeriod { web with sameOrigin := false } (some 1) 1 .weekly .monthly = .weekly ∧
+    (schedule ⟨true, true, 14, false, false, 3, true⟩ 7).latestEnd = 14 ∧
+    mayStartAutomatic true 14 7 = false ∧
+    regenerate web (some 1) 1 1 false false true ⟨initial, 0, 0⟩ = ⟨initial, 0, 0⟩ ∧
     commit none 1 1 true (some ⟨10, [20], [30]⟩) true true none = none := by
   decide
 

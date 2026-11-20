@@ -4,15 +4,15 @@ import type { Env } from '../server/env';
 import { articleMemoryStatements } from '../server/infrastructure/db';
 import { scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
-import { queueWeeklyReflections } from '../server/features/questions/reflection-repository';
-import { reflectionDay, reflectionWeekStart, type ReflectionList } from '../shared/reflections';
+import { queueDueReflections } from '../server/features/questions/reflection-repository';
+import { reflectionPeriodEnd, type ReflectionList } from '../shared/reflections';
 import type { User } from '../shared/domain';
 import { mockEvent, mockStep, testApp } from './helpers';
 
 const day = 86400000;
 const apiPath = '/api/v1/reflections';
 
-describe('期間を選んで振り返る', () => {
+describe('プロジェクトの自動振り返り', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
   beforeEach(async () => {
     app = await testApp();
@@ -55,24 +55,16 @@ describe('期間を選んで振り返る', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     return ((await response.json()) as ReflectionList).reflections;
   }
-  function create(
-    from: string,
-    to = from,
-    request_id = crypto.randomUUID(),
-    project_id = 'alice-project',
-  ) {
-    return app.request(apiPath, { method: 'POST', body: { project_id, from, to, request_id } });
-  }
   const update = (id: string, body: object, user = 'alice') =>
     app.request(`${apiPath}/${id}`, { method: 'PATCH', body, user });
 
   it('週をまたいだ3件から自動追加し、未回答を見送った後は次の期間で1件だけ追加する', async () => {
-    const week = reflectionWeekStart(Date.now()) - 7 * day;
+    const week = reflectionPeriodEnd(Date.now(), 'weekly') - 7 * day;
     const db = app.env.DB;
     await saveStock('最初の観察', week - 9 * day);
     await saveStock('次の観察', week - 8 * day);
     await saveStock('別の保存先', week - 8 * day, 'alice-second');
-    await queueWeeklyReflections(app.env, week - 1);
+    await queueDueReflections(app.env, week - 1);
     expect(await db.prepare('SELECT id FROM reflections').first()).toBeNull();
     await saveStock('最後の観察', week - 1);
     await db.batch([
@@ -103,11 +95,10 @@ describe('期間を選んで振り返る', () => {
     const text = 'どの観察が説明文を減らす判断につながりましたか？';
     const ai = model({ question: { text, stocks: [1, 3], pufus: [1] } });
     await scheduledMaintenance(app.env, week);
-    await queueWeeklyReflections(app.env, week + 600000);
+    await queueDueReflections(app.env, week + 600000);
     await runQueued();
     const [question] = await list();
     expect(question).toMatchObject({
-      is_weekly: 1,
       status: 'ready',
       text,
       end_at: new Date(week).toISOString(),
@@ -130,13 +121,13 @@ describe('期間を選んで振り返る', () => {
     for (const [index, id] of ['週明け', '週の途中', '週末'].entries())
       await saveStock(id, week + index * day);
     const nextWeek = week + 7 * day;
-    await queueWeeklyReflections(app.env, nextWeek);
+    await queueDueReflections(app.env, nextWeek);
     expect(await list()).toHaveLength(1);
     expect((await update(question.id, { action: 'dismiss', generation: 1 })).status).toBe(200);
     model({ question: { text: '週明けの判断で何を優先しましたか？', stocks: [1, 2], pufus: [] } });
     await Promise.all([
-      queueWeeklyReflections(app.env, nextWeek),
-      queueWeeklyReflections(app.env, nextWeek),
+      queueDueReflections(app.env, nextWeek),
+      queueDueReflections(app.env, nextWeek),
     ]);
     await runQueued();
     const [next] = await list();
@@ -149,7 +140,7 @@ describe('期間を選んで振り返る', () => {
   it.each(['summary', 'note'])(
     '空の試行のあとに既存ストックの%sを使えるようになると再検討する',
     async (changed) => {
-      const week = reflectionWeekStart(Date.now()) - 7 * day;
+      const week = reflectionPeriodEnd(Date.now(), 'weekly') - 7 * day;
       const db = app.env.DB;
       for (const index of [1, 2, 3]) await saveStock(`記録${index}`, week - index * day);
       await saveStock('要約待ち', week - 1000);
@@ -160,11 +151,11 @@ describe('期間を選んで振り返る', () => {
       const ai = model({
         question: { text: '存在しない記録に基づく問い？', stocks: [4], pufus: [] },
       });
-      await queueWeeklyReflections(app.env, week);
+      await queueDueReflections(app.env, week);
       await runQueued();
       expect(await list()).toEqual([]);
       const nextWeek = week + 7 * day;
-      await queueWeeklyReflections(app.env, nextWeek);
+      await queueDueReflections(app.env, nextWeek);
       expect(await db.prepare('SELECT COUNT(*) AS count FROM reflections').first()).toEqual({
         count: 1,
       });
@@ -191,7 +182,7 @@ describe('期間を選んで振り返る', () => {
         });
         expect(edited.status).toBe(200);
       }
-      await queueWeeklyReflections(app.env, nextWeek);
+      await queueDueReflections(app.env, nextWeek);
       model({
         question: { text: '観察の目の付け所はどう変わりましたか？', stocks: [1, 4], pufus: [] },
       });
@@ -200,26 +191,112 @@ describe('期間を選んで振り返る', () => {
     },
   );
 
-  it('同時処理枠が1なら、別プロジェクトからの手動要求を同時に受けても1件だけ予約する', async () => {
-    const timestamp = reflectionWeekStart(Date.now()) - day;
-    const date = reflectionDay(timestamp);
-    await saveStock('one', timestamp);
-    await saveStock('two', timestamp, 'alice-second');
+  it.each([
+    ['weekly', '2025-02-09T15:00:00Z', 1],
+    ['biweekly', '2025-02-16T15:00:00Z', 8],
+    ['monthly', '2025-01-31T15:00:00Z', 8],
+  ])('%sの日本時間の締めまで待ち、締め時刻のストックは次回へ回す', async (period, date, age) => {
+    const end = Date.parse(date);
+    const settings = await app.request('/api/v1/projects/alice-project', {
+      method: 'PATCH',
+      body: { name: '周期の確認', reflection_period: period },
+    });
+    expect(settings.status).toBe(200);
+    for (const offset of [0, 1, 2]) await saveStock(`対象${offset}`, end - age * day + offset);
+    await saveStock('次の期間', end);
+    // 隔週の締めの1週前や、月末までの最終月曜を過ぎてもまだ作らない。
+    await queueDueReflections(app.env, end - 1);
+    expect(await app.env.DB.prepare('SELECT id FROM reflections').first()).toBeNull();
+    const ai = model({
+      question: { text: '記録の変化は何ですか？', stocks: [1, 2, 3], pufus: [] },
+    });
+    await queueDueReflections(app.env, end);
+    await runQueued();
+    const [reflection] = await list();
+    expect(reflection.end_at).toBe(new Date(end).toISOString());
+    expect(reflection.stocks.map(({ id }) => id)).toEqual(['対象0', '対象1', '対象2']);
+    expect(ai).toHaveBeenCalledTimes(1);
+  });
+
+  it('周期を変えても、前に確認した締め以前には戻らない', async () => {
+    const week = Date.parse('2025-02-09T15:00:00Z');
+    for (const offset of [10, 11, 12]) await saveStock(`記録${offset}`, week - offset * day);
+    model({ question: null });
+    await queueDueReflections(app.env, week);
+    await runQueued();
+    // 空の確認後に材料の版も変わっており、過去の月初までに3件ある。
+    await app.env.DB.prepare(
+      "UPDATE projects SET memory_revision=memory_revision+1 WHERE id='alice-project'",
+    ).run();
+    await saveStock('追加の記録', week - 13 * day);
+    expect(
+      (
+        await app.request('/api/v1/projects/alice-project', {
+          method: 'PATCH',
+          body: { name: '周期の確認', reflection_period: 'monthly' },
+        })
+      ).status,
+    ).toBe(200);
+    await queueDueReflections(app.env, week);
+    expect(await app.env.DB.prepare('SELECT COUNT(*) AS count FROM reflections').first()).toEqual({
+      count: 1,
+    });
+    const nextMonth = Date.parse('2025-02-28T15:00:00Z');
+    await queueDueReflections(app.env, nextMonth);
+    model({ question: { text: 'どの時点で考えが変わりましたか？', stocks: [1], pufus: [] } });
+    await runQueued();
+    expect((await list())[0].end_at).toBe(new Date(nextMonth).toISOString());
+  });
+
+  it('周期の変更を生成開始前に反映し、合わない締めの予約を取り消す', async () => {
+    const week = Date.parse('2025-02-09T15:00:00Z');
+    for (const offset of [1, 2, 3]) await saveStock(`記録${offset}`, week - offset * day);
+    await queueDueReflections(app.env, week);
+    expect(
+      (
+        await app.request('/api/v1/projects/alice-project', {
+          method: 'PATCH',
+          body: { name: '月ごとに振り返る', reflection_period: 'monthly' },
+        })
+      ).status,
+    ).toBe(200);
+    const ai = model({ question: { text: 'どんな変化がありましたか？', stocks: [1], pufus: [] } });
+    await runQueued();
+    expect(ai).not.toHaveBeenCalled();
+    expect(await app.env.DB.prepare('SELECT id FROM reflections').first()).toBeNull();
+
+    const month = Date.parse('2025-02-28T15:00:00Z');
+    await queueDueReflections(app.env, month);
+    await runQueued();
+    expect(ai).toHaveBeenCalledTimes(1);
+    expect((await list())[0].end_at).toBe(new Date(month).toISOString());
+  });
+
+  it('同時枠が1なら、別プロジェクトの再生成を同時に受けても1件だけ予約する', async () => {
+    const week = reflectionPeriodEnd(Date.now(), 'weekly');
+    for (const project of ['alice-project', 'alice-second'])
+      for (const offset of [1, 2, 3])
+        await saveStock(`${project}-${offset}`, week - offset * day, project);
+    await queueDueReflections(app.env, week);
+    model({ question: { text: '設定した周期で何に気づきましたか？', stocks: [1], pufus: [] } });
+    await runQueued();
+    await runQueued();
+    const reflections = await list();
+    expect(reflections).toHaveLength(2);
     app.env.AI_CONCURRENT_JOBS = '1';
-    const responses = await Promise.all([
-      create(date),
-      create(date, date, crypto.randomUUID(), 'alice-second'),
-    ]);
+    const responses = await Promise.all(
+      reflections.map(({ id }) => update(id, { action: 'alternative', generation: 1 })),
+    );
     expect(responses.map((res) => res.status).sort()).toEqual([202, 429]);
-    expect(await list()).toHaveLength(1);
+    expect((await list()).map(({ generation }) => generation).sort()).toEqual([1, 2]);
     expect(
       await app.env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM ai_operations WHERE user_id='alice' AND kind='question'",
+        "SELECT COUNT(*) AS count FROM ai_operations WHERE user_id='alice' AND id LIKE 'reflection-regeneration-%'",
       ).first(),
     ).toEqual({ count: 1 });
   });
 
-  it('自動追加オフでも指定した日本時間の1日・1件から作り、別案と回答を本人だけに保存する', async () => {
+  it('設定がオフの期間には追加せず、自動で届いた問いの別案と回答を本人だけに保存する', async () => {
     const db = app.env.DB;
     await db
       .prepare(
@@ -227,43 +304,52 @@ describe('期間を選んで振り返る', () => {
       WHERE id='alice-project'`,
       )
       .run();
-    const timestamp = reflectionWeekStart(Date.now()) - 2 * day;
-    const date = reflectionDay(timestamp);
-    await saveStock('日付境界の手前', timestamp - 1);
-    await saveStock('当日のストック', timestamp);
-    await saveStock('翌日のストック', timestamp + day);
-    await saveStock('他人のストック', timestamp, 'bob-project', 'bob');
-    await queueWeeklyReflections(app.env, reflectionWeekStart(Date.now()));
+    const week = reflectionPeriodEnd(Date.now(), 'weekly');
+    for (const index of [1, 2, 3]) await saveStock(`記録${index}`, week - index * day);
+    await saveStock('次の期間', week);
+    await saveStock('他人のストック', week - day, 'bob-project', 'bob');
+    await queueDueReflections(app.env, week);
+    expect(await db.prepare('SELECT id FROM reflections').first()).toBeNull();
+    expect(
+      (
+        await app.request(apiPath, {
+          method: 'POST',
+          body: {
+            project_id: 'alice-project',
+            from: '2025-01-01',
+            to: '2025-01-31',
+            request_id: crypto.randomUUID(),
+          },
+        })
+      ).status,
+    ).toBe(404);
     expect(await db.prepare('SELECT id FROM reflections').first()).toBeNull();
 
-    const request = crypto.randomUUID();
-    expect((await create(date, date, request, 'bob-project')).status).toBe(404);
-    expect((await create('2000-01-01')).status).toBe(422);
-    expect((await create('2026-02-30')).status).toBe(400);
-    const created = await create(date, date, request);
-    expect(created.status).toBe(202);
-    const { id } = (await created.json()) as { id: string };
-    const replay = await create(date, date, request);
-    expect(replay.status).toBe(200);
-    expect(await replay.json()).toEqual({ id });
-    expect((await create('2000-01-01', date, request)).status).toBe(409);
-    expect((await create(date)).status).toBe(409);
-    const ai = model({ question: { text: 'どこに注目しましたか？', stocks: [1], pufus: [] } });
+    expect(
+      (
+        await app.request('/api/v1/projects/alice-project', {
+          method: 'PATCH',
+          body: { name: '反映を確認する', auto_generate_questions: true },
+        })
+      ).status,
+    ).toBe(200);
+    await queueDueReflections(app.env, week);
+    const ai = model({ question: { text: 'どこに注目しましたか？', stocks: [3], pufus: [] } });
     await runQueued();
     const context = JSON.parse(ai.mock.calls[0][1].messages[1].content);
-    expect(context.stocks).toMatchObject([{ title: '当日のストック' }]);
+    expect(context.stocks).toMatchObject([
+      { title: '記録3' },
+      { title: '記録2' },
+      { title: '記録1' },
+    ]);
     const [original] = await list();
-    expect(original).toMatchObject({ id, stocks: [{ id: '当日のストック' }] });
+    const { id } = original;
+    expect(original.stocks).toMatchObject([{ id: '記録1' }]);
     app.env.AI_QUESTION_DAILY_LIMIT = '1';
-    for (const limited of [
-      await create(date),
-      await update(id, { action: 'alternative', generation: 1 }),
-    ]) {
-      expect(limited.status).toBe(429);
-      expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(3600);
-      expect(await limited.json()).toMatchObject({ retry_at: expect.any(String) });
-    }
-    expect((await create(date, date, request)).status).toBe(200);
+    const limited = await update(id, { action: 'alternative', generation: 1 });
+    expect(limited.status).toBe(429);
+    expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(3600);
+    expect(await limited.json()).toMatchObject({ retry_at: expect.any(String) });
     expect(await list()).toEqual([original]);
     app.env.AI_QUESTION_DAILY_LIMIT = undefined;
     expect((await update(id, { action: 'alternative', generation: 1 })).status).toBe(202);
@@ -324,11 +410,11 @@ describe('期間を選んで振り返る', () => {
   it.each(['stock', 'project'])(
     '生成中に%sが元の保存先からなくなると結果を確定しない',
     async (target) => {
-      const timestamp = reflectionWeekStart(Date.now()) - day;
-      const date = reflectionDay(timestamp);
-      await saveStock('source', timestamp);
-      const created = await create(date);
-      expect(created.status).toBe(202);
+      const week = reflectionPeriodEnd(Date.now(), 'weekly');
+      await saveStock('source', week - 3 * day);
+      await saveStock('second-source', week - 2 * day);
+      await saveStock('third-source', week - day);
+      await queueDueReflections(app.env, week);
       app.env.AI = {
         run: async () => {
           const changed =
@@ -346,7 +432,10 @@ describe('期間を選んで振り返る', () => {
       };
       await runQueued();
       if (target === 'stock') {
-        expect(await list()).toMatchObject([{ text: null, status: 'empty', stocks: [] }]);
+        expect(await list()).toEqual([]);
+        expect(
+          await app.env.DB.prepare('SELECT text,status,stock_ids FROM reflections').first(),
+        ).toEqual({ text: null, status: 'empty', stock_ids: '[]' });
       } else {
         expect(await list()).toEqual([]);
         const cached = await app.env.DB.prepare(

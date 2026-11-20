@@ -525,7 +525,7 @@ export const ja: Record<string, string> = {
   'ui.app.automatically_generate_questions_and_insights_from_stocks':
     '振り返りの問いを自動で追加する',
   'ui.app.when_off_no_questions_or_insights_are_automatically_generated':
-    '新しいストックが3件以上たまると、週に一度、振り返りの問いを作ります。自分で期間を選ぶ振り返りはいつでも使えます。',
+    '新しいストックが3件以上たまると、設定した周期で振り返りの問いを作ります。',
   'ui.app.save': '保存',
   'ui.app.project_deletion': 'プロジェクトの削除',
   'ui.app.delete_project': 'プロジェクトを削除',
@@ -1097,20 +1097,15 @@ export const ja: Record<string, string> = {
   'ui.questions.use_add_question_or_insight_to_save_thoughts_from':
     '「問い・気づきを追加」から、日常や会話で生まれた問い・気づきを保存できます。',
   'reflection.heading': '振り返り',
-  'reflection.automatic_hint': '新しいストックが3件たまると、週ごとの振り返りの対象になります。',
+  'reflection.automatic_hint': '新しいストックが3件たまると、自動で振り返りの対象になります。',
   'reflection.back': '振り返りに戻る',
-  'reflection.weekly': '今週の問い',
   'reflection.question': '振り返りの問い',
-  'reflection.choose_period': '期間を選んで振り返る',
-  'reflection.period': '期間',
-  'reflection.days_7': '直近7日間',
-  'reflection.days_30': '直近30日間',
-  'reflection.custom_dates': '期間を指定',
-  'reflection.from': '開始日',
-  'reflection.to': '終了日',
-  'reflection.generate': '振り返りの問いを作る',
+  'reflection.schedule': '振り返りの周期',
+  'reflection.period.weekly': '毎週',
+  'reflection.period.biweekly': '隔週',
+  'reflection.period.monthly': '毎月',
+  'reflection.schedule_hint': '日本時間で、毎週・隔週は月曜、毎月は1日に確認します。',
   'reflection.generating': '振り返りの問いを作っています。',
-  'reflection.no_question': 'この期間の記録から問いが見つかりませんでした。',
   'reflection.no_alternative': 'この期間の記録から別の問いが見つかりませんでした。',
   'reflection.failed': '振り返りの問いを作れませんでした。',
   'reflection.sources': 'きっかけになった記録',
@@ -1122,10 +1117,6 @@ export const ja: Record<string, string> = {
   'reflection.retry': '再試行',
   'reflection.busy': 'このプロジェクトの振り返りを作成中です。完了後にお試しください。',
   'reflection.changed': '振り返りが更新されました。再読み込みしてお試しください。',
-  'reflection.empty_period':
-    'この期間に振り返れるストックがありません。期間を広げてお試しください。',
-  'reflection.future_date': '今日までの日付を指定してください。',
-  'reflection.request_conflict': '同じリクエストIDで異なる振り返りが送信されました。',
   'ui.relation_picker.optional_multiple_selections_allowed': '任意・複数選択可',
   'ui.relation_picker.selected': '選択済み ',
   'ui.relation_picker.search_article_titles_and_more': '記事のタイトルなどで検索',
@@ -1196,7 +1187,7 @@ export const ja: Record<string, string> = {
   'manual.question_generation_heading': '振り返りの自動追加を設定する',
   'manual.question_delete_heading': '問い・気づきを削除する',
   'ui.user_manual.use_questions_insights_or_all_questions_insights_to_view':
-    '「問い・気づき」の「振り返り」で、期間内のストックをもとにAIが考えた問いを確認できます。自分で作るときは「期間を選んで振り返る」を開きます。関連があれば、同じプロジェクトのメモリやプ譜も参照します。',
+    '「問い・気づき」の「振り返り」で、自動で追加された問いを確認できます。AIは期間内のストックをもとに問いを考え、同じプロジェクトのメモリやプ譜も参考にします。',
   'manual.reflection_answer':
     'きっかけになった記録を開き、気づいたことを「振り返りとして保存」できます。「別の問いを見る」や「今回は見送る」も選べます。振り返りの問いと回答は本人の画面にだけ表示されます。',
   'ui.user_manual.use_add_question_or_insight_to_save_your_own':
@@ -1210,7 +1201,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     '自分で追加した問い・気づきは、ストックの関連を解除して保存すると、同じ画面で保存先プロジェクトを変更できます。AIが作った問いの保存先は元の記事から変更します。複数の関連がある場合など、別のプロジェクトにまたがる移動はできません。',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
-    '初期設定では、プロジェクトごとに月曜（日本時間）に確認します。前回の自動追加以降に振り返れるストックが3件以上あり、具体的な問いが見つかると1件追加します。前の問いに答えるか「今回は見送る」を選ぶと、次回の対象になります。停止するには、プロジェクトの「詳細設定」で「振り返りの問いを自動で追加する」をオフにします。',
+    'プロジェクトの「詳細設定」で「振り返りの周期」を毎週・隔週・毎月から選びます。初期設定は毎週です。前回の自動追加以降に振り返れるストックが3件以上あり、具体的な問いが見つかると1件追加します。前の問いに答えるか「今回は見送る」を選ぶと、次回の対象になります。停止するには「振り返りの問いを自動で追加する」をオフにします。',
   'ui.user_manual.to_delete_a_question_or_insight_open_other_actions':
     '問い・気づきを削除するには、詳細画面の下部にある「その他の操作」を開き、「問い・気づきを削除」を選びます。問いとそのコメントは削除されますが、関連するプ譜・局面・ストックは残ります。',
   'ui.user_manual.develop_solutions_with_pufu': 'プ譜で解決の案をつくる',

@@ -106,7 +106,8 @@
         "tests/public-pages.test.ts",
         "tests/mcp-pufu-viewer.test.ts",
         "tests/ai-neurons-runtime.test.ts",
-        "tests/reflections.test.ts"
+        "tests/reflections.test.ts",
+        "tests/project-question-settings.test.ts"
       ]
     }
   ]

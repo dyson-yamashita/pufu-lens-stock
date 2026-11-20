@@ -1,7 +1,9 @@
+ALTER TABLE projects ADD COLUMN reflection_period TEXT NOT NULL DEFAULT 'weekly'
+  CHECK (reflection_period IN ('weekly','biweekly','monthly'));
+-- statement-breakpoint
 CREATE TABLE reflections (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  is_weekly INTEGER NOT NULL CHECK (is_weekly IN (0,1)),
   start_at TEXT NOT NULL,
   end_at TEXT NOT NULL CHECK (start_at < end_at),
   generation INTEGER NOT NULL DEFAULT 1,
@@ -18,7 +20,7 @@ CREATE TABLE reflections (
 -- statement-breakpoint
 CREATE INDEX reflections_project ON reflections(project_id,created_at DESC,id DESC);
 -- statement-breakpoint
-CREATE UNIQUE INDEX reflections_week ON reflections(project_id,end_at) WHERE is_weekly=1;
+CREATE UNIQUE INDEX reflections_period ON reflections(project_id,end_at);
 -- statement-breakpoint
 CREATE UNIQUE INDEX reflections_generating ON reflections(project_id) WHERE status='queued';
 -- statement-breakpoint

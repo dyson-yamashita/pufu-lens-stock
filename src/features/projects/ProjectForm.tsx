@@ -1,6 +1,7 @@
 import { Check, Copy } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Project } from '../../../shared/domain';
+import { reflectionPeriods, type ReflectionPeriod } from '../../../shared/reflections';
 import DeleteAction from '../../components/DeleteAction';
 import { FormError } from '../../components/FormError';
 import { Spinner } from '../../components/Spinner';
@@ -32,6 +33,10 @@ export function ProjectForm({
     project?.auto_generate_questions ?? true,
   );
   const autoQuestionsId = useId();
+  const [reflectionPeriod, setReflectionPeriod] = useState<ReflectionPeriod>(
+    project?.reflection_period ?? 'weekly',
+  );
+  const reflectionPeriodId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [idCopied, setIdCopied] = useState(false);
@@ -54,6 +59,7 @@ export function ProjectForm({
                 show_in_all_lists: showInAllLists,
                 include_in_user_memory: includeInUserMemory,
                 auto_generate_questions: autoGenerateQuestions,
+                reflection_period: reflectionPeriod,
               },
               project ? 'PATCH' : 'POST',
             );
@@ -173,6 +179,23 @@ export function ProjectForm({
           </label>
           <p id={`${autoQuestionsId}-hint`} className="project-memory-hint">
             {t('ui.app.when_off_no_questions_or_insights_are_automatically_generated')}
+          </p>
+          <label htmlFor={reflectionPeriodId}>{t('reflection.schedule')}</label>
+          <select
+            id={reflectionPeriodId}
+            value={reflectionPeriod}
+            disabled={busy || !autoGenerateQuestions}
+            onChange={(event) => setReflectionPeriod(event.target.value as ReflectionPeriod)}
+            aria-describedby={`${reflectionPeriodId}-hint`}
+          >
+            {reflectionPeriods.map((period) => (
+              <option key={period} value={period}>
+                {t(`reflection.period.${period}`)}
+              </option>
+            ))}
+          </select>
+          <p id={`${reflectionPeriodId}-hint`} className="project-memory-hint">
+            {t('reflection.schedule_hint')}
           </p>
         </details>
         <FormError error={error} />

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { legalVersions } from './legal';
 import { relationIdsSchema, type StockRelations } from './relations';
 import { languageSchema, type Language } from './locale';
+import type { ReflectionPeriod } from './reflections';
 
 export const summarySchema = z.object({
   overview: z.string().min(1).max(1600),
@@ -160,6 +161,7 @@ export type Project = {
   show_in_all_lists: boolean;
   include_in_user_memory: boolean;
   auto_generate_questions: boolean;
+  reflection_period: ReflectionPeriod;
   count: number;
   ready_count: number;
   created_at: string;

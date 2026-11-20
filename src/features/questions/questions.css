@@ -13,39 +13,16 @@
   margin: 0;
   font-size: 16px;
 }
-.reflection-period,
 .reflection-card {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card);
 }
-.reflection-period summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 28px;
-  cursor: pointer;
-  font-weight: 600;
-}
-.reflection-period[open] summary svg {
-  transform: rotate(180deg);
-}
 .reflections .question-settings {
   margin-top: 12px;
   padding: 0;
   border: 0;
-}
-.reflection-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.reflection-fields label,
-.reflection-answer-form label {
-  display: grid;
-  gap: 6px;
 }
 .reflection-card h3 {
   margin: 0 0 4px;

@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { memorySchema, questionSchema } from '../../../shared/domain';
 import { languages, resolveLanguage } from '../../../shared/locale';
 import { pufuScoreSchema } from '../../../shared/pufu';
-import { reflectionDay } from '../../../shared/reflections';
+import {
+  reflectionDay,
+  reflectionPeriodEnd,
+  type ReflectionPeriod,
+} from '../../../shared/reflections';
 import type { Env, Job } from '../../env';
 import { isDemo } from '../../env';
 import { parseAiJson } from '../../infrastructure/ai/ai';
@@ -33,8 +37,8 @@ function readJson(text: string | null): unknown {
 
 async function generateReflection(env: Env, job: Job) {
   const reflection = await env.DB.prepare(
-    `SELECT r.project_id,r.is_weekly,r.start_at,r.end_at,r.created_at,r.text,r.previous_questions,
-      p.name,p.description,p.auto_generate_questions,p.memory_revision,m.data_json
+    `SELECT r.project_id,r.start_at,r.end_at,r.created_at,r.text,r.previous_questions,
+      p.name,p.description,p.auto_generate_questions,p.reflection_period,p.memory_revision,m.data_json
     FROM reflections r JOIN projects p ON p.id=r.project_id
     LEFT JOIN memories m ON m.project_id=p.id AND m.user_id=p.user_id
     WHERE r.id=? AND p.user_id=? AND r.generation=? AND r.status='queued'`,
@@ -42,7 +46,6 @@ async function generateReflection(env: Env, job: Job) {
     .bind(job.target_id, job.user_id, job.revision)
     .first<{
       project_id: string;
-      is_weekly: number;
       start_at: string;
       end_at: string;
       created_at: string;
@@ -51,11 +54,17 @@ async function generateReflection(env: Env, job: Job) {
       name: string;
       description: string;
       auto_generate_questions: number;
+      reflection_period: ReflectionPeriod;
       memory_revision: number;
       data_json: string | null;
     }>();
   if (!reflection) return { question: null };
-  if (reflection.is_weekly && job.revision === 1 && !reflection.auto_generate_questions)
+  const reservedEnd = Date.parse(reflection.end_at);
+  if (
+    job.revision === 1 &&
+    (!reflection.auto_generate_questions ||
+      reflectionPeriodEnd(reservedEnd, reflection.reflection_period) !== reservedEnd)
+  )
     return { question: null, cancelled: true };
 
   const stocks = (
@@ -89,8 +98,7 @@ async function generateReflection(env: Env, job: Job) {
   ).results.reverse();
   // ストックと同じ照会で版を読み、待機中に済んだ要約と、読んだ後の更新を区別する。
   const sourceRevision = stocks[0]?.memory_revision ?? reflection.memory_revision;
-  if (stocks.length < (reflection.is_weekly && job.revision === 1 ? 3 : 1))
-    return { question: null, sourceRevision };
+  if (stocks.length < (job.revision === 1 ? 3 : 1)) return { question: null, sourceRevision };
 
   const [pufuRows, priorRows] = await Promise.all([
     env.DB.prepare(
@@ -141,7 +149,7 @@ async function generateReflection(env: Env, job: Job) {
     project: { name: reflection.name, description: reflection.description },
     period: {
       from: reflectionDay(Date.parse(reflection.start_at)),
-      to: reflectionDay(Date.parse(reflection.end_at) - 1),
+      to: reflectionDay(reservedEnd - 1),
     },
     stocks: stocks.map(({ title, note, created_at, excerpt }, index) => ({
       ref: index + 1,
@@ -231,9 +239,9 @@ export async function runReflection(env: Env, job: Job, step: WorkflowStep) {
     );
     await step.do('save-reflection', async () => {
       if (cancelled) {
-        // 予約後に自動追加がオフになった場合、次回の集計に同じ期間を使えるようにする。
+        // 無効になった初回予約を取り消し、次に対象期間を確認し直せるようにする。
         await env.DB.prepare(
-          `DELETE FROM reflections WHERE id=? AND is_weekly=1 AND generation=? AND status='queued'
+          `DELETE FROM reflections WHERE id=? AND generation=? AND status='queued'
           AND EXISTS(SELECT 1 FROM projects WHERE id=reflections.project_id AND user_id=?)`,
         )
           .bind(job.target_id, job.revision, job.user_id)

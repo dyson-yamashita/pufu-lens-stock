@@ -452,19 +452,21 @@
   {
     "id": "REFLECTION-001",
     "estimatedSeconds": 12,
-    "title": "期間から振り返りの問いを作成・保存",
+    "title": "振り返りの周期設定と自動で届いた問いへの回答",
     "sources": [
+      "src/features/projects/ProjectForm.tsx",
       "src/features/questions/Reflections.tsx",
       "src/features/questions/Questions.tsx",
       "src/features/questions/questions.css",
       "server/api/routes/reflections.ts",
+      "server/api/routes/projects.ts",
       "server/features/questions/reflection-repository.ts",
       "server/features/questions/reflection-generation.ts",
       "shared/reflections.ts"
     ],
     "aspects": [
-      "問い・気づきから期間を選び、デモのWorkflowで問いを生成。きっかけのストック詳細を開けることと、回答を再読込後も表示することを両画面幅で確認",
-      "週次の繰り越し、未回答時の追加保留、プロジェクトごとの資料の分離、非公開のAPIはVitestで検証"
+      "プロジェクトの詳細設定で毎月を保存・再表示し、月初の自動生成から参照ストックの表示・回答の保存・再表示までを両画面幅で確認",
+      "すべての周期の締め時刻、繰り越し、未回答時の追加保留、プロジェクトごとの資料の分離、非公開のAPIはVitestで検証"
     ]
   },
   {

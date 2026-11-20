@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import { URLSearchParams } from 'node:url';
 import { legalVersions } from '../shared/legal.ts';
-import { reflectionDay } from '../shared/reflections.ts';
 
 const base = process.env.SMOKE_BASE_URL ?? 'http://localhost:5173';
 // 同時実行枠が埋まると最短60秒待機するため、再試行と完了までの時間も含める。
@@ -38,9 +37,12 @@ try {
     });
   const project = await request('/projects', 'POST', {
     name: 'ローカル動作検証',
+    reflection_period: 'monthly',
     description: '検証終了後に、この検証で作成したデータだけを削除します。',
   });
   projectId = project.id;
+  const { projects } = await request('/projects');
+  assert.equal(projects.find(({ id }) => id === projectId)?.reflection_period, 'monthly');
   const saved = await request('/stocks', 'POST', {
     project_id: projectId,
     url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/202',
@@ -117,36 +119,10 @@ try {
         await setTimeout(1000);
       }
       assert.ok(textVerified, '180秒以内にテキストの処理が完了しませんでした。');
-      const from = reflectionDay(Date.parse(stock.created_at));
-      const { id: reflectionId } = await request('/reflections', 'POST', {
-        project_id: projectId,
-        from,
-        to: reflectionDay(Date.now()),
-        request_id: randomUUID(),
-      });
-      let reflectionVerified = false;
-      const reflectionDeadline = Date.now() + processingTimeoutMs;
-      while (Date.now() < reflectionDeadline) {
-        const { reflections } = await request(`/reflections?project_id=${projectId}`);
-        const reflection = reflections.find((value) => value.id === reflectionId);
-        if (reflection?.status === 'failed')
-          throw new Error('振り返りの問いを生成できませんでした。');
-        if (reflection?.status === 'ready') {
-          assert.ok(reflection.text);
-          assert.ok(reflection.stocks.length);
-          await request(`/reflections/${reflectionId}`, 'PATCH', {
-            action: 'answer',
-            generation: reflection.generation,
-            answer: '次回は再試行の条件を確かめる。',
-          });
-          reflectionVerified = true;
-          break;
-        }
-        await setTimeout(1000);
-      }
-      assert.ok(reflectionVerified, '180秒以内に振り返りの生成が完了しませんでした。');
+      const { reflections } = await request(`/reflections?project_id=${projectId}`);
+      assert.deepEqual(reflections, []);
       console.log(
-        'ローカルWorkersでストック・要約・メモリ更新・手動の問い・期間からの振り返りを確認しました。',
+        'ローカルWorkersでストック・要約・メモリ更新・手入力の問い・振り返りの周期設定を確認しました。',
       );
       verified = true;
       break;

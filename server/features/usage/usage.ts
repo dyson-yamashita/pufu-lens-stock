@@ -3,7 +3,7 @@ import type { Env, Job } from '../../env';
 import { meteredOperation, observeAiUsage } from '../../infrastructure/ai/ai-neurons';
 import { MAX_ATTEMPTS, deferJob } from '../../infrastructure/jobs/job-retries';
 import { PufuFactValidationError } from '../pufu/generation/pufu-fact-validation';
-import { manualReflectionJobPrefix } from '../questions/reflection-repository';
+import { reflectionRegenerationJobPrefix } from '../questions/reflection-repository';
 
 const windowStart = () => new Date(Date.now() - 86400000).toISOString();
 const setting = (value: string | undefined, fallback: number) =>
@@ -21,7 +21,7 @@ export const limits = (env: Env) => ({
 });
 const category = (kind: Job['kind']) => (kind.endsWith('_memory') ? 'memory' : kind);
 // 手動の振り返りは受付時点で枠を確保する。通常の自動生成は起動時まで待つ。
-const waitingQuestion = `j.kind='question' AND j.status='pending' AND j.id NOT LIKE '${manualReflectionJobPrefix}%'`;
+const waitingQuestion = `j.kind='question' AND j.status='pending' AND j.id NOT LIKE '${reflectionRegenerationJobPrefix}%'`;
 type OperationGuard = { sql: string; params: (string | number | null)[] };
 export function reserveOperation(
   env: Env,

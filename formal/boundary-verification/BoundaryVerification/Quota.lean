@@ -25,9 +25,9 @@ inductive Status where
 
 -- Pending manual reflections continue holding a slot reserved at acceptance.
 -- The operations/jobs join and server-assigned job kind and ID are premises.
-def activeJob (kind : Kind) (status : Status) (manualReflection : Bool) : Bool :=
+def activeJob (kind : Kind) (status : Status) (regeneration : Bool) : Bool :=
   decide (status ≠ .done ∧ status ≠ .failed ∧
-    ¬ (kind = .question ∧ status = .pending ∧ manualReflection = false))
+    ¬ (kind = .question ∧ status = .pending ∧ regeneration = false))
 
 structure Limits where
   operations : Nat
@@ -153,7 +153,7 @@ theorem another_owner_excluded (owner : Nat) (kind : Kind) (boundary : Nat) (r :
 theorem pending_automatic_question_is_not_active :
     activeJob .question .pending false = false := by decide
 
-theorem pending_manual_reflection_is_active :
+theorem pending_regeneration_is_active :
     activeJob .question .pending true = true := by decide
 
 theorem rejected_operation_preserves_state (c : Context) (s : State)

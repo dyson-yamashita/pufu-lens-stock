@@ -1,5 +1,6 @@
 import {
-  reflectionWeekStart,
+  reflectionPeriodEnd,
+  reflectionPeriods,
   type Reflection,
   type ReflectionList,
 } from '../../../shared/reflections';
@@ -12,57 +13,62 @@ export const usableReflectionStock = `a.user_id=s.user_id AND (
   TRIM(s.note,char(9,10,13,32,160,12288))<>'' OR (a.status='ready' AND json_valid(a.summary_json))
   OR TRIM(a.input_text,char(9,10,13,32,160,12288))<>''
 )`;
-export const manualReflectionJobPrefix = 'manual-reflection-';
+export const reflectionRegenerationJobPrefix = 'reflection-regeneration-';
 
 export function reflectionJobStatement(env: Env, reflectionId: string | null) {
   return env.DB.prepare(
     `INSERT OR IGNORE INTO processing_jobs (id,user_id,kind,purpose,target_id,revision)
-    SELECT (CASE WHEN r.is_weekly=0 OR r.generation>1 THEN '${manualReflectionJobPrefix}' ELSE 'reflection-' END)
+    SELECT (CASE WHEN r.generation>1 THEN '${reflectionRegenerationJobPrefix}' ELSE 'reflection-' END)
       ||r.id||'-'||r.generation,p.user_id,'question','reflection',r.id,r.generation
     FROM reflections r JOIN projects p ON p.id=r.project_id
     WHERE r.status='queued' AND (?1 IS NULL OR r.id=?1)`,
   ).bind(reflectionId);
 }
 
-export async function queueWeeklyReflections(env: Env, at: number) {
-  const end = new Date(reflectionWeekStart(at)).toISOString();
+export async function queueDueReflections(env: Env, at: number) {
+  const ends = Object.fromEntries(
+    reflectionPeriods.map((period) => [
+      period,
+      new Date(reflectionPeriodEnd(at, period)).toISOString(),
+    ]),
+  );
   const previous = `SELECT MAX(r.end_at) FROM reflections r
-    WHERE r.project_id=p.id AND r.is_weekly=1`;
+    WHERE r.project_id=p.id`;
   await env.DB.batch([
     env.DB.prepare(
       `WITH due AS (
-        SELECT p.id,p.user_id,
+        SELECT p.id,p.user_id,period.value AS cutoff,
           COALESCE((${previous} AND r.text IS NOT NULL),'') AS since,
           COALESCE((${previous} AND r.status='empty' AND r.text IS NULL
             AND r.source_revision=p.memory_revision),'') AS last_empty
         FROM projects p JOIN users u ON u.id=p.user_id
+        JOIN json_each(?1) period ON period.key=p.reflection_period
         WHERE p.auto_generate_questions=1 AND u.onboarding_completed_at IS NOT NULL
           AND NOT EXISTS (
             SELECT 1 FROM reflections r WHERE r.project_id=p.id
-            AND (r.status='queued' OR (r.is_weekly=1 AND (
-              r.end_at>=?1 OR (r.text IS NOT NULL AND r.answer IS NULL AND r.dismissed_at IS NULL)
-            )))
+            AND (r.status='queued' OR r.end_at>=period.value
+              OR (r.text IS NOT NULL AND r.answer IS NULL AND r.dismissed_at IS NULL))
           )
       )
-      INSERT OR IGNORE INTO reflections(id,project_id,is_weekly,start_at,end_at)
-      SELECT 'weekly-'||lower(hex(randomblob(16))),d.id,1,
+      INSERT OR IGNORE INTO reflections(id,project_id,start_at,end_at)
+      SELECT lower(hex(randomblob(16))),d.id,
         COALESCE(NULLIF(d.since,''),(
           SELECT MIN(s.created_at) FROM stocks s WHERE s.project_id=d.id AND s.user_id=d.user_id
-        )),?1
+        )),d.cutoff
       FROM due d
       WHERE EXISTS (
         SELECT 1 FROM stocks s JOIN articles a ON a.id=s.article_id
         WHERE s.project_id=d.id AND s.user_id=d.user_id AND s.created_at>=d.since
-          AND s.created_at<?1 AND ${usableReflectionStock}
+          AND s.created_at<d.cutoff AND ${usableReflectionStock}
         LIMIT 1 OFFSET 2
       ) AND EXISTS (
         SELECT 1 FROM stocks s JOIN articles a ON a.id=s.article_id
-        WHERE s.project_id=d.id AND s.user_id=d.user_id AND s.created_at>=d.since AND s.created_at<?1
+        WHERE s.project_id=d.id AND s.user_id=d.user_id AND s.created_at>=d.since AND s.created_at<d.cutoff
           AND s.created_at>=d.last_empty
           AND ${usableReflectionStock}
       )
       ORDER BY d.id LIMIT 20`,
-    ).bind(end),
+    ).bind(JSON.stringify(ends)),
     reflectionJobStatement(env, null),
   ]);
 }
@@ -76,7 +82,7 @@ export async function listReflections(
   const scope = projectListFilter(projectId, null);
   const limit = 8;
   const rows = await env.DB.prepare(
-    `SELECT r.id,r.project_id,p.name AS project_name,r.is_weekly,r.start_at,r.end_at,r.generation,
+    `SELECT r.id,r.project_id,p.name AS project_name,r.start_at,r.end_at,r.generation,
       r.status,r.text,r.answer,
       (SELECT json_group_array(json_object('id',s.id,'title',COALESCE(s.title,a.title),'created_at',s.created_at))
         FROM json_each(r.stock_ids) ref JOIN stocks s ON s.id=ref.value
@@ -89,8 +95,7 @@ export async function listReflections(
           WHERE pf.project_id=p.id AND pf.user_id=p.user_id AND pf.status='ready'
         )) AS pufus_json
     FROM reflections r JOIN projects p ON p.id=r.project_id
-    WHERE p.user_id=? AND ${scope.sql} AND r.dismissed_at IS NULL
-      AND (r.is_weekly=0 OR r.text IS NOT NULL)
+    WHERE p.user_id=? AND ${scope.sql} AND r.dismissed_at IS NULL AND r.text IS NOT NULL
     ORDER BY (r.answer IS NOT NULL),r.created_at DESC,r.id DESC LIMIT ? OFFSET ?`,
   )
     .bind(userId, ...scope.params, limit + 1, (page - 1) * limit)

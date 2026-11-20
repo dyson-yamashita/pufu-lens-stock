@@ -1,15 +1,9 @@
-import { BookOpen, ChevronDown, LoaderCircle } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { BookOpen, LoaderCircle } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import type { Project } from '../../../shared/domain';
-import {
-  recentReflectionDays,
-  reflectionDay,
-  reflectionWeekStart,
-  type Reflection,
-  type ReflectionList,
-} from '../../../shared/reflections';
+import type { Reflection, ReflectionList } from '../../../shared/reflections';
 import { applicationError, intlLocale, t, useLanguage } from '../../i18n/i18n';
-import { api, createRequestId, send } from '../../lib/api';
+import { api, send } from '../../lib/api';
 import { date } from '../../lib/dates';
 
 type OpenSources = {
@@ -40,7 +34,6 @@ function ReflectionCard({
     new Date(reflection.start_at),
     new Date(Date.parse(reflection.end_at) - 1),
   );
-  const currentWeek = Date.parse(reflection.end_at) === reflectionWeekStart(Date.now());
   const update = async (action: 'answer' | 'dismiss' | 'alternative' | 'retry') => {
     setPending(true);
     setError('');
@@ -60,14 +53,12 @@ function ReflectionCard({
   const canRespond = !reflection.answer && reflection.status !== 'queued';
   return (
     <article className="reflection-card">
-      <h3>
-        {t(reflection.is_weekly && currentWeek ? 'reflection.weekly' : 'reflection.question')}
-      </h3>
+      <h3>{t('reflection.question')}</h3>
       <p className="field-hint">
         {showProject ? `${reflection.project_name} · ` : ''}
         {range}
       </p>
-      {reflection.text && <p className="question-text">{reflection.text}</p>}
+      <p className="question-text">{reflection.text}</p>
       {reflection.status === 'queued' && (
         <p className="question-message" role="status">
           <LoaderCircle className="spin" size={17} aria-hidden="true" />
@@ -76,7 +67,7 @@ function ReflectionCard({
       )}
       {reflection.status === 'empty' && (
         <p className="question-message" role="status">
-          {t(reflection.text ? 'reflection.no_alternative' : 'reflection.no_question')}
+          {t('reflection.no_alternative')}
         </p>
       )}
       {reflection.status === 'failed' && (
@@ -128,31 +119,25 @@ function ReflectionCard({
       )}
       {canRespond && (
         <form
-          className="question-settings reflection-answer-form"
+          className="question-settings"
           onSubmit={(event) => {
             event.preventDefault();
             void update('answer');
           }}
         >
-          {reflection.text && (
-            <>
-              <label htmlFor={label}>{t('reflection.answer')}</label>
-              <textarea
-                id={label}
-                rows={3}
-                maxLength={2000}
-                value={answer}
-                disabled={pending}
-                onChange={(event) => setAnswer(event.target.value)}
-              />
-            </>
-          )}
+          <label htmlFor={label}>{t('reflection.answer')}</label>
+          <textarea
+            id={label}
+            rows={3}
+            maxLength={2000}
+            value={answer}
+            disabled={pending}
+            onChange={(event) => setAnswer(event.target.value)}
+          />
           <div className="reflection-actions">
-            {reflection.text && (
-              <button className="button primary" type="submit" disabled={!answer.trim() || pending}>
-                {t('reflection.save_answer')}
-              </button>
-            )}
+            <button className="button primary" type="submit" disabled={!answer.trim() || pending}>
+              {t('reflection.save_answer')}
+            </button>
             {reflection.status === 'ready' && (
               <button
                 className="button secondary"
@@ -210,19 +195,12 @@ export default function Reflections({
   const [page, setPage] = useState(1);
   const [refresh, setRefresh] = useState(0);
   const [loadError, setLoadError] = useState('');
-  const [formError, setFormError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [selectedProject, setSelectedProject] = useState('');
-  const [preset, setPreset] = useState('7');
-  const [customDates, setCustomDates] = useState(() => recentReflectionDays(7, Date.now()));
-  const request = useRef<{ signature: string; id: string } | null>(null);
-  const destinations = projects.filter((p) =>
+  const visibleProjects = projects.filter((p) =>
     projectId ? p.id === projectId : p.show_in_all_lists !== false,
   );
-  const destination = destinations.find((p) => p.id === selectedProject)?.id ?? destinations[0]?.id;
-  const today = reflectionDay(Date.now());
   const updateList = () => setRefresh((value) => value + 1);
-  const hasProjects = destinations.length > 0;
+  const hasProjects = visibleProjects.length > 0;
+  const automatic = visibleProjects.some((project) => project.auto_generate_questions);
 
   useEffect(() => {
     if (!active || !hasProjects) return;
@@ -257,125 +235,22 @@ export default function Reflections({
     };
   }, [active, hasProjects, projectId, page, refresh]);
 
-  async function generate(event: FormEvent) {
-    event.preventDefault();
-    if (!destination || busy) return;
-    setFormError('');
-    const dates =
-      preset === 'custom' ? customDates : recentReflectionDays(Number(preset), Date.now());
-    const signature = JSON.stringify([destination, dates.from, dates.to]);
-    if (request.current?.signature !== signature)
-      request.current = { signature, id: createRequestId() };
-    setBusy(true);
-    try {
-      await send('/api/v1/reflections', {
-        project_id: destination,
-        ...dates,
-        request_id: request.current.id,
-      });
-      request.current = null;
-      setPage(1);
-      updateList();
-    } catch (e) {
-      setFormError(applicationError((e as Error).message));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!hasProjects) return null;
+  if (!hasProjects || (!automatic && !loadError && !data?.reflections.length)) return null;
   return (
     <section className="reflections" aria-labelledby={titleId}>
       <h2 id={titleId}>
         <BookOpen size={18} aria-hidden="true" />
         {t('reflection.heading')}
       </h2>
-      {data?.reflections?.length === 0 &&
-        destinations.some((project) => project.auto_generate_questions) && (
-          <p className="field-hint">{t('reflection.automatic_hint')}</p>
-        )}
-      <details className="reflection-period">
-        <summary>
-          {t('reflection.choose_period')}
-          <ChevronDown size={16} aria-hidden="true" />
-        </summary>
-        <form className="question-settings" onSubmit={generate}>
-          <div className="reflection-fields">
-            {!projectId && (
-              <label>
-                {t('ui.app.destination_project')}
-                <select
-                  value={destination}
-                  disabled={busy}
-                  onChange={(event) => setSelectedProject(event.target.value)}
-                >
-                  {destinations.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label>
-              {t('reflection.period')}
-              <select
-                value={preset}
-                disabled={busy}
-                onChange={(event) => setPreset(event.target.value)}
-              >
-                <option value="7">{t('reflection.days_7')}</option>
-                <option value="30">{t('reflection.days_30')}</option>
-                <option value="custom">{t('reflection.custom_dates')}</option>
-              </select>
-            </label>
-            {preset === 'custom' && (
-              <>
-                <label>
-                  {t('reflection.from')}
-                  <input
-                    type="date"
-                    required
-                    max={customDates.to || today}
-                    value={customDates.from}
-                    disabled={busy}
-                    onChange={(event) =>
-                      setCustomDates({ ...customDates, from: event.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  {t('reflection.to')}
-                  <input
-                    type="date"
-                    required
-                    min={customDates.from}
-                    max={today}
-                    value={customDates.to}
-                    disabled={busy}
-                    onChange={(event) => setCustomDates({ ...customDates, to: event.target.value })}
-                  />
-                </label>
-              </>
-            )}
-          </div>
-          <button type="submit" className="button primary" disabled={busy}>
-            {busy && <LoaderCircle className="spin" size={16} aria-hidden="true" />}
-            {t('reflection.generate')}
-          </button>
-          {formError && (
-            <p className="form-error" role="alert">
-              {formError}
-            </p>
-          )}
-        </form>
-      </details>
+      {data?.reflections.length === 0 && automatic && (
+        <p className="field-hint">{t('reflection.automatic_hint')}</p>
+      )}
       {loadError && (
         <p className="form-error" role="alert">
           {loadError}
         </p>
       )}
-      {data?.reflections?.map((reflection) => (
+      {data?.reflections.map((reflection) => (
         <ReflectionCard
           key={`${reflection.id}:${reflection.generation}`}
           reflection={reflection}

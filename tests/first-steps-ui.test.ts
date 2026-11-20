@@ -23,6 +23,7 @@ const project = (id = 'first'): Project => ({
   show_in_all_lists: true,
   include_in_user_memory: true,
   auto_generate_questions: true,
+  reflection_period: 'weekly',
   count: 0,
   ready_count: 0,
   question_count: 0,
@@ -147,7 +148,7 @@ it.each([true, false])(
       '問い・気づきを追加',
     );
     expect(
-      document.querySelector('.reflections')!.textContent!.includes('新しいストックが3件'),
+      document.querySelector('.reflections')?.textContent?.includes('新しいストックが3件') ?? false,
     ).toBe(auto);
     await click('.questions-page .empty-state button');
     expect(document.querySelector('#question-text')).not.toBeNull();
