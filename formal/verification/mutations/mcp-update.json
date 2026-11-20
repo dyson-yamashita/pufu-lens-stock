@@ -1,0 +1,47 @@
+{
+  "module": "Verification.McpUpdate",
+  "mutations": [
+    {
+      "name": "B00-authentication",
+      "old": "a.authenticated && ",
+      "new": "",
+      "theorem": "unauthenticated_not_authorized"
+    },
+    {
+      "name": "B00-write-scope",
+      "old": "a.writeScope && ",
+      "new": "",
+      "theorem": "missing_scope_not_authorized"
+    },
+    {
+      "name": "B00-ownership",
+      "old": "a.ownsPufu && ",
+      "new": "",
+      "theorem": "non_owner_not_authorized"
+    },
+    {
+      "name": "B00-project",
+      "old": "&& projectAllowed a",
+      "new": "&& true",
+      "theorem": "outside_project_not_authorized"
+    },
+    {
+      "name": "B00-revision-conflict",
+      "old": "decide (u.revision = s.revision)",
+      "new": "true",
+      "theorem": "stale_revision_denied"
+    },
+    {
+      "name": "B00-denied-write",
+      "old": "else ⟨false, s⟩",
+      "new": "else ⟨false, commit s u⟩",
+      "theorem": "rejected_unchanged"
+    },
+    {
+      "name": "B00-revision-increment",
+      "old": "revision := s.revision + 1",
+      "new": "revision := s.revision + 2",
+      "theorem": "accepted_revision"
+    }
+  ]
+}

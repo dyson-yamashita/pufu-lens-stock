@@ -80,11 +80,12 @@ theorem compiler_dependency : (1 + 1 : Nat) = 2 := by native_decide
             with self.subTest(name=name), tempfile.TemporaryDirectory(prefix='pufu-axiom-test-') as scratch:
                 project = Path(scratch) / 'project'
                 shutil.copytree(ROOT / target['directory'], project, ignore=shutil.ignore_patterns('.lake', '__pycache__'))
-                modules = list(target['modules'])
+                # Only the model changed by these fixtures needs to be built.
+                modules = ['Verification.McpUpdate']
                 if name == 'private-module':
-                    (project / 'McpVerification' / 'PrivateTrap.lean').write_text(
+                    (project / 'Verification' / 'PrivateTrap.lean').write_text(
                         'module\nprivate axiom hiddenBad : False\nprivate theorem hidden : False := hiddenBad\n')
-                    modules.append('McpVerification.PrivateTrap')
+                    modules.append('Verification.PrivateTrap')
                 extra_import = ''
                 if name.startswith('indirect-'):
                     # Simulate an imported dependency not owned by the audited
@@ -96,10 +97,10 @@ theorem compiler_dependency : (1 + 1 : Nat) = 2 := by native_decide
                     with (project / 'lakefile.toml').open('a') as config:
                         config.write('\n[[lean_lib]]\nname = "Untrusted"\n')
                     extra_import = 'import Untrusted\n'
-                proofs = project / 'McpVerification' / 'Proofs.lean'
-                # Deliberately outside the McpVerification namespace: the audit
+                model = project / 'Verification' / 'McpUpdate.lean'
+                # Deliberately outside the model namespace: the audit
                 # selects declaration origins, so helper namespaces cannot evade it.
-                proofs.write_text('import Lean\n' + extra_import + proofs.read_text() + addition)
+                model.write_text('import Lean\n' + extra_import + model.read_text() + addition)
                 build(project, modules)
                 with self.assertRaisesRegex(VerificationError, 'UNAPPROVED_AXIOM') as caught:
                     audit_axioms(project, modules)

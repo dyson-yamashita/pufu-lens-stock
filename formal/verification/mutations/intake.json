@@ -1,0 +1,47 @@
+{
+  "module": "Verification.Intake",
+  "mutations": [
+    {
+      "name": "B14-owner",
+      "old": "a.actor == some p.owner && !a.shortcut && p.present && inScope a.projects p.project",
+      "new": "!a.shortcut && p.present && inScope a.projects p.project",
+      "theorem": "unauthenticated_denied"
+    },
+    {
+      "name": "B14-signature",
+      "old": "i.detected == some i.supplied",
+      "new": "true",
+      "theorem": "signature_mismatch_denied"
+    },
+    {
+      "name": "B14-final-project",
+      "old": "written && p.present && (p.owner == u.actor) && inScope u.projects p.project &&",
+      "new": "written && p.present && (p.owner == u.actor) &&",
+      "theorem": "finalize_scope_rechecked"
+    },
+    {
+      "name": "B14-object-key",
+      "old": "(s.pendingKey == some u.key)",
+      "new": "true",
+      "theorem": "finalize_key_rechecked"
+    },
+    {
+      "name": "B14-pdf-length",
+      "old": "decide (200 \u2264 o.textLength)",
+      "new": "true",
+      "theorem": "pdf_short_text_denied"
+    },
+    {
+      "name": "B14-ai-schema",
+      "old": "o.chatEnvelopeAccepted && o.jsonDecoded && o.schemaAccepted",
+      "new": "o.chatEnvelopeAccepted && o.jsonDecoded",
+      "theorem": "invalid_ai_schema_denied"
+    },
+    {
+      "name": "B14-pdf-error",
+      "old": "(o.status == 422 && !o.errorIsString)",
+      "new": "(o.status == 422)",
+      "theorem": "pdf_422_error_denied"
+    }
+  ]
+}

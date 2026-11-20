@@ -2,7 +2,7 @@
 
 MCP、iOSショートカット、SNS連携、匿名公開、非同期ジョブなどの形式検証に共通する、環境・登録・実行・CIの入口を案内する。
 
-必須ルールは [AGENTS.md](../AGENTS.md#境界処理の形式検証)、適用条件・検証候補・優先順位は [検証方針と対象一覧](../docs/FORMAL_VERIFICATION.md) を参照する。固有の前提・定理・実装との対応・照合テスト・未検証事項は各対象のREADMEで管理する。
+必須ルールは [AGENTS.md](../AGENTS.md#境界処理の形式検証)、適用条件・検証候補・優先順位は [検証方針と対象一覧](../docs/FORMAL_VERIFICATION.md) を参照する。固有の前提・定理・実装との対応・照合テスト・未検証事項は各対象の仕様で管理する。
 
 ## 固定バージョンと更新方針
 
@@ -16,17 +16,17 @@ Leanは **4.36.0** に固定する。バージョンの正本は [targets.json](
 
 機械的な登録表は [targets.json](targets.json)。対象ID、プロジェクトのディレクトリ、全Leanモジュール、ビルド・変異検出のコマンド、実装の照合テストを一緒に管理する。共通コードを共有する複数の対象IDは同じプロジェクトの `ids` に記録できる。
 
-現在の実装済み対象は **B00〜B16の最小モデル**。B00は[MCP update_pufu](mcp-verification/README.md)、B01〜B16は[認証・ショートカット・SNS等の境界処理](boundary-verification/README.md)に仕様と検証範囲を記載する。
+現在の **B00〜B16の最小モデル**は、MCPの `update_pufu` を含めて1つのLakeプロジェクト `formal/verification` に配置する。各モデルと仕様は[対象一覧](verification/README.md#対象と対応表)を参照する。
 
-新しい対象は、その責務に応じて `formal/` 配下へ配置する。固定版の `lean-toolchain` とLake設定を含め、共有できるコードは再利用する。MCP以外を追加したためにMCP PoCの適用範囲を広げる必要はない。
+新しいモデルは `verification/Verification/` に置き、仕様を `verification/specs/`、変異JSONを `verification/mutations/` に置く。
 
 登録時には次を確認する。
 
-- そのプロジェクトの全ソースモジュールを `modules` に登録する。共通ランナーは各モジュールを明示的にビルドし、ルートからimportされていない登録モジュールも対象にする。
+- 対象IDと全ソースモジュールを `ids` と `modules` に登録し、`Verification.lean` にモデルのimportを追加する。共通ランナーは登録モジュールを明示的にビルドする。
 - `formal/` に未登録のプロジェクトやLeanファイルがあれば失敗する。生成物の `.lake/` とLake設定用の `lakefile.lean` はモデルのソース一覧から除く。
 - 照合テストは現行Vitestが読み込む `tests/**/*.test.ts` に登録する。ファイルの存在も検査する。別のテスト環境を使う場合は、登録形式とCI実行も合わせて拡張する。
-- 変異検出の `mutations` は対象の性質に合わせたコマンドを登録する。現行の `mcp-verification/check.py` はupdate_pufu専用である。
-- 登録表、対象自身のREADME、検証方針の対象一覧を一緒に更新する。登録漏れ検査は性質の網羅性や実装との同値性の証明ではない。
+- [変異ランナー](verification/check.py)は、各モデルの変異JSONを読み込み、モデルの変更によって指定した定理の証明が失敗することを確認する。
+- 登録表、対象固有の仕様、検証方針の対象一覧を一緒に更新する。登録漏れ検査は性質の網羅性や実装との同値性の証明ではない。
 
 ## 証明の公理依存
 
@@ -58,7 +58,7 @@ python3 -m unittest discover -s formal -p 'test_*.py' -v
 
 ## CIとGitHubのマージ保護
 
-[共通validate workflow](../.github/workflows/validate.yml) の `formal` ジョブが、共通ランナーと検査機構の回帰テストを実行する。対象を登録すれば、このランナーがビルド・公理監査・変異検出を実行する。変異スイートはプロジェクトごとに5分で打ち切る（個別のLean検査は各ランナーでも制限）。B01〜B14を同じプロジェクトに登録したため、旧PoC用の3分から拡張した。登録した照合テストは既存の4分割Vitestジョブで実行する。新しい実行環境が必要な場合はCIのセットアップも更新する。
+[共通validate workflow](../.github/workflows/validate.yml) の `formal` ジョブが、共通ランナーと検査機構の回帰テストを実行する。共通ランナーは登録対象のビルド・公理監査・変異検出を実行する。変異スイート全体の制限時間は5分で、個別のLean検査にも制限時間がある。登録した照合テストは既存の4分割Vitestジョブで実行する。
 
 PRの [ci.yml](../.github/workflows/ci.yml) は全検証結果を `Check` に集約する。**workflowで失敗を集約することと、GitHubでマージを禁止する設定は別である。** mainの有効なルールセットまたはブランチ保護で、GitHub Actions由来の `Check` を必須ステータスチェックに指定する。推奨設定は更新済みブランチを要求し、バイパスを設けない構成である。設定後に適用先・有効状態・チェック名・提供元を読み戻して確認する。
 

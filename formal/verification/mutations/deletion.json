@@ -1,0 +1,23 @@
+{
+  "module": "Verification.Deletion",
+  "mutations": [
+    {
+      "name": "B10-account-generation",
+      "old": "state.tombstone = some observedGeneration ∧ state.pendingJobs = [] ∧",
+      "new": "state.pendingJobs = [] ∧",
+      "theorem": "stale_cleanup_preserves_request"
+    },
+    {
+      "name": "B10-unfinished-jobs",
+      "old": "state.tombstone = some observedGeneration ∧ state.pendingJobs = [] ∧",
+      "new": "state.tombstone = some observedGeneration ∧",
+      "theorem": "unfinished_jobs_preserve_request"
+    },
+    {
+      "name": "B10-prefix-generation",
+      "old": "if truncated = false ∧ pending = some observed then none else pending",
+      "new": "if truncated = false then none else pending",
+      "theorem": "stale_prefix_cleanup_preserves_request"
+    }
+  ]
+}

@@ -1,7 +1,0 @@
-name = "mcpVerification"
-version = "0.1.0"
-defaultTargets = ["McpVerification"]
-
-[[lean_lib]]
-name = "McpVerification"
-leanOptions = { warningAsError = true }
