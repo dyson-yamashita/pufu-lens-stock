@@ -480,8 +480,28 @@
 }
 
 .public-stock-card {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
+}
+.public-stock-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+}
+.public-stock-card-link:focus-visible {
+  outline: none;
+}
+.public-stock-card-link:focus-visible::after {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.public-stock-card .stock-image-slide,
+.public-stock-card .stock-image-controls button {
+  position: relative;
+  z-index: 1;
 }
 .public-stock-card:hover {
   border-color: var(--muted);

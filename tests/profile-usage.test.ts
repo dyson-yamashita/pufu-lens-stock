@@ -48,9 +48,12 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
         VALUES (?,?,'user','問い','ready',?)`,
       ).bind(`q${index}`, project, date),
       app.env.DB.prepare(
-        `INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,editor_version,created_at)
-        VALUES (?,'alice',?,'プ譜','{}','0.9.19',?)`,
+        `INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,score_json,editor_version,status,created_at)
+        VALUES (?,'alice',?,'プ譜','{}','{}','0.9.19','ready',?)`,
       ).bind(`p${index}`, project, date),
+      app.env.DB.prepare(
+        "INSERT INTO pufu_phases(pufu_id,number,score_json,created_at,updated_at) VALUES (?,1,'{}',?,?)",
+      ).bind(`p${index}`, date, dates[4]),
       app.env.DB.prepare(
         "INSERT INTO ai_attempts(id,user_id,created_at) VALUES (?,'alice',?)",
       ).bind(`attempt${index}`, date),
@@ -67,7 +70,15 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
   }
   await app.env.DB.batch([
     app.env.DB.prepare(
-      "INSERT INTO pufu_phases(pufu_id,number,score_json,created_at,updated_at) VALUES ('p4',2,'{}',?,?)",
+      `INSERT INTO pufu_phases(pufu_id,number,score_json,created_at,updated_at)
+      VALUES ('p0',2,'{}',?,?), ('p4',2,'{}',?,?)`,
+    ).bind(dates[3], dates[4], dates[4], dates[4]),
+    app.env.DB.prepare(
+      `INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,score_json,editor_version,status,created_at)
+      VALUES ('bob-p','bob','bob-project','別人','{}','{}','0.9.19','ready',?)`,
+    ).bind(dates[4]),
+    app.env.DB.prepare(
+      "INSERT INTO pufu_phases(pufu_id,number,score_json,created_at,updated_at) VALUES ('bob-p',1,'{}',?,?)",
     ).bind(dates[4], dates[4]),
     app.env.DB.prepare(
       "INSERT INTO questions(id,project_id,source,text,status,created_at) VALUES ('bob-q','bob-project','user','別人','ready',?)",
@@ -87,6 +98,7 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
         stocks: 2,
         questions: 2,
         pufus: 2,
+        phases: 4,
         ai_neurons: 4,
         ai_unmeasured_calls: 1,
       },
@@ -95,6 +107,7 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
         stocks: 4,
         questions: 4,
         pufus: 4,
+        phases: 6,
         ai_neurons: 9,
         ai_unmeasured_calls: 1,
       },
@@ -103,6 +116,7 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
         stocks: 5,
         questions: 5,
         pufus: 5,
+        phases: 7,
         ai_neurons: 10,
         ai_unmeasured_calls: 1,
       },
@@ -112,7 +126,8 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
     since: null,
     stocks: 0,
     questions: 1,
-    pufus: 0,
+    pufus: 1,
+    phases: 1,
     ai_neurons: 7,
     ai_unmeasured_calls: 0,
   });
@@ -127,9 +142,27 @@ it('日本時間の月曜・月初を含み、全プロジェクトを所有者�
     stocks: 1,
     questions: 1,
     pufus: 1,
+    phases: 2,
     ai_neurons: 4,
     ai_unmeasured_calls: 1,
   });
+});
+
+it('旧形式の最初の局面を詳細の取得前から数え、生成待ちのプ譜には局面を数えない', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-12T03:00:00.000Z'));
+  await app.env.DB.prepare(
+    `INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,score_json,editor_version,status,created_at)
+    VALUES ('legacy','alice','alice-project','プ譜','{}','{}','0.9.19','ready','2026-11-07T00:00:00.000Z'),
+           ('queued','alice','alice-project','プ譜','{}',NULL,'0.9.19','queued','2026-11-12T00:00:00.000Z')`,
+  ).run();
+  const before = (await usage()).periods;
+  expect(before.week).toMatchObject({ pufus: 1, phases: 0 });
+  expect(before.month).toMatchObject({ pufus: 2, phases: 1 });
+  expect(before.all).toMatchObject({ pufus: 2, phases: 1 });
+
+  expect((await app.request('/api/v1/pufus/legacy')).status).toBe(200);
+  expect((await usage()).periods).toEqual(before);
 });
 
 it.each([
@@ -145,6 +178,7 @@ it.each([
     stocks: 0,
     questions: 0,
     pufus: 0,
+    phases: 0,
     ai_neurons: 0,
     ai_unmeasured_calls: 0,
   });

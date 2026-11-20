@@ -52,6 +52,7 @@ it('通信失敗を0件と表示せず、再読み込み後に選択中の期間
     stocks: 1200,
     questions: 30,
     pufus: 5,
+    phases: 1006,
     ai_neurons: 21.234567,
     ai_unmeasured_calls: 0,
   };
@@ -65,6 +66,7 @@ it('通信失敗を0件と表示せず、再読み込み後に選択中の期間
           stocks: 0,
           questions: 0,
           pufus: 0,
+          phases: 0,
           ai_neurons: 0,
           ai_unmeasured_calls: 0,
         },
@@ -74,8 +76,31 @@ it('通信失敗を0件と表示せず、再読み込み後に選択中の期間
     }),
   );
   expect(document.querySelector('[data-metric="stocks"] strong')?.textContent).toBe('1,200');
+  expect(document.querySelector('[data-metric="pufus"] dd')?.textContent).toBe('5件局面 1,006件');
   expect(document.querySelector('[data-metric="ai_neurons"] dd')?.textContent).toBe('21Neurons');
   expect(document.querySelector('.usage-range')?.textContent).toContain('2026/11/1');
+});
+
+it.each([
+  [undefined, '3件'],
+  [0, '3件局面 0件'],
+])('局面登録数が %s の応答でプ譜登録数を表示する', async (phases, countText) => {
+  const counts = {
+    since: null,
+    stocks: 1,
+    questions: 2,
+    pufus: 3,
+    ...(phases === undefined ? {} : { phases }),
+    ai_neurons: 0,
+    ai_unmeasured_calls: 0,
+  };
+  vi.mocked(api).mockResolvedValue({
+    timezone: 'Asia/Tokyo',
+    as_of: '2026-11-12T03:00:00Z',
+    periods: { week: counts, month: counts, all: counts },
+  });
+  await act(async () => root.render(createElement(ProfileUsage, { userId: 'alice' })));
+  expect(document.querySelector('[data-metric="pufus"] dd')?.textContent).toBe(countText);
 });
 
 it.each([
@@ -92,6 +117,7 @@ it.each([
       stocks: 0,
       questions: 0,
       pufus: 0,
+      phases: 0,
       ai_neurons: neurons,
       ai_unmeasured_calls: missing,
     };

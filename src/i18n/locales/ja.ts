@@ -175,6 +175,8 @@ export const ja: Record<string, string> = {
   'ui.usage.stocks': 'ストック登録数',
   'ui.usage.questions': '問い登録数',
   'ui.usage.pufus': 'プ譜登録数',
+  'ui.usage.phase_label': '局面',
+  'ui.usage.phase_count': '{{value0}}件',
   'ui.usage.ai_neurons': 'AI使用量',
   'ui.usage.unmeasured': '未計測',
   'ui.usage.items_unit': '件',
@@ -183,7 +185,7 @@ export const ja: Record<string, string> = {
   'ui.usage.retry': '再読み込み',
   'ui.usage.timezone_note': '日本時間で集計します。今週は月曜、今月は1日からです。',
   'manual.usage':
-    '「プロフィール」の「利用状況」から、今週・今月・全体のストック・問い・プ譜の登録数とAI使用量を確認できます。登録数は削除済みを除きます。AI使用量はモデル別にNeuronsへ換算した目安で、計測開始後の取得できた分だけを集計します。日本時間の月曜・月初を区切りに集計します。',
+    '「プロフィール」の「利用状況」から、今週・今月・全体のストック・問い・プ譜・局面の登録数とAI使用量を確認できます。局面は最初の局面も含めて、それぞれの登録日で集計します。登録数は削除済みを除きます。AI使用量はモデル別にNeuronsへ換算した目安で、計測開始後の取得できた分だけを集計します。日本時間の月曜・月初を区切りに集計します。',
   'pufu.creation_method': '作成方法',
   'pufu.create_with_ai': 'AIで作成',
   'pufu.create_from_json': 'JSONから作成',
@@ -1594,13 +1596,13 @@ export const ja: Record<string, string> = {
   'stock_images.request_id': '画像のリクエストIDを確認してください。',
   'stock_images.request_conflict': '画像を保存中か、同じリクエストIDで異なる画像が送信されました。',
   'stock_images.hint':
-    'PNG・JPEG・GIF・WebP、1枚5MBまで、5枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。画像を押すと別タブで開きます。',
+    'PNG・JPEG・GIF・WebP、1枚5MBまで、5枚まで添付できます。画像の公開範囲は保存先プロジェクトに従います。公開プロジェクトでは画像も公開されます。AIの要約・問い・メモリには含まれません。',
   'stock_images.attach': '画像を添付',
   'stock_images.loading': '画像を読み込んでいます…',
   'stock_images.processing': '画像を保存・削除しています…',
   'stock_images.empty': '添付画像はありません。',
   'stock_images.retry': '再読み込み',
-  'stock_images.open': '画像を開く：{{name}}',
+  'stock_images.enlarge': '画像を拡大表示：{{name}}',
   'stock_images.delete': '削除',
   'stock_images.delete_named': '画像を削除：{{name}}',
   'stock_images.confirm_delete': '「{{name}}」を削除しますか？この操作は取り消せません。',
@@ -1611,7 +1613,7 @@ export const ja: Record<string, string> = {
   'manual.stock_images_add':
     '新規ストックでは「画像を添付」、保存済みストックでは詳細画面の「画像」から追加します。PNG・JPEG・GIF・WebPに対応し、1枚5MB、1ストックにつき5枚までです。画像だけ保存に失敗した場合、ストックは保存済みです。未保存の画像だけ再試行できます。',
   'manual.stock_images_view':
-    '自分のストック一覧と詳細では、要約の下に添付画像が表示されます。複数枚ある場合は、前後ボタン・左右キー・横スワイプで切り替えます。一覧で画像を押すと詳細が開き、詳細の画像を押すと元の画像が別タブで開きます。取り除くには「画像」タブで「削除」を押します。',
+    '自分のストックと公開プロジェクトのストックでは、一覧・詳細の要約の下に添付画像が表示されます。複数枚ある場合は、前後ボタン・左右キー・横スワイプで切り替えます。一覧で画像を押すと詳細が開きます。詳細で画像を押すとその場で拡大でき、「閉じる」で詳細に戻れます。自分の添付画像を取り除くには「画像」タブで「削除」を押します。',
   'manual.stock_images_visibility':
     '公開プロジェクトでは画像も公開されます。プロジェクトを非公開に戻すと画像の公開URLは使えなくなります。画像はAIの要約・問い・メモリには含まれません。ストック・プロジェクト・アカウントを削除すると、添付画像も削除されます。',
   'manual.stock_images_mcp':

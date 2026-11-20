@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { t, useLanguage } from '../../i18n/i18n';
+import StockImageDialog from './StockImageDialog';
 
 export type CarouselImage = { id: string; filename: string; url: string };
 
@@ -9,10 +10,11 @@ export default function StockImageCarousel({
   preview,
 }: {
   images: CarouselImage[];
-  preview?: { onOpen: () => void; openLabel: string };
+  preview?: { openLabel: string } & ({ onOpen: () => void } | { href: string });
 }) {
   useLanguage();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const gesture = useRef<{ x: number; y: number } | null>(null);
   if (!images.length) return null;
   const selected = Math.max(
@@ -39,7 +41,15 @@ export default function StockImageCarousel({
       aria-label={t('stock_images.title')}
       aria-roledescription={multiple ? t('stock_images.carousel') : undefined}
       onKeyDown={(event) => {
-        if (!multiple || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (
+          expanded ||
+          !multiple ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey
+        )
+          return;
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           event.preventDefault();
           move(event.key === 'ArrowLeft' ? -1 : 1);
@@ -69,24 +79,33 @@ export default function StockImageCarousel({
           }
         }}
       >
-        {preview ? (
-          <button
-            type="button"
-            onClick={preview.onOpen}
+        {preview && 'href' in preview ? (
+          <a
+            className="stock-image-preview"
+            href={preview.href}
             aria-label={preview.openLabel}
             aria-description={current.filename}
           >
             {image}
-          </button>
+          </a>
         ) : (
-          <a
-            href={current.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t('stock_images.open', { name: current.filename })}
+          <button
+            type="button"
+            className={preview ? 'stock-image-preview' : 'stock-image-open'}
+            aria-label={preview?.openLabel ?? t('stock_images.enlarge', { name: current.filename })}
+            aria-description={preview ? current.filename : undefined}
+            aria-haspopup={preview ? undefined : 'dialog'}
+            onClick={(event) => {
+              if (preview) {
+                preview.onOpen();
+                return;
+              }
+              event.currentTarget.focus({ preventScroll: true });
+              setExpanded(true);
+            }}
           >
             {image}
-          </a>
+          </button>
         )}
       </div>
       {multiple && (
@@ -118,6 +137,9 @@ export default function StockImageCarousel({
         </div>
       )}
       {!preview && <p className="stock-image-caption">{current.filename}</p>}
+      {expanded && !preview && (
+        <StockImageDialog image={current} onClose={() => setExpanded(false)} />
+      )}
     </section>
   );
 }

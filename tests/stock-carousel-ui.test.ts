@@ -37,25 +37,28 @@ const click = async (label: string) =>
     document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click(),
   );
 
-it('0枚は表示せず、1枚は画像リンクだけを表示し切替ボタンを出さない', async () => {
+it('0枚は表示せず、1枚なら拡大ボタンだけを表示する', async () => {
   await render([]);
   expect(document.querySelector('section')).toBeNull();
   await render(images.slice(0, 1));
   expect(shown()).toBe('first.png');
-  expect(document.querySelector('a')?.getAttribute('href')).toBe(images[0].url);
-  expect(document.querySelectorAll('button')).toHaveLength(0);
+  expect(document.querySelector('button[aria-haspopup="dialog"] img')?.getAttribute('src')).toBe(
+    images[0].url,
+  );
+  expect(document.querySelectorAll('button')).toHaveLength(1);
 });
 
-it('複数画像を前後ボタンと左右キーで循環し、枚数とリンクを更新する', async () => {
+it('複数画像を前後ボタンと左右キーで循環し、枚数と拡大ボタンを更新する', async () => {
   await render();
   await click('次の画像');
   expect(shown()).toBe('second.png');
   expect(document.querySelector('[role="status"]')?.textContent).toBe('2 / 3');
-  expect(document.querySelector('a')?.getAttribute('href')).toBe(images[1].url);
+  const trigger = document.querySelector('button[aria-haspopup="dialog"]')!;
+  expect(trigger.getAttribute('aria-label')).toBe('画像を拡大表示：second.png');
   await act(async () => {
     const event = new window.Event('keydown', { bubbles: true, cancelable: true });
     Object.assign(event, { key: 'ArrowRight' });
-    document.querySelector('a')!.dispatchEvent(event);
+    trigger.dispatchEvent(event);
   });
   expect(shown()).toBe('third.png');
   await click('次の画像');
