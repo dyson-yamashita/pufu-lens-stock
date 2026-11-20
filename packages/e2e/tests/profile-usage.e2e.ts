@@ -57,7 +57,7 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
       );
     }
     await expect(pufuCount).toHaveText(
-      `${counts.pufus.toLocaleString('ja-JP')}件(局面 ${counts.phases.toLocaleString('ja-JP')}件)`,
+      `${counts.pufus.toLocaleString('ja-JP')} 件 局面 ${counts.phases.toLocaleString('ja-JP')}件`,
     );
   };
   await expect(screen.getByRole('radio', '今週', { exact: true })).toBeChecked();
@@ -73,10 +73,11 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
       const count = value.querySelector('strong')!.getBoundingClientRect();
       const phaseCount = value.querySelector('.usage-phase-count')!;
       const phases = phaseCount.getBoundingClientRect();
-      const text = document.createRange();
-      text.selectNodeContents(phaseCount);
+      const style = getComputedStyle(phaseCount);
       return (
-        text.getClientRects().length === 1 &&
+        style.borderInlineStartStyle === 'solid' &&
+        style.borderInlineStartWidth === '1px' &&
+        phases.height <= Math.ceil(Number.parseFloat(style.lineHeight)) &&
         phases.left >= count.right &&
         phases.top < count.bottom &&
         phases.right <= value.getBoundingClientRect().right

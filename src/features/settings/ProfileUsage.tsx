@@ -105,7 +105,9 @@ export default function ProfileUsage({ userId }: { userId: string }) {
                       <span>{key === 'ai_neurons' ? 'Neurons' : t('ui.usage.items_unit')}</span>
                     )}
                     {key === 'pufus' && phaseCount && (
-                      <span className="usage-phase-count">{phaseCount}</span>
+                      <span className="usage-phase-count">
+                        {t('ui.usage.phase_label')} <b>{phaseCount}</b>
+                      </span>
                     )}
                   </dd>
                 </div>
