@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { testApp, applyMigration, mockEvent, mockStep, upgradeRelationsSchema } from './helpers';
-import { queueQuestionStatements, jobFailureStatements } from '../server/infrastructure/db';
+import { jobFailureStatements } from '../server/infrastructure/db';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import { scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
 import type { Env, Job } from '../server/env';
@@ -50,7 +51,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
     )
       .bind(JSON.stringify(summary), stockId)
       .run();
-    await app.env.DB.batch(queueQuestionStatements(app.env, stockId));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, stockId));
   }
   async function run(stockId: string) {
     const job = await app.env.DB.prepare(
@@ -62,8 +63,10 @@ describe('問い・ストック・プロジェクトの関連', () => {
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
     return job!;
   }
-  it('保存時に1つの問いを登録し、記事の要約ができるまで生成を待つ', async () => {
+  it('新規保存では単体の問いを作らず、移行前に登録された問いは要約後に完了する', async () => {
     const id = await save();
+    expect(await question(id)).toBeNull();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     expect(await question(id)).toMatchObject({
       stock_id: id,
       status: 'queued',
@@ -92,7 +95,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
     const second = await save('alice-second');
     expect(second).not.toBe(first);
     await ready(first);
-    await app.env.DB.batch(queueQuestionStatements(app.env, second));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, second));
     await run(first);
     await run(second);
     const questions = (await list()).questions;
@@ -101,20 +104,24 @@ describe('問い・ストック・プロジェクトの関連', () => {
     expect((await question(first)).text).toContain('Alice project');
     expect((await question(second)).text).toContain('Second project');
   });
-  it('同じURLを同時保存しても1ストック・1問いになる', async () => {
+  it('同じURLの同時保存は1ストックにまとまり、単体の問いを生成しない', async () => {
     const ids = await Promise.all([save(), save()]);
     expect(ids[0]).toBe(ids[1]);
-    expect((await list()).total).toBe(1);
+    expect((await list()).total).toBe(0);
   });
   it('作成元をAIとユーザーに分類し、一覧・詳細・検索で同じ作成元を返す', async () => {
     const aiId = await save();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, aiId));
     expect(await question(aiId)).toMatchObject({ source: 'ai', status: 'queued' });
     const userId = await save('alice-second', 'https://example.com/user-question');
-    await app.env.DB.prepare(
-      "UPDATE questions SET source = 'user', text = '自分で考えた問い？', status = 'ready' WHERE stock_id = ?",
-    )
-      .bind(userId)
-      .run();
+    expect(
+      (
+        await app.request('/api/v1/questions', {
+          method: 'POST',
+          body: { stock_id: userId, text: '自分で考えた問い？' },
+        })
+      ).status,
+    ).toBe(201);
     expect(await question(userId)).toMatchObject({ source: 'user', text: '自分で考えた問い？' });
     const ai = await list('?source=ai');
     const user = await list('?source=user');
@@ -143,13 +150,12 @@ describe('問い・ストック・プロジェクトの関連', () => {
         .first())!,
     ).toMatchObject({ model: null });
   });
-  it('要約済みの記事を別プロジェクトへ追加すると、直ちにその問いの生成を登録する', async () => {
+  it('要約済みの記事を別プロジェクトへ追加しても単体の問いを生成しない', async () => {
     const first = await save();
     await ready(first);
     await run(first);
     const second = await save('alice-second');
-    await run(second);
-    expect((await question(second)).status).toBe('ready');
+    expect(await question(second)).toBeNull();
   });
   it('AIには記事の要約・保存先・メモを渡し、1つの問いとして保存する', async () => {
     const id = await save();
@@ -201,6 +207,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
   });
   it('記事取得の失敗は問いにも伝わり、記事の再取得で生成待ちに戻る', async () => {
     const id = await save();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     const job = await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind = 'article'",
     ).first<Job>();
@@ -219,7 +226,8 @@ describe('問い・ストック・プロジェクトの関連', () => {
     const id = await save();
     await ready(id);
     await run(id);
-    await save('alice-second', 'https://example.com/pending');
+    const pending = await save('alice-second', 'https://example.com/pending');
+    await app.env.DB.batch(legacyQuestionStatements(app.env, pending));
     expect((await list('?project_id=alice-project')).total).toBe(1);
     expect((await list('?status=processing')).total).toBe(1);
     expect((await list('?status=ready&q=' + encodeURIComponent('重複実行'))).total).toBe(1);
@@ -357,7 +365,7 @@ describe('問い・ストック・プロジェクトの関連', () => {
         ).bind(`page-stock-${index}`, `page-article-${index}`),
       ]).flat(),
     );
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     const first = await list('?page=1');
     const second = await list('?page=2');
     expect(first.total).toBe(25);

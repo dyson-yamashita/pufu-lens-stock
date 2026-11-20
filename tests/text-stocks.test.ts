@@ -4,6 +4,7 @@ import type { Job } from '../server/env';
 import type { Stock } from '../shared/domain';
 import { createApp } from '../server/api/app';
 import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 
 describe('URLとテキストのストック', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -74,7 +75,7 @@ describe('URLとテキストのストック', () => {
     expect(auto.stocks.some((stock) => stock.title === 'タイトルのない本文です。')).toBe(true);
   });
 
-  it('本文取得の通信をせずR2・要約・AIの問い・両方のメモリへつなぐ', async () => {
+  it('本文取得の通信をせずR2・要約・両方のメモリへつなぐ', async () => {
     const { id } = (await (await save()).json()) as { id: string };
     const fetchMock = vi.fn(async () => {
       throw new Error('テキストではURLへアクセスしてはいけません。');
@@ -88,12 +89,10 @@ describe('URLとテキストのストック', () => {
     expect(stock.title).toBe('非同期処理の設計');
     const body = await app.env.CONTENT.get(`alice/${job.target_id}/1.txt`);
     expect(await body!.text()).toBe(text);
-    await run('question', id);
-    const question = (await (await app.request(`/api/v1/stocks/${id}/question`)).json()) as {
-      question: { source: string; status: string; text: string };
-    };
-    expect(question.question).toMatchObject({ source: 'ai', status: 'ready' });
-    expect(question.question.text.length).toBeGreaterThan(0);
+    expect(await (await app.request(`/api/v1/stocks/${id}/question`)).json()).toMatchObject({
+      question: null,
+      questions: [],
+    });
     for (const [kind, target] of [
       ['project_memory', 'alice-project'],
       ['user_memory', 'alice'],
@@ -115,6 +114,7 @@ describe('URLとテキストのストック', () => {
       id: string;
     };
     const original = await run('article');
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await run('question', id);
     const question = await (await app.request(`/api/v1/stocks/${id}/question`)).json();
     const { version } = await content(id);
@@ -268,6 +268,7 @@ describe('URLとテキストのストック', () => {
 
   it('問いの自動生成が無効な保存先では、本文を編集しても失敗済みの問いを待機に戻さない', async () => {
     const { id } = (await (await save()).json()) as { id: string };
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await app.env.DB.prepare("UPDATE questions SET status='failed' WHERE stock_id=?")
       .bind(id)
       .run();
@@ -446,6 +447,7 @@ describe('URLとテキストのストック', () => {
   it('ストック削除でテキストを除去し、問いを保持してR2本文を削除する', async () => {
     const { id } = (await (await save()).json()) as { id: string };
     const job = await run('article');
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await run('question', id);
     const questions = (await app.env.DB.prepare('SELECT * FROM questions ORDER BY id').all())
       .results;

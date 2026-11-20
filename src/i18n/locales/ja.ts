@@ -221,8 +221,6 @@ export const ja: Record<string, string> = {
     '例：読書メモ、新規事業の調査、研究テーマ。迷ったら1つで十分です。名前だけで始められ、あとから変えられます。',
   'first_steps.question_intro':
     '日常や会話で生まれた問い・気づきや、記事を読んで気になったことを保存できます。',
-  'first_steps.ai_questions':
-    '自動生成がオンのプロジェクトでは、記事の要約後にAIの問い・気づきも生成されます。',
   'first_steps.after_save': '気になった点を、問い・気づきとして書けます。',
   'first_steps.manual':
     '初めて使うときは、プロジェクトをつくり、記事をストックし、自分の問い・気づきを1つ書いてみましょう。ストック一覧の「はじめの3ステップ」から次の操作を開けます。順番は自由で、3つ揃うと案内は消えます。削除して未完了になると再び表示されます。',
@@ -525,15 +523,15 @@ export const ja: Record<string, string> = {
   'ui.app.saving_also_applies_changes_to_existing_memory':
     '保存すると、既存のメモリにも変更を反映します。',
   'ui.app.automatically_generate_questions_and_insights_from_stocks':
-    'ストックから問い・気づきを自動生成する',
+    '振り返りの問いを自動で追加する',
   'ui.app.when_off_no_questions_or_insights_are_automatically_generated':
-    'オフにすると、このプロジェクトのストックから問い・気づきを自動生成しません。生成済みの問い・気づきは残り、手動で問い・気づきを追加できます。要約とメモリの更新設定は変わりません。',
+    '新しいストックが3件以上たまると、週に一度、振り返りの問いを作ります。自分で期間を選ぶ振り返りはいつでも使えます。',
   'ui.app.save': '保存',
   'ui.app.project_deletion': 'プロジェクトの削除',
   'ui.app.delete_project': 'プロジェクトを削除',
   'ui.app.delete_this_project': 'プロジェクトを削除しますか？',
   'ui.app.delete_this_project_s_stocks_questions_insights_pufu_all':
-    'このプロジェクトのストック・問い・気づき・プ譜（すべての局面）・コメント・メモリを削除します。他のプロジェクトに保存した記事は残ります。',
+    'このプロジェクトのストック、問い・気づき、振り返り、プ譜（すべての局面）、コメント、メモリを削除します。他のプロジェクトに保存した記事は残ります。',
   'ui.app.if_published_its_public_page_will_also_become_unavailable':
     '公開中の場合は公開ページも閲覧できなくなります。この操作は取り消せません。',
   'ui.app.enter_the_article_text': '本文を入力してください。',
@@ -541,8 +539,6 @@ export const ja: Record<string, string> = {
     '入力内容を確認してください。文字数または形式が正しくありません。',
   'ui.app.saving_a_url_or_text_generates_a_summary_and':
     'URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。',
-  'ui.app.questions_and_insights_are_also_generated_automatically':
-    '問い・気づきも自動で生成します。',
   'ui.app.type': '種別',
   'ui.app.destination_project': '保存先プロジェクト',
   'ui.app.select_a_project': 'プロジェクトを選択してください',
@@ -590,12 +586,12 @@ export const ja: Record<string, string> = {
   'ui.app.no_retrieved_text_is_available_for_sample_articles_open':
     '取得した本文はありません。サンプル記事では元の記事をご覧ください。',
   'ui.app.note_saved_it_will_inform_questions_insights_and_memory':
-    'メモを保存しました。問い・気づきとメモリに反映します。',
+    'メモを保存しました。振り返りとメモリに使います。',
   'ui.app.note_and_destination_updated': 'メモと保存先を更新しました。',
   'ui.app.why_did_it_catch_your_attention_note': 'なぜ気になった？（メモ）',
   'ui.app.note_2': 'メモ',
   'ui.app.leave_a_short_note_to_inform_questions_insights_and':
-    '気になった理由を一言残すと、問い・気づきとメモリに反映されます。原文はそのまま残ります。 プロジェクトの公開時は、メモをもとに作った問い・気づきも公開されます。',
+    '気になった理由を書いておくと、振り返りとメモリの材料になります。公開プロジェクトの既存のストック単位のAIの問いにも、メモの変更が反映される場合があります。',
   'ui.app.save_changes': '変更を保存',
   'ui.app.saved_in': ' に保存',
   'ui.app.delete_this_stock': 'このストックを削除',
@@ -716,7 +712,7 @@ export const ja: Record<string, string> = {
   'ui.mcp_connections.mcp_integration_is_not_configured_yet_this_url_will':
     '現在、MCP連携は未設定です。管理者による接続設定が完了すると、このURLから連携できます。',
   'ui.mcp_connections.ask_the_connected_app_to_find_stocks_in_a':
-    '接続先から「プロジェクトのストックを探して」「この問い・気づきを保存して」と依頼できます。ストックを追加すると、要約とAIの問い・気づきが順次生成されます。',
+    '接続先から「プロジェクトのストックを探して」「この問い・気づきを保存して」と依頼できます。ストックを追加すると、要約とメモリの処理が進みます。',
   'ui.mcp_connections.selected_projects': '選択したプロジェクト',
   'ui.mcp_connections.projects_help':
     'プロジェクトを複数選択できます。すべてを選ぶと、今後作成するプロジェクトにもアクセスできます。',
@@ -1099,7 +1095,37 @@ export const ja: Record<string, string> = {
   'ui.questions.no_matching_questions_or_insights': '該当する問い・気づきはありません',
   'ui.questions.take_the_next_step_with_questions_and_insights': '問い・気づきから、次の一歩へ',
   'ui.questions.use_add_question_or_insight_to_save_thoughts_from':
-    '「問い・気づきを追加」から、日常や会話で生まれた問い・気づきを保存できます。自動生成がオンのプロジェクトでは、ストックの要約からAIの問い・気づきも生成されます。',
+    '「問い・気づきを追加」から、日常や会話で生まれた問い・気づきを保存できます。',
+  'reflection.heading': '振り返り',
+  'reflection.automatic_hint': '新しいストックが3件たまると、週ごとの振り返りの対象になります。',
+  'reflection.back': '振り返りに戻る',
+  'reflection.weekly': '今週の問い',
+  'reflection.question': '振り返りの問い',
+  'reflection.choose_period': '期間を選んで振り返る',
+  'reflection.period': '期間',
+  'reflection.days_7': '直近7日間',
+  'reflection.days_30': '直近30日間',
+  'reflection.custom_dates': '期間を指定',
+  'reflection.from': '開始日',
+  'reflection.to': '終了日',
+  'reflection.generate': '振り返りの問いを作る',
+  'reflection.generating': '振り返りの問いを作っています。',
+  'reflection.no_question': 'この期間の記録から問いが見つかりませんでした。',
+  'reflection.no_alternative': 'この期間の記録から別の問いが見つかりませんでした。',
+  'reflection.failed': '振り返りの問いを作れませんでした。',
+  'reflection.sources': 'きっかけになった記録',
+  'reflection.answer': '気づいたこと',
+  'reflection.saved_answer': '保存した振り返り',
+  'reflection.save_answer': '振り返りとして保存',
+  'reflection.alternative': '別の問いを見る',
+  'reflection.dismiss': '今回は見送る',
+  'reflection.retry': '再試行',
+  'reflection.busy': 'このプロジェクトの振り返りを作成中です。完了後にお試しください。',
+  'reflection.changed': '振り返りが更新されました。再読み込みしてお試しください。',
+  'reflection.empty_period':
+    'この期間に振り返れるストックがありません。期間を広げてお試しください。',
+  'reflection.future_date': '今日までの日付を指定してください。',
+  'reflection.request_conflict': '同じリクエストIDで異なる振り返りが送信されました。',
   'ui.relation_picker.optional_multiple_selections_allowed': '任意・複数選択可',
   'ui.relation_picker.selected': '選択済み ',
   'ui.relation_picker.search_article_titles_and_more': '記事のタイトルなどで検索',
@@ -1145,11 +1171,11 @@ export const ja: Record<string, string> = {
   'ui.user_manual.to_add_a_note_or_a_title_for_text':
     '保存時にメモやテキストのタイトルを付ける場合は、「詳細」を開いて入力します。',
   'ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with':
-    '公開されたPDFのURLも保存できます。文字情報のあるPDFから本文を読み取り、要約や問いを生成します。画像だけのスキャンPDFやパスワード付きPDFは自動取得できません。取得に失敗した場合は、詳細画面で本文を補完して再試行できます。',
+    '公開されたPDFのURLも保存できます。文字情報のあるPDFから本文を読み取り、要約します。画像だけのスキャンPDFやパスワード付きPDFは自動取得できません。取得に失敗した場合は、詳細画面で本文を補完して再試行できます。',
   'ui.user_manual.star_articles_you_want_to_revisit_use_note_destination':
     'あとで読み返したい記事には星を付けられます。「メモ・保存先」では、メモや保存先を変更できます。',
   'manual.stock_note_visibility':
-    '「ひとことメモを残す」に書いた内容はAIの問いとメモリに反映されます。メモ本文は記事の要約に混ぜず、直接公開しません。プロジェクトを公開すると、メモをもとに作った問いも公開されます。',
+    '「ひとことメモを残す」に書いた内容は、振り返りやメモリのためにAIが参照します。メモ本文は本人の画面で確認できます。公開プロジェクトの既存のストック単位のAIの問いにも、メモの変更が反映される場合があります。',
   'ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings':
     'プロジェクトの作成時または「設定」の「詳細設定」で「すべてのストック・問い・気づき・プ譜の一覧に表示する」をオフにすると、全体の一覧と件数から外せます。初期値はオンです。オフでもプロジェクトを指定すれば表示でき、メモリや公開設定は変わりません。',
   'ui.user_manual.to_change_a_title_press_the_pencil_beside_it':
@@ -1162,15 +1188,17 @@ export const ja: Record<string, string> = {
   'manual.stock_youtube_playback':
     'YouTubeは、一覧のサムネイルかタイトルを押し、詳細画面の「動画」で再生できます。チャンネルURLや再生できない動画は「YouTubeで開く」を使います。',
   'manual.stock_youtube_storage':
-    'YouTubeはURLとメモだけを保存します。初期タイトルは「YouTube」で、タイトル右の鉛筆から変更できます。動画情報の取得や要約・問いの生成は行いません。',
+    'YouTubeはURLとメモを保存します。初期タイトルは「YouTube」で、タイトル右の鉛筆から変更できます。メモを書いたストックは振り返りやメモリの材料になります。',
   'ui.user_manual.find_and_write_questions': '問いを見つける・書く',
-  'manual.question_read_heading': 'AIが作った問いを読む',
+  'manual.question_read_heading': 'ストックを振り返る',
   'manual.question_write_heading': '自分の問い・気づきを書く',
   'manual.question_edit_heading': '関連ストック・メモ・保存先',
-  'manual.question_generation_heading': '問いの自動生成を止める',
+  'manual.question_generation_heading': '振り返りの自動追加を設定する',
   'manual.question_delete_heading': '問い・気づきを削除する',
   'ui.user_manual.use_questions_insights_or_all_questions_insights_to_view':
-    '「問い・気づき」タブか「すべての問い・気づき」を開きます。ストックをもとにAIが作った問いのうち、気になるものを選びます。',
+    '「問い・気づき」の「振り返り」で、期間内のストックをもとにAIが考えた問いを確認できます。自分で作るときは「期間を選んで振り返る」を開きます。関連があれば、同じプロジェクトのメモリやプ譜も参照します。',
+  'manual.reflection_answer':
+    'きっかけになった記録を開き、気づいたことを「振り返りとして保存」できます。「別の問いを見る」や「今回は見送る」も選べます。振り返りの問いと回答は本人の画面にだけ表示されます。',
   'ui.user_manual.use_add_question_or_insight_to_save_your_own':
     '「問い・気づきを追加」を開きます。保存先を選んで内容を入力し、同じ名前のボタンで保存します。',
   'manual.question_link_stocks':
@@ -1182,7 +1210,7 @@ export const ja: Record<string, string> = {
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     '自分で追加した問い・気づきは、ストックの関連を解除して保存すると、同じ画面で保存先プロジェクトを変更できます。AIが作った問いの保存先は元の記事から変更します。複数の関連がある場合など、別のプロジェクトにまたがる移動はできません。',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
-    '問いの自動生成を止める場合は、プロジェクトの作成時または「設定」の「詳細設定」で「ストックから問い・気づきを自動生成する」をオフにして保存します。初期値はオンです。生成済みの問いや手動での追加、要約・メモリの更新設定は変わりません。開始済みの生成は完了する場合があります。',
+    '初期設定では、プロジェクトごとに月曜（日本時間）に確認します。前回の自動追加以降に振り返れるストックが3件以上あり、具体的な問いが見つかると1件追加します。前の問いに答えるか「今回は見送る」を選ぶと、次回の対象になります。停止するには、プロジェクトの「詳細設定」で「振り返りの問いを自動で追加する」をオフにします。',
   'ui.user_manual.to_delete_a_question_or_insight_open_other_actions':
     '問い・気づきを削除するには、詳細画面の下部にある「その他の操作」を開き、「問い・気づきを削除」を選びます。問いとそのコメントは削除されますが、関連するプ譜・局面・ストックは残ります。',
   'ui.user_manual.develop_solutions_with_pufu': 'プ譜で解決の案をつくる',

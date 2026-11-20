@@ -4,6 +4,7 @@ import { testApp, mockEvent, mockStep } from './helpers';
 import type { Env, Job } from '../server/env';
 import { createPdfWorker } from './pdf-worker-helper';
 import { pdfArticleText, pdfFixture } from './pdf-fixture';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 
 describe('本文取得から要約とメモリまで', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -128,6 +129,7 @@ describe('本文取得から要約とメモリまで', () => {
 
   it('要約・問い・メモリは旧モデルのDB/Workflowキャッシュを再利用せずGemmaで生成する', async () => {
     const { id: stockId } = await savedArticle();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, stockId));
     articleFetch();
     const summary = { overview: 'Gemmaの要約。', keyPoints: ['重複を防ぐ。'], topics: [] };
     const question = { text: '再試行時の重複をどう防ぐか？' };
@@ -205,18 +207,9 @@ describe('本文取得から要約とメモリまで', () => {
     expect(article!.status).toBe('ready');
     expect(JSON.parse(article!.summary_json).keyPoints.length).toBeGreaterThan(0);
     expect(await app.env.CONTENT.get(article!.content_key)).not.toBeNull();
-    const questionJob = await app.env.DB.prepare(
-      "SELECT * FROM processing_jobs WHERE kind = 'question' AND target_id = ?",
-    )
-      .bind(stockId)
-      .first<Job>();
-    expect(questionJob).not.toBeNull();
-    await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(questionJob!.id), mockStep());
     expect(
-      (await app.env.DB.prepare('SELECT stock_id, status FROM questions WHERE stock_id = ?')
-        .bind(stockId)
-        .first())!,
-    ).toMatchObject({ stock_id: stockId, status: 'ready' });
+      await app.env.DB.prepare('SELECT id FROM questions WHERE stock_id = ?').bind(stockId).first(),
+    ).toBeNull();
     const request = fetchMock.mock.calls.find(([value]) =>
       String(value).includes('example.com/story'),
     )!;
@@ -344,7 +337,7 @@ describe('本文取得から要約とメモリまで', () => {
     expect((await app.env.CONTENT.list()).objects).toHaveLength(0);
   });
 
-  it('失敗済みのPDFを再試行し、本文保存と要約・問いの生成予約まで進む', async () => {
+  it('失敗済みのPDFを再試行し、本文保存と要約まで進む', async () => {
     const { id } = await savedArticle();
     articleFetch(403);
     await expect(runArticle()).rejects.toThrow();
@@ -381,7 +374,7 @@ describe('本文取得から要約とメモリまで', () => {
       )
         .bind(id)
         .first(),
-    ).not.toBeNull();
+    ).toBeNull();
   });
   it('要約生成中に増えた保存先にもメモリ更新を登録する', async () => {
     await savedArticle();

@@ -1,0 +1,59 @@
+{
+  "module": "BoundaryVerification.Reflections",
+  "mutations": [
+    {
+      "name": "B16-read-owner",
+      "old": " && (owner == some user)",
+      "new": "",
+      "theorem": "foreign_read_denied"
+    },
+    {
+      "name": "B16-reservation",
+      "old": "hasStock && !busy && quotaAvailable",
+      "new": "hasStock && !busy",
+      "theorem": "quota_denial_keeps_request"
+    },
+    {
+      "name": "B16-answer-generation",
+      "old": " && (entry.generation == generation) && entry.text.isSome",
+      "new": " && entry.text.isSome",
+      "theorem": "stale_answer_denied"
+    },
+    {
+      "name": "B16-week",
+      "old": " && !s.alreadyScheduled",
+      "new": "",
+      "theorem": "existing_week_keeps_schedule"
+    },
+    {
+      "name": "B16-unanswered",
+      "old": " && !s.unanswered",
+      "new": "",
+      "theorem": "unanswered_blocks_schedule"
+    },
+    {
+      "name": "B16-stock-count",
+      "old": "      (decide (3 ≤ s.eligibleStocks)) && s.changedMaterials then",
+      "new": "      s.changedMaterials then",
+      "theorem": "fewer_than_three_cannot_schedule"
+    },
+    {
+      "name": "B16-commit-owner",
+      "old": "if (owner == some jobUser) && (entry.generation == generation) &&",
+      "new": "if (entry.generation == generation) &&",
+      "theorem": "deleted_project_denies_commit"
+    },
+    {
+      "name": "B16-commit-generation",
+      "old": "if (owner == some jobUser) && (entry.generation == generation) &&",
+      "new": "if (owner == some jobUser) &&",
+      "theorem": "stale_commit_denied"
+    },
+    {
+      "name": "B16-stock-scope",
+      "old": "if stockRefsCurrent && pufuRefsCurrent then",
+      "new": "if pufuRefsCurrent then",
+      "theorem": "moved_stock_preserves_previous_question"
+    }
+  ]
+}

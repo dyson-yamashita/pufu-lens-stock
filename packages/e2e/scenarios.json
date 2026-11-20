@@ -450,6 +450,24 @@
     ]
   },
   {
+    "id": "REFLECTION-001",
+    "estimatedSeconds": 12,
+    "title": "期間から振り返りの問いを作成・保存",
+    "sources": [
+      "src/features/questions/Reflections.tsx",
+      "src/features/questions/Questions.tsx",
+      "src/features/questions/questions.css",
+      "server/api/routes/reflections.ts",
+      "server/features/questions/reflection-repository.ts",
+      "server/features/questions/reflection-generation.ts",
+      "shared/reflections.ts"
+    ],
+    "aspects": [
+      "問い・気づきから期間を選び、デモのWorkflowで問いを生成。きっかけのストック詳細を開けることと、回答を再読込後も表示することを両画面幅で確認",
+      "週次の繰り越し、未回答時の追加保留、プロジェクトごとの資料の分離、非公開のAPIはVitestで検証"
+    ]
+  },
+  {
     "id": "FEEDBACK-001",
     "estimatedSeconds": 8,
     "title": "プフィの検知・会話・保守向けDB保存",

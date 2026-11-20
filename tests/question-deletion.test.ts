@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { applyMigration, mockEvent, mockStep, testApp, upgradeRelationsSchema } from './helpers';
-import { queueQuestionStatements } from '../server/infrastructure/db';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type { Question } from '../shared/domain';
@@ -137,7 +137,7 @@ describe('問いの削除', () => {
     expect((await remove('question-stock-first')).status).toBe(200);
     expect((await storedStock())!.ai_question_dismissed).toBe(1);
     await app.env.DB.prepare("UPDATE articles SET status='ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent('q-stock-first-1'), mockStep());
     expect((await questions()).questions.map((q) => q.id)).toEqual(['manual-first']);
     expect(
@@ -189,10 +189,10 @@ describe('問いの削除', () => {
       app.env.DB.prepare(
         "INSERT INTO stocks (id,user_id,project_id,article_id) VALUES ('second','alice','alice-second','article-first')",
       ),
-      ...queueQuestionStatements(app.env, 'second'),
+      ...legacyQuestionStatements(app.env, 'second'),
     ]);
     await remove('question-stock-first');
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     const list = (await (await app.request('/api/v1/questions?source=ai')).json()) as {
       questions: Question[];
       total: number;

@@ -15,7 +15,7 @@ import {
 import { listStocks } from '../../features/stocks/stock-search';
 import { textArticleCanonical } from '../../features/stocks/text-stock-content';
 import { SearchError } from '../../infrastructure/ai/search-ai';
-import { dirtyMemoryStatements, now, queueQuestionStatements } from '../../infrastructure/db';
+import { dirtyMemoryStatements, now } from '../../infrastructure/db';
 import { observeOperation } from '../../infrastructure/diagnostics';
 import { dispatchJobs } from '../../infrastructure/jobs/jobs';
 import { canonicalUrl, hash, validateUrl } from '../../infrastructure/security';
@@ -194,7 +194,6 @@ export function registerStockCollectionRoutes(app: Hono<AppEnv>) {
         ...(!youtube || data.note.trim()
           ? dirtyMemoryStatements(c.env, user.id, [project.id], stockId)
           : []),
-        ...(!youtube ? queueQuestionStatements(c.env, stockId) : []),
       );
     }
     statements.push(

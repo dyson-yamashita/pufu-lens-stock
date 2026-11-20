@@ -90,7 +90,7 @@ export function registerStocksTools(context: McpToolContext) {
     {
       title: 'ストック追加',
       description:
-        '指定プロジェクトにURLまたはテキストを保存します。type=urlならurl、type=textならtextを指定します。skip_summary=trueで要約せず、入力または取得した本文をそのまま採用します。省略時は従来どおり要約します。要約ありと本文採用は別のストックとして保存します。request_idは保存操作ごとに新しいUUIDを使い、再送では同じ値を使います。本文処理・AIの問い・気づき・メモリ更新は非同期です。',
+        '指定プロジェクトにURLまたはテキストを保存します。type=urlならurl、type=textならtextを指定します。skip_summary=trueで要約せず、入力または取得した本文をそのまま採用します。省略時は従来どおり要約します。要約ありと本文採用は別のストックとして保存します。request_idは保存操作ごとに新しいUUIDを使い、再送では同じ値を使います。本文処理とメモリ更新は非同期です。',
       inputSchema: z.object({
         project_id: id,
         type: z.enum(['url', 'text']),
@@ -102,7 +102,7 @@ export function registerStocksTools(context: McpToolContext) {
           .boolean()
           .default(false)
           .describe(
-            'trueで要約せず本文をそのまま採用します。既定はfalse。AIの問い・気づき・メモリ更新は通常どおり実行します。',
+            'trueで要約せず本文をそのまま採用します。既定はfalse。メモリ更新は通常どおり実行します。',
           ),
         request_id: z.uuid(),
       }),

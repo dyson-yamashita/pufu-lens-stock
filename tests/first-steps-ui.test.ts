@@ -73,6 +73,7 @@ beforeEach(() => {
     if (url.pathname === '/api/v1/memory') return { memory: null, pending: false, error: null };
     if (url.pathname === '/api/v1/stocks') return { stocks: [], total: 0 };
     if (url.pathname === '/api/v1/questions') return { questions: [], total: 0 };
+    if (url.pathname === '/api/v1/reflections') return { reflections: [], has_more: false };
     throw new Error('想定外の取得先: ' + path);
   });
   root = createRoot(document.getElementById('root')!);
@@ -137,7 +138,7 @@ it('お気に入り0件を初回の空状態と混同しない', async () => {
 });
 
 it.each([true, false])(
-  '問いの空状態は追加ボタンを持ち、設定に応じてAIの説明を出す（%s）',
+  '問いを手入力でき、振り返りの自動追加の案内は設定に従う（%s）',
   async (auto) => {
     projects = [{ ...project(), auto_generate_questions: auto }];
     window.location.hash = '#questions';
@@ -146,7 +147,7 @@ it.each([true, false])(
       '問い・気づきを追加',
     );
     expect(
-      document.querySelector('.questions-page .empty-state')!.textContent!.includes('AIの問い'),
+      document.querySelector('.reflections')!.textContent!.includes('新しいストックが3件'),
     ).toBe(auto);
     await click('.questions-page .empty-state button');
     expect(document.querySelector('#question-text')).not.toBeNull();

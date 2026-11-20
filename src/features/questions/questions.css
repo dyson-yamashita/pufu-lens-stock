@@ -1,6 +1,86 @@
 .questions-page {
   max-width: 1100px;
 }
+.reflections {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.reflections > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+.reflection-period,
+.reflection-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.reflection-period summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.reflection-period[open] summary svg {
+  transform: rotate(180deg);
+}
+.reflections .question-settings {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+}
+.reflection-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.reflection-fields label,
+.reflection-answer-form label {
+  display: grid;
+  gap: 6px;
+}
+.reflection-card h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.reflection-card .question-text {
+  margin: 10px 0;
+}
+.reflection-sources ul {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.reflection-sources .button {
+  justify-content: flex-start;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.reflection-sources time {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.reflection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.reflection-answer p:last-child {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .question-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

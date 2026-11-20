@@ -3,6 +3,7 @@ import type { Env, Job } from '../../env';
 import { meteredOperation, observeAiUsage } from '../../infrastructure/ai/ai-neurons';
 import { MAX_ATTEMPTS, deferJob } from '../../infrastructure/jobs/job-retries';
 import { PufuFactValidationError } from '../pufu/generation/pufu-fact-validation';
+import { manualReflectionJobPrefix } from '../questions/reflection-repository';
 
 const windowStart = () => new Date(Date.now() - 86400000).toISOString();
 const setting = (value: string | undefined, fallback: number) =>
@@ -19,6 +20,8 @@ export const limits = (env: Env) => ({
   concurrentCalls: setting(env.AI_CONCURRENT_CALLS, 5),
 });
 const category = (kind: Job['kind']) => (kind.endsWith('_memory') ? 'memory' : kind);
+// 手動の振り返りは受付時点で枠を確保する。通常の自動生成は起動時まで待つ。
+const waitingQuestion = `j.kind='question' AND j.status='pending' AND j.id NOT LIKE '${manualReflectionJobPrefix}%'`;
 type OperationGuard = { sql: string; params: (string | number | null)[] };
 export function reserveOperation(
   env: Env,
@@ -36,7 +39,7 @@ export function reserveOperation(
     (SELECT COUNT(*) FROM ai_operations WHERE user_id=? AND kind=? AND created_at>?) < ?
     AND (SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
       WHERE o.user_id=? AND j.status NOT IN ('done','failed')
-      AND NOT (j.kind='question' AND j.status='pending')) < ?
+      AND NOT (${waitingQuestion})) < ?
     AND (SELECT COUNT(*) FROM ai_attempts WHERE user_id=? AND created_at>?) < ?
     AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running') < ?
     AND (${guard?.sql ?? '1'})`,
@@ -131,7 +134,7 @@ export async function admitJob(env: Env, job: Job): Promise<boolean> {
         WHERE o.id=? AND u.onboarding_completed_at IS NOT NULL AND (? != 'question' OR (
         SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
         WHERE o.user_id=? AND j.id!=? AND j.status NOT IN ('done','failed')
-        AND NOT (j.kind='question' AND j.status='pending')) < ?)`,
+        AND NOT (${waitingQuestion})) < ?)`,
     )
       .bind(job.id, job.kind, job.user_id, job.id, limits(env).concurrent)
       .first(),
@@ -224,7 +227,9 @@ export async function aiStep<T extends object>(
           ? 'SELECT 1 FROM users WHERE id=? AND memory_revision=? AND onboarding_completed_at IS NOT NULL'
           : job.kind === 'pufu'
             ? 'SELECT 1 FROM pufu_scores WHERE id=? AND generation=? AND user_id=?'
-            : null;
+            : job.purpose === 'reflection'
+              ? 'SELECT 1 FROM reflections r JOIN projects p ON p.id=r.project_id WHERE r.id=? AND r.generation=? AND p.user_id=?'
+              : null;
       const guardValues =
         job.kind === 'user_memory'
           ? [job.user_id, job.revision]
@@ -258,7 +263,7 @@ export async function deferLimitedJob(env: Env, job: Job, error: unknown): Promi
         `UPDATE ${table} SET status='queued',error=? WHERE id=? AND user_id=? AND generation=? AND status!='ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='pending')`,
       ).bind(message, job.target_id, job.user_id, job.revision, job.id),
     );
-  } else if (job.kind === 'question') {
+  } else if (job.kind === 'question' && job.purpose !== 'reflection') {
     statements.push(
       env.DB.prepare(
         "UPDATE questions SET status='queued',error=? WHERE stock_id=? AND generation=? AND source='ai' AND status!='ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='pending')",

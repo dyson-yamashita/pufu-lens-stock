@@ -23,10 +23,11 @@ inductive Status where
   | absent | pending | running | done | failed
   deriving DecidableEq, Repr
 
--- For operations joined to processing_jobs, question/pending does not occupy
--- a concurrent job slot. The join and same-job owner consistency are premises.
-def activeJob (kind : Kind) (status : Status) : Bool :=
-  decide (status ≠ .done ∧ status ≠ .failed ∧ ¬ (kind = .question ∧ status = .pending))
+-- Pending manual reflections continue holding a slot reserved at acceptance.
+-- The operations/jobs join and server-assigned job kind and ID are premises.
+def activeJob (kind : Kind) (status : Status) (manualReflection : Bool) : Bool :=
+  decide (status ≠ .done ∧ status ≠ .failed ∧
+    ¬ (kind = .question ∧ status = .pending ∧ manualReflection = false))
 
 structure Limits where
   operations : Nat
@@ -149,7 +150,11 @@ theorem another_owner_excluded (owner : Nat) (kind : Kind) (boundary : Nat) (r :
     (h : r.owner ≠ owner) : counted owner kind boundary r = false := by
   simp [counted, h]
 
-theorem pending_question_is_not_active : activeJob .question .pending = false := by decide
+theorem pending_automatic_question_is_not_active :
+    activeJob .question .pending false = false := by decide
+
+theorem pending_manual_reflection_is_active :
+    activeJob .question .pending true = true := by decide
 
 theorem rejected_operation_preserves_state (c : Context) (s : State)
     (h : ¬ operationGuard c s) : reserveOperation c s = s := by

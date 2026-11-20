@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import { URLSearchParams } from 'node:url';
 import { legalVersions } from '../shared/legal.ts';
+import { reflectionDay } from '../shared/reflections.ts';
 
 const base = process.env.SMOKE_BASE_URL ?? 'http://localhost:5173';
 // 同時実行枠が埋まると最短60秒待機するため、再試行と完了までの時間も含める。
@@ -52,17 +53,14 @@ try {
     if (stock?.status === 'failed') throw new Error(stock.error);
     const { memory } = await request(`/memory?project_id=${projectId}`);
     const { question } = await request(`/stocks/${saved.id}/question`);
-    if (question?.status === 'failed') throw new Error(question.error);
-    if (stock?.status === 'ready' && memory?.article_count === 1 && question?.status === 'ready') {
+    assert.equal(question, null);
+    if (stock?.status === 'ready' && memory?.article_count === 1) {
       const { content } = await request(`/stocks/${saved.id}/content`);
       assert.ok(content.length >= 200);
       assert.ok(stock.summary.keyPoints.length);
       assert.ok(memory.data.knowledge[0].articleIds.includes(stock.article_id));
-      assert.equal(question.stock_id, saved.id);
-      assert.equal(question.project_id, projectId);
-      assert.ok(question.text.length);
       const questions = await request(`/questions?project_id=${projectId}`);
-      assert.equal(questions.total, 1);
+      assert.equal(questions.total, 0);
       const manual = await request('/questions', 'POST', {
         stock_id: saved.id,
         text: 'この仕組みを利用するとき、どの点を確認すべきだろう？',
@@ -71,8 +69,8 @@ try {
       assert.equal(manual.question.source, 'user');
       assert.equal(manual.question.stock_id, saved.id);
       const details = await request(`/stocks/${saved.id}/question`);
-      assert.equal(details.question.source, 'ai');
-      assert.equal(details.questions.length, 2);
+      assert.equal(details.question.source, 'user');
+      assert.equal(details.questions.length, 1);
       assert.ok(details.questions.some((value) => value.id === manual.question.id));
       const userQuestions = await request(`/questions?project_id=${projectId}&source=user`);
       assert.equal(userQuestions.total, 1);
@@ -102,13 +100,8 @@ try {
       while (Date.now() < textDeadline) {
         const { stock: textDetail } = await request(`/stocks/${textStock.id}`);
         if (textDetail.status === 'failed') throw new Error(textDetail.error);
-        const { question: textQuestion } = await request(`/stocks/${textStock.id}/question`);
         const { memory: textMemory } = await request(`/memory?project_id=${projectId}`);
-        if (
-          textDetail.status === 'ready' &&
-          textQuestion?.status === 'ready' &&
-          textMemory?.article_count === 2
-        ) {
+        if (textDetail.status === 'ready' && textMemory?.article_count === 2) {
           assert.equal(textDetail.source_type, 'text');
           assert.equal(textDetail.title, 'テキストストックの検証');
           assert.equal(textDetail.source_url, '');
@@ -124,8 +117,36 @@ try {
         await setTimeout(1000);
       }
       assert.ok(textVerified, '180秒以内にテキストの処理が完了しませんでした。');
+      const from = reflectionDay(Date.parse(stock.created_at));
+      const { id: reflectionId } = await request('/reflections', 'POST', {
+        project_id: projectId,
+        from,
+        to: reflectionDay(Date.now()),
+        request_id: randomUUID(),
+      });
+      let reflectionVerified = false;
+      const reflectionDeadline = Date.now() + processingTimeoutMs;
+      while (Date.now() < reflectionDeadline) {
+        const { reflections } = await request(`/reflections?project_id=${projectId}`);
+        const reflection = reflections.find((value) => value.id === reflectionId);
+        if (reflection?.status === 'failed')
+          throw new Error('振り返りの問いを生成できませんでした。');
+        if (reflection?.status === 'ready') {
+          assert.ok(reflection.text);
+          assert.ok(reflection.stocks.length);
+          await request(`/reflections/${reflectionId}`, 'PATCH', {
+            action: 'answer',
+            generation: reflection.generation,
+            answer: '次回は再試行の条件を確かめる。',
+          });
+          reflectionVerified = true;
+          break;
+        }
+        await setTimeout(1000);
+      }
+      assert.ok(reflectionVerified, '180秒以内に振り返りの生成が完了しませんでした。');
       console.log(
-        'ローカルWorkersでURLとテキストの保存・R2保存・要約・AIの問い・ユーザーの問いの追加・根拠付きメモリ更新を確認しました。',
+        'ローカルWorkersでストック・要約・メモリ更新・手動の問い・期間からの振り返りを確認しました。',
       );
       verified = true;
       break;

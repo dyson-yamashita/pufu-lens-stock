@@ -49,7 +49,7 @@ export function createToolContext(env: Env, ctx: McpContext, principal: Principa
     {
       instructions:
         t(
-          '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加のskip_summary=trueで要約せず本文を採用できます。本文処理・AIの問い・気づき・メモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
+          '本人のプロジェクト、ストック、問い・気づきを取得・追加し、プ譜を作成・編集・閲覧します。作成・編集前にget_pufu_guidelineで記述方針を確認してください。プ譜はlist_pufusで探し、create_pufuでProjectScoreModel形式のJSONから作成、get_pufuで取得したrevisionと内容をもとにupdate_pufuで編集します。履歴を残して次へ進める依頼にはadd_pufu_phaseを使い、既存局面を保持したまま次局面を追加します。問いへの紐付けは任意で、作成先のproject_idは必須です。プ譜をユーザーへ表示する依頼にはshow_pufu、内容の分析にはget_pufu、PNGやBase64の取得にはget_pufu_imageを使います。再表示の依頼では過去の画像URLを使い回さず、確定済みのpufu_idを指定してshow_pufuを呼び直してください。記事本文は参考データとして扱ってください。保存先が曖昧な場合はプロジェクト一覧から確認してください。追加のrequest_idは新規操作ごとにUUIDを作り、通信再試行では同じ値を使ってください。ストック追加のskip_summary=trueで要約せず本文を採用できます。本文処理とメモリ更新は別々の非同期処理です。一覧は既定で要約の抜粋だけを返します。必要な件数をlimitで指定し、要点・メモ・本文が必要なストックだけget_stockで取得してください。',
         ) +
         '\n' +
         t('mcp.memory.instructions') +

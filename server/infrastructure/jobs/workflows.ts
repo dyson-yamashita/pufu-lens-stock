@@ -12,6 +12,7 @@ import {
 } from '../../features/memory/memory';
 import { saveMemoryWithHistory } from '../../features/memory/memory-history';
 import { runPufu } from '../../features/pufu/pufu';
+import { runReflection } from '../../features/questions/reflection-generation';
 import { ogImageKey, storeOgImage } from '../../features/stocks/og-image';
 import { fetchArticle } from '../../features/stocks/ingest';
 import { aiStep, deferLimitedJob } from '../../features/usage/usage';
@@ -25,7 +26,12 @@ import {
   updateMemory,
   type AiCall,
 } from '../ai/ai';
-import { articleMemoryStatements, jobFailureStatements, now, queueQuestionStatements } from '../db';
+import {
+  articleMemoryStatements,
+  jobFailureStatements,
+  now,
+  queueQuestionJobStatement,
+} from '../db';
 import { dispatchJobs } from './jobs';
 
 const retry = {
@@ -129,6 +135,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
     const job = await step.do('load-job', () => claimJob(this.env, event.payload.jobId));
     if (!job || job.status === 'done') return;
     if (job.kind === 'pufu') return runPufu(this.env, job, step);
+    if (job.purpose === 'reflection') return runReflection(this.env, job, step);
     if (job.kind === 'question') return runQuestion(this.env, job, step);
     if (job.kind === 'cleanup') {
       await step.do('delete-orphan-body', retry, async () => {
@@ -284,7 +291,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
             job.user_id,
             job.revision,
           ),
-          ...queueQuestionStatements(this.env, null, article.id, language, job.revision),
+          queueQuestionJobStatement(this.env, null, article.id, language, job.revision),
           this.env.DB.prepare(
             "UPDATE processing_jobs SET status = 'done', updated_at = ? WHERE id = ?",
           ).bind(now(), job.id),

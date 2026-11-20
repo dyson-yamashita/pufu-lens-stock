@@ -1,4 +1,4 @@
-# 境界処理の最小モデル B01〜B15
+# 境界処理の最小モデル B01〜B16
 
 MCP以外も含む既存境界をLean 4.36.0で扱う。[B00 update_pufu](../mcp-verification/README.md)の仕様と検証範囲は専用のREADMEを参照する。
 
@@ -23,6 +23,7 @@ MCP以外も含む既存境界をLean 4.36.0で扱う。[B00 update_pufu](../mcp
 | B13 | [Push](BoundaryVerification/Push.lean) / [仕様](specs/push.md)                             | セッション付き購読、配信前の再確認、試行/lease遷移                               |
 | B14 | [Intake](BoundaryVerification/Intake.lean) / [仕様](specs/intake.md)                       | 画像のサイズ/形式/予約、親/scope/key付き確定、PDF/AI出力の採用条件               |
 | B15 | [TextStock](BoundaryVerification/TextStock.lean) / [仕様](specs/text-stock.md)             | 本文の所有者・世代の再確認、共有分離、メモリ世代の失効                           |
+| B16 | [Reflections](BoundaryVerification/Reflections.lean) / [仕様](specs/reflections.md)        | 振り返りの本人限定、受付と週次予約の重複防止、生成確定時の世代と関連             |
 
 すべてのモデルに成功と拒否の到達例を置く。各モデルの入力となるスキーマ判定や公開IP分類などの前提は、仕様文書に記載する。
 

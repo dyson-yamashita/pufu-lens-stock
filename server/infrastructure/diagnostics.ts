@@ -16,6 +16,7 @@ export type Operation =
   | 'dispatch_pending'
   | 'workflow_dispatch'
   | 'search_index_maintenance'
+  | 'reflection_schedule'
   | 'pufu_image_link_cleanup'
   | 'api_request'
   | 'worker_request'
@@ -35,7 +36,7 @@ export function diagnosticRoute(url: string): string {
   )
     return path;
   const match =
-    /^\/api\/v1\/(stocks|questions|projects|pufus|memory|comments|me|tokens|articles)(?:\/([^/]+))?(?:\/(content|images|retry|pufus|history|phases))?$/.exec(
+    /^\/api\/v1\/(stocks|questions|reflections|projects|pufus|memory|comments|me|tokens|articles)(?:\/([^/]+))?(?:\/(content|images|retry|pufus|history|phases))?$/.exec(
       path,
     );
   if (match) return `/api/v1/${match[1]}${match[2] ? '/:id' : ''}${match[3] ? `/${match[3]}` : ''}`;

@@ -170,10 +170,10 @@ it('短い本文の案内から公開範囲の説明つきメモフォームを�
   expect(detail.querySelector('label[for="edit-note"]')?.textContent).toContain('なぜ気になった');
   expect(
     document.getElementById(textarea.getAttribute('aria-describedby')!)?.textContent,
-  ).toContain('問い・気づきとメモリ');
+  ).toContain('振り返りとメモリ');
   expect(
     document.getElementById(textarea.getAttribute('aria-describedby')!)?.textContent,
-  ).toContain('問い・気づきも公開');
+  ).toContain('公開プロジェクトの既存のストック単位のAIの問い');
   vi.mocked(send).mockRejectedValueOnce(new Error('保存できませんでした'));
   await act(async () =>
     textarea

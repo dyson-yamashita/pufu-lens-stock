@@ -70,6 +70,7 @@ export type Job = {
   id: string;
   user_id: string;
   kind: 'article' | 'project_memory' | 'user_memory' | 'cleanup' | 'question' | 'pufu';
+  purpose?: '' | 'reflection';
   target_id: string;
   revision: number;
   memory_mode?: 'incremental' | 'full';

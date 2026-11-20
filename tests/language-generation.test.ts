@@ -12,6 +12,7 @@ import { generatePufu } from '../server/features/pufu/pufu';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Env, Job } from '../server/env';
 import { mockEvent, mockStep, testApp } from './helpers';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 
 const source: Source = {
   articleId: 'article-1',
@@ -106,7 +107,7 @@ describe('受け付けたジョブの生成言語', () => {
       .bind(kind)
       .first<Job>();
 
-  it('待機中に設定を変えても記事と遅延生成の子質問は受付時の英語を使う', async () => {
+  it('待機中に設定を変えても記事と既存のストック単位の問いは受付時の英語を使う', async () => {
     app = await testApp();
     await profile('en');
     const saved = await app.request('/api/v1/stocks', {
@@ -119,6 +120,8 @@ describe('受け付けたジョブの生成言語', () => {
       },
     });
     expect(saved.status).toBe(202);
+    const { id } = (await saved.json()) as { id: string };
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await profile('ja');
     const systems: string[] = [];
     app.env.AI = {

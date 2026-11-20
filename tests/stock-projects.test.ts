@@ -61,9 +61,7 @@ describe('ストックの保存先指定', () => {
     const questions = await app.env.DB.prepare('SELECT stock_id FROM questions').all<{
       stock_id: string;
     }>();
-    expect(questions.results.map((q) => q.stock_id).sort()).toEqual(
-      saved.map((stock) => stock.id).sort(),
-    );
+    expect(questions.results).toEqual([]);
     const jobs = await app.env.DB.prepare('SELECT kind FROM processing_jobs').all<{
       kind: string;
     }>();

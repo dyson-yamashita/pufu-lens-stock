@@ -1018,7 +1018,7 @@ describe('MCPによるストックと問いの取得・追加', () => {
           )
             .bind(stockId)
             .first(),
-        ).toEqual({ kind: 'question' });
+        ).toBeNull();
         expect(
           await app.env.DB.prepare(
             "SELECT kind FROM processing_jobs WHERE kind = 'project_memory' AND target_id = 'alice-project' LIMIT 1",

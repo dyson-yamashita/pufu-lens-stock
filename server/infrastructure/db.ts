@@ -13,20 +13,6 @@ export function queueQuestionJobStatement(
     "INSERT OR IGNORE INTO processing_jobs (id, user_id, kind, target_id, revision, language) SELECT 'q-' || s.id || '-' || q.generation, s.user_id, 'question', s.id, q.generation, ? FROM questions q JOIN stocks s ON s.id = q.stock_id JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND q.source = 'ai' AND q.status = 'queued' AND a.status = 'ready' AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?) AND a.generation = COALESCE(?, a.generation)",
   ).bind(language ?? '', stockId, stockId, articleId, articleId, articleGeneration ?? null);
 }
-export function queueQuestionStatements(
-  env: Env,
-  stockId: string | null = null,
-  articleId: string | null = null,
-  language?: Language,
-  articleGeneration?: number,
-): D1PreparedStatement[] {
-  return [
-    env.DB.prepare(
-      "INSERT OR IGNORE INTO questions (id, project_id, stock_id, status, error, created_at) SELECT 'question-' || s.id, s.project_id, s.id, CASE WHEN a.status = 'failed' THEN 'failed' ELSE 'queued' END, CASE WHEN a.status = 'failed' THEN '記事の取得・要約が完了していません。記事の再取得をお試しください。' ELSE NULL END, s.created_at FROM stocks s JOIN articles a ON a.id = s.article_id JOIN projects p ON p.id = s.project_id WHERE p.auto_generate_questions = 1 AND s.ai_question_dismissed = 0 AND (? IS NULL OR s.id = ?) AND (? IS NULL OR s.article_id = ?) AND a.generation = COALESCE(?, a.generation)",
-    ).bind(stockId, stockId, articleId, articleId, articleGeneration ?? null),
-    queueQuestionJobStatement(env, stockId, articleId, language, articleGeneration),
-  ];
-}
 export function jobFailureStatements(
   env: Env,
   job: Job,
@@ -62,6 +48,14 @@ export function jobFailureStatements(
       env.DB.prepare(
         "UPDATE pufu_scores SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND user_id = ? AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')",
       ).bind(message, now(), job.target_id, job.user_id, job.revision, job.id),
+    );
+  } else if (job.purpose === 'reflection') {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE reflections SET status='failed' WHERE id=? AND generation=? AND status='queued'
+        AND EXISTS(SELECT 1 FROM projects WHERE id=reflections.project_id AND user_id=?)
+        AND EXISTS(SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')`,
+      ).bind(job.target_id, job.revision, job.user_id, job.id),
     );
   } else if (job.kind === 'question') {
     statements.push(

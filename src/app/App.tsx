@@ -102,6 +102,7 @@ export default function App({
     openQuestion,
     openStock,
     backFromStock,
+    backFromPufu,
     openPufu,
     navigate,
     restoreStockScroll,
@@ -315,15 +316,16 @@ export default function App({
                 }
                 refresh={refresh}
                 onQuestion={openQuestion}
+                onReflectionPufu={(id) => openPufu(id, true)}
                 onScope={(id) => {
                   if (libraryView) filterProject(id);
                   else navigate('questions', id);
                 }}
-                onOpen={async (id) => {
+                onOpen={async (id, tab = 'question') => {
                   const { stock } = await api<{
                     stock: Stock;
-                  }>(`/api/v1/stocks/${id}`);
-                  openStock(stock, 'question');
+                  }>(`/api/v1/stocks/${encodeURIComponent(id)}`);
+                  openStock(stock, tab);
                 }}
               />
             </div>
@@ -395,20 +397,16 @@ export default function App({
                 backLabel={
                   pufuSource.questionId
                     ? t('ui.app.back_to_question_or_insight')
-                    : t('ui.app.back_to_pufu_list')
+                    : pufuSource.fromReflection
+                      ? t('reflection.back')
+                      : t('ui.app.back_to_pufu_list')
                 }
-                onBack={() => {
-                  if (pufuSource.questionId) navigateDetail('question', pufuSource.questionId);
-                  else
-                    window.location.hash = `#pufus${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
-                }}
+                onBack={backFromPufu}
                 onGuard={setNavigationGuard}
                 onDeleted={() => {
                   setNotice({ message: t('ui.pufu_page.pufu_deleted') });
                   reload();
-                  if (pufuSource.questionId) navigateDetail('question', pufuSource.questionId);
-                  else
-                    window.location.hash = `#pufus${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
+                  backFromPufu();
                 }}
               />
             ) : (

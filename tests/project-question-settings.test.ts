@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
-import { queueQuestionStatements } from '../server/infrastructure/db';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 import { dispatchJobs, scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
 import { admitJob, AiLimitError, deferLimitedJob } from '../server/features/usage/usage';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
@@ -142,7 +142,6 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
       expect(detail.stock.summary?.overview).toBeTruthy();
     } else {
       await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-      await app.env.DB.batch(queueQuestionStatements(app.env));
     }
     await scheduledMaintenance(app.env);
     expect(await questions(id)).toEqual([]);
@@ -157,8 +156,9 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     ).toEqual(['article', 'project_memory', 'user_memory']);
   });
 
-  it('生成済みと手動の問いを保持し、同じ要約済み記事でも保存先の設定に従う', async () => {
+  it('設定変更で既存・手動の問いを保持し、設定にかかわらず新しい単体の問いを作らない', async () => {
     const first = await save();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, first));
     await run('article', first);
     await run('question', first);
     const before = await questions(first);
@@ -174,8 +174,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
       '手動の問いを追加できる？',
     );
     const second = await save({}, 'alice-second');
-    await run('question', second);
-    expect((await questions(second))[0].status).toBe('ready');
+    expect(await questions(second)).toEqual([]);
     const offProject = await app.request('/api/v1/projects', {
       method: 'POST',
       body: { name: '要約済み記事の保存先', auto_generate_questions: false },
@@ -189,8 +188,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await update(true);
     const resumedStock = await save({ text: 'オンに戻した後の記事。' });
     await run('article', resumedStock);
-    await run('question', resumedStock);
-    expect((await questions(resumedStock))[0].status).toBe('ready');
+    expect(await questions(resumedStock)).toEqual([]);
   });
 
   it('オフにすると未開始の問いジョブを待機させ、オンに戻すと再開する', async () => {
@@ -198,7 +196,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await app.env.DB.prepare("UPDATE articles SET status = 'ready', summary_json = ?")
       .bind(JSON.stringify({ overview: '概要', keyPoints: ['要点'], topics: ['話題'] }))
       .run();
-    await app.env.DB.batch(queueQuestionStatements(app.env, id));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await update(false);
     await scheduledMaintenance(app.env);
     expect(
@@ -222,7 +220,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await save({ text: '2件目の問いの生成元。' });
     await app.env.DB.prepare("UPDATE processing_jobs SET status = 'done'").run();
     await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     app.env.AI_CONCURRENT_JOBS = '2';
     const jobs = await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind = 'question'",
@@ -262,7 +260,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     const id = await save();
     await app.env.DB.prepare("UPDATE processing_jobs SET status = 'done'").run();
     await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env, id));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await app.env.DB.prepare(
       "INSERT INTO processing_jobs (id,user_id,kind,target_id,revision) VALUES ('toggle-before-question','alice','cleanup','unused',1)",
     ).run();
@@ -287,6 +285,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     '短文のメモ変更や移動でも保存先%sがオフなら生成済みの問いを保持する',
     async (projectId) => {
       const id = await save();
+      await app.env.DB.batch(legacyQuestionStatements(app.env, id));
       await run('article', id);
       await run('question', id);
       const [before] = await questions(id);
@@ -314,7 +313,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await save({ text: '再開する2件目の問い。' });
     await app.env.DB.prepare("UPDATE processing_jobs SET status = 'done'").run();
     await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     app.env.AI_CONCURRENT_JOBS = '2';
     const jobs = await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind = 'question'",

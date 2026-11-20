@@ -28,7 +28,7 @@ export function registerApiErrors(app: Hono<AppEnv>) {
             ? 'pufu'
             : c.req.path.includes('/memory/')
               ? 'user_memory'
-              : c.req.path.includes('/question/')
+              : c.req.path.includes('/question/') || c.req.path.startsWith('/api/v1/reflections')
                 ? 'question'
                 : 'article',
       );
