@@ -1295,7 +1295,7 @@ export const en: Record<string, string> = {
   'manual.help_paste_text': 'You can also paste the article text and retry.',
   'manual.help_pdf_limits': 'PDFs must be within 10 MB and 100 pages.',
   'manual.help_access_settings':
-    'Check access restrictions and integration settings shown on screen.',
+    'If the site disallows crawling in robots.txt, the URL is saved without the article text. Check any access restrictions and integration settings shown on screen.',
   'manual.help_youtube_retrieval':
     'YouTube uses an embedded player and does not support article-retrieval retries.',
   'manual.help_youtube_playback': 'If playback fails, use Open on YouTube.',
@@ -1443,6 +1443,10 @@ export const en: Record<string, string> = {
   'error.could_not_retrieve_the_article_text_configure_javascript_enabled_browser':
     'Could not retrieve the article text. Configure JavaScript-enabled Browser Run or try another public URL.',
   'error.could_not_retrieve_public_article_text': 'Could not retrieve public article text.',
+  'error.article_crawling_disallowed':
+    'The site disallows crawling in robots.txt, so the article text could not be retrieved.',
+  'error.article_robots_unavailable':
+    'Article retrieval was skipped because robots.txt could not be checked.',
   'error.the_page_is_too_large_2_mb_maximum': 'The page is too large (2 MB maximum).',
   'error.the_page_is_too_large_3_mb_maximum': 'The page is too large (3 MB maximum).',
   'error.too_many_redirects_or_an_invalid_destination':

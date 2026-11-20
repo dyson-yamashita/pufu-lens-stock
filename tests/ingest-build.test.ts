@@ -43,6 +43,7 @@ it('ビルド後もCanvas要素を含む記事の本文と次ページを取得�
         Status: 0,
         Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '8.8.8.8' }] : [],
       });
+    if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
     requests.push(url.href);
     const last = url.pathname.endsWith('/2');
     return new Response(

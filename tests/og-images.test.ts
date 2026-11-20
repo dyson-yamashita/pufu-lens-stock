@@ -32,6 +32,7 @@ async function save(
         });
       expect(new Headers(init?.headers).get('Cookie')).toBeNull();
       expect(new Headers(init?.headers).get('Authorization')).toBeNull();
+      if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
       requests.push(url.href);
       if (url.pathname !== '/story') return imageResponse();
       return new Response(

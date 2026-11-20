@@ -1276,7 +1276,7 @@ export const ja: Record<string, string> = {
   'manual.help_paste_text': '本文を貼り付けて再試行することもできます。',
   'manual.help_pdf_limits': 'PDFは10MB・100ページまでが対象です。',
   'manual.help_access_settings':
-    'ページの閲覧制限や、画面に表示された外部連携の設定も確認してください。',
+    'サイトが robots.txt でクロールを禁止している場合は、URLだけが保存されます。ページの閲覧制限や、画面に表示された外部連携の設定も確認してください。',
   'manual.help_youtube_retrieval':
     'YouTubeの動画は埋め込みプレーヤーで表示するため、記事取得の再試行はできません。',
   'manual.help_youtube_playback': '再生できない場合は「YouTubeで開く」からご覧ください。',
@@ -1423,6 +1423,10 @@ export const ja: Record<string, string> = {
   'error.could_not_retrieve_the_article_text_configure_javascript_enabled_browser':
     '本文を取得できませんでした。JavaScript対応のBrowser Runを設定するか、別の公開URLをお試しください。',
   'error.could_not_retrieve_public_article_text': '公開された本文を取得できませんでした。',
+  'error.article_crawling_disallowed':
+    'robots.txt でクロールが禁止されているため、本文を取得できません。',
+  'error.article_robots_unavailable':
+    'robots.txt を確認できなかったため、本文の取得を見送りました。',
   'error.the_page_is_too_large_2_mb_maximum': 'ページが大きすぎます（上限2MB）。',
   'error.the_page_is_too_large_3_mb_maximum': 'ページが大きすぎます（上限3MB）。',
   'error.too_many_redirects_or_an_invalid_destination':

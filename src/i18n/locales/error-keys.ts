@@ -93,6 +93,10 @@ export const errorKeys: Record<string, string> = {
   '本文を取得できませんでした。JavaScript対応のBrowser Runを設定するか、別の公開URLをお試しください。':
     'error.could_not_retrieve_the_article_text_configure_javascript_enabled_browser',
   '公開された本文を取得できませんでした。': 'error.could_not_retrieve_public_article_text',
+  'robots.txt でクロールが禁止されているため、本文を取得できません。':
+    'error.article_crawling_disallowed',
+  'robots.txt を確認できなかったため、本文の取得を見送りました。':
+    'error.article_robots_unavailable',
   'ページが大きすぎます（上限2MB）。': 'error.the_page_is_too_large_2_mb_maximum',
   'ページが大きすぎます（上限3MB）。': 'error.the_page_is_too_large_3_mb_maximum',
   'リダイレクトが多すぎるか、移動先が無効です。':

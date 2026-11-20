@@ -7,6 +7,13 @@ import { assertPublicDestination, validateUrl } from '../../infrastructure/secur
 import { fetchXPost, xPostId } from '../integrations/x';
 import { isArticlePage, nextArticlePage } from './article-pages';
 import { parsePdf } from './pdf/pdf-client';
+import {
+  crawlerName,
+  createRobotsGuard,
+  RobotsError,
+  robotsPath,
+  type RobotsGuard,
+} from './robots';
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 const MAX_ARTICLE_HTML_BYTES = 3 * 1024 * 1024;
@@ -63,20 +70,35 @@ export function extractHtml(html: string, url: string): ArticleContent {
     ...(ogImageUrl ? { ogImageUrl } : {}),
   };
 }
-async function renderHtml(env: Env, url: string): Promise<string> {
+async function renderHtml(
+  env: Env,
+  url: string,
+  robots: RobotsGuard,
+  deadline: number,
+): Promise<string> {
   if (!env.BROWSER)
     throw new Error(
       '本文を取得できませんでした。JavaScript対応のBrowser Runを設定するか、別の公開URLをお試しください。',
     );
   const { launch } = await import('@cloudflare/playwright');
   const browser = await launch(env.BROWSER);
-  let articleSizeError: Error | undefined;
+  const controller = new AbortController();
+  let articleError: Error | undefined;
   try {
     const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false });
     const page = await context.newPage();
     // 自動リダイレクトも含め、ブラウザのHTTPアクセスをWorkersの検証付き取得で代行する。
     await context.route('**/*', async (route) => {
       const request = route.request();
+      const isMainDocument = () => {
+        if (request.resourceType() !== 'document') return false;
+        try {
+          return request.frame() === page.mainFrame();
+        } catch {
+          // A navigation can start before Playwright has created its frame.
+          return false;
+        }
+      };
       try {
         if (
           request.method() !== 'GET' ||
@@ -85,17 +107,13 @@ async function renderHtml(env: Env, url: string): Promise<string> {
           await route.abort();
           return;
         }
-        const { response } = await fetchPublic(request.url());
+        const { response } = await fetchPublic(request.url(), {
+          robots,
+          deadline,
+          signal: controller.signal,
+        });
         const contentType = response.headers.get('Content-Type') ?? 'text/plain';
-        let isArticleDocument = false;
-        if (request.resourceType() === 'document' && isHtmlContentType(contentType)) {
-          try {
-            isArticleDocument = request.frame() === page.mainFrame();
-          } catch {
-            // A navigation can start before Playwright has created its frame.
-          }
-        }
-        const body = await (isArticleDocument
+        const body = await (isHtmlContentType(contentType) && isMainDocument()
           ? limitedArticleHtml(response)
           : limitedText(response));
         await route.fulfill({
@@ -104,8 +122,11 @@ async function renderHtml(env: Env, url: string): Promise<string> {
           body,
         });
       } catch (error) {
-        if (error instanceof Error && error.message === ARTICLE_HTML_TOO_LARGE)
-          articleSizeError = error;
+        if (
+          (error instanceof RobotsError && isMainDocument()) ||
+          (error instanceof Error && error.message === ARTICLE_HTML_TOO_LARGE)
+        )
+          articleError = error;
         await route.abort().catch(() => undefined);
       }
     });
@@ -121,49 +142,91 @@ async function renderHtml(env: Env, url: string): Promise<string> {
       )
       .catch(() => undefined);
     const html = await page.content();
-    if (articleSizeError) throw articleSizeError;
+    if (articleError) throw articleError;
     if (new TextEncoder().encode(html).byteLength > MAX_ARTICLE_HTML_BYTES)
       throw new Error(ARTICLE_HTML_TOO_LARGE);
     return html;
   } catch (error) {
-    throw articleSizeError ?? error;
+    throw articleError ?? error;
   } finally {
+    controller.abort();
     await browser.close();
   }
 }
-export async function fetchPublic(
+type FetchOptions = {
+  guard?: (url: URL) => void;
+  deadline?: number;
+  accept?: string;
+  robots?: RobotsGuard;
+  signal?: AbortSignal;
+};
+
+async function fetchValidated(
   value: string,
-  guard?: (url: URL) => void,
-  deadline = Date.now() + 120000,
-  accept = 'text/html,application/pdf,text/plain;q=0.8,application/octet-stream;q=0.5',
+  {
+    guard,
+    deadline = Date.now() + 120000,
+    accept = 'text/html,application/pdf,text/plain;q=0.8,application/octet-stream;q=0.5',
+    robots,
+    signal,
+  }: FetchOptions,
 ): Promise<{ response: Response; url: URL }> {
   let url = validateUrl(value);
+  const timeout = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
+  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   for (let redirects = 0; redirects <= 5; redirects++) {
     guard?.(url);
     if (Date.now() >= deadline) throw new Error('記事取得の時間上限を超えました。');
     if (isYouTubeUrl(url.href)) throw new Error(youtubeUnavailableMessage);
-    await assertPublicDestination(url);
+    requestSignal.throwIfAborted();
+    await robots?.(url, deadline, requestSignal);
+    requestSignal.throwIfAborted();
+    await assertPublicDestination(url, fetch, requestSignal);
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error('記事取得の時間上限を超えました。');
     // アプリのCookieやBearerトークンは取得先に一切渡さない。
     const response = await fetch(url, {
       redirect: 'manual',
       headers: {
-        'User-Agent': 'PufuLens/0.1 (personal article bookmarks)',
+        'User-Agent': `${crawlerName}/0.1 (personal article bookmarks)`,
         Accept: accept,
       },
-      signal: AbortSignal.timeout(Math.min(20000, Math.max(1, deadline - Date.now()))),
+      signal: AbortSignal.any([requestSignal, AbortSignal.timeout(Math.min(20000, remaining))]),
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('Location');
+      await response.body?.cancel();
       if (!location || redirects === 5)
         throw new Error('リダイレクトが多すぎるか、移動先が無効です。');
       url = validateUrl(new URL(location, url).href);
-      await response.body?.cancel();
       continue;
     }
     return { response, url };
   }
   throw new Error('リダイレクトを完了できませんでした。');
 }
+
+async function fetchRobots(target: URL, deadline: number, signal: AbortSignal): Promise<Response> {
+  const targetPath = robotsPath(target);
+  const { response } = await fetchValidated(`${target.origin}/robots.txt`, {
+    deadline,
+    signal,
+    accept: 'text/plain, */*;q=0.1',
+    guard: (url) => {
+      if (url.origin === target.origin && robotsPath(url) === targetPath)
+        throw new Error('robots.txt redirects to the article URL');
+    },
+  });
+  return response;
+}
+
+export function fetchPublic(
+  value: string,
+  { robots = createRobotsGuard(fetchRobots), ...options }: FetchOptions = {},
+) {
+  return fetchValidated(value, { ...options, robots });
+}
+
 export async function fetchArticle(
   env: Env,
   value: string,
@@ -175,7 +238,8 @@ export async function fetchArticle(
     if (!userId) throw new Error('Xの取得にはユーザー認証が必要です。');
     return fetchXPost(env, userId, postId);
   }
-  const { response, url } = await fetchPublic(value, undefined, deadline);
+  const robots = createRobotsGuard(fetchRobots);
+  const { response, url } = await fetchPublic(value, { deadline, robots });
   if (!response.ok)
     throw new Error(
       `本文を取得できませんでした（HTTP ${response.status}）。ログインやアクセス制限が必要なページは保存URLのみ保持します。`,
@@ -192,7 +256,7 @@ export async function fetchArticle(
     ? extractHtml(content, url.href)
     : { title: url.hostname, text: content.trim() };
   if (!result || result.text.length < 200) {
-    content = await renderHtml(env, url.href);
+    content = await renderHtml(env, url.href, robots, deadline);
     const rendered = extractHtml(content, url.href);
     result = { ...rendered, ogImageUrl: rendered.ogImageUrl ?? result.ogImageUrl };
   }
@@ -215,7 +279,7 @@ export async function fetchArticle(
         if (!isArticlePage(candidate, url) || seen.has(candidate.href))
           throw new Error('同一記事の未取得ページではありません。');
       };
-      const page = await fetchPublic(next, guard, deadline);
+      const page = await fetchPublic(next, { guard, deadline, robots });
       if (!page.response.ok || !isHtmlContentType(page.response.headers.get('Content-Type') ?? ''))
         throw new Error('続きの本文を取得できませんでした。');
       const html = await limitedArticleHtml(page.response);

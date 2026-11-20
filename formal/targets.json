@@ -97,6 +97,7 @@
         "tests/job-retry-limits.test.ts",
         "tests/request-id.test.ts",
         "tests/ingest.test.ts",
+        "tests/ingest-render.test.ts",
         "tests/comments.test.ts",
         "tests/pufu-images.test.ts",
         "tests/api.test.ts",

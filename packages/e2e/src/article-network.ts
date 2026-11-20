@@ -29,6 +29,9 @@ globalThis.fetch = async (input: RequestInfo | URL) => {
       Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '93.184.215.14' }] : [],
     });
   }
+  if (url.origin === 'https://example.com' && url.pathname === '/robots.txt') {
+    return new Response('User-agent: *\nDisallow: /pufu-e2e/article?key=*&fail=true$');
+  }
   const key = url.searchParams.get('key') ?? '';
   if (
     url.origin !== 'https://example.com' ||

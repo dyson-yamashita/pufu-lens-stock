@@ -61,16 +61,25 @@ instance (d : Destination) : Decidable (destinationAllowed d) := by
   unfold destinationAllowed
   infer_instance
 
+inductive RobotsAccess where
+  | rulesRequest | permitted | disallowed | unreachable
+  deriving DecidableEq, Repr
+
+def robotsPermits : RobotsAccess → Bool
+  | .rulesRequest | .permitted => true
+  | .disallowed | .unreachable => false
+
 structure Request where
   destination : Destination
   callerGuard : Bool
   beforeDeadline : Bool
   youtube : Bool
+  robots : RobotsAccess
   deriving DecidableEq, Repr
 
 def requestAllowed (r : Request) : Prop :=
   destinationAllowed r.destination ∧ r.callerGuard = true ∧
-  r.beforeDeadline = true ∧ r.youtube = false
+  r.beforeDeadline = true ∧ r.youtube = false ∧ robotsPermits r.robots = true
 
 instance (r : Request) : Decidable (requestAllowed r) := by
   unfold requestAllowed
@@ -136,6 +145,13 @@ theorem rejected_request_does_not_fetch (s : State) (r : Request) (reply : Reply
   · split
     · rfl
     · rfl
+
+theorem robots_refusal_does_not_fetch (s : State) (r : Request) (reply : Reply)
+    (h : robotsPermits r.robots = false) : (step s r reply).fetched = s.fetched := by
+  apply rejected_request_does_not_fetch
+  intro allowed
+  have permitted := allowed.2.2.2.2
+  simp [h] at permitted
 
 theorem stopped_never_fetches_again (s : State) (r : Request) (reply : Reply)
     (h : s.stopped = true) : step s r reply = s := by
@@ -211,7 +227,7 @@ theorem no_more_than_six_fetches (events : List (Request × Reply)) :
 
 def publicUrl : Url := ⟨true, 25, .https, false, false, none, true, false, false, false⟩
 def publicDns : Dns := ⟨true, 0, 0, [true]⟩
-def publicRequest : Request := ⟨⟨publicUrl, publicDns⟩, true, true, false⟩
+def publicRequest : Request := ⟨⟨publicUrl, publicDns⟩, true, true, false, .permitted⟩
 def privateRedirect : Request :=
   { publicRequest with destination := ⟨publicUrl, ⟨true, 0, 0, [true, false]⟩⟩ }
 
@@ -224,6 +240,13 @@ theorem unsafe_redirect_stops_before_second_fetch :
     let first := step initial publicRequest (.redirect true)
     (step first privateRedirect .terminal).stopped = true ∧
     (step first privateRedirect .terminal).fetched = [publicRequest.destination] := by
+  decide
+
+theorem robots_disallowed_redirect_stops_before_second_fetch :
+    let first := step initial publicRequest (.redirect true)
+    let denied := { publicRequest with robots := .disallowed }
+    (step first denied .terminal).stopped = true ∧
+    (step first denied .terminal).fetched = [publicRequest.destination] := by
   decide
 
 theorem sixth_redirect_stops :

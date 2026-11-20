@@ -18,6 +18,12 @@
       "old": "  else if requestAllowed r then",
       "new": "  else if True then",
       "theorem": "rejected_request_does_not_fetch"
+    },
+    {
+      "name": "B09-robots",
+      "old": "  r.beforeDeadline = true ∧ r.youtube = false ∧ robotsPermits r.robots = true",
+      "new": "  r.beforeDeadline = true ∧ r.youtube = false",
+      "theorem": "robots_refusal_does_not_fetch"
     }
   ]
 }
