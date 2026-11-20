@@ -48,16 +48,17 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await app.open('/#profile');
   await expect(screen.getByRole('heading', '利用状況', { exact: true })).toBeVisible();
   await expect(browser.locator('.usage-card + .appearance-settings')).toBeVisible();
-  const phaseLabel = browser.locator(
-    '.usage-metrics > dl:has([data-metric="pufus"]) [data-metric="phases"] dt',
-  );
-  await expect(phaseLabel).toHaveText('局面登録数');
+  const pufuCount = browser.locator('.usage-metrics [data-metric="pufus"] dd');
   const check = async (period: UsagePeriod) => {
-    for (const key of ['stocks', 'questions', 'pufus', 'phases', 'ai_neurons'] as const) {
+    const counts = expected.periods[period];
+    for (const key of ['stocks', 'questions', 'ai_neurons'] as const) {
       await expect(browser.locator(`.usage-metrics [data-metric="${key}"] strong`)).toHaveText(
-        expected.periods[period][key].toLocaleString('ja-JP', { maximumFractionDigits: 0 }),
+        counts[key].toLocaleString('ja-JP', { maximumFractionDigits: 0 }),
       );
     }
+    await expect(pufuCount).toHaveText(
+      `${counts.pufus.toLocaleString('ja-JP')}件(局面 ${counts.phases.toLocaleString('ja-JP')}件)`,
+    );
   };
   await expect(screen.getByRole('radio', '今週', { exact: true })).toBeChecked();
   await check('week');
@@ -66,6 +67,22 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await check('month');
   await screen.getByRole('radio', '全体', { exact: true }).check();
   await check('all');
+  expect(
+    await browser.evaluate(() => {
+      const value = document.querySelector('[data-metric="pufus"] dd')!;
+      const count = value.querySelector('strong')!.getBoundingClientRect();
+      const phaseCount = value.querySelector('.usage-phase-count')!;
+      const phases = phaseCount.getBoundingClientRect();
+      const text = document.createRange();
+      text.selectNodeContents(phaseCount);
+      return (
+        text.getClientRects().length === 1 &&
+        phases.left >= count.right &&
+        phases.top < count.bottom &&
+        phases.right <= value.getBoundingClientRect().right
+      );
+    }),
+  ).toBe(true);
   await browser.evaluate(() => {
     document.querySelector('.usage-card')!.scrollIntoView({ block: 'start' });
     return null;

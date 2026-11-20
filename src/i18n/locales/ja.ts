@@ -175,7 +175,7 @@ export const ja: Record<string, string> = {
   'ui.usage.stocks': 'ストック登録数',
   'ui.usage.questions': '問い登録数',
   'ui.usage.pufus': 'プ譜登録数',
-  'ui.usage.phases': '局面登録数',
+  'ui.usage.phase_count': '(局面 {{value0}}件)',
   'ui.usage.ai_neurons': 'AI使用量',
   'ui.usage.unmeasured': '未計測',
   'ui.usage.items_unit': '件',

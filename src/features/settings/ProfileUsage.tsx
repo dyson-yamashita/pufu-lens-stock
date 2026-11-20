@@ -1,4 +1,4 @@
-import { Archive, CircleHelp, Layers, ListTree, Sparkles } from 'lucide-react';
+import { Archive, CircleHelp, ListTree, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ProfileUsage as Usage, UsagePeriod } from '../../../shared/profile-usage';
 import { intlLocale, t, useLanguage } from '../../i18n/i18n';
@@ -28,17 +28,17 @@ export default function ProfileUsage({ userId }: { userId: string }) {
     { value: 'month', label: t('ui.usage.month') },
     { value: 'all', label: t('ui.usage.all') },
   ];
-  const metricGroups = [
-    [{ key: 'stocks', label: t('ui.usage.stocks'), icon: Archive }],
-    [{ key: 'questions', label: t('ui.usage.questions'), icon: CircleHelp }],
-    [
-      { key: 'pufus', label: t('ui.usage.pufus'), icon: ListTree },
-      { key: 'phases', label: t('ui.usage.phases'), icon: Layers },
-    ],
-    [{ key: 'ai_neurons', label: t('ui.usage.ai_neurons'), icon: Sparkles }],
+  const metrics = [
+    { key: 'stocks', label: t('ui.usage.stocks'), icon: Archive },
+    { key: 'questions', label: t('ui.usage.questions'), icon: CircleHelp },
+    { key: 'pufus', label: t('ui.usage.pufus'), icon: ListTree },
+    { key: 'ai_neurons', label: t('ui.usage.ai_neurons'), icon: Sparkles },
   ] as const;
   const selected = usage?.periods[period];
-  const hasPhaseCount = typeof selected?.phases === 'number';
+  const phaseCount =
+    typeof selected?.phases === 'number'
+      ? t('ui.usage.phase_count', { value0: selected.phases })
+      : null;
   const unmeasured = selected && selected.ai_neurons === 0 && selected.ai_unmeasured_calls > 0;
   const formatNeurons = (value: number) =>
     value.toLocaleString(intlLocale(), { maximumFractionDigits: 0 });
@@ -86,36 +86,31 @@ export default function ProfileUsage({ userId }: { userId: string }) {
                 ? `${date(selected.since)} – ${date(usage.as_of)}`
                 : t('ui.usage.all_time')}
             </p>
-            <div className="usage-metrics">
-              {metricGroups.map((group) => (
-                <dl key={group[0].key}>
-                  {group
-                    .filter(({ key }) => key !== 'phases' || hasPhaseCount)
-                    .map(({ key, label, icon: Icon }) => (
-                      <div key={key} data-metric={key}>
-                        <dt>
-                          <Icon size={17} aria-hidden="true" />
-                          {label}
-                        </dt>
-                        <dd>
-                          <strong>
-                            {key === 'ai_neurons'
-                              ? unmeasured
-                                ? t('ui.usage.unmeasured')
-                                : formatNeurons(selected[key])
-                              : selected[key].toLocaleString(intlLocale())}
-                          </strong>
-                          {!(key === 'ai_neurons' && unmeasured) && (
-                            <span>
-                              {key === 'ai_neurons' ? 'Neurons' : t('ui.usage.items_unit')}
-                            </span>
-                          )}
-                        </dd>
-                      </div>
-                    ))}
-                </dl>
+            <dl className="usage-metrics">
+              {metrics.map(({ key, label, icon: Icon }) => (
+                <div key={key} data-metric={key}>
+                  <dt>
+                    <Icon size={17} aria-hidden="true" />
+                    {label}
+                  </dt>
+                  <dd>
+                    <strong>
+                      {key === 'ai_neurons'
+                        ? unmeasured
+                          ? t('ui.usage.unmeasured')
+                          : formatNeurons(selected[key])
+                        : selected[key].toLocaleString(intlLocale())}
+                    </strong>
+                    {!(key === 'ai_neurons' && unmeasured) && (
+                      <span>{key === 'ai_neurons' ? 'Neurons' : t('ui.usage.items_unit')}</span>
+                    )}
+                    {key === 'pufus' && phaseCount && (
+                      <span className="usage-phase-count">{phaseCount}</span>
+                    )}
+                  </dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </>
         ) : (
           <p className="profile-hint">{t('ui.usage.loading')}</p>

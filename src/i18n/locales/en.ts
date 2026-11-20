@@ -179,7 +179,7 @@ export const en: Record<string, string> = {
   'ui.usage.stocks': 'Stocks registered',
   'ui.usage.questions': 'Questions registered',
   'ui.usage.pufus': 'Pufus registered',
-  'ui.usage.phases': 'Phases registered',
+  'ui.usage.phase_count': '(Phases {{value0}})',
   'ui.usage.ai_neurons': 'AI usage',
   'ui.usage.unmeasured': 'Unmeasured',
   'ui.usage.items_unit': 'items',

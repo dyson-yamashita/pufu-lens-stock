@@ -184,16 +184,10 @@
   gap: 12px;
   margin: 0 0 20px;
 }
-.usage-metrics > dl {
-  margin: 0;
+.usage-metrics > div {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 10px;
-}
-.usage-metrics dl > div + div {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
 }
 .usage-metrics dt {
   display: flex;
@@ -209,6 +203,14 @@
   gap: 6px;
   margin: 10px 0 0;
   font-variant-numeric: tabular-nums;
+}
+.usage-metrics [data-metric='pufus'] dd:lang(ja) {
+  display: block;
+}
+.usage-phase-count {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .usage-metrics strong {
   font-size: clamp(22px, 4vw, 30px);
