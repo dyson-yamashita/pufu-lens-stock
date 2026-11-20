@@ -28,22 +28,32 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   const score = JSON.parse(
     await readFile(new URL('../../../tests/fixtures/pufu-sparse.json', import.meta.url), 'utf8'),
   );
-  await fixture.request('/pufus', 'POST', {
+  const { pufu } = (await fixture.request('/pufus', 'POST', {
     project_id: fixture.projectId,
     request_id: requestId(),
+    score,
+  })) as { pufu: { id: string; revision: number } };
+  await fixture.request(`/pufus/${pufu.id}/phases`, 'POST', {
+    revision: pufu.revision,
+    phase: 1,
     score,
   });
   const expected = (await fixture.request('/me/usage')) as ProfileUsage;
   expect(expected.periods.all.stocks).toBe(before.periods.all.stocks + 1);
   expect(expected.periods.all.questions).toBe(before.periods.all.questions + 1);
   expect(expected.periods.all.pufus).toBe(before.periods.all.pufus + 1);
+  expect(expected.periods.all.phases).toBe(before.periods.all.phases + 2);
   expect(expected.periods.all.ai_neurons).toBe(0);
   await browser.emulateMedia({ colorScheme: 'light' });
   await app.open('/#profile');
   await expect(screen.getByRole('heading', '利用状況', { exact: true })).toBeVisible();
   await expect(browser.locator('.usage-card + .appearance-settings')).toBeVisible();
+  const phaseLabel = browser.locator(
+    '.usage-metrics > dl:has([data-metric="pufus"]) [data-metric="phases"] dt',
+  );
+  await expect(phaseLabel).toHaveText('局面登録数');
   const check = async (period: UsagePeriod) => {
-    for (const key of ['stocks', 'questions', 'pufus', 'ai_neurons'] as const) {
+    for (const key of ['stocks', 'questions', 'pufus', 'phases', 'ai_neurons'] as const) {
       await expect(browser.locator(`.usage-metrics [data-metric="${key}"] strong`)).toHaveText(
         expected.periods[period][key].toLocaleString('ja-JP', { maximumFractionDigits: 0 }),
       );
@@ -74,7 +84,7 @@ test('USAGE-001 プロフィールの利用状況を期間別に確認し再読�
   await app.open('/manual');
   await browser.locator('.manual-start summary').getByText('利用状況', { exact: true }).click();
   await expect(browser.locator('.manual-start details[open] p')).toContainText(
-    '「プロフィール」の「利用状況」',
+    'ストック・問い・プ譜・局面の登録数',
   );
   await app.screenshot('manual-usage-dark');
   await browser.emulateMedia({ colorScheme: 'light' });

@@ -184,10 +184,16 @@
   gap: 12px;
   margin: 0 0 20px;
 }
-.usage-metrics > div {
+.usage-metrics > dl {
+  margin: 0;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 10px;
+}
+.usage-metrics dl > div + div {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 .usage-metrics dt {
   display: flex;
