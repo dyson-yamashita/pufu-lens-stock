@@ -15,6 +15,7 @@ import SearchField from '../../components/SearchField';
 import { applicationError, intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { api, send } from '../../lib/api';
 import QuestionLabels from './QuestionLabels';
+import Reflections from './Reflections';
 function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () => void }) {
   useLanguage();
   return (
@@ -159,6 +160,7 @@ export default function Questions({
   onScope,
   onOpen,
   onQuestion,
+  onReflectionPufu,
   active = true,
   isMobile = false,
 }: {
@@ -167,8 +169,9 @@ export default function Questions({
   projectId: string | null;
   refresh: number;
   onScope: (projectId: string | null) => void;
-  onOpen: (stockId: string) => Promise<void>;
+  onOpen: (stockId: string, tab?: 'question' | 'summary') => Promise<void>;
   onQuestion: (id: string) => void;
+  onReflectionPufu?: (id: string) => void;
   active?: boolean;
   isMobile?: boolean;
 }) {
@@ -186,11 +189,6 @@ export default function Questions({
   const [opening, setOpening] = useState<string | null>(null);
   const [savingFavorites, setSavingFavorites] = useState<string[]>([]);
   const favoriteVersion = useRef(0);
-  const autoGenerateQuestions = projects.some(
-    (project) =>
-      (projectId ? project.id === projectId : project.show_in_all_lists !== false) &&
-      project.auto_generate_questions,
-  );
   useEffect(() => setPage(1), [projectId, pageSize]);
   useEffect(() => {
     if (!active) return;
@@ -239,6 +237,14 @@ export default function Questions({
   }, [projectId, search, filter, page, pageSize, refresh, reload, active]);
   return (
     <section className="questions-page" aria-label={t('ui.questions.project_questions_insights')}>
+      <Reflections
+        key={projectId ?? 'all'}
+        projects={projects}
+        projectId={projectId}
+        active={active}
+        onStock={(id) => onOpen(id, 'summary')}
+        onPufu={onReflectionPufu}
+      />
       <SearchField
         label={t('ui.questions.search_questions_insights')}
         placeholder={t('ui.questions.search_questions_insights_article_titles_and_notes')}
@@ -308,12 +314,9 @@ export default function Questions({
                 : t('first_steps.question_intro')}
           </p>
           {!error && !search && filter === 'all' && (
-            <>
-              {autoGenerateQuestions && <p>{t('first_steps.ai_questions')}</p>}
-              <button className="button primary" onClick={onAdd}>
-                {projects.length ? t('ui.app.add_question_or_insight') : t('ui.app.create_project')}
-              </button>
-            </>
+            <button className="button primary" onClick={onAdd}>
+              {projects.length ? t('ui.app.add_question_or_insight') : t('ui.app.create_project')}
+            </button>
           )}
         </div>
       ) : (

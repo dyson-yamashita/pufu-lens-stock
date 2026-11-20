@@ -144,7 +144,21 @@ export async function withRuntime<T>(
 import { handleArticleControl } from './article-network.mjs';
 import worker, { ArticleWorkflow, MemoryWorkflow } from './${built.main}';
 export { ArticleWorkflow, MemoryWorkflow };
-export default { ...worker, fetch(request, env, ctx) {
+export default { ...worker, async fetch(request, env, ctx) {
+  const url = new URL(request.url);
+  if (url.pathname === '/api/__e2e__/scheduled') {
+    if (url.hostname !== '127.0.0.1' || request.method !== 'POST')
+      return new Response(null, { status: 405 });
+    const scheduledTime = Number(url.searchParams.get('time'));
+    if (!Number.isSafeInteger(scheduledTime) || scheduledTime <= 0)
+      return new Response(null, { status: 400 });
+    const pending = [];
+    worker.scheduled({ scheduledTime, cron: '', noRetry() {} }, env, {
+      waitUntil(task) { pending.push(task); },
+    });
+    await Promise.all(pending);
+    return new Response(null, { status: 204 });
+  }
   return handleArticleControl(request) ?? worker.fetch(request, env, ctx);
 } };
 `,

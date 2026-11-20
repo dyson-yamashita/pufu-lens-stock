@@ -3,6 +3,7 @@ import { cleanupDeletedAccounts } from '../../features/auth/account';
 import { cleanupMemoryHistory } from '../../features/memory/memory-history';
 import { cleanupLegacyUserMemory } from '../../features/projects/privacy';
 import { cleanupExpiredPufuImageLinks } from '../../features/pufu/images/pufu-image-links';
+import { queueDueReflections } from '../../features/questions/reflection-repository';
 import { cleanupStockImages } from '../../features/stocks/stock-images';
 import { admitJob, retryAt } from '../../features/usage/usage';
 import { syncSearchIndex } from '../ai/search-index';
@@ -79,7 +80,7 @@ export async function dispatchJobs(env: Env): Promise<void> {
     }
   }
 }
-export async function scheduledMaintenance(env: Env): Promise<void> {
+export async function scheduledMaintenance(env: Env, scheduledAt = Date.now()): Promise<void> {
   await cleanupLegacyUserMemory(env);
   await env.DB.prepare(
     "UPDATE ai_calls SET status='failed',retry_blocked=1 WHERE status='running' AND job_id IN ('search-query','search-index') AND updated_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 minutes')",
@@ -197,5 +198,13 @@ export async function scheduledMaintenance(env: Env): Promise<void> {
       'DELETE FROM job_dispatch_attempts WHERE NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=job_dispatch_attempts.job_id)',
     ),
   ]);
+  // 周期の締めは日本時間。処理の遅延や複数ユーザーを拾えるよう、10分ごとに予約を確認する。
+  if (new Date(scheduledAt).getUTCMinutes() % 10 === 0) {
+    try {
+      await queueDueReflections(env, scheduledAt);
+    } catch (error) {
+      logDiagnosticError('reflection_schedule', error);
+    }
+  }
   await dispatchJobs(env);
 }

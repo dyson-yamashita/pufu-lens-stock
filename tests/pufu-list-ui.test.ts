@@ -99,6 +99,7 @@ beforeEach(() => {
       show_in_all_lists: true,
       include_in_user_memory: true,
       auto_generate_questions: true,
+      reflection_period: 'weekly',
       count: 0,
       ready_count: 0,
       question_count: 1,

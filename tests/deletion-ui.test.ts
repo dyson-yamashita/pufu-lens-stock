@@ -21,6 +21,7 @@ const project: Project = {
   show_in_all_lists: true,
   include_in_user_memory: true,
   auto_generate_questions: true,
+  reflection_period: 'weekly',
   count: 1,
   ready_count: 1,
   question_count: 1,

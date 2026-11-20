@@ -1,0 +1,83 @@
+{
+  "module": "BoundaryVerification.Reflections",
+  "mutations": [
+    {
+      "name": "B16-read-owner",
+      "old": " && (owner == some user)",
+      "new": "",
+      "theorem": "foreign_read_denied"
+    },
+    {
+      "name": "B16-configure-owner",
+      "old": "  if allowed r .patch owner user then proposed else current",
+      "new": "  proposed",
+      "theorem": "foreign_period_update_denied"
+    },
+    {
+      "name": "B16-reservation",
+      "old": "      !busy && quotaAvailable then",
+      "new": "      !busy then",
+      "theorem": "quota_denial_preserves_regeneration"
+    },
+    {
+      "name": "B16-answer-generation",
+      "old": "  if allowed r .patch owner user && (entry.generation == generation) && entry.text.isSome &&\n      entry.answer.isNone && !entry.dismissed && (entry.status != .queued) then",
+      "new": "  if allowed r .patch owner user && entry.text.isSome &&\n      entry.answer.isNone && !entry.dismissed && (entry.status != .queued) then",
+      "theorem": "stale_answer_denied"
+    },
+    {
+      "name": "B16-regeneration-generation",
+      "old": "  if allowed r .patch owner user && (entry.generation == generation) && entry.text.isSome &&\n      entry.answer.isNone && !entry.dismissed && (entry.status == (if retry then .failed else .ready)) &&",
+      "new": "  if allowed r .patch owner user && entry.text.isSome &&\n      entry.answer.isNone && !entry.dismissed && (entry.status == (if retry then .failed else .ready)) &&",
+      "theorem": "stale_regeneration_denied"
+    },
+    {
+      "name": "B16-period",
+      "old": " && decide (s.latestEnd < cutoff)",
+      "new": "",
+      "theorem": "closed_period_keeps_schedule"
+    },
+    {
+      "name": "B16-disabled",
+      "old": "if s.autoEnabled && s.onboarded",
+      "new": "if s.onboarded",
+      "theorem": "disabled_blocks_schedule"
+    },
+    {
+      "name": "B16-start-cutoff",
+      "old": "  enabled && (reservedEnd == currentCutoff)",
+      "new": "  enabled",
+      "theorem": "mismatched_cutoff_cancels"
+    },
+    {
+      "name": "B16-unanswered",
+      "old": " && !s.unanswered",
+      "new": "",
+      "theorem": "unanswered_blocks_schedule"
+    },
+    {
+      "name": "B16-stock-count",
+      "old": "      (decide (3 ≤ s.eligibleStocks)) && s.changedMaterials then",
+      "new": "      s.changedMaterials then",
+      "theorem": "fewer_than_three_cannot_schedule"
+    },
+    {
+      "name": "B16-commit-owner",
+      "old": "if (owner == some jobUser) && (entry.generation == generation) &&",
+      "new": "if (entry.generation == generation) &&",
+      "theorem": "deleted_project_denies_commit"
+    },
+    {
+      "name": "B16-commit-generation",
+      "old": "if (owner == some jobUser) && (entry.generation == generation) &&",
+      "new": "if (owner == some jobUser) &&",
+      "theorem": "stale_commit_denied"
+    },
+    {
+      "name": "B16-stock-scope",
+      "old": "if stockRefsCurrent && pufuRefsCurrent then",
+      "new": "if pufuRefsCurrent then",
+      "theorem": "moved_stock_preserves_previous_question"
+    }
+  ]
+}

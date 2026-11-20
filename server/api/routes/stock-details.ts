@@ -18,7 +18,6 @@ import {
   now,
   orphanCleanupStatements,
   queueQuestionJobStatement,
-  queueQuestionStatements,
 } from '../../infrastructure/db';
 import { observeOperation } from '../../infrastructure/diagnostics';
 import { dispatchJobs } from '../../infrastructure/jobs/jobs';
@@ -107,7 +106,7 @@ export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
       c.env.DB.prepare(
         "UPDATE questions SET status = 'queued', error = NULL, generation = generation + 1, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND status = 'failed' AND generation = ?",
       ).bind(now(), stock.id, question.generation),
-      ...queueQuestionStatements(c.env, stock.id),
+      queueQuestionJobStatement(c.env, stock.id),
     ]);
     c.executionCtx.waitUntil(
       observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),

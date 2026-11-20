@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 import * as oidc from 'openid-client';
 import type { AppEnv, Principal } from '../../env';
 import { isDemoOrigin } from '../../env';
-import { dirtyMemoryStatements, now, queueQuestionStatements } from '../../infrastructure/db';
+import { dirtyMemoryStatements, now } from '../../infrastructure/db';
 import { hash, randomSecret } from '../../infrastructure/security';
 import { consumeMcpLogin } from '../../mcp/login';
 import { cleanupDeletedAccounts } from './account';
@@ -125,10 +125,7 @@ export async function demoLogin(c: Context<AppEnv>) {
   await cleanupDeletedAccounts(c.env);
   const demo = await seedDemo(c.env);
   if (demo.created)
-    await c.env.DB.batch([
-      ...dirtyMemoryStatements(c.env, demo.userId, demo.projectIds),
-      ...queueQuestionStatements(c.env),
-    ]);
+    await c.env.DB.batch(dirtyMemoryStatements(c.env, demo.userId, demo.projectIds));
   await createSession(c, demo.userId);
   return c.json({ ok: true });
 }

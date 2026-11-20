@@ -72,8 +72,8 @@ entry.all('*', (c) => {
 });
 export default {
   fetch: entry.fetch,
-  scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(scheduledDiagnostics(() => scheduledMaintenance(env)));
+  scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(scheduledDiagnostics(() => scheduledMaintenance(env, event.scheduledTime)));
     ctx.waitUntil(scheduledDiagnostics(() => deliverAnnouncements(env)));
   },
 } satisfies ExportedHandler<Env>;

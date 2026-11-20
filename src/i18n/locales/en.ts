@@ -225,8 +225,6 @@ export const en: Record<string, string> = {
     'Examples: reading notes, business research, or a research topic. One project is enough to start. All you need is a name, which you can change later.',
   'first_steps.question_intro':
     'Save a question or insight from daily life, a conversation, or something you noticed while reading.',
-  'first_steps.ai_questions':
-    'In projects with automatic generation on, AI questions and insights are also generated after an article is summarized.',
   'first_steps.after_save': 'You can write a question or insight about something you noticed.',
   'first_steps.manual':
     'To get started, create a project, save an article, and write your own question or insight. Use Your first 3 steps in the stock list to open the next action. You can follow any order. The guide disappears when all three steps are complete and returns if deleting content makes a step incomplete.',
@@ -533,15 +531,15 @@ export const en: Record<string, string> = {
   'ui.app.saving_also_applies_changes_to_existing_memory':
     'Saving also applies changes to existing memory.',
   'ui.app.automatically_generate_questions_and_insights_from_stocks':
-    'Automatically generate questions and insights from stocks',
+    'Automatically add reflection questions',
   'ui.app.when_off_no_questions_or_insights_are_automatically_generated':
-    "When off, no questions or insights are automatically generated from this project's stocks. Existing ones remain and you can add your own. Summary and memory settings stay the same.",
+    'Once at least three new stocks are available, Pufu Lens checks for a reflection question on the selected schedule.',
   'ui.app.save': 'Save',
   'ui.app.project_deletion': 'Project deletion',
   'ui.app.delete_project': 'Delete project',
   'ui.app.delete_this_project': 'Delete this project?',
   'ui.app.delete_this_project_s_stocks_questions_insights_pufu_all':
-    "Delete this project's stocks, questions, insights, Pufu (all phases), comments and memory. Articles saved in other projects remain.",
+    "Delete this project's stocks, questions, insights, reflections, Pufu (all phases), comments and memory. Articles saved in other projects remain.",
   'ui.app.if_published_its_public_page_will_also_become_unavailable':
     'If published, its public page will also become unavailable. This cannot be undone.',
   'ui.app.enter_the_article_text': 'Enter the article text.',
@@ -549,8 +547,6 @@ export const en: Record<string, string> = {
     'Check your input. The length or format is incorrect.',
   'ui.app.saving_a_url_or_text_generates_a_summary_and':
     'Saving a URL or text generates a summary and updates memory automatically.',
-  'ui.app.questions_and_insights_are_also_generated_automatically':
-    'Questions and insights are also generated automatically.',
   'ui.app.type': 'Type',
   'ui.app.destination_project': 'Destination project',
   'ui.app.select_a_project': 'Select a project',
@@ -598,12 +594,12 @@ export const en: Record<string, string> = {
   'ui.app.no_retrieved_text_is_available_for_sample_articles_open':
     'No retrieved text is available. For sample articles, open the original article.',
   'ui.app.note_saved_it_will_inform_questions_insights_and_memory':
-    'Note saved. It will inform questions, insights and memory.',
+    'Note saved. It can inform reflections and memory.',
   'ui.app.note_and_destination_updated': 'Note and destination updated.',
   'ui.app.why_did_it_catch_your_attention_note': 'Why did it catch your attention? (note)',
   'ui.app.note_2': 'Note',
   'ui.app.leave_a_short_note_to_inform_questions_insights_and':
-    'Leave a short note to inform questions, insights and memory. The original text stays as it is. When publishing a project, questions and insights generated from the note are also published.',
+    'Write down what caught your attention for future reflections and memory. In published projects, note changes may also update existing AI questions attached to the stock.',
   'ui.app.save_changes': 'Save changes',
   'ui.app.saved_in': ' saved in',
   'ui.app.delete_this_stock': 'Delete this stock',
@@ -723,7 +719,7 @@ export const en: Record<string, string> = {
   'ui.mcp_connections.mcp_integration_is_not_configured_yet_this_url_will':
     'MCP integration is not configured yet. This URL will work after the administrator completes connection setup.',
   'ui.mcp_connections.ask_the_connected_app_to_find_stocks_in_a':
-    'Ask the connected app to find stocks in a project or save a question or insight. Adding a stock generates its summary and AI questions and insights in sequence.',
+    'Ask the connected app to find stocks in a project or save a question or insight. Adding a stock queues its summary and memory updates.',
   'ui.mcp_connections.selected_projects': 'Selected projects',
   'ui.mcp_connections.projects_help':
     'Select one or more projects. All projects also allows access to projects created in the future.',
@@ -1116,7 +1112,30 @@ export const en: Record<string, string> = {
   'ui.questions.take_the_next_step_with_questions_and_insights':
     'Take the next step with questions and insights',
   'ui.questions.use_add_question_or_insight_to_save_thoughts_from':
-    'Use Add question or insight to save thoughts from everyday life or conversations. Projects with automatic generation enabled also generate AI questions and insights from stock summaries.',
+    'Use Add question or insight to save thoughts from everyday life or conversations.',
+  'reflection.heading': 'Reflection',
+  'reflection.automatic_hint':
+    'Once you have three new stocks, they can be used for an automatic reflection question.',
+  'reflection.back': 'Back to reflection',
+  'reflection.question': 'Reflection question',
+  'reflection.schedule': 'Reflection frequency',
+  'reflection.period.weekly': 'Every week',
+  'reflection.period.biweekly': 'Every two weeks',
+  'reflection.period.monthly': 'Every month',
+  'reflection.schedule_hint':
+    'Weekly and two-week periods close on Mondays. Monthly periods close on the first of the month. Dates use Japan time.',
+  'reflection.generating': 'Putting together a reflection question.',
+  'reflection.no_alternative': 'No other question came up for this period.',
+  'reflection.failed': 'Could not create a reflection question.',
+  'reflection.sources': 'What prompted this question',
+  'reflection.answer': 'What did you notice?',
+  'reflection.saved_answer': 'Saved reflection',
+  'reflection.save_answer': 'Save reflection',
+  'reflection.alternative': 'See another question',
+  'reflection.dismiss': 'Skip for now',
+  'reflection.retry': 'Retry',
+  'reflection.busy': 'A reflection is in progress for this project. Try again when it finishes.',
+  'reflection.changed': 'This reflection was updated. Reload and try again.',
   'ui.relation_picker.optional_multiple_selections_allowed':
     'Optional · Multiple selections allowed',
   'ui.relation_picker.selected': 'Selected ',
@@ -1163,11 +1182,11 @@ export const en: Record<string, string> = {
   'ui.user_manual.to_add_a_note_or_a_title_for_text':
     'To add a note or a title for text while saving, open Details.',
   'ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with':
-    'You can save publicly accessible PDF URLs. PDFs with text are read to generate summaries and questions. Image-only scans and password-protected PDFs cannot be retrieved automatically. If retrieval fails, supply the text in the details screen and retry.',
+    'You can save publicly accessible PDF URLs. PDFs with text are read and summarized. If retrieval fails, such as for image-only scans or password-protected PDFs, supply the text in the details screen and retry.',
   'ui.user_manual.star_articles_you_want_to_revisit_use_note_destination':
     'Star articles you want to revisit. Use Note & destination to change notes or where an article is saved.',
   'manual.stock_note_visibility':
-    'What you write under Leave a short note informs AI questions and memory. The note itself stays out of the summary and public pages. Publishing a project also publishes questions generated from the note.',
+    'AI can use what you write under Leave a short note for reflections and memory. You can read the note itself in your own account. In published projects, note changes may also update existing AI questions attached to the stock.',
   'ui.user_manual.when_creating_a_project_or_under_settings_advanced_settings':
     'When creating a project, or under Settings → Advanced settings, turn off Include in all stocks, questions & insights, and Pufu lists to exclude the project from library lists and counts. It is on by default. You can still view it by selecting the project; memory and publication settings stay the same.',
   'ui.user_manual.to_change_a_title_press_the_pencil_beside_it':
@@ -1180,15 +1199,17 @@ export const en: Record<string, string> = {
   'manual.stock_youtube_playback':
     'Select a YouTube thumbnail or title, then play it under Video in the details. For channel links or videos that cannot play here, choose Open on YouTube.',
   'manual.stock_youtube_storage':
-    'For YouTube, Pufu Lens saves the URL and your note. The initial title is YouTube, which you can edit using the pencil. Video metadata, summaries, and questions are unavailable.',
+    'For YouTube, Pufu Lens saves the URL and your note. The initial title is YouTube, which you can edit using the pencil. Stocks with notes can contribute to reflections and memory.',
   'ui.user_manual.find_and_write_questions': 'Find and write questions',
-  'manual.question_read_heading': 'Read AI-generated questions',
+  'manual.question_read_heading': 'Reflect on your stocks',
   'manual.question_write_heading': 'Write your own question or insight',
   'manual.question_edit_heading': 'Related stocks, notes, and destination',
-  'manual.question_generation_heading': 'Turn off automatic question generation',
+  'manual.question_generation_heading': 'Manage automatic reflection questions',
   'manual.question_delete_heading': 'Delete a question or insight',
   'ui.user_manual.use_questions_insights_or_all_questions_insights_to_view':
-    'Open Questions & insights or All questions & insights. Pick a question that interests you from the questions generated from your stocks.',
+    'In Questions & insights, see Reflection for automatically added questions. AI uses stocks from the period and can draw on memory and Pufu from the same project.',
+  'manual.reflection_answer':
+    'Open the records that prompted the question and choose Save reflection to keep what you noticed. You can also choose See another question or Skip for now. Reflection questions and answers are visible in your account only.',
   'ui.user_manual.use_add_question_or_insight_to_save_your_own':
     'Open Add question or insight. Choose a project, enter your text, and press the button of the same name to save.',
   'manual.question_link_stocks':
@@ -1200,7 +1221,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     'For questions you added yourself, unlink the stocks and save before changing the destination project on the same screen. Move AI-generated questions from their source article. Moves across projects are unavailable in cases such as multiple related stocks.',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
-    'To stop automatic question generation, turn off Automatically generate questions and insights from stocks when creating a project or under Settings → Advanced settings, then save. It is on by default. Existing questions, manual additions, and summary/memory settings stay the same. Generation already started may still finish.',
+    'Under Advanced settings for the project, set Reflection frequency to Every week, Every two weeks, or Every month. The default is Every week. Pufu Lens adds a question if there are at least three eligible stocks since the last automatic question and the records support a specific question. Answer or skip the previous question to receive another. To pause, turn off Automatically add reflection questions.',
   'ui.user_manual.to_delete_a_question_or_insight_open_other_actions':
     'To delete a question or insight, open Other actions at the bottom of its details and select Delete question or insight. Its comments are also deleted; related Pufu, phases and stocks remain.',
   'ui.user_manual.develop_solutions_with_pufu': 'Develop solutions with Pufu',

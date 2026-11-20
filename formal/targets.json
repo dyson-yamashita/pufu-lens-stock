@@ -37,7 +37,8 @@
         "B12",
         "B13",
         "B14",
-        "B15"
+        "B15",
+        "B16"
       ],
       "directory": "boundary-verification",
       "modules": [
@@ -56,7 +57,8 @@
         "BoundaryVerification.Sns",
         "BoundaryVerification.Push",
         "BoundaryVerification.Intake",
-        "BoundaryVerification.TextStock"
+        "BoundaryVerification.TextStock",
+        "BoundaryVerification.Reflections"
       ],
       "build": ["lake", "build"],
       "mutations": ["python3", "check.py"],
@@ -103,7 +105,9 @@
         "tests/api.test.ts",
         "tests/public-pages.test.ts",
         "tests/mcp-pufu-viewer.test.ts",
-        "tests/ai-neurons-runtime.test.ts"
+        "tests/ai-neurons-runtime.test.ts",
+        "tests/reflections.test.ts",
+        "tests/project-question-settings.test.ts"
       ]
     }
   ]

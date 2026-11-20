@@ -34,8 +34,8 @@ describe('永続利用量制限', () => {
         JSON.stringify({ overview: '確認', keyPoints: ['確認'], topics: ['確認'] }),
       ),
       app.env.DB.prepare(
-        "UPDATE questions SET status='ready', text='どう確かめる？' WHERE stock_id=?",
-      ).bind(id),
+        "INSERT INTO questions(id,stock_id,source,status,text) VALUES (?,?,'user','ready','どう確かめる？')",
+      ).bind(`question-${id}`, id),
       app.env.DB.prepare("UPDATE processing_jobs SET status='done'"),
     ]);
     return `question-${id}`;

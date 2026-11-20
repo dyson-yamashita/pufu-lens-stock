@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-30T05:32:14.833Z",
+  "createdAt": "2026-11-20T10:51:27.095Z",
   "payload": {
     "actions": [
       {
@@ -25,15 +25,19 @@
       "agent": "default"
     },
     "summary": "実画面で操作しました。後続のexpectで検証します。",
-    "startPath": "/#project/68e9f587-ad16-4555-985b-3e3c9886d295",
-    "endPath": "/#project/68e9f587-ad16-4555-985b-3e3c9886d295",
+    "startPath": "/#project/12cb255f-9507-4fb2-ba45-36376068a8e1",
+    "endPath": "/#project/12cb255f-9507-4fb2-ba45-36376068a8e1",
     "endAnchors": [
       {
         "role": "heading",
         "name": "記事をストック"
       },
       {
-        "text": "URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。問い・気づきも自動で生成します。"
+        "role": "button",
+        "name": "閉じる"
+      },
+      {
+        "text": "URL・テキストを保存すると、要約を生成し、メモリを自動で更新します。"
       },
       {
         "role": "tab",
@@ -54,14 +58,9 @@
       {
         "role": "option",
         "name": "日々のインプット"
-      },
-      {
-        "role": "option",
-        "name": "E2E検証プロジェクト",
-        "states": ["selected"]
       }
     ],
-    "endWaitMs": 10163,
+    "endWaitMs": 10501,
     "keyedBy": {
       "cacheSchema": "trace-1",
       "policyVersion": "conservative/6",

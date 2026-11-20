@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { testApp, applyMigration, mockEvent, mockStep, upgradeRelationsSchema } from './helpers';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
-import { queueQuestionStatements } from '../server/infrastructure/db';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 import type { Question, QuestionDetail } from '../shared/domain';
 import type { Job } from '../server/env';
 
@@ -67,8 +67,8 @@ describe('ユーザーの問いの追加', () => {
     expect(note).toBe('');
     expect((await userQuestions()).questions).toEqual([listedQuestion]);
     const detail = await questions(id);
-    expect(detail.question.source).toBe('ai');
-    expect(detail.questions).toHaveLength(2);
+    expect(detail.question.source).toBe('user');
+    expect(detail.questions).toHaveLength(1);
     expect(detail.questions.find((item) => item.id === question.id)).toEqual(listedQuestion);
     expect(
       await app.env.DB.prepare('SELECT COUNT(*) AS count FROM processing_jobs').first(),
@@ -87,7 +87,7 @@ describe('ユーザーの問いの追加', () => {
         }),
       )
       .run();
-    await app.env.DB.batch(queueQuestionStatements(app.env, id));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     const job = await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind='question'",
     ).first<Job>();
@@ -174,6 +174,7 @@ describe('ユーザーの問いの追加', () => {
   });
   it('ストックの移動に追従し、削除後もAIとユーザーの問いを保持する', async () => {
     const id = await save();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await add(id);
     await app.request(`/api/v1/stocks/${id}`, {
       method: 'PATCH',
@@ -238,6 +239,7 @@ describe('ユーザーの問いの追加', () => {
     await applyMigration(app.env.DB, '0016_independent_questions.sql');
     await applyMigration(app.env.DB, '0028_question_notes.sql');
     await upgradeRelationsSchema(app.env.DB);
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     expect((await add(id, '追加1？')).status).toBe(201);
     expect((await add(id, '追加2？')).status).toBe(201);
     await expect(

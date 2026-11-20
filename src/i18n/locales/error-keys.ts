@@ -1,5 +1,7 @@
 // Only application-owned error messages are eligible for translation.
 export const errorKeys: Record<string, string> = {
+  'このプロジェクトの振り返りを作成中です。完了後にお試しください。': 'reflection.busy',
+  '振り返りが更新されました。再読み込みしてお試しください。': 'reflection.changed',
   '画像のリクエストIDを確認してください。': 'stock_images.request_id',
   '画像を保存中か、同じリクエストIDで異なる画像が送信されました。': 'stock_images.request_conflict',
   '画像は1枚5MBまでです。': 'stock_images.too_large',

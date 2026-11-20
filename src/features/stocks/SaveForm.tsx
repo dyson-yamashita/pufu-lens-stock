@@ -129,11 +129,7 @@ export function SaveForm({
         }
       }}
     >
-      <p className="form-intro">
-        {t('ui.app.saving_a_url_or_text_generates_a_summary_and')}
-        {projects.find((project) => project.id === target)?.auto_generate_questions !== false &&
-          t('ui.app.questions_and_insights_are_also_generated_automatically')}
-      </p>
+      <p className="form-intro">{t('ui.app.saving_a_url_or_text_generates_a_summary_and')}</p>
       <div
         className="stock-source-tabs"
         role="tablist"

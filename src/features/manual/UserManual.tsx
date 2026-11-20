@@ -74,6 +74,7 @@ const sections = (tr: typeof t) => [
       <div className="manual-guide">
         <h3>{tr('manual.question_read_heading')}</h3>
         <p>{tr('ui.user_manual.use_questions_insights_or_all_questions_insights_to_view')}</p>
+        <p>{tr('manual.reflection_answer')}</p>
         <h3>{tr('manual.question_write_heading')}</h3>
         <p>{tr('ui.user_manual.use_add_question_or_insight_to_save_your_own')}</p>
         <p>{tr('first_steps.manual_question')}</p>

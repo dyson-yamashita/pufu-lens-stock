@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
-import { queueQuestionStatements } from '../server/infrastructure/db';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 import { dispatchJobs, scheduledMaintenance } from '../server/infrastructure/jobs/jobs';
 import { admitJob, AiLimitError, deferLimitedJob } from '../server/features/usage/usage';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type { Project, Question, Stock } from '../shared/domain';
+import type { ReflectionPeriod } from '../shared/reflections';
 
 describe('プロジェクトごとの問いの自動生成設定', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -19,10 +20,10 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
   });
   const projects = async () =>
     ((await (await app.request('/api/v1/projects')).json()) as { projects: Project[] }).projects;
-  const update = (auto_generate_questions?: boolean) =>
+  const update = (auto_generate_questions?: boolean, reflection_period?: ReflectionPeriod) =>
     app.request('/api/v1/projects/alice-project', {
       method: 'PATCH',
-      body: { name: 'Alice project', description: '', auto_generate_questions },
+      body: { name: 'Alice project', description: '', auto_generate_questions, reflection_period },
     });
   const save = async (input = {}, project_id = 'alice-project') => {
     const response = await app.request('/api/v1/stocks', {
@@ -54,27 +55,31 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(job!.id), mockStep());
   }
 
-  it('既定値はオンで、作成・更新した設定を保存し、省略した更新ではオフを維持する', async () => {
-    expect((await projects()).every((project) => project.auto_generate_questions === true)).toBe(
-      true,
-    );
+  it('既定値はオン・毎週で、作成・更新した周期はオン・オフを切り替えても保持する', async () => {
+    expect(await projects()).toMatchObject([
+      { auto_generate_questions: true, reflection_period: 'weekly' },
+      { auto_generate_questions: true, reflection_period: 'weekly' },
+    ]);
     const off = await app.request('/api/v1/projects', {
       method: 'POST',
-      body: { name: '自動生成なし', auto_generate_questions: false },
+      body: { name: '自動生成なし', auto_generate_questions: false, reflection_period: 'monthly' },
     });
     expect(off.status).toBe(201);
     const { id } = (await off.json()) as { id: string };
     expect((await projects()).find((project) => project.id === id)).toMatchObject({
       auto_generate_questions: false,
+      reflection_period: 'monthly',
     });
-    expect((await update(false)).status).toBe(200);
+    expect((await update(false, 'biweekly')).status).toBe(200);
     expect((await update()).status).toBe(200);
     expect((await projects()).find((project) => project.id === 'alice-project')).toMatchObject({
       auto_generate_questions: false,
+      reflection_period: 'biweekly',
     });
     expect((await update(true)).status).toBe(200);
     expect((await projects()).find((project) => project.id === 'alice-project')).toMatchObject({
       auto_generate_questions: true,
+      reflection_period: 'biweekly',
     });
     const defaultProject = await app.request('/api/v1/projects', {
       method: 'POST',
@@ -84,15 +89,19 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     const defaultId = ((await defaultProject.json()) as { id: string }).id;
     expect((await projects()).find((project) => project.id === defaultId)).toMatchObject({
       auto_generate_questions: true,
+      reflection_period: 'weekly',
     });
   });
 
   it('設定の不正な型と他ユーザーによる変更を拒否する', async () => {
-    for (const auto_generate_questions of [null, 0, 'false', {}]) {
+    for (const fields of [
+      ...[null, 0, 'false', {}].map((value) => ({ auto_generate_questions: value })),
+      ...[null, 7, 'daily', {}].map((value) => ({ reflection_period: value })),
+    ]) {
       for (const method of ['POST', 'PATCH']) {
         const response = await app.request(
           method === 'POST' ? '/api/v1/projects' : '/api/v1/projects/alice-project',
-          { method, body: { name: '変更', auto_generate_questions } },
+          { method, body: { name: '変更', ...fields } },
         );
         expect(response.status).toBe(400);
       }
@@ -102,10 +111,14 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
         await app.request('/api/v1/projects/alice-project', {
           method: 'PATCH',
           user: 'bob',
-          body: { name: '変更', auto_generate_questions: false },
+          body: { name: '変更', auto_generate_questions: false, reflection_period: 'monthly' },
         })
       ).status,
     ).toBe(404);
+    expect((await projects()).find(({ id }) => id === 'alice-project')).toMatchObject({
+      auto_generate_questions: true,
+      reflection_period: 'weekly',
+    });
   });
 
   it('問いの設定を切り替えても既存の一覧表示・メモリ設定を保持する', async () => {
@@ -142,7 +155,6 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
       expect(detail.stock.summary?.overview).toBeTruthy();
     } else {
       await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-      await app.env.DB.batch(queueQuestionStatements(app.env));
     }
     await scheduledMaintenance(app.env);
     expect(await questions(id)).toEqual([]);
@@ -157,8 +169,9 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     ).toEqual(['article', 'project_memory', 'user_memory']);
   });
 
-  it('生成済みと手動の問いを保持し、同じ要約済み記事でも保存先の設定に従う', async () => {
+  it('設定変更で既存・手動の問いを保持し、設定にかかわらず新しい単体の問いを作らない', async () => {
     const first = await save();
+    await app.env.DB.batch(legacyQuestionStatements(app.env, first));
     await run('article', first);
     await run('question', first);
     const before = await questions(first);
@@ -174,8 +187,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
       '手動の問いを追加できる？',
     );
     const second = await save({}, 'alice-second');
-    await run('question', second);
-    expect((await questions(second))[0].status).toBe('ready');
+    expect(await questions(second)).toEqual([]);
     const offProject = await app.request('/api/v1/projects', {
       method: 'POST',
       body: { name: '要約済み記事の保存先', auto_generate_questions: false },
@@ -189,8 +201,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await update(true);
     const resumedStock = await save({ text: 'オンに戻した後の記事。' });
     await run('article', resumedStock);
-    await run('question', resumedStock);
-    expect((await questions(resumedStock))[0].status).toBe('ready');
+    expect(await questions(resumedStock)).toEqual([]);
   });
 
   it('オフにすると未開始の問いジョブを待機させ、オンに戻すと再開する', async () => {
@@ -198,7 +209,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await app.env.DB.prepare("UPDATE articles SET status = 'ready', summary_json = ?")
       .bind(JSON.stringify({ overview: '概要', keyPoints: ['要点'], topics: ['話題'] }))
       .run();
-    await app.env.DB.batch(queueQuestionStatements(app.env, id));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await update(false);
     await scheduledMaintenance(app.env);
     expect(
@@ -222,7 +233,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await save({ text: '2件目の問いの生成元。' });
     await app.env.DB.prepare("UPDATE processing_jobs SET status = 'done'").run();
     await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     app.env.AI_CONCURRENT_JOBS = '2';
     const jobs = await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind = 'question'",
@@ -262,7 +273,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     const id = await save();
     await app.env.DB.prepare("UPDATE processing_jobs SET status = 'done'").run();
     await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env, id));
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     await app.env.DB.prepare(
       "INSERT INTO processing_jobs (id,user_id,kind,target_id,revision) VALUES ('toggle-before-question','alice','cleanup','unused',1)",
     ).run();
@@ -287,6 +298,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     '短文のメモ変更や移動でも保存先%sがオフなら生成済みの問いを保持する',
     async (projectId) => {
       const id = await save();
+      await app.env.DB.batch(legacyQuestionStatements(app.env, id));
       await run('article', id);
       await run('question', id);
       const [before] = await questions(id);
@@ -314,7 +326,7 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await save({ text: '再開する2件目の問い。' });
     await app.env.DB.prepare("UPDATE processing_jobs SET status = 'done'").run();
     await app.env.DB.prepare("UPDATE articles SET status = 'ready'").run();
-    await app.env.DB.batch(queueQuestionStatements(app.env));
+    await app.env.DB.batch(legacyQuestionStatements(app.env));
     app.env.AI_CONCURRENT_JOBS = '2';
     const jobs = await app.env.DB.prepare(
       "SELECT * FROM processing_jobs WHERE kind = 'question'",
@@ -392,5 +404,21 @@ describe('プロジェクトごとの問いの自動生成設定', () => {
     await expect(
       app.env.DB.prepare('UPDATE projects SET auto_generate_questions = 2').run(),
     ).rejects.toThrow();
+  });
+
+  it('振り返りの移行で既存のオン・オフを維持し、毎週の周期を設定する', async () => {
+    await app.dispose();
+    const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
+      .filter((filename) => filename.endsWith('.sql') && filename < '0055')
+      .sort();
+    app = await testApp({ migrations });
+    await app.env.DB.prepare(
+      "UPDATE projects SET auto_generate_questions=0 WHERE id='alice-project'",
+    ).run();
+    await applyMigration(app.env.DB, '0055_reflections.sql');
+    expect(await projects()).toMatchObject([
+      { id: 'alice-project', auto_generate_questions: false, reflection_period: 'weekly' },
+      { id: 'alice-second', auto_generate_questions: true, reflection_period: 'weekly' },
+    ]);
   });
 });

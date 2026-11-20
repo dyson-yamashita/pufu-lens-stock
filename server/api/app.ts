@@ -17,6 +17,7 @@ import { registerPublicEndpointsRoutes } from './routes/public-endpoints';
 import { registerPufuRoutes } from './routes/pufu';
 import { registerQuestionCollectionRoutes } from './routes/question-collection';
 import { registerQuestionDetailsRoutes } from './routes/question-details';
+import { registerReflectionRoutes } from './routes/reflections';
 import { registerStockCollectionRoutes } from './routes/stock-collection';
 import { registerStockDetailsRoutes } from './routes/stock-details';
 import { registerTokensRoutes } from './routes/tokens';
@@ -41,6 +42,7 @@ export function createApp(trustedPrincipal?: Principal) {
   registerQuestionDetailsRoutes(app);
   registerPufuRoutes(app);
   registerQuestionCollectionRoutes(app);
+  registerReflectionRoutes(app);
   registerStockDetailsRoutes(app);
   registerMemoryRoutes(app);
   registerTokensRoutes(app);

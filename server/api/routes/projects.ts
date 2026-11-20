@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
+import { reflectionPeriodSchema } from '../../../shared/reflections';
 import type { AppEnv } from '../../env';
 import { historyPrefix, queueHistoryCleanup } from '../../features/memory/memory-history';
 import { projectScopeJson } from '../../features/projects/project-access';
@@ -17,13 +18,14 @@ const projectSchema = z.object({
   show_in_all_lists: z.boolean().optional(),
   include_in_user_memory: z.boolean().optional(),
   auto_generate_questions: z.boolean().optional(),
+  reflection_period: reflectionPeriodSchema.optional(),
 });
 export function registerProjectsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/projects', async (c) => {
     const principal = c.get('principal');
     const { user } = principal;
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.auto_generate_questions, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id AND q.source = 'user') AS user_question_count, (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id = p.id AND pf.user_id = p.user_id) AS pufu_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?))) GROUP BY p.id ORDER BY p.created_at, p.id",
+      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.auto_generate_questions, p.reflection_period, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id AND q.source = 'user') AS user_question_count, (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id = p.id AND pf.user_id = p.user_id) AS pufu_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?))) GROUP BY p.id ORDER BY p.created_at, p.id",
     )
       .bind(user.id, projectScopeJson(principal), projectScopeJson(principal))
       .all();
@@ -48,7 +50,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory, auto_generate_questions) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory, auto_generate_questions, reflection_period) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       ).bind(
         id,
         user.id,
@@ -57,6 +59,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         Number(data.show_in_all_lists ?? true),
         Number(data.include_in_user_memory ?? true),
         Number(data.auto_generate_questions ?? true),
+        data.reflection_period ?? 'weekly',
       ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
@@ -78,13 +81,14 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         Boolean(project.include_in_user_memory) !== data.include_in_user_memory);
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory), auto_generate_questions = COALESCE(?, auto_generate_questions) WHERE id = ? AND user_id = ?',
+        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory), auto_generate_questions = COALESCE(?, auto_generate_questions), reflection_period = COALESCE(?, reflection_period) WHERE id = ? AND user_id = ?',
       ).bind(
         data.name,
         data.description,
         data.show_in_all_lists === undefined ? null : Number(data.show_in_all_lists),
         data.include_in_user_memory === undefined ? null : Number(data.include_in_user_memory),
         data.auto_generate_questions === undefined ? null : Number(data.auto_generate_questions),
+        data.reflection_period ?? null,
         id,
         user.id,
       ),

@@ -3,6 +3,7 @@ import { testApp, mockEvent, mockStep } from './helpers';
 import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/workflows';
 import type { Job } from '../server/env';
 import type { Question, Stock } from '../shared/domain';
+import { legacyQuestionStatements } from './legacy-questions-fixture';
 
 let app: Awaited<ReturnType<typeof testApp>>;
 beforeEach(async () => {
@@ -38,6 +39,7 @@ async function save() {
   ).json()) as { id: string };
   const { stock } = (await (await app.request(`/api/v1/stocks/${id}`)).json()) as { stock: Stock };
   await run('article', stock.article_id);
+  await app.env.DB.batch(legacyQuestionStatements(app.env, id));
   await run('question', id);
   return id;
 }
@@ -112,6 +114,7 @@ it('同じ記事の別保存先の問いを変えず、利用上限でもメモ�
       },
     })
   ).json()) as { id: string };
+  await app.env.DB.batch(legacyQuestionStatements(app.env, other));
   await run('question', other);
   const previous = await question(other);
   app.env.AI_QUESTION_DAILY_LIMIT = '1';
