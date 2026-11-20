@@ -3,6 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import PublicProjectPage from '../src/features/public-projects';
+import { PublicStockCard } from '../src/features/public-projects/PublicStocks';
 import { api } from '../src/lib/api';
 import { setLanguage } from '../src/i18n/i18n';
 import type { PublicStock } from '../shared/public-project';
@@ -41,6 +42,7 @@ let root: Root;
 let document: Document;
 beforeEach(() => {
   delete stock.images;
+  delete stock.og_image_url;
   pufuTitle = null;
   setLanguage('ja');
   const dom = parseHTML('<html><body><div id="root"></div></body></html>');
@@ -139,7 +141,7 @@ async function navigate(hash: string) {
     window.dispatchEvent(new window.Event('hashchange'));
   });
 }
-it('公開ストックでも要約の直後に画像を表示し、公開URLのままカルーセルで切り替える', async () => {
+it('公開ストックの一覧と詳細で添付画像を切り替え、一覧ではOGP画像も要約の下に表示する', async () => {
   stock.images = ['first', 'second'].map((id) => ({
     id,
     filename: `${id}.png`,
@@ -148,7 +150,23 @@ it('公開ストックでも要約の直後に画像を表示し、公開URLの�
     size: 100,
     created_at: '2026-11-08',
   }));
-  await render('#stock/stock');
+  stock.og_image_url = '/api/public/projects/project/stocks/stock/og-image';
+  await render();
+  const card = document.querySelector('.public-stock-card')!;
+  const carousel = card.querySelector('.public-summary + .article-image-previews')!;
+  const preview = carousel.querySelector('a[href="#stock/stock"]');
+  expect(preview?.querySelector('img')?.getAttribute('src')).toBe(stock.images[0].url);
+  expect(carousel.querySelector('.stock-image-caption')).toBeNull();
+  expect(carousel.nextElementSibling?.querySelector('.stock-og-image')?.getAttribute('src')).toBe(
+    stock.og_image_url,
+  );
+  await act(async () =>
+    carousel.querySelector<HTMLButtonElement>('[aria-label="次の画像"]')!.click(),
+  );
+  expect(preview?.querySelector('img')?.getAttribute('src')).toBe(stock.images[1].url);
+  expect(window.location.hash).toBe('#stocks');
+
+  await navigate('#stock/stock');
   const summary = document.querySelector('.public-stock-detail .public-summary')!;
   expect(summary.nextElementSibling?.className).toBe('stock-image-carousel');
   await act(async () =>
@@ -219,11 +237,11 @@ it('一覧取得中はコンテンツ領域の骨格を保ち、読み込み文�
 it('一覧のストックは詳細へのリンクで、要点は詳細で関連する問いとともに表示する', async () => {
   await render();
   const card = document.querySelector('.public-stock-card');
-  expect(card?.tagName).toBe('A');
-  expect(card?.getAttribute('href')).toBe('#stock/stock');
+  expect(card?.querySelector('h3 a')?.getAttribute('href')).toBe('#stock/stock');
   expect(document.body.textContent).not.toContain('要点を見る');
   expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
-  expect(card?.querySelector('a,details')).toBeNull();
+  expect(card?.querySelectorAll('a')).toHaveLength(1);
+  expect(card?.querySelector('details,img')).toBeNull();
   expect(card?.textContent).not.toContain('詳細を見る');
   await navigate('#stock/stock');
   expect(document.body.textContent).toContain('詳細で確認する記事の要点');
@@ -236,6 +254,14 @@ it('一覧のストックは詳細へのリンクで、要点は詳細で関連�
     '_blank',
   );
   expect(document.querySelectorAll('input,textarea,[contenteditable]')).toHaveLength(0);
+});
+it('タイトルが空白のストックでも詳細リンクにドメインを表示する', async () => {
+  await act(async () =>
+    root.render(createElement(PublicStockCard, { stock: { ...stock, title: ' ' } })),
+  );
+  const link = document.querySelector('.public-stock-card h3 a');
+  expect(link?.textContent).toBe(stock.domain);
+  expect(link?.getAttribute('href')).toBe('#stock/stock');
 });
 it('本文採用モードはストック詳細に原文を表示し、問いの関連ストックは一覧カードで案内する', async () => {
   const text =
@@ -267,9 +293,9 @@ it('本文採用モードはストック詳細に原文を表示し、問いの�
   expect(detail.querySelector('img[onerror]')).toBeNull();
   await navigate('#question/ai');
   const card = document.querySelector('.public-stock-card')!;
-  expect(card.getAttribute('href')).toBe('#stock/stock');
+  expect(card.querySelector('h4 a')?.getAttribute('href')).toBe('#stock/stock');
   expect(card.querySelector('.public-summary')?.textContent).toBe(text);
-  expect(card.querySelector('a,img[onerror]')).toBeNull();
+  expect(card.querySelector('.public-summary a,img[onerror]')).toBeNull();
   expect(document.querySelector('.public-stock-detail,.public-stock-points')).toBeNull();
 });
 it('問い一覧にはAI・プ譜のラベルを表示し、問いの詳細にはストックの概要カードを表示する', async () => {

@@ -31,8 +31,11 @@ const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
   (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count,
   ${publicPufuCount} AS pufu_count`;
-const stockColumns =
-  "s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,a.has_og_image,p.public_id,s.created_at,CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json";
+const stockColumns = `s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,a.has_og_image,p.public_id,s.created_at,
+  CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json,
+  (SELECT json_group_array(json_object('id',id,'filename',filename,'content_type',content_type,'size',size,'created_at',created_at)) FROM
+    (SELECT id,filename,content_type,size,created_at FROM stock_images WHERE stock_id=s.id AND status='ready' ORDER BY created_at,id)
+  ) AS images_json`;
 const stockJoins =
   'stocks s JOIN projects p ON p.id=s.project_id JOIN articles a ON a.id=s.article_id';
 const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.title) AS article_title,q.created_at,
@@ -41,23 +44,28 @@ const questionJoins =
   'questions q JOIN projects p ON p.id=q.project_id LEFT JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id';
 const publicWhere = 'p.public_id=? AND p.is_public=1';
 function stock(
-  row: Omit<PublicStock, 'summary'> & {
+  row: Omit<PublicStock, 'summary' | 'images'> & {
     summary_json: string | null;
     has_og_image: number;
     public_id: string;
+    images_json: string;
   },
 ): PublicStock {
   // 本文採用時は要約の代わりに原文を公開する。
   // 明示したフィールドだけを返し、通常保存の取得本文・個人メモ・内部情報は返さない。
   const parsed = row.summary_json ? (JSON.parse(row.summary_json) as ArticleSummary) : null;
+  const imageBase = `/api/public/projects/${encodeURIComponent(row.public_id)}/stocks/${encodeURIComponent(row.id)}`;
+  const images = JSON.parse(row.images_json) as StockImage[];
   return {
     id: row.id,
     title: row.title,
     source_url: row.source_url,
     domain: row.domain,
-    og_image_url: row.has_og_image
-      ? `/api/public/projects/${encodeURIComponent(row.public_id)}/stocks/${encodeURIComponent(row.id)}/og-image`
-      : null,
+    og_image_url: row.has_og_image ? `${imageBase}/og-image` : null,
+    images: images.map((image) => ({
+      ...image,
+      url: `${imageBase}/images/${encodeURIComponent(image.id)}`,
+    })),
     created_at: row.created_at,
     summary: parsed
       ? {
@@ -198,20 +206,9 @@ export function publicProjectsApp() {
       ).bind(c.req.param('key'), c.req.param('id')),
     ]);
     if (!stocks.results.length) throw notFound();
-    const images = await c.env.DB.prepare(
-      "SELECT id,filename,content_type,size,created_at FROM stock_images WHERE stock_id=? AND status='ready' ORDER BY created_at,id",
-    )
-      .bind(c.req.param('id'))
-      .all<StockImage>();
     const total = Number(count.results[0].total);
     return c.json({
-      stock: {
-        ...stock(stocks.results[0] as Parameters<typeof stock>[0]),
-        images: images.results.map((image) => ({
-          ...image,
-          url: `/api/public/projects/${encodeURIComponent(c.req.param('key'))}/stocks/${encodeURIComponent(c.req.param('id'))}/images/${encodeURIComponent(image.id)}`,
-        })),
-      },
+      stock: stock(stocks.results[0] as Parameters<typeof stock>[0]),
       questions: questions.results.map(withRelations),
       total,
       page,

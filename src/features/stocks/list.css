@@ -158,12 +158,12 @@
   background: var(--wash);
   border-radius: 8px;
 }
-.article-image-previews .stock-image-slide button {
+.article-image-previews .stock-image-preview {
   display: block;
   width: 100%;
   padding: 0;
 }
-.article-image-previews .stock-image-slide button:focus-visible {
+.article-image-previews .stock-image-preview:focus-visible {
   outline-offset: -3px;
 }
 .article-image-previews .stock-image-slide img {

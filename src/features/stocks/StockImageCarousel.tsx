@@ -10,7 +10,7 @@ export default function StockImageCarousel({
   preview,
 }: {
   images: CarouselImage[];
-  preview?: { onOpen: () => void; openLabel: string };
+  preview?: { openLabel: string } & ({ onOpen: () => void } | { href: string });
 }) {
   useLanguage();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -25,6 +25,15 @@ export default function StockImageCarousel({
   const multiple = images.length > 1;
   const move = (offset: number) =>
     setSelectedId(images[(selected + offset + images.length) % images.length].id);
+  const image = (
+    <img
+      src={current.url}
+      alt={current.filename}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+    />
+  );
   return (
     <section
       className={preview ? 'stock-image-carousel article-image-previews' : 'stock-image-carousel'}
@@ -70,29 +79,34 @@ export default function StockImageCarousel({
           }
         }}
       >
-        <button
-          type="button"
-          className={preview ? undefined : 'stock-image-open'}
-          aria-label={preview?.openLabel ?? t('stock_images.enlarge', { name: current.filename })}
-          aria-description={preview ? current.filename : undefined}
-          aria-haspopup={preview ? undefined : 'dialog'}
-          onClick={(event) => {
-            if (preview) {
-              preview.onOpen();
-              return;
-            }
-            event.currentTarget.focus({ preventScroll: true });
-            setExpanded(true);
-          }}
-        >
-          <img
-            src={current.url}
-            alt={current.filename}
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-          />
-        </button>
+        {preview && 'href' in preview ? (
+          <a
+            className="stock-image-preview"
+            href={preview.href}
+            aria-label={preview.openLabel}
+            aria-description={current.filename}
+          >
+            {image}
+          </a>
+        ) : (
+          <button
+            type="button"
+            className={preview ? 'stock-image-preview' : 'stock-image-open'}
+            aria-label={preview?.openLabel ?? t('stock_images.enlarge', { name: current.filename })}
+            aria-description={preview ? current.filename : undefined}
+            aria-haspopup={preview ? undefined : 'dialog'}
+            onClick={(event) => {
+              if (preview) {
+                preview.onOpen();
+                return;
+              }
+              event.currentTarget.focus({ preventScroll: true });
+              setExpanded(true);
+            }}
+          >
+            {image}
+          </button>
+        )}
       </div>
       {multiple && (
         <div className="stock-image-controls">
