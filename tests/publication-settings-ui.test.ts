@@ -34,6 +34,7 @@ beforeEach(() => {
     public_id: null,
     public_description: '公開用の紹介文',
     published_at: null,
+    view_stats: null,
   };
   vi.mocked(api).mockImplementation(async () => ({ publication }));
   vi.mocked(send).mockImplementation(async (_path, body) => {
@@ -238,5 +239,27 @@ it('検索掲載は公開と別に選択し、既に公開済みでも有効化�
     '/api/v1/projects/project/publication',
     { is_public: true, search_indexable: true, public_description: '公開用の紹介文' },
     'PATCH',
+  );
+});
+
+it('公開設定の下に確定した閲覧数と閲覧上位の詳細リンクを表示する', async () => {
+  publication = {
+    ...publication,
+    is_public: true,
+    public_id: 'public-project',
+    view_stats: {
+      totals: { project: 20, stocks: 12, questions: 7, pufus: 3 },
+      top: [{ kind: 'stocks', id: 'stock-a', title: '読まれた記事', views: 12 }],
+    },
+  };
+  await render();
+  const section = document.querySelector('form + .publication-views');
+  expect(
+    Array.from(section?.querySelectorAll('dd .public-view-count') ?? [], (el) => el.textContent),
+  ).toEqual(['20', '12', '7', '3']);
+  const first = section?.querySelector('ol li');
+  expect(first?.querySelector('a')?.textContent).toBe('読まれた記事');
+  expect(first?.querySelector('a')?.getAttribute('href')).toBe(
+    'https://example.com/p/public-project/stocks/stock-a',
   );
 });

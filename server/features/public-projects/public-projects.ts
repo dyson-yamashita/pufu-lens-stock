@@ -8,6 +8,9 @@ import type {
   PublicProjectDetail,
   PublicPufu,
   PublicStock,
+  PublicViewRankingItem,
+  PublicViewStats,
+  PublicViewTotals,
 } from '../../../shared/public-project';
 import { pufuScoreSchema } from '../../../shared/pufu';
 import type { StockImage } from '../../../shared/stock-images';
@@ -16,6 +19,7 @@ import { now } from '../../infrastructure/db';
 import { pufuRelationsColumns, stockRelationsColumn, withRelations } from '../relations/relations';
 import { ogImageResponse } from '../stocks/og-image';
 import { stockImageResponse } from '../stocks/stock-images';
+import { publicViewColumn } from './public-views';
 
 const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
@@ -30,15 +34,15 @@ const publicPufuCount = `(SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_i
 const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,
   (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND ${publicQuestionWhere}) AS question_count,
-  ${publicPufuCount} AS pufu_count`;
-const stockColumns = `s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,a.has_og_image,p.public_id,s.created_at,
+  ${publicPufuCount} AS pufu_count,${publicViewColumn('project')}`;
+const stockColumns = `s.id,COALESCE(s.title,a.title) AS title,a.source_url,a.domain,a.has_og_image,p.public_id,s.created_at,${publicViewColumn('stocks', 's.id')},
   CASE WHEN a.status != 'failed' THEN a.summary_json END AS summary_json,
   (SELECT json_group_array(json_object('id',id,'filename',filename,'content_type',content_type,'size',size,'created_at',created_at)) FROM
     (SELECT id,filename,content_type,size,created_at FROM stock_images WHERE stock_id=s.id AND status='ready' ORDER BY created_at,id)
   ) AS images_json`;
 const stockJoins =
   'stocks s JOIN projects p ON p.id=s.project_id JOIN articles a ON a.id=s.article_id';
-const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.title) AS article_title,q.created_at,
+const questionColumns = `q.id,q.text,q.source,q.stock_id,COALESCE(s.title,a.title) AS article_title,q.created_at,${publicViewColumn('questions', 'q.id')},
   (SELECT COUNT(*) FROM pufu_scores pf WHERE EXISTS(SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pf.id AND pq.question_id=q.id) AND pf.user_id=p.user_id AND pf.status='ready') AS pufu_count,${stockRelationsColumn('q')}`;
 const questionJoins =
   'questions q JOIN projects p ON p.id=q.project_id LEFT JOIN stocks s ON s.id=q.stock_id AND s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id';
@@ -58,6 +62,7 @@ function stock(
   const images = JSON.parse(row.images_json) as StockImage[];
   return {
     id: row.id,
+    view_count: row.view_count,
     title: row.title,
     source_url: row.source_url,
     domain: row.domain,
@@ -104,7 +109,7 @@ export function publicProjectsApp() {
       ).first<string>('revision');
       if (!revision) throw new Error('Public directory revision is missing');
       cacheKey = new Request(
-        new URL(`/__cache/public-projects/v2/${revision}?page=${page}`, c.env.APP_URL),
+        new URL(`/__cache/public-projects/v3/${revision}?page=${page}`, c.env.APP_URL),
       );
       try {
         const cached = await cache.match(cacheKey);
@@ -245,7 +250,7 @@ export function publicProjectsApp() {
         `SELECT ${stockColumns} FROM ${stockJoins} JOIN question_stocks qs ON qs.stock_id=s.id JOIN questions q ON q.id=qs.question_id AND q.project_id=p.id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere}`,
       ).bind(c.req.param('key'), c.req.param('id')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at FROM pufu_scores pf JOIN pufu_questions pq ON pq.pufu_id=pf.id JOIN questions q ON q.id=pq.question_id JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
+        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,${publicViewColumn('pufus', 'pf.id')} FROM pufu_scores pf JOIN pufu_questions pq ON pq.pufu_id=pf.id JOIN questions q ON q.id=pq.question_id JOIN projects p ON p.id=pf.project_id WHERE ${publicWhere} AND q.id=? AND ${publicQuestionWhere} AND pf.user_id=p.user_id AND pf.status='ready' ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), c.req.param('id'), limit, offset),
     ]);
     if (!questions.results.length) throw notFound();
@@ -263,7 +268,7 @@ export function publicProjectsApp() {
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
       c.env.DB.prepare(
-        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,
+        `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,${publicViewColumn('pufus', 'pf.id')},
         json_extract(COALESCE(ph.score_json,pf.score_json),'$.gainingGoal.text') AS latest_gaining_goal
         FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
         LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
@@ -287,7 +292,7 @@ export function publicProjectsApp() {
       throw new HTTPException(400);
     // 公開の読み取りでは局面の初期化・ジョブ起動・コンテキスト取得を一切行わない。
     const row = await c.env.DB.prepare(
-      `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,q.id AS question_id,q.text AS question_text,${pufuRelationsColumns('pf')},
+      `SELECT pf.id,pf.title,pf.task,pf.current_phase,pf.updated_at,${publicViewColumn('pufus', 'pf.id')},q.id AS question_id,q.text AS question_text,${pufuRelationsColumns('pf')},
       COALESCE(ph.score_json,pf.score_json) AS score_json FROM pufu_scores pf
       JOIN projects p ON p.id=pf.project_id JOIN questions q ON q.id=(SELECT pq.question_id FROM pufu_questions pq JOIN questions visible ON visible.id=pq.question_id WHERE pq.pufu_id=pf.id AND (visible.status='ready' OR (visible.source='ai' AND visible.text IS NOT NULL)) ORDER BY pq.question_id LIMIT 1)
       LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
@@ -317,6 +322,7 @@ export function publicProjectsApp() {
       pufu: {
         ...withRelations({ questions_json: row.questions_json, stocks_json: row.stocks_json }),
         id: row.id,
+        view_count: row.view_count,
         title: row.title,
         task: row.task,
         current_phase: row.current_phase,
@@ -329,6 +335,36 @@ export function publicProjectsApp() {
     });
   });
   return app;
+}
+
+async function readViewStats(db: D1Database, projectId: string): Promise<PublicViewStats> {
+  const [counts, ranking] = await db.batch([
+    db
+      .prepare(
+        'SELECT kind,SUM(views) AS views FROM public_view_totals WHERE project_id=? GROUP BY kind',
+      )
+      .bind(projectId),
+    db
+      .prepare(
+        `WITH views AS (SELECT kind,item_id,views FROM public_view_totals WHERE project_id=?1)
+       SELECT v.kind,s.id,COALESCE(NULLIF(trim(COALESCE(s.title,a.title)),''),NULLIF(a.domain,'')) AS title,v.views
+       FROM views v JOIN stocks s ON s.id=v.item_id JOIN articles a ON a.id=s.article_id
+       WHERE v.kind='stocks' AND s.project_id=?1
+       UNION ALL
+       SELECT v.kind,q.id,q.text AS title,v.views FROM views v JOIN questions q ON q.id=v.item_id
+       WHERE v.kind='questions' AND q.project_id=?1 AND ${publicQuestionWhere}
+       UNION ALL
+       SELECT v.kind,pf.id,COALESCE(NULLIF(pf.title,''),pf.task) AS title,v.views
+       FROM views v JOIN pufu_scores pf ON pf.id=v.item_id JOIN projects p ON p.id=pf.project_id
+       WHERE v.kind='pufus' AND pf.project_id=?1 AND ${publicPufuWhere}
+       ORDER BY views DESC,kind,id LIMIT 5`,
+      )
+      .bind(projectId),
+  ]);
+  const totals: PublicViewTotals = { project: 0, stocks: 0, questions: 0, pufus: 0 };
+  for (const { kind, views } of counts.results as { kind: keyof PublicViewTotals; views: number }[])
+    totals[kind] = views;
+  return { totals, top: ranking.results as PublicViewRankingItem[] };
 }
 
 const publicationSchema = z.strictObject({
@@ -344,7 +380,7 @@ export function publicationApp() {
     )
       .bind(id, c.get('principal').user.id)
       .first<
-        Omit<Publication, 'is_public' | 'search_indexable'> & {
+        Omit<Publication, 'is_public' | 'search_indexable' | 'view_stats'> & {
           is_public: number;
           search_indexable: number;
         }
@@ -356,9 +392,12 @@ export function publicationApp() {
       search_indexable: Boolean(row.search_indexable),
     };
   }
-  app.get('/:id/publication', async (c) =>
-    c.json({ publication: await read(c, c.req.param('id')) }),
-  );
+  async function respond(c: import('hono').Context<AppEnv>, id: string) {
+    const publication = await read(c, id);
+    const view_stats = publication.is_public ? await readViewStats(c.env.DB, id) : null;
+    return c.json({ publication: { ...publication, view_stats } });
+  }
+  app.get('/:id/publication', (c) => respond(c, c.req.param('id')));
   app.patch('/:id/publication', async (c) => {
     const id = c.req.param('id');
     await read(c, id);
@@ -381,7 +420,7 @@ export function publicationApp() {
         c.get('principal').user.id,
       )
       .run();
-    return c.json({ publication: await read(c, id) });
+    return respond(c, id);
   });
   return app;
 }

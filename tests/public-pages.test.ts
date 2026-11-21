@@ -1,9 +1,11 @@
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { parseHTML } from 'linkedom';
 import worker from '../server/index';
+import { publicViewsCron } from '../server/features/public-projects/public-views';
 import { testApp } from './helpers';
 import { socialImagePath } from '../scripts/social-image';
+import type { Publication } from '../shared/public-project';
 let app: Awaited<ReturnType<typeof testApp>>;
 let key: string;
 const read = (path: string, method = 'GET') =>
@@ -45,7 +47,10 @@ beforeEach(async () => {
     app.env.DB.prepare("INSERT INTO pufu_questions (pufu_id,question_id) VALUES ('pf','q')"),
   ]);
 });
-afterEach(async () => app.dispose());
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await app.dispose();
+});
 async function allow(value = true) {
   await app.request('/api/v1/projects/alice-project/publication', {
     method: 'PATCH',
@@ -319,4 +324,109 @@ it('本文採用モードの原文全体を公開HTMLへ安全に表示する', 
   });
   expect(result.status).toBe(200);
   expect((await read(`/p/${key}/stocks/stock`)).status).toBe(404);
+});
+
+it('画面遷移の総回数を日次で確定し、各公開画面と所有者の設定に返す', async () => {
+  const browserHeaders = { 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'navigate' };
+  const background: Promise<unknown>[] = [];
+  const ctx = { ...app.ctx, waitUntil: (work: Promise<unknown>) => background.push(work) };
+  const base = `/p/${key}`;
+  const api = `/api/public/projects/${key}`;
+  const navigate = (path: string, headers: HeadersInit = browserHeaders, method = 'GET') =>
+    worker.fetch(new Request(`${app.env.APP_URL}${path}`, { method, headers }), app.env, ctx);
+  const now = Date.now();
+  vi.spyOn(Date, 'now').mockReturnValue(now);
+  const afterDay = now + 24 * 60 * 60 * 1000;
+  const aggregate = async (scheduledTime: number) => {
+    worker.scheduled({ scheduledTime, cron: publicViewsCron } as ScheduledController, app.env, ctx);
+    await Promise.all(background.splice(0));
+  };
+  const publication = '/api/v1/projects/alice-project/publication';
+  const readStats = async () =>
+    ((await (await app.request(publication)).json()) as { publication: Publication }).publication
+      .view_stats;
+  for (const suffix of [
+    '',
+    '?view=questions',
+    '/stocks/stock',
+    '/stocks/stock',
+    '/questions/q',
+    '/pufus/pf',
+  ])
+    expect((await navigate(base + suffix)).status).toBe(200);
+  expect((await navigate(base, browserHeaders, 'HEAD')).status).toBe(200);
+  expect((await navigate(base, { ...browserHeaders, 'Sec-Purpose': 'prefetch' })).status).toBe(200);
+  expect((await navigate(base + '/stocks/stock', { 'Sec-Fetch-Mode': 'cors' })).status).toBe(200);
+  expect((await navigate(base + '/questions/hidden')).status).toBe(404);
+  expect((await navigate(api + '/pufus/pf?phase=1')).status).toBe(200);
+  await Promise.all(background.splice(0));
+
+  await aggregate(now);
+  expect(await readStats()).toEqual({
+    totals: { project: 0, stocks: 0, questions: 0, pufus: 0 },
+    top: [],
+  });
+  await aggregate(afterDay);
+  await aggregate(afterDay);
+  const counts = await readStats();
+  expect(counts).toEqual({
+    totals: { project: 2, stocks: 2, questions: 1, pufus: 1 },
+    top: [
+      { kind: 'stocks', id: 'stock', title: '公開ストック', views: 2 },
+      { kind: 'pufus', id: 'pf', title: '公開された課題', views: 1 },
+      { kind: 'questions', id: 'q', title: '実践の問い？', views: 1 },
+    ],
+  });
+  expect(await (await app.request(api)).json()).toMatchObject({ project: { view_count: 2 } });
+  expect(await (await app.request('/api/public/projects')).json()).toMatchObject({
+    items: [{ view_count: 2 }],
+  });
+  for (const [kind, views] of [
+    ['stocks', 2],
+    ['questions', 1],
+    ['pufus', 1],
+  ] as const)
+    expect(await (await app.request(`${api}/${kind}`)).json()).toMatchObject({
+      items: [{ view_count: views }],
+    });
+  expect((await app.request(publication, { user: 'bob' })).status).toBe(404);
+  const privateResult = await app.request(publication, {
+    method: 'PATCH',
+    body: { is_public: false, public_description: '' },
+  });
+  expect(await privateResult.json()).toMatchObject({ publication: { view_stats: null } });
+  expect((await navigate(base)).status).toBe(404);
+});
+
+it('上位5件は現在公開されている詳細だけを横断し、同数を安定した順に表示する', async () => {
+  const db = app.env.DB;
+  await db.batch([
+    ...Array.from({ length: 6 }, (_, i) =>
+      db
+        .prepare(
+          "INSERT INTO questions (id,project_id,source,text,status) VALUES (?,'alice-project','user',?,'ready')",
+        )
+        .bind(`rank-${i}`, `公開の問い ${i}`),
+    ),
+    ...Array.from({ length: 6 }, (_, i) =>
+      db
+        .prepare(
+          "INSERT INTO public_view_totals (project_id,kind,item_id,views) VALUES ('alice-project','questions',?,?)",
+        )
+        .bind(`rank-${i}`, 3),
+    ),
+    db.prepare(`INSERT INTO public_view_totals (project_id,kind,item_id,views) VALUES
+      ('alice-project','project','',200),('alice-project','questions','hidden',100),
+      ('alice-project','stocks','deleted',90),('alice-project','pufus','pf',5)`),
+  ]);
+  const data = (await (await app.request('/api/v1/projects/alice-project/publication')).json()) as {
+    publication: Publication;
+  };
+  expect(data.publication.view_stats?.top.map(({ id }) => id)).toEqual([
+    'pf',
+    'rank-0',
+    'rank-1',
+    'rank-2',
+    'rank-3',
+  ]);
 });

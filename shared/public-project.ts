@@ -3,12 +3,26 @@ import type { ArticleSummary } from './domain';
 import type { PufuScore } from './pufu';
 import type { StockImage } from './stock-images';
 
+export type PublicViewTotals = Record<'project' | 'stocks' | 'questions' | 'pufus', number>;
+
+export type PublicViewRankingItem = {
+  kind: Exclude<keyof PublicViewTotals, 'project'>;
+  id: string;
+  title: string | null;
+  views: number;
+};
+export type PublicViewStats = {
+  totals: PublicViewTotals;
+  top: PublicViewRankingItem[];
+};
+
 export type Publication = {
   is_public: boolean;
   search_indexable: boolean;
   public_id: string | null;
   public_description: string;
   published_at: string | null;
+  view_stats: PublicViewStats | null;
 };
 export type PublicProject = {
   public_id: string;
@@ -18,6 +32,7 @@ export type PublicProject = {
   stock_count: number;
   question_count: number;
   pufu_count: number;
+  view_count: number;
 };
 export type PublicProjectDetail = PublicProject & { search_indexable: number };
 export type PublicStock = {
@@ -29,6 +44,7 @@ export type PublicStock = {
   domain: string;
   created_at: string;
   summary: ArticleSummary | null;
+  view_count: number;
 };
 export type PublicQuestion = StockRelations & {
   id: string;
@@ -38,6 +54,7 @@ export type PublicQuestion = StockRelations & {
   article_title: string | null;
   created_at: string;
   pufu_count: number;
+  view_count: number;
 };
 export type PublicPufuSummary = {
   title?: string | null;
@@ -46,6 +63,7 @@ export type PublicPufuSummary = {
   task: string;
   current_phase: number;
   updated_at: string;
+  view_count: number;
 };
 export type PublicPufu = PufuRelations &
   PublicPufuSummary & {

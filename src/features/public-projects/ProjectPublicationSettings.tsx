@@ -1,8 +1,13 @@
 import { Check, Copy, ExternalLink, Globe, LockKeyhole } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type RefObject } from 'react';
-import type { Publication } from '../../../shared/public-project';
+import type {
+  Publication,
+  PublicViewStats,
+  PublicViewTotals,
+} from '../../../shared/public-project';
 import { applicationError, t, useLanguage } from '../../i18n/i18n';
 import { send } from '../../lib/api';
+import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import { useResource } from './useResource';
 
@@ -208,6 +213,9 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
           </button>
         </div>
       </form>
+      {saved.is_public && url && saved.view_stats && (
+        <PublicationViews url={url} stats={saved.view_stats} />
+      )}
       {confirming && (
         <PublicationConfirmation
           triggerRef={saveRef}
@@ -223,6 +231,59 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         />
       )}
     </>
+  );
+}
+
+const viewLabels = {
+  project: 'ui.public_projects.project_page',
+  stocks: 'ui.public_projects.stock_details',
+  questions: 'ui.public_projects.question_or_insight_details',
+  pufus: 'ui.public_projects.pufu_details',
+} as const satisfies Record<keyof PublicViewTotals, string>;
+
+function PublicationViews({ url, stats }: { url: string; stats: PublicViewStats }) {
+  const id = useId();
+  const kinds = ['project', 'stocks', 'questions', 'pufus'] as const;
+  return (
+    <section className="publication-views" aria-labelledby={id}>
+      <h3 id={id}>{t('ui.public_projects.public_views')}</h3>
+      <p className="public-help">{t('ui.public_projects.public_views_help')}</p>
+      <dl>
+        {kinds.map((kind) => (
+          <div key={kind}>
+            <dt>{t(viewLabels[kind])}</dt>
+            <dd>
+              <PublicViewCount count={stats.totals[kind]} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <h4>{t('ui.public_projects.top_details')}</h4>
+      {stats.top.length > 0 ? (
+        <ol>
+          {stats.top.map((item) => (
+            <li key={`${item.kind}/${item.id}`}>
+              <div className="public-count-row">
+                <div>
+                  <span className="public-help">{t(viewLabels[item.kind])}</span>
+                  <a
+                    className="text-link"
+                    href={`${url}/${item.kind}/${encodeURIComponent(item.id)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {item.title || t('ui.app.text')}
+                  </a>
+                </div>
+                <PublicViewCount count={item.views} />
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="public-help">{t('ui.public_projects.no_ranked_details')}</p>
+      )}
+    </section>
   );
 }
 

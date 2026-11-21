@@ -3,6 +3,7 @@ import { pufuDisplayTitle } from '../../../shared/pufu';
 import { intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
+import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
@@ -23,7 +24,10 @@ export function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             key={pufu.id}
             href={publicLink(`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`)}
           >
-            <h3>{pufuDisplayTitle(pufu)}</h3>
+            <div className="public-count-row">
+              <h3>{pufuDisplayTitle(pufu)}</h3>
+              <PublicViewCount count={pufu.view_count} />
+            </div>
             {pufu.title && pufu.latest_gaining_goal && (
               <p className="public-pufu-goal">{pufu.latest_gaining_goal}</p>
             )}

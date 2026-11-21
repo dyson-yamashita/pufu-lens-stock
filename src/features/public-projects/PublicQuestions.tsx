@@ -12,6 +12,7 @@ import QuestionLabels from '../questions/QuestionLabels';
 import { initialPublicPage, publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
 import { PublicStockCard } from './PublicStocks';
+import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
@@ -26,7 +27,10 @@ export function PublicQuestionCard({ question }: { question: PublicQuestion }) {
       <QuestionLabels
         question={{ source: question.source, has_pufu: question.pufu_count > 0 ? 1 : 0 }}
       />
-      <h3>{question.text}</h3>
+      <div className="public-count-row">
+        <h3>{question.text}</h3>
+        <PublicViewCount count={question.view_count} />
+      </div>
       {(
         question.stocks ??
         (question.stock_id ? [{ id: question.stock_id, title: question.article_title }] : [])
@@ -98,11 +102,12 @@ export function PublicQuestionDetail({
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_questions_insights')}
       </a>
-      <header className="page-header">
+      <header className="page-header public-count-row">
         <div>
           <h2 className="page-title">{t('ui.public_projects.question_or_insight_details')}</h2>
           <p>{t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}</p>
         </div>
+        <PublicViewCount count={data.question.view_count} />
       </header>
       <article className="question-detail-card">
         <div className="question-detail-meta">
@@ -162,6 +167,7 @@ export function PublicQuestionDetail({
                   {t('ui.public_projects.read_only')}
                 </small>
               </span>
+              <PublicViewCount count={pufu.view_count} />
             </a>
           ))}
         </div>

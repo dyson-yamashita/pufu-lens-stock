@@ -6,6 +6,7 @@ import { createApp } from './api/app';
 import type { AppEnv, Env } from './env';
 import { deliverAnnouncements } from './features/announcements/push-delivery';
 import { publicPagesApp } from './features/public-projects/public-pages';
+import { publicViewsCron, publishPublicViews } from './features/public-projects/public-views';
 import {
   logDiagnosticError,
   requestDiagnostics,
@@ -73,6 +74,10 @@ entry.all('*', (c) => {
 export default {
   fetch: entry.fetch,
   scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    if (event.cron === publicViewsCron) {
+      ctx.waitUntil(scheduledDiagnostics(() => publishPublicViews(env.DB, event.scheduledTime)));
+      return;
+    }
     ctx.waitUntil(scheduledDiagnostics(() => scheduledMaintenance(env, event.scheduledTime)));
     ctx.waitUntil(scheduledDiagnostics(() => deliverAnnouncements(env)));
   },

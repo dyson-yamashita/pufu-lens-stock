@@ -4,6 +4,7 @@ import type { PublicList, PublicProject } from '../../../shared/public-project';
 import { t, useLanguage } from '../../i18n/i18n';
 import { initialPublicPage } from './public-routing';
 import { Pagination } from './PublicLayout';
+import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import { useResource } from './useResource';
 
@@ -40,7 +41,10 @@ export function PublicProjectDirectory() {
                   <Globe size={13} aria-hidden="true" />
                   {t('ui.public_projects.public')}
                 </span>
-                <h3 title={project.name}>{project.name}</h3>
+                <div className="public-count-row">
+                  <h3 title={project.name}>{project.name}</h3>
+                  <PublicViewCount count={project.view_count} />
+                </div>
                 <p>
                   {project.public_description ||
                     t(

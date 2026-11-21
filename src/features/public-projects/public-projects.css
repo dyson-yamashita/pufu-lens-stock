@@ -545,3 +545,65 @@
 .public-question-detail .question-card-footer {
   min-height: 44px;
 }
+
+.public-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.public-count-row > :first-child {
+  min-width: 0;
+}
+
+.public-view-count {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.publication-views {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.publication-views dl {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 24px;
+}
+
+.publication-views dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.publication-views dd {
+  margin: 0;
+}
+
+.publication-views ol {
+  padding-inline-start: 24px;
+}
+
+.publication-views li {
+  padding: 10px 0;
+  overflow-wrap: anywhere;
+}
+
+.publication-views li + li {
+  border-top: 1px solid var(--border);
+}
+
+.publication-views li .text-link {
+  display: block;
+}

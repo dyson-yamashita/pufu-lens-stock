@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Response as CacheResponse } from 'miniflare';
 import { testApp } from './helpers';
+import { publishPublicViews } from '../server/features/public-projects/public-views';
 
 describe('公開プロジェクト一覧のキャッシュ', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -65,6 +66,18 @@ describe('公開プロジェクト一覧のキャッシュ', () => {
     expect(cached.headers.get('Cache-Control')).toBe('no-store');
     expect(cached.headers.get('Content-Type')).toContain('application/json');
     expect(cached.headers.get('X-Content-Type-Options')).toBe('nosniff');
+  });
+
+  it('日次集計で保存済みの公開一覧にも公開画面の累計を反映する', async () => {
+    const expectCount = async (count: number) =>
+      expect(await (await directory()).json()).toMatchObject({ items: [{ view_count: count }] });
+    await expectCount(0);
+    await app.env.DB.prepare(
+      "INSERT INTO public_view_pending (day,project_id,kind,item_id,views) VALUES ('2026-11-15','alice-project','project','',3)",
+    ).run();
+    await expectCount(0);
+    await publishPublicViews(app.env.DB, Date.parse('2026-11-15T15:05:00Z'));
+    await expectCount(3);
   });
 
   it('プ譜の作成・完成状態・問いとの関連・局面・削除をキャッシュ済みの件数に反映する', async () => {

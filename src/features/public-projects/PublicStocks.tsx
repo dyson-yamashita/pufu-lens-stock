@@ -11,6 +11,7 @@ import YouTubeThumbnail from '../stocks/YouTubeThumbnail';
 import { initialPublicPage, publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
 import { PublicQuestionCard } from './PublicQuestions';
+import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
@@ -47,11 +48,14 @@ export function PublicStockCard({
         {site}
         <time>{new Date(stock.created_at).toLocaleDateString(intlLocale())}</time>
       </p>
-      <Heading className="public-stock-card-title">
-        <a className="public-stock-card-link" href={href}>
-          {title}
-        </a>
-      </Heading>
+      <div className="public-count-row">
+        <Heading className="public-stock-card-title">
+          <a className="public-stock-card-link" href={href}>
+            {title}
+          </a>
+        </Heading>
+        <PublicViewCount count={stock.view_count} />
+      </div>
       <p className="public-summary">
         {youtube
           ? t('ui.public_projects.youtube_link_saved')
@@ -141,7 +145,10 @@ export function PublicStockDetailPage({ root, id }: { root: string; id: string }
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_stocks')}
       </a>
-      <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
+      <div className="public-count-row">
+        <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
+        <PublicViewCount count={data.stock.view_count} />
+      </div>
       <StockDetails stock={data.stock} />
       <h3 className="public-detail-title">{t('ui.public_projects.related_questions_insights')}</h3>
       <div className="public-content-grid">

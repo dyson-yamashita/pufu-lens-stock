@@ -289,6 +289,7 @@ describe('公開プロジェクトの参照専用API', () => {
     expect(stocks.items).toHaveLength(1);
     expect(stocks.items[0]).toEqual({
       id: 'stock',
+      view_count: 0,
       title: '公開する記事',
       og_image_url: null,
       images: [],
@@ -362,6 +363,7 @@ describe('公開プロジェクトの参照専用API', () => {
           title: null,
           task: '公開する課題',
           latest_gaining_goal: '公開する最新局面',
+          view_count: 0,
           current_phase: 2,
           updated_at: expect.any(String),
         },
