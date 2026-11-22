@@ -48,14 +48,11 @@ export function PublicStockCard({
         {site}
         <time>{new Date(stock.created_at).toLocaleDateString(intlLocale())}</time>
       </p>
-      <div className="public-count-row">
-        <Heading className="public-stock-card-title">
-          <a className="public-stock-card-link" href={href}>
-            {title}
-          </a>
-        </Heading>
-        <PublicViewCount count={stock.view_count} />
-      </div>
+      <Heading className="public-stock-card-title">
+        <a className="public-stock-card-link" href={href}>
+          {title}
+        </a>
+      </Heading>
       <p className="public-summary">
         {youtube
           ? t('ui.public_projects.youtube_link_saved')
@@ -76,6 +73,9 @@ export function PublicStockCard({
         </div>
       )}
       <StockTopics stock={stock} />
+      <div className="public-card-footer">
+        <PublicViewCount count={stock.view_count} />
+      </div>
     </article>
   );
 }

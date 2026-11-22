@@ -305,7 +305,7 @@ it('問い一覧にはAI・プ譜のラベルを表示し、問いの詳細に�
   expect(cards[0].querySelector('.question-labels')?.textContent).toBe('AIプ譜');
   expect(cards[1].querySelector('.question-labels')?.textContent).toBe('ユーザー');
   expect(cards[0].querySelector('.public-card-footer')?.textContent).toContain('1件のプ譜');
-  expect(cards[1].querySelector('.public-card-footer')).toBeNull();
+  expect(cards[1].querySelector('.public-card-footer')?.textContent).toBe('0');
   expect(document.body.textContent).not.toContain('詳細を見る');
   expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
   expect(document.body.textContent).not.toContain('要点を見る');

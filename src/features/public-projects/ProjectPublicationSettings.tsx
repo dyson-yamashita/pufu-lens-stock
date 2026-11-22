@@ -1,4 +1,4 @@
-import { Check, Copy, ExternalLink, Globe, LockKeyhole } from 'lucide-react';
+import { ArrowRight, Check, Copy, ExternalLink, Globe, LockKeyhole } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type RefObject } from 'react';
 import type {
   Publication,
@@ -214,7 +214,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         </div>
       </form>
       {saved.is_public && url && saved.view_stats && (
-        <PublicationViews url={url} stats={saved.view_stats} />
+        <PublicationViews url={url} stats={saved.view_stats} projectId={projectId} />
       )}
       {confirming && (
         <PublicationConfirmation
@@ -241,12 +241,26 @@ const viewLabels = {
   pufus: 'ui.public_projects.pufu_details',
 } as const satisfies Record<keyof PublicViewTotals, string>;
 
-function PublicationViews({ url, stats }: { url: string; stats: PublicViewStats }) {
+function PublicationViews({
+  url,
+  stats,
+  projectId,
+}: {
+  url: string;
+  stats: PublicViewStats;
+  projectId: string;
+}) {
   const id = useId();
   const kinds = ['project', 'stocks', 'questions', 'pufus'] as const;
   return (
     <section className="publication-views" aria-labelledby={id}>
-      <h3 id={id}>{t('ui.public_projects.public_views')}</h3>
+      <div className="publication-views-heading">
+        <h3 id={id}>{t('ui.public_projects.public_views')}</h3>
+        <a className="text-link" href={`#public-views/${encodeURIComponent(projectId)}`}>
+          {t('ui.public_projects.open_view_details')}
+          <ArrowRight size={16} aria-hidden="true" />
+        </a>
+      </div>
       <p className="public-help">{t('ui.public_projects.public_views_help')}</p>
       <dl>
         {kinds.map((kind) => (

@@ -37,14 +37,14 @@ export function PublicProjectDirectory() {
                 key={project.public_id}
                 href={`/p/${encodeURIComponent(project.public_id)}`}
               >
-                <span className="public-badge">
-                  <Globe size={13} aria-hidden="true" />
-                  {t('ui.public_projects.public')}
-                </span>
-                <div className="public-count-row">
-                  <h3 title={project.name}>{project.name}</h3>
-                  <PublicViewCount count={project.view_count} />
+                <div className="public-project-card-top">
+                  <span className="public-badge">
+                    <Globe size={13} aria-hidden="true" />
+                    {t('ui.public_projects.public')}
+                  </span>
+                  <ArrowRight size={18} aria-hidden="true" />
                 </div>
+                <h3 title={project.name}>{project.name}</h3>
                 <p>
                   {project.public_description ||
                     t(
@@ -67,7 +67,7 @@ export function PublicProjectDirectory() {
                     {project.pufu_count}
                     {t('ui.public_projects.pufus')}
                   </span>
-                  <ArrowRight className="public-project-card-arrow" size={18} aria-hidden="true" />
+                  <PublicViewCount count={project.view_count} />
                 </div>
               </a>
             ))}

@@ -430,3 +430,73 @@ it('上位5件は現在公開されている詳細だけを横断し、同数を
     'rank-3',
   ]);
 });
+
+it('閲覧数順でページをまたいでも公開項目と0回の項目を取得できる', async () => {
+  const db = app.env.DB;
+  await db.batch([
+    ...Array.from({ length: 12 }, (_, index) =>
+      db
+        .prepare(
+          "INSERT INTO questions (id,project_id,source,text,status,created_at) VALUES (?,'alice-project','user',?,'ready','2026-10-01')",
+        )
+        .bind(`view-order-${index}`, `閲覧数のある問い ${index}`),
+    ),
+    ...Array.from({ length: 12 }, (_, index) =>
+      db
+        .prepare(
+          "INSERT INTO public_view_totals (project_id,kind,item_id,views) VALUES ('alice-project','questions',?,?)",
+        )
+        .bind(`view-order-${index}`, index + 1),
+    ),
+    db.prepare(`INSERT INTO public_view_totals (project_id,kind,item_id,views) VALUES
+      ('alice-project','questions','hidden',100),
+      ('alice-project','stocks','older-stock',30),('alice-project','pufus','older-pufu',20)`),
+    db.prepare(
+      "INSERT INTO articles (id,user_id,canonical_url,source_url,domain,title,status) VALUES ('older-article','alice','older','older','','古いストック','ready')",
+    ),
+    db.prepare(
+      "INSERT INTO stocks (id,user_id,project_id,article_id,created_at) VALUES ('older-stock','alice','alice-project','older-article','2026-10-01')",
+    ),
+    db.prepare(
+      `INSERT INTO pufu_scores (id,user_id,project_id,task,input_json,score_json,editor_version,status,created_at)
+       SELECT 'older-pufu',user_id,project_id,task,input_json,score_json,editor_version,status,'2026-10-01'
+       FROM pufu_scores WHERE id='pf'`,
+    ),
+    db.prepare("INSERT INTO pufu_questions (pufu_id,question_id) VALUES ('older-pufu','q')"),
+  ]);
+
+  const api = `/api/public/projects/${key}`;
+  const list = async (path: string) => {
+    const response = await app.request(`${api}/${path}`, { headers: { Cookie: '' } });
+    expect(response.status).toBe(200);
+    return (await response.json()) as {
+      items: { id: string; view_count: number }[];
+      total: number;
+      has_more: boolean;
+    };
+  };
+  const first = await list('questions?sort=views');
+  expect(first.items.map(({ view_count }) => view_count)).toEqual(
+    Array.from({ length: 12 }, (_, index) => 12 - index),
+  );
+  expect(first).toMatchObject({ total: 13, has_more: true });
+  expect(await list('questions?sort=views&page=2')).toMatchObject({
+    items: [{ id: 'q', view_count: 0 }],
+    has_more: false,
+  });
+  expect((await list('questions')).items[0].id).toBe('q');
+  expect((await list('stocks?sort=views')).items[0]).toMatchObject({
+    id: 'older-stock',
+    view_count: 30,
+  });
+  expect((await list('pufus?sort=views')).items[0]).toMatchObject({
+    id: 'older-pufu',
+    view_count: 20,
+  });
+
+  await app.request('/api/v1/projects/alice-project/publication', {
+    method: 'PATCH',
+    body: { is_public: false, public_description: '' },
+  });
+  expect((await app.request(`${api}/questions?sort=views`)).status).toBe(404);
+});

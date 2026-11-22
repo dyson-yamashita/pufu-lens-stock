@@ -20,6 +20,7 @@ import PufuPage from '../features/pufu/PufuPage';
 import Pufus from '../features/pufu/Pufus';
 import QuestionPage from '../features/questions/QuestionPage';
 import Questions from '../features/questions/Questions';
+import { PublicationViewDetails } from '../features/public-projects/PublicationViewDetails';
 import Profile from '../features/settings/Profile';
 import { StockDetail } from '../features/stocks/StockDetail';
 import { StockList } from '../features/stocks/StockList';
@@ -457,6 +458,8 @@ export default function App({
                 </p>
               )}
             </section>
+          ) : route.view === 'public-views' && route.projectId ? (
+            <PublicationViewDetails key={route.projectId} projectId={route.projectId} />
           ) : route.view === 'questions' || route.view === 'pufus' ? null : route.view ===
             'profile' ? (
             <Profile

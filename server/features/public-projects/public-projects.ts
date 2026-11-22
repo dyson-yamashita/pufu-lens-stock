@@ -87,6 +87,8 @@ function pageOptions(value: string | undefined) {
   if (!Number.isInteger(page) || page < 1 || page > 5000) throw new HTTPException(400);
   return { page, limit: 12, offset: (page - 1) * 12 };
 }
+const viewCountOrder = (sort: string | undefined) => (sort === 'views' ? 'view_count DESC,' : '');
+
 export function publicProjectsApp() {
   const app = new Hono<AppEnv>();
   app.use('*', async (c, next) => {
@@ -164,7 +166,7 @@ export function publicProjectsApp() {
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
       c.env.DB.prepare(
-        `SELECT ${stockColumns} FROM ${stockJoins} WHERE ${publicWhere} ORDER BY s.created_at DESC,s.id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${stockColumns} FROM ${stockJoins} WHERE ${publicWhere} ORDER BY ${viewCountOrder(c.req.query('sort'))} s.created_at DESC,s.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), limit, offset),
       c.env.DB.prepare(
         `SELECT COUNT(*) AS total FROM stocks s JOIN projects p ON p.id=s.project_id WHERE ${publicWhere}`,
@@ -225,7 +227,7 @@ export function publicProjectsApp() {
     const [project, rows, count] = await c.env.DB.batch<Record<string, unknown>>([
       c.env.DB.prepare(`SELECT p.id FROM projects p WHERE ${publicWhere}`).bind(c.req.param('key')),
       c.env.DB.prepare(
-        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND ${publicQuestionWhere} ORDER BY q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
+        `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${publicWhere} AND ${publicQuestionWhere} ORDER BY ${viewCountOrder(c.req.query('sort'))} q.created_at DESC,q.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), limit, offset),
       c.env.DB.prepare(
         `SELECT COUNT(*) AS total FROM questions q JOIN projects p ON p.id=q.project_id WHERE ${publicWhere} AND ${publicQuestionWhere}`,
@@ -273,7 +275,7 @@ export function publicProjectsApp() {
         FROM pufu_scores pf JOIN projects p ON p.id=pf.project_id
         LEFT JOIN pufu_phases ph ON ph.pufu_id=pf.id AND ph.number=pf.current_phase
         WHERE ${publicWhere} AND ${publicPufuWhere}
-        ORDER BY pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
+        ORDER BY ${viewCountOrder(c.req.query('sort'))} pf.created_at DESC,pf.id DESC LIMIT ? OFFSET ?`,
       ).bind(c.req.param('key'), limit, offset),
       c.env.DB.prepare(
         `SELECT ${publicPufuCount} AS total FROM projects p WHERE ${publicWhere}`,

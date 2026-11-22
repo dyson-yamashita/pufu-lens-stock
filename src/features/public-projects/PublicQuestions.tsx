@@ -27,10 +27,7 @@ export function PublicQuestionCard({ question }: { question: PublicQuestion }) {
       <QuestionLabels
         question={{ source: question.source, has_pufu: question.pufu_count > 0 ? 1 : 0 }}
       />
-      <div className="public-count-row">
-        <h3>{question.text}</h3>
-        <PublicViewCount count={question.view_count} />
-      </div>
+      <h3>{question.text}</h3>
       {(
         question.stocks ??
         (question.stock_id ? [{ id: question.stock_id, title: question.article_title }] : [])
@@ -39,11 +36,12 @@ export function PublicQuestionCard({ question }: { question: PublicQuestion }) {
           {stock.title}
         </p>
       ))}
-      {question.pufu_count > 0 && (
-        <div className="public-card-footer">
+      <div className="public-card-footer">
+        {question.pufu_count > 0 && (
           <span>{t('ui.public_projects.value_pufu', { value0: question.pufu_count })}</span>
-        </div>
-      )}
+        )}
+        <PublicViewCount count={question.view_count} />
+      </div>
     </a>
   );
 }
@@ -156,7 +154,7 @@ export function PublicQuestionDetail({
         <div className="pufu-list">
           {data.pufus.map((pufu) => (
             <a
-              className="pufu-list-item"
+              className="pufu-list-item public-related-pufu"
               key={pufu.id}
               href={publicLink(`#pufu/${encodeURIComponent(pufu.id)}`)}
             >

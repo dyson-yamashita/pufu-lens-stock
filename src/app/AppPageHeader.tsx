@@ -3,6 +3,7 @@ import {
   BookOpen,
   ChevronDown,
   CircleHelp,
+  Eye,
   Layers,
   Network,
   Plug,
@@ -39,7 +40,8 @@ export function AppPageHeader({
   setModal,
 }: Props) {
   const projectHeading =
-    selected && ['stocks', 'questions', 'pufus', 'memory', 'settings'].includes(route.view);
+    selected &&
+    ['stocks', 'questions', 'pufus', 'memory', 'settings', 'public-views'].includes(route.view);
   const HeadingIcon =
     (
       {
@@ -48,6 +50,7 @@ export function AppPageHeader({
         pufus: Network,
         memory: Sparkles,
         settings: Settings,
+        'public-views': Eye,
         profile: UserRound,
         announcements: Bell,
         mcp: Plug,
@@ -94,7 +97,7 @@ export function AppPageHeader({
               )}
             </span>
           </h1>
-          {route.view !== 'profile' && (
+          {route.view !== 'profile' && route.view !== 'public-views' && (
             <p>
               {route.view === 'announcements'
                 ? t('announcements.description')

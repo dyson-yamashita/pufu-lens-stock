@@ -818,6 +818,11 @@ export const ja: Record<string, string> = {
     '初期状態はOFFです。ONにすると、このプロジェクトと公開する問い・プ譜を検索対象として案内します。公開後の追加・編集も対象です。OFFでもURLを知る人は閲覧できます。検索掲載は保証されず、解除後も検索結果や第三者のコピーが残る場合があります。',
   'ui.public_projects.search_indexing_confirmation':
     '検索掲載を許可した場合、公開内容が検索エンジンやAI検索に参照され、解除後も外部のコピーが残る場合があることを理解しました。',
+  'ui.public_projects.view_details': '閲覧数の詳細',
+  'ui.public_projects.open_view_details': '閲覧数の詳細を見る',
+  'ui.public_projects.back_to_publication_settings': 'プロジェクト設定に戻る',
+  'ui.public_projects.view_details_public_only': '公開中のプロジェクトで閲覧数を確認できます。',
+  'ui.public_projects.no_public_items': '公開中の項目はまだありません。',
   'ui.public_projects.view_count': '閲覧 {{value}} 回',
   'ui.public_projects.project_page': 'プロジェクト画面',
   'ui.public_projects.pufu_details': 'プ譜の詳細',
@@ -827,7 +832,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.top_details': '詳細ページの閲覧数 上位5件',
   'ui.public_projects.no_ranked_details': '集計済みの詳細閲覧はまだありません。',
   'ui.user_manual.public_view_counts':
-    '目のアイコンは前日までの累計閲覧数です。公開中は、プロジェクトの「公開設定」の下で画面別の合計と、閲覧数が多い詳細ページの上位5件を確認できます。',
+    '目のアイコンは前日までの累計閲覧数です。公開中は、プロジェクトの「公開設定」の下で画面別の合計と、閲覧数が多い詳細ページの上位5件を確認できます。「閲覧数の詳細を見る」を開くと、種類ごとにすべての項目の閲覧数を確認できます。',
   'ui.public_projects.publication_settings': '公開設定',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     '公開設定を保存しました。トップページにも掲載されています。',

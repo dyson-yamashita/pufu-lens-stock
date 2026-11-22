@@ -234,7 +234,7 @@ export function useAppNavigation({
   }, []);
 
   useEffect(() => {
-    if (detailFlow) window.scrollTo(0, 0);
+    if (detailFlow || route.view === 'public-views') window.scrollTo(0, 0);
     if (stockReturnScroll.current !== null && !stockFlow) {
       // A question page must finish loading before its previous scroll position fits.
       if (route.view !== 'question' && route.view !== 'resolve') restoreStockScroll();

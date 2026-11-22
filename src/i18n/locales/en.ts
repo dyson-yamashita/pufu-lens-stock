@@ -825,6 +825,11 @@ export const en: Record<string, string> = {
     'Off by default. When on, this project and its public questions and Pufu are submitted for discovery, including later additions and edits. Anyone with the URL can still view public content when off. Search inclusion is not guaranteed; results and third-party copies may remain after turning this off.',
   'ui.public_projects.search_indexing_confirmation':
     'I understand that allowing indexing lets search engines and AI search reference public content, and external copies may remain after permission is withdrawn.',
+  'ui.public_projects.view_details': 'View count details',
+  'ui.public_projects.open_view_details': 'See view count details',
+  'ui.public_projects.back_to_publication_settings': 'Back to project settings',
+  'ui.public_projects.view_details_public_only': 'You can see views while this project is public.',
+  'ui.public_projects.no_public_items': 'There are no published items yet.',
   'ui.public_projects.view_count': '{{value}} views',
   'ui.public_projects.project_page': 'Project page',
   'ui.public_projects.pufu_details': 'Pufu details',
@@ -834,7 +839,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.top_details': 'Top 5 detail pages by views',
   'ui.public_projects.no_ranked_details': 'There are no counted detail page views yet.',
   'ui.user_manual.public_view_counts':
-    'The eye icon shows total views through the previous day. While a project is public, you can find totals by page type and the five most-viewed detail pages below Publication settings.',
+    'The eye icon shows total views through the previous day. While a project is public, you can find totals by page type and the five most-viewed detail pages below Publication settings. Select See view count details to find views for every item by type.',
   'ui.public_projects.publication_settings': 'Publication settings',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     'Publication settings saved. The project is also listed on the home page.',

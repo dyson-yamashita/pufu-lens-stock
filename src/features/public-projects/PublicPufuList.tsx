@@ -24,10 +24,7 @@ export function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             key={pufu.id}
             href={publicLink(`#pufu/${encodeURIComponent(pufu.id)}?from=pufus`)}
           >
-            <div className="public-count-row">
-              <h3>{pufuDisplayTitle(pufu)}</h3>
-              <PublicViewCount count={pufu.view_count} />
-            </div>
+            <h3>{pufuDisplayTitle(pufu)}</h3>
             {pufu.title && pufu.latest_gaining_goal && (
               <p className="public-pufu-goal">{pufu.latest_gaining_goal}</p>
             )}
@@ -38,6 +35,7 @@ export function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             </p>
             <div className="public-card-footer">
               <time>{new Date(pufu.updated_at).toLocaleDateString(intlLocale())}</time>
+              <PublicViewCount count={pufu.view_count} />
             </div>
           </a>
         ))}

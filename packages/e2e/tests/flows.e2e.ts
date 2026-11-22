@@ -787,7 +787,10 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
   await expect(browser.locator('.public-stock-card .public-view-count')).toHaveText('0');
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
-  await expect(browser.locator('.public-stock-card .public-card-footer')).toHaveCount(0);
+  await expect(
+    browser.locator('.public-stock-card .public-card-footer .public-view-count'),
+  ).toHaveText('0');
+  await expect(browser.locator('.public-stock-card .public-card-footer a')).toHaveCount(0);
   const preview = '.public-stock-card .public-summary + .article-image-previews';
   const previewImage = browser.locator(`${preview} img`);
   const previewPosition = browser.locator(`${preview} .stock-image-position`);
@@ -980,10 +983,27 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await browser.setCookies(cookies);
   await app.open(`/#settings/${fixture.projectId}`);
+  await screen.getByRole('link', '閲覧数の詳細を見る').click();
+  const viewRows = browser.locator('.publication-view-rows');
+  await expect(viewRows).toContainText('E2Eの公開するストック');
+  expect(await browser.evaluate(() => window.scrollY)).toBe(0);
+  await expect(browser.locator('.publication-view-rows .public-view-count')).toHaveText('0');
+  await browser
+    .locator('.publication-view-details button')
+    .filter({ hasText: '問い・気づき' })
+    .click();
+  await expect(viewRows).toContainText('E2Eの公開する問い');
+  await browser.locator('.publication-view-details button').filter({ hasText: 'プ譜' }).click();
+  await expect(viewRows).toContainText('E2Eの公開プ譜タイトル');
+  await app.screenshot('publication-view-details');
+  await screen.getByRole('link', 'プロジェクト設定に戻る').click();
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();
   await screen.getByRole('button', '公開設定を保存').click();
   await expect(screen.getByRole('status').filter({ hasText: '非公開にしました。' })).toBeVisible();
   await expect(browser.locator('.publication-views')).toHaveCount(0);
+  await app.open(`/#public-views/${fixture.projectId}`);
+  await expect(screen.getByText('公開中のプロジェクトで閲覧数を確認できます。')).toBeVisible();
+  await expect(viewRows).toHaveCount(0);
   expect((await fetch(publicImageUrl)).status).toBe(404);
   for (const suffix of [
     '',
