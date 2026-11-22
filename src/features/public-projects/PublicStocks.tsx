@@ -72,8 +72,8 @@ export function PublicStockCard({
           <YouTubeThumbnail url={stock.source_url!} />
         </div>
       )}
-      <StockTopics stock={stock} />
       <div className="public-card-footer">
+        <StockTopics stock={stock} />
         <PublicViewCount count={stock.view_count} />
       </div>
     </article>
