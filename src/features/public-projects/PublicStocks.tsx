@@ -11,21 +11,19 @@ import YouTubeThumbnail from '../stocks/YouTubeThumbnail';
 import { initialPublicPage, publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
 import { PublicQuestionCard } from './PublicQuestions';
-import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
 
 function StockTopics({ stock }: { stock: PublicStock }) {
-  useLanguage();
+  const topics = stock.summary?.topics;
+  if (!topics?.length) return null;
   return (
-    stock.summary && (
-      <div className="public-topics">
-        {stock.summary.topics.map((topic, i) => (
-          <span key={i}>{topic}</span>
-        ))}
-      </div>
-    )
+    <div className="public-topics">
+      {topics.map((topic, i) => (
+        <span key={i}>{topic}</span>
+      ))}
+    </div>
   );
 }
 
@@ -72,10 +70,7 @@ export function PublicStockCard({
           <YouTubeThumbnail url={stock.source_url!} />
         </div>
       )}
-      <div className="public-card-footer">
-        <StockTopics stock={stock} />
-        <PublicViewCount count={stock.view_count} />
-      </div>
+      <StockTopics stock={stock} />
     </article>
   );
 }
@@ -145,10 +140,7 @@ export function PublicStockDetailPage({ root, id }: { root: string; id: string }
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_stocks')}
       </a>
-      <div className="public-count-row">
-        <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
-        <PublicViewCount count={data.stock.view_count} />
-      </div>
+      <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
       <StockDetails stock={data.stock} />
       <h3 className="public-detail-title">{t('ui.public_projects.related_questions_insights')}</h3>
       <div className="public-content-grid">

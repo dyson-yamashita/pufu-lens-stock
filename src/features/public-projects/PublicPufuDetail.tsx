@@ -4,7 +4,6 @@ import type { PublicPufu } from '../../../shared/public-project';
 import { t, useLanguage } from '../../i18n/i18n';
 import { publicLink } from './public-routing';
 import { PublicPufuScoreSkeleton, ResourceState } from './ResourceState';
-import { PublicViewCount } from './PublicViewCount';
 import { useResource } from './useResource';
 
 const PublicPufuScore = lazy(async () => {
@@ -63,10 +62,7 @@ export function PublicPufuDetail({
             ? t('ui.public_projects.back_to_question_or_insight')
             : t('ui.public_projects.back_to_questions_insights')}
       </a>
-      <div className="public-count-row">
-        <h2 className="public-detail-title">{data.pufu.title || t('ui.app.pufu')}</h2>
-        <PublicViewCount count={data.pufu.view_count} />
-      </div>
+      <h2 className="public-detail-title">{data.pufu.title || t('ui.app.pufu')}</h2>
       <div className="pufu-context public-pufu-context">
         <section aria-label={t('ui.public_projects.task')}>
           <h3 className="question-origin pufu-context-label">{t('ui.public_projects.task')}</h3>
