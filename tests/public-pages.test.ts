@@ -2,7 +2,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { parseHTML } from 'linkedom';
 import worker from '../server/index';
-import { publicViewsCron } from '../server/features/public-projects/public-views';
+import {
+  publicViewsCron,
+  publishPublicViews,
+} from '../server/features/public-projects/public-views';
 import { testApp } from './helpers';
 import { socialImagePath } from '../scripts/social-image';
 import type { Publication } from '../shared/public-project';
@@ -429,6 +432,96 @@ it('上位5件は現在公開されている詳細だけを横断し、同数を
     'rank-2',
     'rank-3',
   ]);
+});
+
+it('日次確定した日本時間の今週と過去月で順位を出し、全期間は旧集計分を含む', async () => {
+  const scheduledTime = Date.parse('2026-11-04T15:05:00Z');
+  vi.spyOn(Date, 'now').mockReturnValue(scheduledTime);
+  const db = app.env.DB;
+  await db.batch([
+    db.prepare(
+      "UPDATE projects SET published_at='2026-11-02T00:00:00.000Z' WHERE id='alice-project'",
+    ),
+    db.prepare(`INSERT INTO public_view_totals (project_id,kind,item_id,views)
+      VALUES ('alice-project','stocks','stock',40)`),
+    db.prepare(`INSERT INTO public_view_pending (day,project_id,kind,item_id,views) VALUES
+      ('2026-09-30','alice-project','stocks','stock',8),
+      ('2026-10-01','alice-project','questions','q',9),
+      ('2026-10-25','alice-project','pufus','pf',4),
+      ('2026-10-31','alice-project','questions','q',5),
+      ('2026-11-01','alice-project','stocks','stock',12),
+      ('2026-11-02','alice-project','questions','q',3),
+      ('2026-11-03','alice-project','questions','q',3),
+      ('2026-11-04','alice-project','pufus','pf',7),
+      ('2026-11-04','alice-project','project','',50),
+      ('2026-11-04','alice-project','questions','hidden',45),
+      ('2026-11-04','alice-second','questions','q',60),
+      ('2026-11-05','alice-project','stocks','stock',18)`),
+  ]);
+  await publishPublicViews(db, scheduledTime);
+  // A late write to a consumed day increases both totals once.
+  await db
+    .prepare(
+      `INSERT INTO public_view_pending (day,project_id,kind,item_id,views)
+    VALUES ('2026-11-02','alice-project','questions','q',2)`,
+    )
+    .run();
+  await publishPublicViews(db, scheduledTime);
+  await publishPublicViews(db, scheduledTime);
+
+  const path = '/api/v1/projects/alice-project/publication';
+  const readRanking = async (period: string, month?: string) => {
+    const query = new URLSearchParams({ view_period: period });
+    if (month) query.set('view_month', month);
+    const res = await app.request(`${path}?${query}`);
+    expect(res.status).toBe(200);
+    const { publication } = (await res.json()) as { publication: Publication };
+    return {
+      months: publication.view_stats?.months,
+      top: publication.view_stats?.top.map(({ id, views }) => [id, views]),
+    };
+  };
+  expect(await readRanking('week')).toEqual({
+    months: { first: '2026-09', current: '2026-11' },
+    top: [
+      ['q', 8],
+      ['pf', 7],
+    ],
+  });
+  expect((await readRanking('month')).top).toEqual([
+    ['stock', 12],
+    ['q', 8],
+    ['pf', 7],
+  ]);
+  expect((await readRanking('month', '2026-10')).top).toEqual([
+    ['q', 14],
+    ['pf', 4],
+  ]);
+  expect((await readRanking('all')).top).toEqual([
+    ['stock', 60],
+    ['q', 22],
+    ['pf', 11],
+  ]);
+  expect((await app.request(`${path}?view_period=week`, { user: 'bob' })).status).toBe(404);
+  for (const query of [
+    'view_period=day',
+    'view_period=month&view_month=2026-13',
+    'view_period=month&view_month=2026-12',
+    'view_period=month&view_month=2026-1',
+    'view_period=month&view_month=2026-10%0A',
+    'view_period=all&view_month=2026-10',
+  ])
+    expect((await app.request(`${path}?${query}`)).status).toBe(400);
+
+  await app.request(path, { method: 'PATCH', body: { is_public: false, public_description: '' } });
+  const privateResult = await app.request(`${path}?view_period=month&view_month=2026-10`);
+  expect(await privateResult.json()).toMatchObject({ publication: { view_stats: null } });
+  expect((await app.request('/api/v1/projects/alice-project', { method: 'DELETE' })).status).toBe(
+    200,
+  );
+  expect(
+    await db.prepare("SELECT day FROM public_view_daily WHERE project_id='alice-project'").first(),
+  ).toBeNull();
 });
 
 it('閲覧数順でページをまたいでも公開項目と0回の項目を取得できる', async () => {

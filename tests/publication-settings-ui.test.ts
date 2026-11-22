@@ -251,6 +251,7 @@ it('公開設定と別枠に閲覧数を表示し、上位の項目は閲覧数�
     view_stats: {
       totals: { project: 20, stocks: 12, questions: 7, pufus: 3 },
       top: [{ kind: 'stocks', id: 'stock-a', title: '読まれた記事', views: 12 }],
+      months: { first: '2025-12', current: '2026-02' },
     },
   };
   await render();
@@ -261,11 +262,22 @@ it('公開設定と別枠に閲覧数を表示し、上位の項目は閲覧数�
   expect(section?.querySelector('a')?.getAttribute('href')).toBe('#public-views/project');
   expect(document.querySelector('.publication-view-ranking')).toBeNull();
 
-  vi.mocked(api).mockImplementation(async (path) =>
-    path.startsWith('/api/v1/')
-      ? { publication }
-      : { items: [], total: 0, page: 1, has_more: false },
-  );
+  vi.mocked(api).mockImplementation(async (path) => {
+    if (!path.startsWith('/api/v1/')) return { items: [], total: 0, page: 1, has_more: false };
+    const query = new URLSearchParams(path.split('?')[1]);
+    const period = query.get('view_period');
+    if (period === 'week') return { publication };
+    const ranked = publication.view_stats!;
+    return {
+      publication: {
+        ...publication,
+        view_stats: {
+          ...ranked,
+          top: [{ ...ranked.top[0], views: period === 'all' ? 20 : 3 }],
+        },
+      },
+    };
+  });
   await act(async () =>
     root.render(createElement(PublicationViewDetails, { projectId: 'project' })),
   );
@@ -273,4 +285,34 @@ it('公開設定と別枠に閲覧数を表示し、上位の項目は閲覧数�
   expect(first?.querySelector('a')?.textContent).toBe('読まれた記事');
   expect(first?.querySelector('a')?.getAttribute('href')).toBe('/p/public-project/stocks/stock-a');
   expect(first?.querySelector('.public-view-count')?.textContent).toBe('12');
+  expect(button('今週').getAttribute('aria-pressed')).toBe('true');
+
+  await act(async () => button('月別').click());
+  const select = document.querySelector('.publication-view-ranking select')!;
+  expect(
+    [...select.querySelectorAll('option')].map((option) => option.getAttribute('value')),
+  ).toEqual(['2026-02', '2026-01', '2025-12']);
+  expect(select.querySelector('option[selected]')?.getAttribute('value')).toBe('2026-02');
+  await act(async () => {
+    select.querySelector('option[selected]')!.removeAttribute('selected');
+    select.querySelector('option[value="2025-12"]')!.setAttribute('selected', '');
+    select.dispatchEvent(new window.Event('change', { bubbles: true }));
+  });
+  expect(api).toHaveBeenCalledWith(
+    '/api/v1/projects/project/publication?view_period=month&view_month=2025-12',
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  );
+  await act(async () => button('全期間').click());
+  expect(document.querySelector('.publication-view-ranking .public-view-count')?.textContent).toBe(
+    '20',
+  );
+  await act(async () => button('月別').click());
+  expect(
+    document
+      .querySelector('.publication-view-ranking select option[selected]')
+      ?.getAttribute('value'),
+  ).toBe('2025-12');
+  expect(document.querySelector('.publication-view-ranking .public-view-count')?.textContent).toBe(
+    '3',
+  );
 });

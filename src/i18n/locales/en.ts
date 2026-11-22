@@ -837,9 +837,11 @@ export const en: Record<string, string> = {
   'ui.public_projects.public_views_help':
     'Counts include browser navigation to public URLs and reloads. Views through the previous day are added daily at 12:05 a.m. Japan time.',
   'ui.public_projects.top_details': 'Top 5 detail pages by views',
+  'ui.public_projects.by_month': 'By month',
+  'ui.public_projects.ranking_month': 'Reporting month',
   'ui.public_projects.no_ranked_details': 'There are no counted detail page views yet.',
   'ui.user_manual.public_view_counts':
-    'The eye icon shows total views through the previous day. While a project is public, the Public page views section in project settings shows totals by page type. Select See view count details to see the five most-viewed pages and views for every published item by type.',
+    'The eye icon shows total views through the previous day. While a project is public, the Public page views section in project settings shows totals by page type. Select See view count details to switch the top five between This week, By month, and All time, and to see total views for every published item by type. Weeks start on Monday in Japan time, and By month lets you select past months. Weekly and monthly rankings use available daily records.',
   'ui.public_projects.publication_settings': 'Publication settings',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     'Publication settings saved. The project is also listed on the home page.',
@@ -1519,6 +1521,7 @@ export const en: Record<string, string> = {
     'Could not read the PDF. Check for corruption or password protection, or supply the text and retry.',
   'error.the_public_page_was_not_found': 'The public page was not found.',
   'error.check_the_publication_settings': 'Check the publication settings.',
+  'error.check_the_view_count_period': 'Check the reporting period for view counts.',
   'error.different_content_was_sent_with_the_same_request_id':
     'Different content was sent with the same request ID.',
   'error.wait_for_question_or_insight_generation_to_finish_before_creating':

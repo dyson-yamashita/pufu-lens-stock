@@ -5,7 +5,7 @@ type ViewKind = keyof PublicViewTotals;
 // Cron triggers use UTC. This processes completed Japan-time days at 00:05 JST.
 export const publicViewsCron = '5 15 * * *';
 
-function japanDay(timestamp: number) {
+export function japanDay(timestamp: number) {
   return new Date(timestamp + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
@@ -44,7 +44,7 @@ export async function recordPublicView(
 
 export async function publishPublicViews(db: D1Database, scheduledTime: number) {
   const cutoff = japanDay(scheduledTime);
-  // A D1 batch commits the increments, cache revision and consumed rows together.
+  // A D1 batch commits both totals, the cache revision and the consumed rows together.
   await db.batch([
     db
       .prepare(
@@ -52,6 +52,13 @@ export async function publishPublicViews(db: D1Database, scheduledTime: number) 
          SELECT project_id,kind,item_id,SUM(views)
          FROM public_view_pending WHERE day<? GROUP BY project_id,kind,item_id
          ON CONFLICT(project_id,kind,item_id) DO UPDATE SET views=views+excluded.views`,
+      )
+      .bind(cutoff),
+    db
+      .prepare(
+        `INSERT INTO public_view_daily (project_id,day,kind,item_id,views)
+         SELECT project_id,day,kind,item_id,views FROM public_view_pending WHERE day<?
+         ON CONFLICT(project_id,day,kind,item_id) DO UPDATE SET views=views+excluded.views`,
       )
       .bind(cutoff),
     db
