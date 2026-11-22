@@ -116,7 +116,7 @@ export function ProjectForm({
           onChange={(e) => setName(e.target.value)}
           required
           maxLength={80}
-          autoFocus
+          autoFocus={!project}
           placeholder={t('ui.app.example_building_the_next_app')}
         />
         <label htmlFor={descriptionId}>

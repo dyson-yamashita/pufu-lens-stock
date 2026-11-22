@@ -9,6 +9,9 @@ test('REFLECTION-001 周期を設定し、自動で届いた問いの記録と�
 }) => {
   const settingsPath = `/#settings/${fixture.projectId}`;
   await app.open(settingsPath);
+  const projectName = screen.getByRole('textbox', 'プロジェクト名', { exact: true });
+  await expect(projectName).toBeVisible();
+  await expect(projectName).not.toBeFocused();
   const advanced = browser.locator('.project-advanced summary');
   await advanced.click();
   const frequency = screen.getByRole('combobox', '振り返りの周期', { exact: true });
