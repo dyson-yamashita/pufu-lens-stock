@@ -179,7 +179,8 @@
 .publication-settings {
   margin-top: 24px;
 }
-.publication-settings h2 {
+.publication-settings h2,
+.publication-views h2 {
   font-size: 20px;
 }
 .publication-checks {
@@ -588,8 +589,6 @@
 
 .publication-views {
   margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
 }
 
 .publication-views-heading {
@@ -604,7 +603,7 @@
 .publication-views dl {
   display: grid;
   gap: 8px;
-  margin: 16px 0 24px;
+  margin: 16px 0 0;
 }
 
 .publication-views dl > div {
@@ -618,20 +617,34 @@
   margin: 0;
 }
 
-.publication-views ol {
+.publication-view-ranking {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.publication-view-ranking h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.publication-view-ranking ol {
+  margin: 0;
   padding-inline-start: 24px;
 }
 
-.publication-views li {
+.publication-view-ranking li {
   padding: 10px 0;
   overflow-wrap: anywhere;
 }
 
-.publication-views li + li {
+.publication-view-ranking li + li {
   border-top: 1px solid var(--border);
 }
 
-.publication-views li .text-link {
+.publication-view-ranking li .text-link {
   display: block;
 }
 

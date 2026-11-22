@@ -246,6 +246,7 @@
     "title": "公開の確認と非公開化",
     "sources": [
       "src/features/public-projects/ProjectPublicationSettings.tsx",
+      "src/features/settings/settings.css",
       "src/features/public-projects/PublicationViewDetails.tsx",
       "src/features/public-projects/PublicLayout.tsx",
       "src/features/public-projects/PublicProjectDirectory.tsx",
@@ -284,7 +285,7 @@
       "確認後に匿名で閲覧できる",
       "匿名の公開ストック一覧と問いから参照する概要カードは要約直下に添付画像を表示。最大320pxのカルーセルで前後切替と枚数を確認し、画像や要約から詳細を開く。公開ストック・問いカードの「詳細を見る」を表示せず、ストック詳細で全文と画像を確認。desktop/phoneとlight/darkで撮影",
       "ストック詳細の添付画像を匿名表示し、画像を押すと同じ公開URLの画像をモーダルで拡大。非公開化後は画像URLも404になる",
-      "匿名トップの公開プロジェクト一覧で閲覧可能なプ譜数と公開ページの閲覧数を表示。公開設定の下に全4種類の閲覧数と上位5件の枠を表示し、非公開時は非表示。件数の確定と上位5件の順位はVitestで検証",
+      "匿名トップの公開プロジェクト一覧で閲覧可能なプ譜数と公開ページの閲覧数を表示。公開設定とは別枠に全4種類の閲覧数を表示し、上位5件は閲覧数詳細で表示。非公開時は非表示。件数の確定と上位5件の順位はVitestで検証",
       "公開カードの閲覧数を右下に表示。公開設定の閲覧数詳細でストック・問い・プ譜を切り替えて各件数を確認し、設定へ戻る。非公開時は直リンクでも一覧を表示しない",
       "公開プ譜タブから詳細を開いて一覧へ戻る",
       "タイトル設定済みの公開プ譜カードは見出しの下に最新局面の獲得目標を表示",

@@ -653,8 +653,12 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     publication: { public_id: string; is_public: boolean };
   };
   expect(published.publication.is_public).toBe(true);
-  await expect(browser.locator('.publication-views dl .public-view-count')).toHaveCount(4);
-  await expect(screen.getByRole('heading', '詳細ページの閲覧数 上位5件')).toBeVisible();
+  const summary = browser.locator('.project-settings > .publication-settings + .publication-views');
+  await expect(
+    browser.locator('.publication-settings + .publication-views dl .public-view-count'),
+  ).toHaveCount(4);
+  await expect(summary).toBeVisible();
+  await expect(screen.getByRole('heading', '詳細ページの閲覧数 上位5件')).toHaveCount(0);
   const publicId = published.publication.public_id;
   const beforeIndexing = await fetch(`${fixture.url}/p/${publicId}`);
   expect(beforeIndexing.headers.get('X-Robots-Tag')).toBe('noindex, follow');
@@ -984,6 +988,9 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await browser.setCookies(cookies);
   await app.open(`/#settings/${fixture.projectId}`);
   await screen.getByRole('link', '閲覧数の詳細を見る').click();
+  const ranking = browser.locator('.publication-view-details .publication-view-ranking');
+  await expect(ranking).toContainText('詳細ページの閲覧数 上位5件');
+  await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
   const viewRows = browser.locator('.publication-view-rows');
   await expect(viewRows).toContainText('E2Eの公開するストック');
   expect(await browser.evaluate(() => window.scrollY)).toBe(0);
@@ -1004,6 +1011,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await app.open(`/#public-views/${fixture.projectId}`);
   await expect(screen.getByText('公開中のプロジェクトで閲覧数を確認できます。')).toBeVisible();
   await expect(viewRows).toHaveCount(0);
+  await expect(ranking).toHaveCount(0);
   expect((await fetch(publicImageUrl)).status).toBe(404);
   for (const suffix of [
     '',

@@ -1,17 +1,19 @@
 import { ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type {
   Publication,
   PublicList,
   PublicPufuSummary,
   PublicQuestion,
   PublicStock,
+  PublicViewRankingItem,
 } from '../../../shared/public-project';
 import { pufuDisplayTitle } from '../../../shared/pufu';
 import { t, useLanguage } from '../../i18n/i18n';
 import { Pagination } from './PublicLayout';
 import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
+import { publicViewLabels } from './types';
 import { useResource } from './useResource';
 
 const kindLabels = {
@@ -45,9 +47,47 @@ export function PublicationViewDetails({ projectId }: { projectId: string }) {
       {!publication ? (
         <ResourceState error={error} retry={reload} />
       ) : publication.is_public && publication.public_id ? (
-        <ViewItems key={publication.public_id} publicId={publication.public_id} />
+        <>
+          <p className="public-help">{t('ui.public_projects.public_views_help')}</p>
+          <ViewRanking publicId={publication.public_id} items={publication.view_stats?.top ?? []} />
+          <ViewItems key={publication.public_id} publicId={publication.public_id} />
+        </>
       ) : (
         <p className="public-help">{t('ui.public_projects.view_details_public_only')}</p>
+      )}
+    </section>
+  );
+}
+
+function ViewRanking({ publicId, items }: { publicId: string; items: PublicViewRankingItem[] }) {
+  const heading = useId();
+  const publicPath = `/p/${encodeURIComponent(publicId)}`;
+  return (
+    <section className="publication-view-ranking" aria-labelledby={heading}>
+      <h2 id={heading}>{t('ui.public_projects.top_details')}</h2>
+      {items.length ? (
+        <ol>
+          {items.map((item) => (
+            <li key={`${item.kind}/${item.id}`}>
+              <div className="public-count-row">
+                <div>
+                  <span className="public-help">{t(publicViewLabels[item.kind])}</span>
+                  <a
+                    className="text-link"
+                    href={`${publicPath}/${item.kind}/${encodeURIComponent(item.id)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {item.title || t('ui.app.text')}
+                  </a>
+                </div>
+                <PublicViewCount count={item.views} />
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="public-help">{t('ui.public_projects.no_ranked_details')}</p>
       )}
     </section>
   );
@@ -62,7 +102,6 @@ function ViewItems({ publicId }: { publicId: string }) {
   );
   return (
     <>
-      <p className="public-help">{t('ui.public_projects.public_views_help')}</p>
       <div className="detail-tabs" role="group" aria-label={t('ui.public_projects.view_details')}>
         {kinds.map((itemKind) => (
           <button

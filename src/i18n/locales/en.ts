@@ -839,7 +839,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.top_details': 'Top 5 detail pages by views',
   'ui.public_projects.no_ranked_details': 'There are no counted detail page views yet.',
   'ui.user_manual.public_view_counts':
-    'The eye icon shows total views through the previous day. While a project is public, you can find totals by page type and the five most-viewed detail pages below Publication settings. Select See view count details to find views for every item by type.',
+    'The eye icon shows total views through the previous day. While a project is public, the Public page views section in project settings shows totals by page type. Select See view count details to see the five most-viewed pages and views for every published item by type.',
   'ui.public_projects.publication_settings': 'Publication settings',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     'Publication settings saved. The project is also listed on the home page.',

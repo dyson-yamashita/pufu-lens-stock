@@ -1,50 +1,70 @@
 import { ArrowRight, Check, Copy, ExternalLink, Globe, LockKeyhole } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type RefObject } from 'react';
-import type {
-  Publication,
-  PublicViewStats,
-  PublicViewTotals,
-} from '../../../shared/public-project';
+import { useEffect, useId, useRef, useState, type PropsWithChildren, type RefObject } from 'react';
+import type { Publication, PublicViewTotals } from '../../../shared/public-project';
 import { applicationError, t, useLanguage } from '../../i18n/i18n';
 import { send } from '../../lib/api';
 import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
+import { publicViewLabels } from './types';
 import { useResource } from './useResource';
 
 export function ProjectPublicationSettings({ projectId }: { projectId: string }) {
   useLanguage();
+  const { data, error, reload } = useResource<{ publication: Publication }>(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/publication`,
+  );
+  return data ? (
+    <PublicationSettings key={projectId} initial={data.publication} projectId={projectId} />
+  ) : (
+    <PublicationSettingsPanel>
+      <ResourceState error={error} retry={reload} />
+    </PublicationSettingsPanel>
+  );
+}
+
+function PublicationSettingsPanel({ children }: PropsWithChildren) {
   const id = useId();
-  const { data, error, reload } = useResource<{
-    publication: Publication;
-  }>(`/api/v1/projects/${encodeURIComponent(projectId)}/publication`);
   return (
-    <section className="publication-settings" aria-labelledby={`${id}-title`}>
+    <section className="publication-settings" aria-labelledby={id}>
       <div className="public-section-heading">
-        <h2 id={`${id}-title`}>
+        <h2 id={id}>
           <Globe size={20} aria-hidden="true" />
           {t('ui.public_projects.publication_settings')}
         </h2>
       </div>
-      {data ? (
-        <PublicationForm
-          key={`${projectId}-${data.publication.public_id}`}
-          initial={data.publication}
-          projectId={projectId}
-        />
-      ) : (
-        <ResourceState error={error} retry={reload} />
-      )}
+      {children}
     </section>
   );
 }
 
-function PublicationForm({ initial, projectId }: { initial: Publication; projectId: string }) {
+function PublicationSettings({ initial, projectId }: { initial: Publication; projectId: string }) {
+  const [saved, setSaved] = useState(initial);
+  return (
+    <>
+      <PublicationSettingsPanel>
+        <PublicationForm saved={saved} onSaved={setSaved} projectId={projectId} />
+      </PublicationSettingsPanel>
+      {saved.is_public && saved.public_id && saved.view_stats && (
+        <PublicationViews totals={saved.view_stats.totals} projectId={projectId} />
+      )}
+    </>
+  );
+}
+
+function PublicationForm({
+  saved,
+  onSaved,
+  projectId,
+}: {
+  saved: Publication;
+  onSaved: (publication: Publication) => void;
+  projectId: string;
+}) {
   useLanguage();
   const id = useId();
-  const [saved, setSaved] = useState(initial);
-  const [enabled, setEnabled] = useState(initial.is_public);
-  const [searchIndexable, setSearchIndexable] = useState(initial.search_indexable ?? false);
-  const [description, setDescription] = useState(initial.public_description);
+  const [enabled, setEnabled] = useState(saved.is_public);
+  const [searchIndexable, setSearchIndexable] = useState(saved.search_indexable ?? false);
+  const [description, setDescription] = useState(saved.public_description);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -70,7 +90,7 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
         },
         'PATCH',
       );
-      setSaved(result.publication);
+      onSaved(result.publication);
       setSearchIndexable(result.publication.search_indexable ?? false);
       setDescription(result.publication.public_description);
       setConfirming(false);
@@ -213,9 +233,6 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
           </button>
         </div>
       </form>
-      {saved.is_public && url && saved.view_stats && (
-        <PublicationViews url={url} stats={saved.view_stats} projectId={projectId} />
-      )}
       {confirming && (
         <PublicationConfirmation
           triggerRef={saveRef}
@@ -234,28 +251,13 @@ function PublicationForm({ initial, projectId }: { initial: Publication; project
   );
 }
 
-const viewLabels = {
-  project: 'ui.public_projects.project_page',
-  stocks: 'ui.public_projects.stock_details',
-  questions: 'ui.public_projects.question_or_insight_details',
-  pufus: 'ui.public_projects.pufu_details',
-} as const satisfies Record<keyof PublicViewTotals, string>;
-
-function PublicationViews({
-  url,
-  stats,
-  projectId,
-}: {
-  url: string;
-  stats: PublicViewStats;
-  projectId: string;
-}) {
+function PublicationViews({ totals, projectId }: { totals: PublicViewTotals; projectId: string }) {
   const id = useId();
   const kinds = ['project', 'stocks', 'questions', 'pufus'] as const;
   return (
     <section className="publication-views" aria-labelledby={id}>
       <div className="publication-views-heading">
-        <h3 id={id}>{t('ui.public_projects.public_views')}</h3>
+        <h2 id={id}>{t('ui.public_projects.public_views')}</h2>
         <a className="text-link" href={`#public-views/${encodeURIComponent(projectId)}`}>
           {t('ui.public_projects.open_view_details')}
           <ArrowRight size={16} aria-hidden="true" />
@@ -265,38 +267,13 @@ function PublicationViews({
       <dl>
         {kinds.map((kind) => (
           <div key={kind}>
-            <dt>{t(viewLabels[kind])}</dt>
+            <dt>{t(publicViewLabels[kind])}</dt>
             <dd>
-              <PublicViewCount count={stats.totals[kind]} />
+              <PublicViewCount count={totals[kind]} />
             </dd>
           </div>
         ))}
       </dl>
-      <h4>{t('ui.public_projects.top_details')}</h4>
-      {stats.top.length > 0 ? (
-        <ol>
-          {stats.top.map((item) => (
-            <li key={`${item.kind}/${item.id}`}>
-              <div className="public-count-row">
-                <div>
-                  <span className="public-help">{t(viewLabels[item.kind])}</span>
-                  <a
-                    className="text-link"
-                    href={`${url}/${item.kind}/${encodeURIComponent(item.id)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {item.title || t('ui.app.text')}
-                  </a>
-                </div>
-                <PublicViewCount count={item.views} />
-              </div>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="public-help">{t('ui.public_projects.no_ranked_details')}</p>
-      )}
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { parseHTML } from 'linkedom';
 import { ProjectPublicationSettings } from '../src/features/public-projects';
+import { PublicationViewDetails } from '../src/features/public-projects/PublicationViewDetails';
 import { api, send } from '../src/lib/api';
 import type { Publication } from '../shared/public-project';
 
@@ -242,7 +243,7 @@ it('検索掲載は公開と別に選択し、既に公開済みでも有効化�
   );
 });
 
-it('公開設定の下に確定した閲覧数と閲覧上位の詳細リンクを表示する', async () => {
+it('公開設定と別枠に閲覧数を表示し、上位の項目は閲覧数詳細に表示する', async () => {
   publication = {
     ...publication,
     is_public: true,
@@ -253,13 +254,23 @@ it('公開設定の下に確定した閲覧数と閲覧上位の詳細リンク�
     },
   };
   await render();
-  const section = document.querySelector('form + .publication-views');
+  const section = document.querySelector('.publication-settings + .publication-views');
   expect(
     Array.from(section?.querySelectorAll('dd .public-view-count') ?? [], (el) => el.textContent),
   ).toEqual(['20', '12', '7', '3']);
-  const first = section?.querySelector('ol li');
-  expect(first?.querySelector('a')?.textContent).toBe('読まれた記事');
-  expect(first?.querySelector('a')?.getAttribute('href')).toBe(
-    'https://example.com/p/public-project/stocks/stock-a',
+  expect(section?.querySelector('a')?.getAttribute('href')).toBe('#public-views/project');
+  expect(document.querySelector('.publication-view-ranking')).toBeNull();
+
+  vi.mocked(api).mockImplementation(async (path) =>
+    path.startsWith('/api/v1/')
+      ? { publication }
+      : { items: [], total: 0, page: 1, has_more: false },
   );
+  await act(async () =>
+    root.render(createElement(PublicationViewDetails, { projectId: 'project' })),
+  );
+  const first = document.querySelector('.publication-view-ranking ol li');
+  expect(first?.querySelector('a')?.textContent).toBe('読まれた記事');
+  expect(first?.querySelector('a')?.getAttribute('href')).toBe('/p/public-project/stocks/stock-a');
+  expect(first?.querySelector('.public-view-count')?.textContent).toBe('12');
 });

@@ -832,7 +832,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.top_details': '詳細ページの閲覧数 上位5件',
   'ui.public_projects.no_ranked_details': '集計済みの詳細閲覧はまだありません。',
   'ui.user_manual.public_view_counts':
-    '目のアイコンは前日までの累計閲覧数です。公開中は、プロジェクトの「公開設定」の下で画面別の合計と、閲覧数が多い詳細ページの上位5件を確認できます。「閲覧数の詳細を見る」を開くと、種類ごとにすべての項目の閲覧数を確認できます。',
+    '目のアイコンは前日までの累計閲覧数です。公開中は、プロジェクト設定の「公開ページの閲覧数」で画面別の合計を確認できます。「閲覧数の詳細を見る」を開くと、上位5件と、種類ごとのすべての項目の閲覧数が表示されます。',
   'ui.public_projects.publication_settings': '公開設定',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     '公開設定を保存しました。トップページにも掲載されています。',
