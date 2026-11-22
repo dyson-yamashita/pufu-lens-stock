@@ -4,7 +4,6 @@ import type { PublicList, PublicProject } from '../../../shared/public-project';
 import { t, useLanguage } from '../../i18n/i18n';
 import { initialPublicPage } from './public-routing';
 import { Pagination } from './PublicLayout';
-import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import { useResource } from './useResource';
 
@@ -67,7 +66,6 @@ export function PublicProjectDirectory() {
                     {project.pufu_count}
                     {t('ui.public_projects.pufus')}
                   </span>
-                  <PublicViewCount count={project.view_count} />
                 </div>
               </a>
             ))}

@@ -9,7 +9,6 @@ import { PublicPufuDetail } from './PublicPufuDetail';
 import { PublicPufuList } from './PublicPufuList';
 import { PublicQuestionDetail, PublicQuestionList } from './PublicQuestions';
 import { PublicStockDetailPage, PublicStockList } from './PublicStocks';
-import { PublicViewCount } from './PublicViewCount';
 import { PublicPageSkeleton, ResourceState } from './ResourceState';
 import { useResource } from './useResource';
 
@@ -89,10 +88,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
               <Globe size={14} aria-hidden="true" />
               {t('ui.public_projects.public')}
             </span>
-            <div className="public-count-row">
-              <h1>{data.project.name}</h1>
-              {!match && <PublicViewCount count={data.project.view_count} />}
-            </div>
+            <h1>{data.project.name}</h1>
             {data.project.public_description && (
               <p className="public-lead">{data.project.public_description}</p>
             )}

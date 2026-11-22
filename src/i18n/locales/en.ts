@@ -841,7 +841,7 @@ export const en: Record<string, string> = {
   'ui.public_projects.ranking_month': 'Reporting month',
   'ui.public_projects.no_ranked_details': 'There are no counted detail page views yet.',
   'ui.user_manual.public_view_counts':
-    'The eye icon shows total views through the previous day. While a project is public, the Public page views section in project settings shows totals by page type. Select See view count details to switch the top five between This week, By month, and All time, and to see total views for every published item by type. Weeks start on Monday in Japan time, and By month lets you select past months. Weekly and monthly rankings use available daily records.',
+    'While a project is public, its owner can see total views through the previous day by page type in the Public page views section of project settings. Select See view count details to switch the top five between This week, By month, and All time, and to see total views for every published item by type. Weeks start on Monday in Japan time, and By month lets you select past months. Weekly and monthly rankings use available daily records.',
   'ui.public_projects.publication_settings': 'Publication settings',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     'Publication settings saved. The project is also listed on the home page.',

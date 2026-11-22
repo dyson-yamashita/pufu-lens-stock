@@ -135,14 +135,10 @@
   gap: 10px;
   padding-top: 10px;
 }
-.public-stock-card .public-card-footer {
-  align-items: flex-end;
-  gap: 12px;
-  padding-top: 12px;
-}
-.public-stock-card .public-topics {
+.public-stock-card > .public-topics {
   min-width: 0;
-  margin: 0;
+  margin: auto 0 0;
+  padding-top: 12px;
 }
 .public-card-footer {
   display: flex;
@@ -562,14 +558,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.public-card-footer > .public-view-count,
-.public-related-pufu > .public-view-count {
-  margin-inline-start: auto;
-}
-.public-related-pufu > .public-view-count {
-  align-self: flex-end;
 }
 
 .public-count-row > :first-child {

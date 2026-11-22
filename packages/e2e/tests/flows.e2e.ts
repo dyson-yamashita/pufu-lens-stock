@@ -781,21 +781,16 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('.verbatim-content')).toHaveText(verbatimText);
   const cookies = await browser.cookies();
   await app.clearState();
+  const publicViewCounts = browser.locator('.public-view-count');
   await app.open('/');
   await expect(
     browser.locator(`.public-project-card[href="/p/${publicId}"] .public-card-footer`),
   ).toContainText('1 プ譜');
-  await expect(
-    browser.locator(`.public-project-card[href="/p/${publicId}"] .public-view-count`),
-  ).toHaveText('0');
+  await expect(publicViewCounts).toHaveCount(0);
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
-  await expect(browser.locator('.public-stock-card .public-view-count')).toHaveText('0');
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
-  await expect(
-    browser.locator('.public-stock-card .public-card-footer .public-view-count'),
-  ).toHaveText('0');
-  await expect(browser.locator('.public-stock-card .public-card-footer a')).toHaveCount(0);
+  await expect(publicViewCounts).toHaveCount(0);
   const preview = '.public-stock-card .public-summary + .article-image-previews';
   const previewImage = browser.locator(`${preview} img`);
   const previewPosition = browser.locator(`${preview} .stock-image-position`);
@@ -839,10 +834,11 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
   await browser.locator(`${preview} a`).click();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
-  await expect(screen.getByRole('img', '閲覧 0 回', { exact: true }).first()).toBeVisible();
+  await expect(publicViewCounts).toHaveCount(0);
   await app.open(`/p/${publicId}`);
   await browser.locator('.public-tabs a').filter({ hasText: '問い・気づき' }).click();
   await expect(screen.getByRole('heading', 'E2Eの公開する問い', { exact: true })).toBeVisible();
+  await expect(publicViewCounts).toHaveCount(0);
   await expect(screen.getByText('問い・気づきの詳細を見る', { exact: true })).toHaveCount(0);
   expect(
     await browser.evaluate(() => {
@@ -858,6 +854,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
   await browser.locator('.public-question-card').filter({ hasText: 'E2Eの公開する問い' }).click();
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
+  await expect(publicViewCounts).toHaveCount(0);
   await expect(previewImage).toHaveAttribute('src', new URL(publicImageUrl).pathname);
   await expect(browser.locator('.public-stock-detail,.public-stock-points')).toHaveCount(0);
   await expect(screen.getByText('ストックの詳細を見る', { exact: true })).toHaveCount(0);
@@ -946,10 +943,11 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('.public-pufu-card .public-pufu-goal')).toHaveText(
     'E2Eの公開プ譜・次の局面',
   );
-  await expect(browser.locator('.public-pufu-card .public-view-count')).toHaveText('0');
+  await expect(publicViewCounts).toHaveCount(0);
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await screen.getByRole('link', /E2Eの公開プ譜/).click();
   await expect(browser.locator('section[aria-label="課題"]')).toContainText('E2Eの公開プ譜');
+  await expect(publicViewCounts).toHaveCount(0);
   const stockList = browser.locator('.pufu-related-stocks ul');
   const questionList = browser.locator('.pufu-related-questions ul');
   await expect(stockList).toBeHidden();

@@ -834,7 +834,7 @@ export const ja: Record<string, string> = {
   'ui.public_projects.ranking_month': '集計する年月',
   'ui.public_projects.no_ranked_details': '集計済みの詳細閲覧はまだありません。',
   'ui.user_manual.public_view_counts':
-    '目のアイコンは前日までの累計閲覧数です。公開中は、プロジェクト設定の「公開ページの閲覧数」で画面別の合計を確認できます。「閲覧数の詳細を見る」を開くと、上位5件を「今週」「月別」「全期間」で切り替えられ、種類ごとの全項目の累計閲覧数も確認できます。日本時間の月曜始まりで集計し、「月別」では過去の月を選べます。「今週」と「月別」は日別の記録がある期間の集計です。',
+    'プロジェクトの所有者は、公開中にプロジェクト設定の「公開ページの閲覧数」で画面別に前日までの累計を確認できます。「閲覧数の詳細を見る」を開くと、上位5件を「今週」「月別」「全期間」で切り替えられ、種類ごとの全項目の累計閲覧数も確認できます。「今週」は日本時間の月曜始まりで、「月別」では過去の月を選べます。「今週」と「月別」は日別の記録がある期間の集計です。',
   'ui.public_projects.publication_settings': '公開設定',
   'ui.public_projects.publication_settings_saved_the_project_is_also_listed_on':
     '公開設定を保存しました。トップページにも掲載されています。',
