@@ -1001,6 +1001,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     'true',
   );
   const viewRows = browser.locator('.publication-view-rows');
+  const viewItems = browser.locator('.publication-view-rows > li');
   await expect(viewRows).toContainText('E2Eの公開するストック');
   expect(await browser.evaluate(() => window.scrollY)).toBe(0);
   await expect(browser.locator('.publication-view-rows .public-view-count')).toHaveText('0');
@@ -1014,25 +1015,37 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     .locator('.publication-view-details button')
     .filter({ hasText: '問い・気づき' })
     .click();
+  const isPhone = await browser.evaluate(() => window.innerWidth <= 760);
+  const itemsPerPage = isPhone ? 6 : publicListPageSize;
+  const lastPage = isPhone ? 3 : 2;
   await expect(viewRows).toContainText(`E2Eのページ送り用の問い ${publicListPageSize}`);
-  await expect(pager).toContainText('1 / 2ページ');
+  await expect(viewItems).toHaveCount(itemsPerPage);
+  await expect(pager).toContainText(`1 / ${lastPage}ページ`);
   await expect(previousPage).toBeDisabled();
   await nextPage.click();
+  if (isPhone) {
+    await expect(viewItems).toHaveCount(itemsPerPage);
+    await expect(viewRows).toContainText('E2Eのページ送り用の問い 6');
+    await expect(viewRows).not.toContainText(`E2Eのページ送り用の問い ${publicListPageSize}`);
+    await expect(pager).toContainText('2 / 3ページ');
+    await nextPage.click();
+  }
   await expect(viewRows).toContainText('E2Eの公開する問い');
-  await expect(pager).toContainText('2 / 2ページ');
+  await expect(viewItems).toHaveCount(1);
+  await expect(pager).toContainText(`${lastPage} / ${lastPage}ページ`);
   await expect(nextPage).toBeDisabled();
   await screen.getByRole('button', '月別', { exact: true }).click();
   await expect(screen.getByLabel('集計する年月')).toBeVisible();
   await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
-  await expect(pager).toContainText('2 / 2ページ');
+  await expect(pager).toContainText(`${lastPage} / ${lastPage}ページ`);
   await screen.getByRole('button', '全期間', { exact: true }).click();
   await expect(screen.getByLabel('集計する年月')).toHaveCount(0);
   await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
-  await expect(pager).toContainText('2 / 2ページ');
+  await expect(pager).toContainText(`${lastPage} / ${lastPage}ページ`);
   await previousPage.click();
-  await expect(pager).toContainText('1 / 2ページ');
+  await expect(pager).toContainText(`${lastPage - 1} / ${lastPage}ページ`);
   await nextPage.click();
-  await expect(pager).toContainText('2 / 2ページ');
+  await expect(pager).toContainText(`${lastPage} / ${lastPage}ページ`);
   await browser.locator('.publication-view-details button').filter({ hasText: 'プ譜' }).click();
   await expect(viewRows).toContainText('E2Eの公開プ譜タイトル');
   await expect(pager).toContainText('1 / 1ページ');

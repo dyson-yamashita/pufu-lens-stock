@@ -459,7 +459,11 @@ export default function App({
               )}
             </section>
           ) : route.view === 'public-views' && route.projectId ? (
-            <PublicationViewDetails key={route.projectId} projectId={route.projectId} />
+            <PublicationViewDetails
+              key={route.projectId}
+              projectId={route.projectId}
+              isMobile={isMobile}
+            />
           ) : route.view === 'questions' || route.view === 'pufus' ? null : route.view ===
             'profile' ? (
             <Profile
