@@ -12,6 +12,7 @@ import { initialPublicPage, publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
 import { PublicQuestionCard } from './PublicQuestions';
 import { ResourceState } from './ResourceState';
+import { ShareLink } from './ShareLink';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
 
@@ -126,7 +127,15 @@ export function StockDetails({
   );
 }
 
-export function PublicStockDetailPage({ root, id }: { root: string; id: string }) {
+export function PublicStockDetailPage({
+  root,
+  publicId,
+  id,
+}: {
+  root: string;
+  publicId: string;
+  id: string;
+}) {
   useLanguage();
   const [page, setPage] = useState(initialPublicPage);
   const { data, error, reload } = useResource<PublicStockDetail>(
@@ -140,7 +149,10 @@ export function PublicStockDetailPage({ root, id }: { root: string; id: string }
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_stocks')}
       </a>
-      <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
+      <div className="share-heading share-anchor">
+        <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
+        <ShareLink source={{ publicId }} target={{ kind: 'stock', id: data.stock.id }} />
+      </div>
       <StockDetails stock={data.stock} />
       <h3 className="public-detail-title">{t('ui.public_projects.related_questions_insights')}</h3>
       <div className="public-content-grid">

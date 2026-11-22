@@ -7,6 +7,7 @@ import { applicationError, intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { api, send } from '../../lib/api';
 import Comments from '../comments/Comments';
 import PufuForm from '../pufu/PufuForm';
+import { ShareLink } from '../public-projects/ShareLink';
 import QuestionLabels from './QuestionLabels';
 import QuestionSettings from './QuestionSettings';
 const detailTabs = () =>
@@ -99,7 +100,7 @@ export default function QuestionPage({
         <ArrowLeft size={16} aria-hidden="true" />
         {resolve ? t('ui.app.back_to_question_or_insight') : backLabel}
       </button>
-      <header className="page-header">
+      <header className="page-header share-anchor">
         <div>
           <h1>
             {resolve
@@ -112,6 +113,13 @@ export default function QuestionPage({
               : t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}
           </p>
         </div>
+        {!resolve && question?.project_id && (
+          <ShareLink
+            key={question.project_id}
+            source={{ projectId: question.project_id }}
+            target={{ kind: 'question', id: question.id }}
+          />
+        )}
       </header>
       {error && (
         <p className="form-error" role="alert">

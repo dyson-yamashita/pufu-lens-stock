@@ -13,6 +13,7 @@ import { initialPublicPage, publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
 import { PublicStockCard } from './PublicStocks';
 import { ResourceState } from './ResourceState';
+import { ShareLink } from './ShareLink';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
 
@@ -70,10 +71,12 @@ export function PublicQuestionList({ root, page, onPageChange }: PublicListProps
 
 export function PublicQuestionDetail({
   root,
+  publicId,
   id,
   projectName,
 }: {
   root: string;
+  publicId: string;
   id: string;
   projectName: string;
 }) {
@@ -98,11 +101,12 @@ export function PublicQuestionDetail({
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_questions_insights')}
       </a>
-      <header className="page-header">
+      <header className="page-header share-anchor">
         <div>
           <h2 className="page-title">{t('ui.public_projects.question_or_insight_details')}</h2>
           <p>{t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}</p>
         </div>
+        <ShareLink source={{ publicId }} target={{ kind: 'question', id: data.question.id }} />
       </header>
       <article className="question-detail-card">
         <div className="question-detail-meta">

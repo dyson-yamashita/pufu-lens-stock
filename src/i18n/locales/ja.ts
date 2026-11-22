@@ -139,6 +139,8 @@ export const ja: Record<string, string> = {
   'manual.comments_integration_heading': 'ChatGPTなどからコメントを読む・追加する',
   'manual.memory_sources_heading': 'メモリに含まれる情報・対象から外す設定',
   'manual.sharing_view_heading': '公開ページの表示と公開される情報',
+  'manual.share_targets':
+    '公開したプロジェクトやストック・問い・気づき・プ譜の詳細では、「共有」から公開リンクをコピーできます。対応端末では「別のアプリで共有」も選べます。プ譜のリンクは表示中の局面から開きます。',
   'manual.sharing_search_heading': '検索エンジンへの掲載を許可する',
   'manual.integrations_intro':
     '「外部連携」から、iPhoneの共有メニューやChatGPTなどのAIアプリを接続できます。「ショートカット」「MCP」「SNS」のタブから、使いたい連携を選んでください。',
@@ -802,6 +804,21 @@ export const ja: Record<string, string> = {
   'ui.public_projects.could_not_load_the_pufu_image_please_reload':
     'プ譜の画像を読み込めませんでした。再読み込みしてください。',
   'ui.public_projects.loading': '読み込んでいます…',
+  'share.open': '共有',
+  'share.close': '共有を閉じる',
+  'share.project': 'プロジェクトを共有',
+  'share.stock': 'ストックを共有',
+  'share.question': '問い・気づきを共有',
+  'share.pufu': '第{{number}}局面を共有',
+  'share.public': 'ログインなしで閲覧できます。',
+  'share.private': 'このプロジェクトは非公開です。',
+  'share.settings': '公開設定を確認',
+  'share.url': '公開リンク',
+  'share.copy': 'リンクをコピー',
+  'share.native': '別のアプリで共有',
+  'share.copied': 'リンクをコピーしました。',
+  'share.manual_copy': '選択されたリンクをコピーしてください。',
+  'share.native_failed': '共有メニューを開けませんでした。リンクをコピーしてください。',
   'ui.public_projects.pagination': 'ページ切り替え',
   'ui.public_projects.public_projects': '公開プロジェクト',
   'ui.public_projects.discover_your_next_idea_through_someone_else_s_interests':
