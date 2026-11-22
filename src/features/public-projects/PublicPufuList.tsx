@@ -3,6 +3,7 @@ import { pufuDisplayTitle } from '../../../shared/pufu';
 import { intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { publicLink } from './public-routing';
 import { Pagination } from './PublicLayout';
+import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
 import type { PublicListProps } from './types';
 import { useResource } from './useResource';
@@ -34,6 +35,7 @@ export function PublicPufuList({ root, page, onPageChange }: PublicListProps) {
             </p>
             <div className="public-card-footer">
               <time>{new Date(pufu.updated_at).toLocaleDateString(intlLocale())}</time>
+              <PublicViewCount count={pufu.view_count} />
             </div>
           </a>
         ))}

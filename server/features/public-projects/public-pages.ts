@@ -19,6 +19,7 @@ import { textLinks } from '../../../shared/text-links';
 import type { AppEnv } from '../../env';
 import { documentSecureHeaders } from './document-headers';
 import { publicProjectsApp, publicPufuWhere, publicQuestionWhere } from './public-projects';
+import { recordPublicView } from './public-views';
 
 declare const __PUFU_SOCIAL_IMAGE_PATH__: string;
 
@@ -288,6 +289,12 @@ async function projectPage(c: Context<AppEnv>) {
     jsonLd,
   });
   c.header('X-Robots-Tag', robots);
+  const viewKind = kind === 'stocks' || kind === 'questions' || kind === 'pufus' ? kind : 'project';
+  c.executionCtx.waitUntil(
+    recordPublicView(c.env.DB, c.req.raw, project.public_id, viewKind, id ?? '').catch(() =>
+      console.warn('public_view_record_failed'),
+    ),
+  );
   return c.html(document);
 }
 

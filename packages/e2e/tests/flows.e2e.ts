@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { expect } from 'e2e';
+import { publicListPageSize } from '../../../shared/public-project.ts';
 import { test, requestId } from '../src/fixtures.ts';
 import { goals } from '../src/executor.ts';
 
@@ -645,6 +646,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     publication: { public_id: string | null; is_public: boolean; search_indexable: boolean };
   };
   expect(before.publication.is_public).toBe(false);
+  await expect(browser.locator('.publication-views')).toHaveCount(0);
   expect(before.publication.search_indexable).toBe(false);
   await agent.act(goals.publish);
   await expect(screen.getByRole('dialog', '公開前のご確認')).toBeHidden();
@@ -652,6 +654,12 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
     publication: { public_id: string; is_public: boolean };
   };
   expect(published.publication.is_public).toBe(true);
+  const summary = browser.locator('.project-settings > .publication-settings + .publication-views');
+  await expect(
+    browser.locator('.publication-settings + .publication-views dl .public-view-count'),
+  ).toHaveCount(4);
+  await expect(summary).toBeVisible();
+  await expect(screen.getByRole('heading', '詳細ページの閲覧数 上位5件')).toHaveCount(0);
   const publicId = published.publication.public_id;
   const beforeIndexing = await fetch(`${fixture.url}/p/${publicId}`);
   expect(beforeIndexing.headers.get('X-Robots-Tag')).toBe('noindex, follow');
@@ -777,10 +785,17 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(
     browser.locator(`.public-project-card[href="/p/${publicId}"] .public-card-footer`),
   ).toContainText('1 プ譜');
+  await expect(
+    browser.locator(`.public-project-card[href="/p/${publicId}"] .public-view-count`),
+  ).toHaveText('0');
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
+  await expect(browser.locator('.public-stock-card .public-view-count')).toHaveText('0');
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
-  await expect(browser.locator('.public-stock-card .public-card-footer')).toHaveCount(0);
+  await expect(
+    browser.locator('.public-stock-card .public-card-footer .public-view-count'),
+  ).toHaveText('0');
+  await expect(browser.locator('.public-stock-card .public-card-footer a')).toHaveCount(0);
   const preview = '.public-stock-card .public-summary + .article-image-previews';
   const previewImage = browser.locator(`${preview} img`);
   const previewPosition = browser.locator(`${preview} .stock-image-position`);
@@ -824,6 +839,7 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(browser.locator('html')).toHaveAttribute('data-theme', 'light');
   await browser.locator(`${preview} a`).click();
   await expect(browser.locator('.public-stock-detail .public-summary')).toHaveText(verbatimText);
+  await expect(screen.getByRole('img', '閲覧 0 回', { exact: true }).first()).toBeVisible();
   await app.open(`/p/${publicId}`);
   await browser.locator('.public-tabs a').filter({ hasText: '問い・気づき' }).click();
   await expect(screen.getByRole('heading', 'E2Eの公開する問い', { exact: true })).toBeVisible();
@@ -927,7 +943,10 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await app.open(`/p/${publicId}`);
   await browser.locator('.public-tabs a').filter({ hasText: 'プ譜' }).click();
   await expect(browser.locator('.public-pufu-card h3')).toHaveText('E2Eの公開プ譜タイトル');
-  await expect(browser.locator('.public-pufu-card h3 + p')).toHaveText('E2Eの公開プ譜・次の局面');
+  await expect(browser.locator('.public-pufu-card .public-pufu-goal')).toHaveText(
+    'E2Eの公開プ譜・次の局面',
+  );
+  await expect(browser.locator('.public-pufu-card .public-view-count')).toHaveText('0');
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await screen.getByRole('link', /E2Eの公開プ譜/).click();
   await expect(browser.locator('section[aria-label="課題"]')).toContainText('E2Eの公開プ譜');
@@ -968,10 +987,55 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await screen.getByRole('link', 'プ譜の一覧に戻る').click();
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await browser.setCookies(cookies);
+  for (let index = 1; index <= publicListPageSize; index++) {
+    await fixture.request('/questions', 'POST', {
+      project_id: fixture.projectId,
+      text: `E2Eのページ送り用の問い ${index}`,
+    });
+  }
   await app.open(`/#settings/${fixture.projectId}`);
+  await screen.getByRole('link', '閲覧数の詳細を見る').click();
+  const ranking = browser.locator('.publication-view-details .publication-view-ranking');
+  await expect(ranking).toContainText('詳細ページの閲覧数 上位5件');
+  await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
+  const viewRows = browser.locator('.publication-view-rows');
+  await expect(viewRows).toContainText('E2Eの公開するストック');
+  expect(await browser.evaluate(() => window.scrollY)).toBe(0);
+  await expect(browser.locator('.publication-view-rows .public-view-count')).toHaveText('0');
+  const pager = browser.locator('.publication-view-details .public-pagination');
+  const previousPage = screen.getByRole('button', '前へ', { exact: true });
+  const nextPage = screen.getByRole('button', '次へ', { exact: true });
+  await expect(pager).toContainText('1 / 1ページ');
+  await expect(previousPage).toBeDisabled();
+  await expect(nextPage).toBeDisabled();
+  await browser
+    .locator('.publication-view-details button')
+    .filter({ hasText: '問い・気づき' })
+    .click();
+  await expect(viewRows).toContainText(`E2Eのページ送り用の問い ${publicListPageSize}`);
+  await expect(pager).toContainText('1 / 2ページ');
+  await expect(previousPage).toBeDisabled();
+  await nextPage.click();
+  await expect(viewRows).toContainText('E2Eの公開する問い');
+  await expect(pager).toContainText('2 / 2ページ');
+  await expect(nextPage).toBeDisabled();
+  await previousPage.click();
+  await expect(pager).toContainText('1 / 2ページ');
+  await nextPage.click();
+  await expect(pager).toContainText('2 / 2ページ');
+  await browser.locator('.publication-view-details button').filter({ hasText: 'プ譜' }).click();
+  await expect(viewRows).toContainText('E2Eの公開プ譜タイトル');
+  await expect(pager).toContainText('1 / 1ページ');
+  await app.screenshot('publication-view-details');
+  await screen.getByRole('link', 'プロジェクト設定に戻る').click();
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();
   await screen.getByRole('button', '公開設定を保存').click();
   await expect(screen.getByRole('status').filter({ hasText: '非公開にしました。' })).toBeVisible();
+  await expect(browser.locator('.publication-views')).toHaveCount(0);
+  await app.open(`/#public-views/${fixture.projectId}`);
+  await expect(screen.getByText('公開中のプロジェクトで閲覧数を確認できます。')).toBeVisible();
+  await expect(viewRows).toHaveCount(0);
+  await expect(ranking).toHaveCount(0);
   expect((await fetch(publicImageUrl)).status).toBe(404);
   for (const suffix of [
     '',

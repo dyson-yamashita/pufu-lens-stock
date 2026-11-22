@@ -15,6 +15,7 @@ vi.mock('../src/features/public-projects/PublicPufuScore', () => ({
 vi.mock('../src/lib/api', () => ({ api: vi.fn(), send: vi.fn() }));
 const stock: PublicStock = {
   id: 'stock',
+  view_count: 12,
   title: 'ストックのタイトル',
   source_url: 'https://example.com/a',
   domain: 'example.com',
@@ -304,7 +305,7 @@ it('問い一覧にはAI・プ譜のラベルを表示し、問いの詳細に�
   expect(cards[0].querySelector('.question-labels')?.textContent).toBe('AIプ譜');
   expect(cards[1].querySelector('.question-labels')?.textContent).toBe('ユーザー');
   expect(cards[0].querySelector('.public-card-footer')?.textContent).toContain('1件のプ譜');
-  expect(cards[1].querySelector('.public-card-footer')).toBeNull();
+  expect(cards[1].querySelector('.public-card-footer')?.textContent).toBe('0');
   expect(document.body.textContent).not.toContain('詳細を見る');
   expect(document.body.textContent).not.toContain('詳細で確認する記事の要点');
   expect(document.body.textContent).not.toContain('要点を見る');
@@ -509,7 +510,7 @@ it('公開プ譜は一覧と詳細に設定したタイトルを表示し、課�
   await render('#pufus');
   const card = document.querySelector('.public-pufu-card');
   expect(card?.querySelector('h3')?.textContent).toBe(pufuTitle);
-  expect(card?.querySelector('h3 + p')?.textContent).toBe('最新局面で目指す獲得目標');
+  expect(card?.querySelector('.public-pufu-goal')?.textContent).toBe('最新局面で目指す獲得目標');
   expect(card?.textContent).not.toContain('問いから考える課題');
   await navigate('#pufu/pufu');
   expect(document.querySelector('h2.public-detail-title')?.textContent).toBe(pufuTitle);

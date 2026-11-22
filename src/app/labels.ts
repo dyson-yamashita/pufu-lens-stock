@@ -8,6 +8,7 @@ export const headerLabels = (): Record<Route['view'], string> => ({
   pufus: t('ui.app.pufu'),
   memory: t('ui.app.memory'),
   settings: t('ui.app.settings'),
+  'public-views': t('ui.public_projects.view_details'),
   announcements: t('announcements.title'),
   profile: t('ui.app.profile'),
   mcp: t('ui.app.integrations'),

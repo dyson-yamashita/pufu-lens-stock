@@ -228,6 +228,7 @@ const sections = (tr: typeof t) => [
           <details>
             <summary>{tr('manual.sharing_view_heading')}</summary>
             <p>{tr('ui.user_manual.public_pages_can_be_viewed_without_signing_in_and')}</p>
+            <p>{tr('ui.user_manual.public_view_counts')}</p>
           </details>
           <details>
             <summary>{tr('manual.sharing_search_heading')}</summary>

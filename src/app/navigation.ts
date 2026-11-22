@@ -11,6 +11,7 @@ export type Route = {
     | 'questions'
     | 'pufus'
     | 'settings'
+    | 'public-views'
     | 'question'
     | 'resolve'
     | 'pufu';
@@ -95,7 +96,7 @@ export function routeFromHash(): Route {
       view === 'pufus' ||
       ((view === 'question' || view === 'resolve' || view === 'pufu' || view === 'stock') &&
         !!id) ||
-      (view === 'settings' && !!id)
+      ((view === 'settings' || view === 'public-views') && !!id)
         ? view
         : 'stocks',
     projectId:
@@ -103,7 +104,8 @@ export function routeFromHash(): Route {
         view === 'memory' ||
         view === 'questions' ||
         view === 'pufus' ||
-        view === 'settings') &&
+        view === 'settings' ||
+        view === 'public-views') &&
       id
         ? decodeURIComponent(id)
         : null,

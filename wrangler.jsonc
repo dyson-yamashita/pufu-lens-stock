@@ -115,7 +115,7 @@
         { "binding": "ARTICLE_WORKFLOW", "name": "stock-article", "class_name": "ArticleWorkflow" },
         { "binding": "MEMORY_WORKFLOW", "name": "stock-memory", "class_name": "MemoryWorkflow" },
       ],
-      "triggers": { "crons": ["* * * * *"] },
+      "triggers": { "crons": ["* * * * *", "5 15 * * *"] },
     },
   },
 }
