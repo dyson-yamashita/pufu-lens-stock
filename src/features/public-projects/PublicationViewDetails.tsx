@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { useId, useState } from 'react';
+import { publicListPageLimit, publicListPageSize } from '../../../shared/public-project';
 import type {
   Publication,
   PublicList,
@@ -13,7 +14,6 @@ import { t, useLanguage } from '../../i18n/i18n';
 import { Pagination } from './PublicLayout';
 import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
-import { publicViewLabels } from './types';
 import { useResource } from './useResource';
 
 const kindLabels = {
@@ -71,7 +71,7 @@ function ViewRanking({ publicId, items }: { publicId: string; items: PublicViewR
             <li key={`${item.kind}/${item.id}`}>
               <div className="public-count-row">
                 <div>
-                  <span className="public-help">{t(publicViewLabels[item.kind])}</span>
+                  <span className="public-help">{t(kindLabels[item.kind])}</span>{' '}
                   <a
                     className="text-link"
                     href={`${publicPath}/${item.kind}/${encodeURIComponent(item.id)}`}
@@ -100,6 +100,9 @@ function ViewItems({ publicId }: { publicId: string }) {
   const { data, error, reload } = useResource<PublicList<Item>>(
     `/api/public/projects/${encodeURIComponent(publicId)}/${kind}?sort=views&page=${page}`,
   );
+  const totalPages = data
+    ? Math.min(publicListPageLimit, Math.ceil(data.total / publicListPageSize))
+    : 0;
   return (
     <>
       <div className="detail-tabs" role="group" aria-label={t('ui.public_projects.view_details')}>
@@ -139,7 +142,14 @@ function ViewItems({ publicId }: { publicId: string }) {
       ) : (
         <p className="public-message">{t('ui.public_projects.no_public_items')}</p>
       )}
-      {data && <Pagination page={page} hasMore={data.has_more} onChange={setPage} />}
+      {data && (
+        <Pagination
+          page={page}
+          hasMore={page < totalPages}
+          totalPages={page <= totalPages ? totalPages : undefined}
+          onChange={setPage}
+        />
+      )}
     </>
   );
 }

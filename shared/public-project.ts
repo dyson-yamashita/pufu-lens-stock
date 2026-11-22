@@ -3,6 +3,9 @@ import type { ArticleSummary } from './domain';
 import type { PufuScore } from './pufu';
 import type { StockImage } from './stock-images';
 
+export const publicListPageSize = 12;
+export const publicListPageLimit = 5000;
+
 export type PublicViewTotals = Record<'project' | 'stocks' | 'questions' | 'pufus', number>;
 
 export type PublicViewRankingItem = {

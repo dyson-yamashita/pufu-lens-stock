@@ -1628,6 +1628,7 @@ export const en: Record<string, string> = {
   'phase.number': 'Phase {{number}}',
   'count.items': '{{count}} items',
   'pagination.page': 'Page {{page}}',
+  'pagination.page_total': 'Page {{page}} of {{total}}',
   'relation.related': 'Related {{label}}',
   'relation.search': 'Search {{label}}',
   'error.unknown':

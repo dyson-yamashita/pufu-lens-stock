@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { ArticleSummary } from '../../../shared/domain';
+import { publicListPageLimit, publicListPageSize } from '../../../shared/public-project';
 import type {
   Publication,
   PublicProject,
@@ -84,8 +85,9 @@ function stock(
 }
 function pageOptions(value: string | undefined) {
   const page = value === undefined ? 1 : Number(value);
-  if (!Number.isInteger(page) || page < 1 || page > 5000) throw new HTTPException(400);
-  return { page, limit: 12, offset: (page - 1) * 12 };
+  if (!Number.isInteger(page) || page < 1 || page > publicListPageLimit)
+    throw new HTTPException(400);
+  return { page, limit: publicListPageSize, offset: (page - 1) * publicListPageSize };
 }
 const viewCountOrder = (sort: string | undefined) => (sort === 'views' ? 'view_count DESC,' : '');
 

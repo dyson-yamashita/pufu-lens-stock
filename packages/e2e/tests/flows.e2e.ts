@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { expect } from 'e2e';
+import { publicListPageSize } from '../../../shared/public-project.ts';
 import { test, requestId } from '../src/fixtures.ts';
 import { goals } from '../src/executor.ts';
 
@@ -986,6 +987,12 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await screen.getByRole('link', 'プ譜の一覧に戻る').click();
   await expect(screen.getByRole('link', /E2Eの公開プ譜/)).toBeVisible();
   await browser.setCookies(cookies);
+  for (let index = 1; index <= publicListPageSize; index++) {
+    await fixture.request('/questions', 'POST', {
+      project_id: fixture.projectId,
+      text: `E2Eのページ送り用の問い ${index}`,
+    });
+  }
   await app.open(`/#settings/${fixture.projectId}`);
   await screen.getByRole('link', '閲覧数の詳細を見る').click();
   const ranking = browser.locator('.publication-view-details .publication-view-ranking');
@@ -995,13 +1002,30 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(viewRows).toContainText('E2Eの公開するストック');
   expect(await browser.evaluate(() => window.scrollY)).toBe(0);
   await expect(browser.locator('.publication-view-rows .public-view-count')).toHaveText('0');
+  const pager = browser.locator('.publication-view-details .public-pagination');
+  const previousPage = screen.getByRole('button', '前へ', { exact: true });
+  const nextPage = screen.getByRole('button', '次へ', { exact: true });
+  await expect(pager).toContainText('1 / 1ページ');
+  await expect(previousPage).toBeDisabled();
+  await expect(nextPage).toBeDisabled();
   await browser
     .locator('.publication-view-details button')
     .filter({ hasText: '問い・気づき' })
     .click();
+  await expect(viewRows).toContainText(`E2Eのページ送り用の問い ${publicListPageSize}`);
+  await expect(pager).toContainText('1 / 2ページ');
+  await expect(previousPage).toBeDisabled();
+  await nextPage.click();
   await expect(viewRows).toContainText('E2Eの公開する問い');
+  await expect(pager).toContainText('2 / 2ページ');
+  await expect(nextPage).toBeDisabled();
+  await previousPage.click();
+  await expect(pager).toContainText('1 / 2ページ');
+  await nextPage.click();
+  await expect(pager).toContainText('2 / 2ページ');
   await browser.locator('.publication-view-details button').filter({ hasText: 'プ譜' }).click();
   await expect(viewRows).toContainText('E2Eの公開プ譜タイトル');
+  await expect(pager).toContainText('1 / 1ページ');
   await app.screenshot('publication-view-details');
   await screen.getByRole('link', 'プロジェクト設定に戻る').click();
   await screen.getByRole('switch', 'プロジェクトを公開する').uncheck();

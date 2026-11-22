@@ -1602,6 +1602,7 @@ export const ja: Record<string, string> = {
   'phase.number': '第{{number}}局面',
   'count.items': '{{count}}件',
   'pagination.page': '{{page}}ページ',
+  'pagination.page_total': '{{page}} / {{total}}ページ',
   'relation.related': '関連する{{label}}',
   'relation.search': '{{label}}を検索',
   'error.unknown': '処理に失敗しました。時間をおいて再度お試しください。',

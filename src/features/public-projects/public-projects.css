@@ -619,14 +619,14 @@
 
 .publication-view-ranking {
   margin-top: 20px;
-  padding: 16px;
+  padding: 12px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card);
 }
 
 .publication-view-ranking h2 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-size: 16px;
 }
 
@@ -636,7 +636,7 @@
 }
 
 .publication-view-ranking li {
-  padding: 10px 0;
+  padding: 6px 0;
   overflow-wrap: anywhere;
 }
 
@@ -644,8 +644,10 @@
   border-top: 1px solid var(--border);
 }
 
-.publication-view-ranking li .text-link {
-  display: block;
+.publication-view-ranking li .public-help {
+  margin-inline-end: 6px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .publication-view-details {
@@ -656,6 +658,10 @@
 }
 .publication-view-details .detail-tabs {
   margin-top: 20px;
+}
+.publication-view-details .public-pagination {
+  gap: clamp(8px, 3vw, 22px);
+  flex-wrap: wrap;
 }
 .publication-view-rows {
   list-style: none;
