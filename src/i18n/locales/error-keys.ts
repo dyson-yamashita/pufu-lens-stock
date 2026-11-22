@@ -135,6 +135,7 @@ export const errorKeys: Record<string, string> = {
     'error.could_not_read_the_pdf_check_for_corruption_or_password',
   '公開されているページが見つかりません。': 'error.the_public_page_was_not_found',
   '公開設定の入力内容を確認してください。': 'error.check_the_publication_settings',
+  '閲覧数の集計期間を確認してください。': 'error.check_the_view_count_period',
   '同じリクエストIDで異なる内容が送信されました。':
     'error.different_content_was_sent_with_the_same_request_id',
   '問い・気づきの生成が完了してから、プ譜を作成できます。':

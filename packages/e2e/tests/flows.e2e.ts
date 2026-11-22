@@ -998,6 +998,10 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   const ranking = browser.locator('.publication-view-details .publication-view-ranking');
   await expect(ranking).toContainText('詳細ページの閲覧数 上位5件');
   await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
+  await expect(screen.getByRole('button', '今週', { exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   const viewRows = browser.locator('.publication-view-rows');
   await expect(viewRows).toContainText('E2Eの公開するストック');
   expect(await browser.evaluate(() => window.scrollY)).toBe(0);
@@ -1019,6 +1023,14 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(viewRows).toContainText('E2Eの公開する問い');
   await expect(pager).toContainText('2 / 2ページ');
   await expect(nextPage).toBeDisabled();
+  await screen.getByRole('button', '月別', { exact: true }).click();
+  await expect(screen.getByLabel('集計する年月')).toBeVisible();
+  await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
+  await expect(pager).toContainText('2 / 2ページ');
+  await screen.getByRole('button', '全期間', { exact: true }).click();
+  await expect(screen.getByLabel('集計する年月')).toHaveCount(0);
+  await expect(ranking).toContainText('集計済みの詳細閲覧はまだありません。');
+  await expect(pager).toContainText('2 / 2ページ');
   await previousPage.click();
   await expect(pager).toContainText('1 / 2ページ');
   await nextPage.click();

@@ -20,7 +20,7 @@ import { now } from '../../infrastructure/db';
 import { pufuRelationsColumns, stockRelationsColumn, withRelations } from '../relations/relations';
 import { ogImageResponse } from '../stocks/og-image';
 import { stockImageResponse } from '../stocks/stock-images';
-import { publicViewColumn } from './public-views';
+import { japanDay, publicViewColumn } from './public-views';
 
 const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
@@ -341,8 +341,47 @@ export function publicProjectsApp() {
   return app;
 }
 
-async function readViewStats(db: D1Database, projectId: string): Promise<PublicViewStats> {
-  const [counts, ranking] = await db.batch([
+type ViewRankingRange = { period: 'week' | 'month'; start: string; end: string };
+
+function viewRankingRange(
+  period: string | undefined,
+  month: string | undefined,
+): ViewRankingRange | undefined {
+  if ((period === undefined || period === 'all') && month === undefined) return;
+  const today = japanDay(Date.now());
+  if (period === 'week' && month === undefined) {
+    const monday = new Date(`${today}T00:00:00Z`);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    return { period, start: monday.toISOString().slice(0, 10), end: today };
+  }
+  if (period === 'month') {
+    const current = today.slice(0, 7);
+    const selected = month ?? current;
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(selected) && selected.length === 7 && selected <= current) {
+      const start = `${selected}-01`;
+      const nextMonth = new Date(`${start}T00:00:00Z`);
+      nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+      return {
+        period,
+        start,
+        end: selected === current ? today : nextMonth.toISOString().slice(0, 10),
+      };
+    }
+  }
+  throw new HTTPException(400, { message: '閲覧数の集計期間を確認してください。' });
+}
+
+async function readViewStats(
+  db: D1Database,
+  projectId: string,
+  publishedAt: string | null,
+  range?: ViewRankingRange,
+): Promise<PublicViewStats> {
+  const views = range
+    ? `SELECT kind,item_id,SUM(views) AS views FROM public_view_daily
+       WHERE project_id=?1 AND day>=?2 AND day<?3 GROUP BY kind,item_id`
+    : 'SELECT kind,item_id,views FROM public_view_totals WHERE project_id=?1';
+  const [counts, ranking, history] = await db.batch([
     db
       .prepare(
         'SELECT kind,SUM(views) AS views FROM public_view_totals WHERE project_id=? GROUP BY kind',
@@ -350,7 +389,7 @@ async function readViewStats(db: D1Database, projectId: string): Promise<PublicV
       .bind(projectId),
     db
       .prepare(
-        `WITH views AS (SELECT kind,item_id,views FROM public_view_totals WHERE project_id=?1)
+        `WITH views AS (${views})
        SELECT v.kind,s.id,COALESCE(NULLIF(trim(COALESCE(s.title,a.title)),''),NULLIF(a.domain,'')) AS title,v.views
        FROM views v JOIN stocks s ON s.id=v.item_id JOIN articles a ON a.id=s.article_id
        WHERE v.kind='stocks' AND s.project_id=?1
@@ -363,12 +402,27 @@ async function readViewStats(db: D1Database, projectId: string): Promise<PublicV
        WHERE v.kind='pufus' AND pf.project_id=?1 AND ${publicPufuWhere}
        ORDER BY views DESC,kind,id LIMIT 5`,
       )
-      .bind(projectId),
+      .bind(projectId, ...(range ? [range.start, range.end] : [])),
+    ...(range?.period === 'week'
+      ? [
+          db
+            .prepare('SELECT MIN(day) AS day FROM public_view_daily WHERE project_id=?')
+            .bind(projectId),
+        ]
+      : []),
   ]);
   const totals: PublicViewTotals = { project: 0, stocks: 0, questions: 0, pufus: 0 };
   for (const { kind, views } of counts.results as { kind: keyof PublicViewTotals; views: number }[])
     totals[kind] = views;
-  return { totals, top: ranking.results as PublicViewRankingItem[] };
+  const stats: PublicViewStats = { totals, top: ranking.results as PublicViewRankingItem[] };
+  if (range?.period === 'week') {
+    const current = range.end.slice(0, 7);
+    const firstDay = (history.results[0] as { day: string | null }).day;
+    const publishedMonth = publishedAt ? japanDay(Date.parse(publishedAt)).slice(0, 7) : current;
+    const first = [current, publishedMonth, firstDay?.slice(0, 7) ?? current].sort()[0];
+    stats.months = { first, current };
+  }
+  return stats;
 }
 
 const publicationSchema = z.strictObject({
@@ -396,12 +450,22 @@ export function publicationApp() {
       search_indexable: Boolean(row.search_indexable),
     };
   }
-  async function respond(c: import('hono').Context<AppEnv>, id: string) {
+  async function respond(
+    c: import('hono').Context<AppEnv>,
+    id: string,
+    period?: string,
+    month?: string,
+  ) {
     const publication = await read(c, id);
-    const view_stats = publication.is_public ? await readViewStats(c.env.DB, id) : null;
+    const range = viewRankingRange(period, month);
+    const view_stats = publication.is_public
+      ? await readViewStats(c.env.DB, id, publication.published_at, range)
+      : null;
     return c.json({ publication: { ...publication, view_stats } });
   }
-  app.get('/:id/publication', (c) => respond(c, c.req.param('id')));
+  app.get('/:id/publication', (c) =>
+    respond(c, c.req.param('id'), c.req.query('view_period'), c.req.query('view_month')),
+  );
   app.patch('/:id/publication', async (c) => {
     const id = c.req.param('id');
     await read(c, id);

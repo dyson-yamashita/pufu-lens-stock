@@ -659,6 +659,24 @@
 .publication-view-details .detail-tabs {
   margin-top: 20px;
 }
+.publication-ranking-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 6px;
+}
+.publication-ranking-controls .detail-tabs {
+  margin: 0;
+}
+.publication-ranking-controls select {
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
 .publication-view-details .public-pagination {
   gap: clamp(8px, 3vw, 22px);
   flex-wrap: wrap;

@@ -17,6 +17,7 @@ export type PublicViewRankingItem = {
 export type PublicViewStats = {
   totals: PublicViewTotals;
   top: PublicViewRankingItem[];
+  months?: { first: string; current: string };
 };
 
 export type Publication = {

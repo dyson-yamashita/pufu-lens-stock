@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { publicListPageLimit, publicListPageSize } from '../../../shared/public-project';
 import type {
   Publication,
@@ -8,9 +8,10 @@ import type {
   PublicQuestion,
   PublicStock,
   PublicViewRankingItem,
+  PublicViewStats,
 } from '../../../shared/public-project';
 import { pufuDisplayTitle } from '../../../shared/pufu';
-import { t, useLanguage } from '../../i18n/i18n';
+import { intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { Pagination } from './PublicLayout';
 import { PublicViewCount } from './PublicViewCount';
 import { ResourceState } from './ResourceState';
@@ -22,6 +23,12 @@ const kindLabels = {
   pufus: 'ui.app.pufu',
 } as const;
 const kinds = ['stocks', 'questions', 'pufus'] as const;
+const rankingPeriods = ['week', 'month', 'all'] as const;
+const rankingLabels = {
+  week: 'ui.usage.week',
+  month: 'ui.public_projects.by_month',
+  all: 'ui.usage.all_time',
+} as const;
 type Kind = keyof typeof kindLabels;
 type Item = PublicStock | PublicQuestion | PublicPufuSummary;
 
@@ -34,8 +41,9 @@ function itemTitle(item: Item) {
 export function PublicationViewDetails({ projectId }: { projectId: string }) {
   useLanguage();
   const id = encodeURIComponent(projectId);
+  const publicationPath = `/api/v1/projects/${id}/publication`;
   const { data, error, reload } = useResource<{ publication: Publication }>(
-    `/api/v1/projects/${id}/publication`,
+    `${publicationPath}?view_period=week`,
   );
   const publication = data?.publication;
   return (
@@ -47,11 +55,15 @@ export function PublicationViewDetails({ projectId }: { projectId: string }) {
       {!publication ? (
         <ResourceState error={error} retry={reload} />
       ) : publication.is_public && publication.public_id ? (
-        <>
+        <Fragment key={publication.public_id}>
           <p className="public-help">{t('ui.public_projects.public_views_help')}</p>
-          <ViewRanking publicId={publication.public_id} items={publication.view_stats?.top ?? []} />
-          <ViewItems key={publication.public_id} publicId={publication.public_id} />
-        </>
+          <ViewRanking
+            publicId={publication.public_id}
+            publicationPath={publicationPath}
+            stats={publication.view_stats}
+          />
+          <ViewItems publicId={publication.public_id} />
+        </Fragment>
       ) : (
         <p className="public-help">{t('ui.public_projects.view_details_public_only')}</p>
       )}
@@ -59,37 +71,118 @@ export function PublicationViewDetails({ projectId }: { projectId: string }) {
   );
 }
 
-function ViewRanking({ publicId, items }: { publicId: string; items: PublicViewRankingItem[] }) {
+function rankingMonths({ first, current }: NonNullable<PublicViewStats['months']>) {
+  const formatter = new Intl.DateTimeFormat(intlLocale(), {
+    year: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  });
+  const start = new Date(`${first}-01T00:00:00Z`);
+  const options = [];
+  for (
+    const date = new Date(`${current}-01T00:00:00Z`);
+    date >= start;
+    date.setUTCMonth(date.getUTCMonth() - 1)
+  ) {
+    options.push({ value: date.toISOString().slice(0, 7), label: formatter.format(date) });
+  }
+  return options;
+}
+
+function ViewRanking({
+  publicId,
+  publicationPath,
+  stats,
+}: {
+  publicId: string;
+  publicationPath: string;
+  stats: PublicViewStats | null;
+}) {
   const heading = useId();
-  const publicPath = `/p/${encodeURIComponent(publicId)}`;
+  const [period, setPeriod] = useState<(typeof rankingPeriods)[number]>('week');
+  const months = stats?.months;
+  const [month, setMonth] = useState(months?.current ?? '');
+  const query = new URLSearchParams({ view_period: period });
+  if (period === 'month' && month) query.set('view_month', month);
   return (
     <section className="publication-view-ranking" aria-labelledby={heading}>
       <h2 id={heading}>{t('ui.public_projects.top_details')}</h2>
-      {items.length ? (
-        <ol>
-          {items.map((item) => (
-            <li key={`${item.kind}/${item.id}`}>
-              <div className="public-count-row">
-                <div>
-                  <span className="public-help">{t(kindLabels[item.kind])}</span>{' '}
-                  <a
-                    className="text-link"
-                    href={`${publicPath}/${item.kind}/${encodeURIComponent(item.id)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {item.title || t('ui.app.text')}
-                  </a>
-                </div>
-                <PublicViewCount count={item.views} />
-              </div>
-            </li>
+      <div className="publication-ranking-controls">
+        <div className="detail-tabs" role="group" aria-label={t('ui.usage.period')}>
+          {rankingPeriods.map((value) => (
+            <button
+              type="button"
+              key={value}
+              className={period === value ? 'active' : ''}
+              aria-pressed={period === value}
+              onClick={() => setPeriod(value)}
+            >
+              {t(rankingLabels[value])}
+            </button>
           ))}
-        </ol>
+        </div>
+        {period === 'month' && months && (
+          <select
+            aria-label={t('ui.public_projects.ranking_month')}
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+          >
+            {rankingMonths(months).map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+      {period === 'week' ? (
+        <RankingList publicId={publicId} items={stats?.top ?? []} />
       ) : (
-        <p className="public-help">{t('ui.public_projects.no_ranked_details')}</p>
+        <RankingResults publicId={publicId} path={`${publicationPath}?${query}`} />
       )}
     </section>
+  );
+}
+
+function RankingResults({ publicId, path }: { publicId: string; path: string }) {
+  const { data, error, reload } = useResource<{ publication: Publication }>(path);
+  if (error) return <ResourceState error={error} retry={reload} />;
+  if (!data)
+    return (
+      <p className="public-help" role="status">
+        {t('ui.public_projects.loading')}
+      </p>
+    );
+  if (!data.publication.is_public)
+    return <p className="public-help">{t('ui.public_projects.view_details_public_only')}</p>;
+  return <RankingList publicId={publicId} items={data.publication.view_stats?.top ?? []} />;
+}
+
+function RankingList({ publicId, items }: { publicId: string; items: PublicViewRankingItem[] }) {
+  const publicPath = `/p/${encodeURIComponent(publicId)}`;
+  if (!items.length)
+    return <p className="public-help">{t('ui.public_projects.no_ranked_details')}</p>;
+  return (
+    <ol>
+      {items.map((item) => (
+        <li key={`${item.kind}/${item.id}`}>
+          <div className="public-count-row">
+            <div>
+              <span className="public-help">{t(kindLabels[item.kind])}</span>{' '}
+              <a
+                className="text-link"
+                href={`${publicPath}/${item.kind}/${encodeURIComponent(item.id)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {item.title || t('ui.app.text')}
+              </a>
+            </div>
+            <PublicViewCount count={item.views} />
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 
