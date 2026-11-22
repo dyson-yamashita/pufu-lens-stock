@@ -38,7 +38,13 @@ function itemTitle(item: Item) {
   return item.title.trim() || item.domain || t('ui.app.text');
 }
 
-export function PublicationViewDetails({ projectId }: { projectId: string }) {
+export function PublicationViewDetails({
+  projectId,
+  isMobile,
+}: {
+  projectId: string;
+  isMobile: boolean;
+}) {
   useLanguage();
   const id = encodeURIComponent(projectId);
   const publicationPath = `/api/v1/projects/${id}/publication`;
@@ -62,7 +68,7 @@ export function PublicationViewDetails({ projectId }: { projectId: string }) {
             publicationPath={publicationPath}
             stats={publication.view_stats}
           />
-          <ViewItems publicId={publication.public_id} />
+          <ViewItems publicId={publication.public_id} isMobile={isMobile} />
         </Fragment>
       ) : (
         <p className="public-help">{t('ui.public_projects.view_details_public_only')}</p>
@@ -186,15 +192,23 @@ function RankingList({ publicId, items }: { publicId: string; items: PublicViewR
   );
 }
 
-function ViewItems({ publicId }: { publicId: string }) {
+function ViewItems({ publicId, isMobile }: { publicId: string; isMobile: boolean }) {
   const [kind, setKind] = useState<Kind>('stocks');
-  const [page, setPage] = useState(1);
+  // Keep the same item in view when the viewport crosses the mobile breakpoint.
+  const [firstItemIndex, setFirstItemIndex] = useState(0);
+  const pagesPerResponse = isMobile ? 2 : 1;
+  const pageSize = publicListPageSize / pagesPerResponse;
+  const pageIndex = Math.floor(firstItemIndex / pageSize);
+  const page = pageIndex + 1;
+  const requestPage = Math.floor(pageIndex / pagesPerResponse) + 1;
+  const offset = (pageIndex % pagesPerResponse) * pageSize;
   const publicPath = `/p/${encodeURIComponent(publicId)}`;
   const { data, error, reload } = useResource<PublicList<Item>>(
-    `/api/public/projects/${encodeURIComponent(publicId)}/${kind}?sort=views&page=${page}`,
+    `/api/public/projects/${encodeURIComponent(publicId)}/${kind}?sort=views&page=${requestPage}`,
   );
+  const items = data?.items.slice(offset, offset + pageSize) ?? [];
   const totalPages = data
-    ? Math.min(publicListPageLimit, Math.ceil(data.total / publicListPageSize))
+    ? Math.min(publicListPageLimit * pagesPerResponse, Math.ceil(data.total / pageSize))
     : 0;
   return (
     <>
@@ -207,7 +221,7 @@ function ViewItems({ publicId }: { publicId: string }) {
             aria-pressed={kind === itemKind}
             onClick={() => {
               setKind(itemKind);
-              setPage(1);
+              setFirstItemIndex(0);
             }}
           >
             {t(kindLabels[itemKind])}
@@ -216,9 +230,9 @@ function ViewItems({ publicId }: { publicId: string }) {
       </div>
       {!data ? (
         <ResourceState error={error} retry={reload} />
-      ) : data.items.length ? (
+      ) : items.length ? (
         <ul className="publication-view-rows">
-          {data.items.map((item) => (
+          {items.map((item) => (
             <li className="public-count-row" key={item.id}>
               <a
                 className="text-link"
@@ -240,7 +254,7 @@ function ViewItems({ publicId }: { publicId: string }) {
           page={page}
           hasMore={page < totalPages}
           totalPages={page <= totalPages ? totalPages : undefined}
-          onChange={setPage}
+          onChange={(nextPage) => setFirstItemIndex((nextPage - 1) * pageSize)}
         />
       )}
     </>

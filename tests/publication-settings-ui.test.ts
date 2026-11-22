@@ -279,7 +279,7 @@ it('公開設定と別枠に閲覧数を表示し、上位の項目は閲覧数�
     };
   });
   await act(async () =>
-    root.render(createElement(PublicationViewDetails, { projectId: 'project' })),
+    root.render(createElement(PublicationViewDetails, { projectId: 'project', isMobile: false })),
   );
   const first = document.querySelector('.publication-view-ranking ol li');
   expect(first?.querySelector('a')?.textContent).toBe('読まれた記事');
@@ -315,4 +315,32 @@ it('公開設定と別枠に閲覧数を表示し、上位の項目は閲覧数�
   expect(document.querySelector('.publication-view-ranking .public-view-count')?.textContent).toBe(
     '3',
   );
+});
+
+it('画面幅が変わっても開いていた項目を含むページを表示する', async () => {
+  publication = { ...publication, is_public: true, public_id: 'public-project' };
+  const items = Array.from({ length: 12 }, (_, index) => ({
+    id: `stock-${index + 1}`,
+    title: `ストック ${index + 1}`,
+    view_count: 12 - index,
+  }));
+  vi.mocked(api).mockImplementation(async (path) =>
+    path.startsWith('/api/v1/')
+      ? { publication }
+      : { items, total: items.length, page: 1, has_more: false },
+  );
+  const renderDetails = async (isMobile: boolean) =>
+    act(async () =>
+      root.render(createElement(PublicationViewDetails, { projectId: 'project', isMobile })),
+    );
+  const visibleTitles = () =>
+    [...document.querySelectorAll('.publication-view-rows a')].map((link) => link.textContent);
+  await renderDetails(true);
+  expect(visibleTitles()).toEqual(items.slice(0, 6).map(({ title }) => title));
+  await act(async () => button('次へ').click());
+  expect(visibleTitles()).toEqual(items.slice(6).map(({ title }) => title));
+  await renderDetails(false);
+  expect(visibleTitles()).toEqual(items.map(({ title }) => title));
+  await renderDetails(true);
+  expect(visibleTitles()).toEqual(items.slice(6).map(({ title }) => title));
 });
