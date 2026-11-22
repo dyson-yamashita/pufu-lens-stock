@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Project } from '../../shared/domain';
+import { ShareLink } from '../features/public-projects/ShareLink';
 import { t } from '../i18n/i18n';
 import { globalHeaderLabels, headerLabels } from './labels';
 import type { Route } from './navigation';
@@ -64,7 +65,7 @@ export function AppPageHeader({
       : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
   return (
     <>
-      <header className="page-header">
+      <header className="page-header share-anchor">
         <div>
           <h1
             className="section-heading"
@@ -119,6 +120,13 @@ export function AppPageHeader({
           )}
         </div>
         <div className="header-actions">
+          {selected && ['stocks', 'questions', 'pufus'].includes(route.view) && (
+            <ShareLink
+              key={selected.id}
+              source={{ projectId: selected.id }}
+              target={{ kind: 'project' }}
+            />
+          )}
           {libraryView && (
             <div className="header-project-select">
               <label htmlFor="project-scope">{t('ui.app.projects')}</label>

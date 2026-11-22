@@ -143,6 +143,8 @@ export const en: Record<string, string> = {
   'manual.comments_integration_heading': 'Read and add comments from ChatGPT or other apps',
   'manual.memory_sources_heading': 'Memory sources and excluding a project',
   'manual.sharing_view_heading': 'Public page navigation and visible information',
+  'manual.share_targets':
+    'Select Share to copy a public link to a published project, stock, question or insight, or Pufu. On supported devices, you can also choose Share with another app. A Pufu link opens the phase you are viewing.',
   'manual.sharing_search_heading': 'Allow search engine indexing',
   'manual.integrations_intro':
     'Use Integrations to connect the iPhone share menu or AI apps such as ChatGPT. Choose the Shortcuts, MCP, or SNS tab for the connection you need.',
@@ -809,6 +811,21 @@ export const en: Record<string, string> = {
   'ui.public_projects.could_not_load_the_pufu_image_please_reload':
     'Could not load the Pufu image. Please reload.',
   'ui.public_projects.loading': 'Loading…',
+  'share.open': 'Share',
+  'share.close': 'Close sharing',
+  'share.project': 'Share project',
+  'share.stock': 'Share stock',
+  'share.question': 'Share question or insight',
+  'share.pufu': 'Share phase {{number}}',
+  'share.public': 'Anyone can view this without signing in.',
+  'share.private': 'This project is private.',
+  'share.settings': 'Check publication settings',
+  'share.url': 'Public link',
+  'share.copy': 'Copy link',
+  'share.native': 'Share with another app',
+  'share.copied': 'Link copied.',
+  'share.manual_copy': 'Copy the selected link.',
+  'share.native_failed': 'The share menu could not open. Copy the link instead.',
   'ui.public_projects.pagination': 'Pagination',
   'ui.public_projects.public_projects': 'Public projects',
   'ui.public_projects.discover_your_next_idea_through_someone_else_s_interests':

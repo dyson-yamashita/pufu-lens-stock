@@ -9,6 +9,7 @@ import { reportFeedback } from '../feedback/feedback-events';
 import { useTheme } from '../settings/theme';
 // 開いたままの詳細画面から旧デプロイのダウンロード用JSを要求しないよう、詳細と一緒に読み込む。
 import Comments from '../comments/Comments';
+import { ShareLink } from '../public-projects/ShareLink';
 import { createPufuPng } from './pufu-download';
 import PufuImagePreview from './PufuImagePreview';
 import PufuJsonImport from './PufuJsonImport';
@@ -208,6 +209,7 @@ export default function PufuEditor({
       <div className="pufu-phase-bar">
         <div
           className="pufu-phase-navigation"
+          data-share-phase-navigation
           role="group"
           aria-label={t('ui.pufu_editor.switch_phase')}
         >
@@ -238,7 +240,7 @@ export default function PufuEditor({
           )}
         </div>
       </div>
-      <div className="pufu-toolbar">
+      <div className="pufu-toolbar share-anchor">
         <div>
           <button
             className="button secondary"
@@ -252,6 +254,10 @@ export default function PufuEditor({
             <Download size={16} aria-hidden="true" />
             {t('ui.pufu_editor.download')}
           </button>
+          <ShareLink
+            source={{ projectId: pufu.project_id }}
+            target={{ kind: 'pufu', id: pufu.id, phase: savedPhase.number }}
+          />
           {isLatest && (
             <button
               className="button secondary"

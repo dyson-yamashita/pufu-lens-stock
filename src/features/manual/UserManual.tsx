@@ -221,6 +221,7 @@ const sections = (tr: typeof t) => [
           </li>
           <li>{tr('ui.user_manual.share_the_displayed_public_url_the_project_is_also')}</li>
         </ol>
+        <p>{tr('manual.share_targets')}</p>
         <p className="manual-note">
           {tr('ui.user_manual.memories_private_notes_comments_in_details_retrieved_article_text')}
         </p>

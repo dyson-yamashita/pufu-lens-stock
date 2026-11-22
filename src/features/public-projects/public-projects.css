@@ -684,3 +684,96 @@
 .publication-view-rows li + li {
   border-top: 1px solid var(--border);
 }
+.share-anchor {
+  position: relative;
+}
+.share-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.share-heading > :first-child {
+  min-width: 0;
+}
+.share-anchor > .share-control {
+  margin-inline-start: auto;
+}
+.share-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.share-link span {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.share-panel {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  width: min(100%, 390px);
+  padding: 10px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 6px 20px var(--shadow);
+}
+.share-panel-heading,
+.share-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.share-panel-heading {
+  justify-content: space-between;
+}
+.share-panel-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.share-panel-heading .icon-button {
+  margin-inline-end: -6px;
+}
+.share-panel p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.share-panel label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.share-panel input {
+  width: 100%;
+  font-size: 16px;
+}
+.share-panel-actions {
+  margin-top: 12px;
+}
+.share-panel .share-status {
+  margin: 8px 0 0;
+}
+.share-panel .share-status:empty {
+  margin: 0;
+}
+.share-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -12,6 +12,7 @@ import { applicationError, t, useLanguage } from '../../i18n/i18n';
 import { api, send } from '../../lib/api';
 import { fullDate } from '../../lib/dates';
 import Comments from '../comments/Comments';
+import { ShareLink } from '../public-projects/ShareLink';
 import { StockQuestion } from '../questions/Questions';
 import { statusLabels } from './stock-labels';
 import { StockFavoriteButton } from './StockFavoriteButton';
@@ -187,7 +188,7 @@ export function StockDetail({
           </button>
         </div>
       )}
-      <div className="stock-detail-links">
+      <div className="stock-detail-links share-anchor">
         {stock.source_type === 'url' && (
           <a
             className="original-link"
@@ -211,6 +212,11 @@ export function StockDetail({
               setError(applicationError((e as Error).message));
             }
           }}
+        />
+        <ShareLink
+          key={stock.project_id}
+          source={{ projectId: stock.project_id }}
+          target={{ kind: 'stock', id: stock.id }}
         />
       </div>
       <div className="detail-tabs" aria-label={t('ui.app.article_views')}>

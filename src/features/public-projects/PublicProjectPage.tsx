@@ -10,6 +10,7 @@ import { PublicPufuList } from './PublicPufuList';
 import { PublicQuestionDetail, PublicQuestionList } from './PublicQuestions';
 import { PublicStockDetailPage, PublicStockList } from './PublicStocks';
 import { PublicPageSkeleton, ResourceState } from './ResourceState';
+import { ShareLink } from './ShareLink';
 import { useResource } from './useResource';
 
 export default function PublicProjectPage({ publicId }: { publicId: string }) {
@@ -43,11 +44,12 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
   if (match)
     content =
       match[1] === 'stock' ? (
-        <PublicStockDetailPage key={match[2]} root={root} id={match[2]} />
+        <PublicStockDetailPage key={match[2]} root={root} publicId={publicId} id={match[2]} />
       ) : match[1] === 'pufu' ? (
         <PublicPufuDetail
           key={`${root}-${match[2]}`}
           root={root}
+          publicId={publicId}
           id={match[2]}
           fromList={match[3] === 'pufus'}
         />
@@ -55,6 +57,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
         <PublicQuestionDetail
           key={match[2]}
           root={root}
+          publicId={publicId}
           id={match[2]}
           projectName={data?.project.name ?? ''}
         />
@@ -88,7 +91,10 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
               <Globe size={14} aria-hidden="true" />
               {t('ui.public_projects.public')}
             </span>
-            <h1>{data.project.name}</h1>
+            <div className="share-heading share-anchor">
+              <h1>{data.project.name}</h1>
+              {!match && <ShareLink source={{ publicId }} target={{ kind: 'project' }} />}
+            </div>
             {data.project.public_description && (
               <p className="public-lead">{data.project.public_description}</p>
             )}

@@ -4,6 +4,7 @@ import type { PublicPufu } from '../../../shared/public-project';
 import { t, useLanguage } from '../../i18n/i18n';
 import { publicLink } from './public-routing';
 import { PublicPufuScoreSkeleton, ResourceState } from './ResourceState';
+import { ShareLink } from './ShareLink';
 import { useResource } from './useResource';
 
 const PublicPufuScore = lazy(async () => {
@@ -23,14 +24,17 @@ const PublicPufuScore = lazy(async () => {
 
 export function PublicPufuDetail({
   root,
+  publicId,
   id,
   fromList,
 }: {
   root: string;
+  publicId: string;
   id: string;
   fromList: boolean;
 }) {
   useLanguage();
+  const [shareOpen, setShareOpen] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState<number | undefined>(() => {
     const value = new URLSearchParams(window.location.search ?? '').get('phase');
     return value && /^[1-9]\d*$/.test(value) ? Number(value) : undefined;
@@ -115,9 +119,10 @@ export function PublicPufuDetail({
         {phase % 2 === 0 ? t('ui.public_projects.reflection') : t('ui.app.pufu')}
         {t('ui.public_projects.read_only')}
       </p>
-      <div className="pufu-toolbar">
+      <div className="pufu-toolbar share-anchor">
         <div
           className="pufu-phase-navigation"
+          data-share-phase-navigation
           role="group"
           aria-label={t('ui.pufu_editor.switch_phase')}
         >
@@ -143,6 +148,11 @@ export function PublicPufuDetail({
             </button>
           )}
         </div>
+        <ShareLink
+          source={{ publicId }}
+          target={{ kind: 'pufu', id: data.pufu.id, phase }}
+          visibility={{ open: shareOpen, onChange: setShareOpen }}
+        />
       </div>
       <Suspense fallback={<PublicPufuScoreSkeleton />}>
         <PublicPufuScore key={`${id}-${phase}`} score={data.pufu.score} phase={phase} />
