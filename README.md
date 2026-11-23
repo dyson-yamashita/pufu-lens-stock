@@ -4,7 +4,7 @@
 
 ## ローカルで試す
 
-**Node.js 22.22.3以降の22系、または24.11以降（推奨24系） / pnpm 11.28.6** が必要です。Corepackを使う場合は、初回に `corepack enable` を実行します。
+**Node.js 24.11.0以上（推奨24系） / pnpm 11.28.6** が必要です。Corepackを使う場合は、初回に `corepack enable` を実行します。
 
 ```sh
 pnpm install --frozen-lockfile
