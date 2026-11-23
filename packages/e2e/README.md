@@ -4,7 +4,7 @@
 
 ## 初回準備
 
-Node.js 22.22.3以降の22系、または24.11以降、pnpm 11.28.6が必要です。
+Node.js 24.11.0以上とpnpm 11.28.6が必要です。
 
 ```sh
 pnpm install --frozen-lockfile

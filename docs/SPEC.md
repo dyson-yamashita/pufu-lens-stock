@@ -626,7 +626,7 @@ WorkflowのAI試行ごとにAsyncLocalStorageで応答の計測を隔離し、�
 
 ## ローカル開発
 
-Node.js 22.22.3以降の22系、または24.11以降（推奨24系）とpnpm 11.28.6を使用します。開発・CI・監査・デプロイで使うpnpmのバージョンは、`package.json` の `packageManager` で一元的に固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
+Node.js 24.11.0以上（推奨24系）とpnpm 11.28.6を使用します。開発・CI・監査・デプロイで使うpnpmのバージョンは、`package.json` の `packageManager` で一元的に固定しています。Cloudflare・Googleの認証情報なしでもローカルで動作確認できます。
 
 設定値の例は [.dev.vars.example](../.dev.vars.example) にあります。APIキーなどの秘密情報は `.dev.vars` やサービス側のSecretsで管理し、Gitへ追加しないでください。
 
