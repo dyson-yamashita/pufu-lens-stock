@@ -818,8 +818,6 @@ export const en: Record<string, string> = {
   'share.question': 'Share question or insight',
   'share.pufu': 'Share phase {{number}}',
   'share.public': 'Anyone can view this without signing in.',
-  'share.private': 'This project is private.',
-  'share.settings': 'Check publication settings',
   'share.url': 'Public link',
   'share.copy': 'Copy link',
   'share.native': 'Share with another app',

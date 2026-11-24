@@ -455,16 +455,24 @@ export function publicationApp() {
     id: string,
     period?: string,
     month?: string,
+    includeViewStats = true,
   ) {
     const publication = await read(c, id);
     const range = viewRankingRange(period, month);
-    const view_stats = publication.is_public
-      ? await readViewStats(c.env.DB, id, publication.published_at, range)
-      : null;
+    const view_stats =
+      publication.is_public && includeViewStats
+        ? await readViewStats(c.env.DB, id, publication.published_at, range)
+        : null;
     return c.json({ publication: { ...publication, view_stats } });
   }
   app.get('/:id/publication', (c) =>
-    respond(c, c.req.param('id'), c.req.query('view_period'), c.req.query('view_month')),
+    respond(
+      c,
+      c.req.param('id'),
+      c.req.query('view_period'),
+      c.req.query('view_month'),
+      c.req.query('include_view_stats') !== 'false',
+    ),
   );
   app.patch('/:id/publication', async (c) => {
     const id = c.req.param('id');

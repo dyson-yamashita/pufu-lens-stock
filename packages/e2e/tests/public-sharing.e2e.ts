@@ -11,6 +11,19 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
   const share = screen.getByRole('button', '共有', { exact: true });
   const link = screen.getByLabel('公開リンク', { exact: true });
   const settings = `/projects/${fixture.projectId}/publication`;
+  const publicationUrl = `${fixture.url}/api/v1${settings}?include_view_stats=false`;
+
+  async function expectPrivatePublicationAfter(action: () => Promise<unknown>) {
+    const [response] = await Promise.all([browser.waitForResponse(publicationUrl), action()]);
+    expect(await response.json()).toMatchObject({ publication: { is_public: false } });
+    // 公開状態の応答を読んでから画面に反映されるまで待つ。
+    await browser.evaluate(
+      () =>
+        new Promise<null>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)));
+        }),
+    );
+  }
 
   async function expectShareAlignedLeft() {
     const offset = await browser.evaluate(() => {
@@ -21,16 +34,6 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
     });
     expect(offset).toBe(0);
   }
-
-  await app.open(`/#project/${fixture.projectId}`);
-  await share.click();
-  await expect(screen.getByText('このプロジェクトは非公開です。')).toBeVisible();
-  await expect(screen.getByRole('link', '公開設定を確認')).toHaveAttribute(
-    'href',
-    `#settings/${fixture.projectId}`,
-  );
-  await expect(link).toHaveCount(0);
-  await screen.getByRole('button', '共有を閉じる', { exact: true }).click();
 
   const stock = await fixture.request('/stocks', 'POST', {
     project_id: fixture.projectId,
@@ -55,6 +58,23 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
     score,
   })) as { pufu: { id: string } };
   await fixture.request(`/pufus/${pufu.id}/phases`, 'POST', { revision: 1, phase: 1, score });
+
+  const projectPage = `/#project/${fixture.projectId}`;
+  const stockPage = `/#stock/${stock.id}`;
+  const questionPage = `/#question/${question.id}`;
+  const pufuPage = `/#pufu/${pufu.id}`;
+  const projectHeading = screen.getByRole('heading', `${fixture.projectName}のストック`);
+  for (const [page, content] of [
+    [projectPage, projectHeading],
+    [stockPage, screen.getByRole('heading', '共有するストック')],
+    [questionPage, screen.getByText('共有する問い', { exact: true })],
+    [pufuPage, browser.locator('.pufu-phase-number')],
+  ] as const) {
+    await expectPrivatePublicationAfter(() => app.open(page));
+    await expect(content).toBeVisible();
+    await expect(share).toHaveCount(0);
+  }
+
   const { publication } = (await fixture.request(settings, 'PATCH', {
     is_public: true,
     public_description: '',
@@ -64,14 +84,10 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
   const base = `/p/${publication.public_id}`;
   const pufuPath = `${base}/pufus/${pufu.id}`;
   const pages = [
-    [`/#project/${fixture.projectId}`, `${base}?view=questions&page=2`, base],
-    [`/#stock/${stock.id}`, `${base}/stocks/${stock.id}?page=2`, `${base}/stocks/${stock.id}`],
-    [
-      `/#question/${question.id}`,
-      `${base}/questions/${question.id}?page=2`,
-      `${base}/questions/${question.id}`,
-    ],
-    [`/#pufu/${pufu.id}`, `${pufuPath}?from=pufus`, `${pufuPath}?phase=2`],
+    [projectPage, `${base}?view=questions&page=2`, base],
+    [stockPage, `${base}/stocks/${stock.id}?page=2`, `${base}/stocks/${stock.id}`],
+    [questionPage, `${base}/questions/${question.id}?page=2`, `${base}/questions/${question.id}`],
+    [pufuPage, `${pufuPath}?from=pufus`, `${pufuPath}?phase=2`],
   ];
   for (const [owner, , canonical] of pages) {
     await app.open(owner);
@@ -94,6 +110,7 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
   await expect(screen.getByText('公開されているページが見つかりません。')).toBeVisible();
   await expect(link).toHaveCount(0);
 
+  const cookies = await browser.cookies();
   await app.clearState();
   const copyLink = screen.getByRole('button', 'リンクをコピー', { exact: true });
   const nativeShare = screen.getByRole('button', '別のアプリで共有', { exact: true });
@@ -176,6 +193,19 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
 
   await app.open(`${pufuPath}?phase=1`);
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第1局面');
+  await browser.setCookies(cookies);
+  await app.open(projectPage);
+  await share.click();
+  await expect(link).toHaveValue(`${fixture.url}${base}`);
+
   await fixture.request(settings, 'PATCH', { is_public: false, public_description: '' });
   expect((await fetch(firstPhaseUrl)).status).toBe(404);
+  await expectPrivatePublicationAfter(() =>
+    browser.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      return null;
+    }),
+  );
+  await expect(share).toHaveCount(0);
+  await expect(link).toHaveCount(0);
 });

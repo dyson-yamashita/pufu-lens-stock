@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 
 export function useResource<T>(path: string) {
@@ -8,6 +8,7 @@ export function useResource<T>(path: string) {
     error?: string;
   }>({ path });
   const [retry, setRetry] = useState(0);
+  const reload = useCallback(() => setRetry((v) => v + 1), []);
   useEffect(() => {
     const controller = new AbortController();
     setState({ path });
@@ -20,5 +21,5 @@ export function useResource<T>(path: string) {
       });
     return () => controller.abort();
   }, [path, retry]);
-  return { ...(state.path === path ? state : { path }), reload: () => setRetry((v) => v + 1) };
+  return { ...(state.path === path ? state : { path }), reload };
 }
