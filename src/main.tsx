@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { config as configureZod } from 'zod/v4/core';
 import { publicHref, publicPathPattern } from '../shared/public-route';
 import HomeEntry from './features/auth/HomeEntry';
 import PageLoadError from './components/PageLoadError';
@@ -18,6 +19,7 @@ const manualRoute = /^\/(?:(en)\/)?manual\/?$/.exec(window.location.pathname);
 
 // Keep the crawlable HTML visible until the selected route AND its CSS are ready.
 async function start() {
+  configureZod({ jitless: true });
   let page;
   if (legalRoute || faqRoute || manualRoute || publicRoute) {
     await import('./styles/styles.css');

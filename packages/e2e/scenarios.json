@@ -229,6 +229,7 @@
       "src/features/pufu/PufuJsonImport.tsx",
       "src/features/pufu/pufu-import.ts",
       "server/api/routes/pufu.ts",
+      "server/features/public-projects/document-headers.ts",
       "src/features/pufu/pufu.css",
       "src/features/pufu/title.css",
       "src/features/pufu/progress.css"

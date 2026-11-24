@@ -15,7 +15,10 @@ import {
 } from './scripts/production-config';
 
 export default defineConfig(({ command }) => ({
-  define: { __PUFU_SOCIAL_IMAGE_PATH__: JSON.stringify(socialImagePath) },
+  define: {
+    __PUFU_SOCIAL_IMAGE_PATH__: JSON.stringify(socialImagePath),
+    'import.meta.env.PUFU_VITE_DEV_SERVER': JSON.stringify(String(command === 'serve')),
+  },
   plugins: [
     react(),
     pufuViewerPlugin(),

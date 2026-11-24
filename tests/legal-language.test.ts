@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../server/index';
 import type { Env } from '../server/env';
 
 const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
+const documentCsp = "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
 const env = {
   APP_URL: 'https://pufu.example',
   ASSETS: {
@@ -38,6 +39,10 @@ function read(path: string, language?: string, method = 'GET') {
   );
 }
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('法務ページは言語URL固定でAccept-Language転送しない', () => {
   it.each([
     ['/privacy', 'en-US,en;q=0.9', 'プライバシーポリシー', 'ja'],
@@ -51,6 +56,7 @@ describe('法務ページは言語URL固定でAccept-Language転送しない', (
     expect(response.headers.get('Location')).toBeNull();
     expect(response.headers.get('Strict-Transport-Security')).toContain('max-age=');
     expect(response.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+    expect(response.headers.get('Content-Security-Policy')).toBe(documentCsp);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const body = await response.text();
     expect(body).toContain(heading);
@@ -63,5 +69,29 @@ describe('法務ページは言語URL固定でAccept-Language転送しない', (
     expect(await head.text()).toBe('');
     expect(head.headers.get('Strict-Transport-Security')).toContain('max-age=');
     expect(head.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+    expect(head.headers.get('Content-Security-Policy')).toBe(documentCsp);
   });
+});
+
+it.each(['/', '/en', '/en/'])('%s allows WebAssembly for the app’s PNG export', async (path) => {
+  const response = await read(path);
+  expect(response.status).toBe(200);
+  expect(response.headers.get('Content-Security-Policy')).toBe(
+    "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'",
+  );
+});
+
+it('allows Vite’s development scripts', async () => {
+  vi.stubEnv('PUFU_VITE_DEV_SERVER', 'true');
+  const response = await read('/');
+  expect(response.status).toBe(200);
+  expect(response.headers.get('Content-Security-Policy')).toBeNull();
+  expect(response.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+});
+
+it('enforces CSP on a build with NODE_ENV=development', async () => {
+  vi.stubEnv('DEV', true);
+  vi.stubEnv('PUFU_VITE_DEV_SERVER', 'false');
+  const response = await read('/privacy');
+  expect(response.headers.get('Content-Security-Policy')).toBe(documentCsp);
 });
