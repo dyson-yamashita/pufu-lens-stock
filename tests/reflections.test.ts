@@ -58,7 +58,7 @@ describe('プロジェクトの自動振り返り', () => {
   const update = (id: string, body: object, user = 'alice') =>
     app.request(`${apiPath}/${id}`, { method: 'PATCH', body, user });
 
-  it('週をまたいだ3件から自動追加し、未回答を見送った後は次の期間で1件だけ追加する', async () => {
+  it('週をまたいだ3件から自動追加し、前の問いが未回答でも次の期間に1件だけ追加する', async () => {
     const week = reflectionPeriodEnd(Date.now(), 'weekly') - 7 * day;
     const db = app.env.DB;
     await saveStock('最初の観察', week - 9 * day);
@@ -121,20 +121,33 @@ describe('プロジェクトの自動振り返り', () => {
     for (const [index, id] of ['週明け', '週の途中', '週末'].entries())
       await saveStock(id, week + index * day);
     const nextWeek = week + 7 * day;
-    await queueDueReflections(app.env, nextWeek);
-    expect(await list()).toHaveLength(1);
-    expect((await update(question.id, { action: 'dismiss', generation: 1 })).status).toBe(200);
-    model({ question: { text: '週明けの判断で何を優先しましたか？', stocks: [1, 2], pufus: [] } });
+    const nextText = '週明けの判断で何を優先しましたか？';
+    model({ question: { text: nextText, stocks: [1, 2], pufus: [] } });
     await Promise.all([
       queueDueReflections(app.env, nextWeek),
       queueDueReflections(app.env, nextWeek),
     ]);
+    expect(
+      await db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM processing_jobs WHERE purpose='reflection' AND status='pending'",
+        )
+        .first(),
+    ).toEqual({ count: 1 });
     await runQueued();
-    const [next] = await list();
-    expect(next.id).not.toBe(question.id);
-    expect(next.start_at).toBe(question.end_at);
-    expect(next.stocks.map(({ id }) => id)).toEqual(['週明け', '週の途中']);
-    expect(await list()).toHaveLength(1);
+    const reflections = await list();
+    expect(reflections).toHaveLength(2);
+    expect(reflections).toContainEqual(question);
+    const next = reflections.find(({ id }) => id !== question.id);
+    expect(next).toMatchObject({
+      status: 'ready',
+      text: nextText,
+      start_at: question.end_at,
+      end_at: new Date(nextWeek).toISOString(),
+      stocks: [{ id: '週明け' }, { id: '週の途中' }],
+    });
+    expect((await update(question.id, { action: 'dismiss', generation: 1 })).status).toBe(200);
+    expect(await list()).toEqual([next]);
   });
 
   it.each(['summary', 'note'])(

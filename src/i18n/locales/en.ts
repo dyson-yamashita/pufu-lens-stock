@@ -1255,7 +1255,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.for_questions_you_added_yourself_unlink_the_stocks_and':
     'For questions you added yourself, unlink the stocks and save before changing the destination project on the same screen. Move AI-generated questions from their source article. Moves across projects are unavailable in cases such as multiple related stocks.',
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
-    'Under Advanced settings for the project, set Reflection frequency to Every week, Every two weeks, or Every month. The default is Every week. Pufu Lens adds a question if there are at least three eligible stocks since the last automatic question and the records support a specific question. Answer or skip the previous question to receive another. To pause, turn off Automatically add reflection questions.',
+    'Under Advanced settings for the project, set Reflection frequency to Every week, Every two weeks, or Every month. The default is Every week. Pufu Lens adds a question if there are at least three eligible stocks since the last automatic question and the records support a specific question. New questions are added even while earlier questions are unanswered. To pause, turn off Automatically add reflection questions.',
   'ui.user_manual.to_delete_a_question_or_insight_open_other_actions':
     'To delete a question or insight, open Other actions at the bottom of its details and select Delete question or insight. Its comments are also deleted; related Pufu, phases and stocks remain.',
   'ui.user_manual.develop_solutions_with_pufu': 'Develop solutions with Pufu',

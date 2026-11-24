@@ -46,8 +46,7 @@ export async function queueDueReflections(env: Env, at: number) {
         WHERE p.auto_generate_questions=1 AND u.onboarding_completed_at IS NOT NULL
           AND NOT EXISTS (
             SELECT 1 FROM reflections r WHERE r.project_id=p.id
-            AND (r.status='queued' OR r.end_at>=period.value
-              OR (r.text IS NOT NULL AND r.answer IS NULL AND r.dismissed_at IS NULL))
+            AND (r.status='queued' OR r.end_at>=period.value)
           )
       )
       INSERT OR IGNORE INTO reflections(id,project_id,start_at,end_at)

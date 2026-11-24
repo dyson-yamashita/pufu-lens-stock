@@ -50,10 +50,10 @@
       "theorem": "mismatched_cutoff_cancels"
     },
     {
-      "name": "B16-unanswered",
-      "old": " && !s.unanswered",
-      "new": "",
-      "theorem": "unanswered_blocks_schedule"
+      "name": "B16-block-unanswered",
+      "old": " && !s.generating &&",
+      "new": " && !s.unanswered && !s.generating &&",
+      "theorem": "schedules_with_unanswered"
     },
     {
       "name": "B16-stock-count",
