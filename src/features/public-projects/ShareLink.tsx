@@ -178,6 +178,7 @@ function ShareActions({ path }: { path: string }) {
         <input id={id} ref={input} type="url" readOnly value={url} />
         <button type="button" className="icon-button" aria-label={t('share.copy')} onClick={copy}>
           <Copy size={18} aria-hidden="true" />
+          {t('ui.public_projects.copy')}
         </button>
       </div>
       {canShare && (

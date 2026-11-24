@@ -757,6 +757,13 @@
 .share-url-row input {
   font-size: 16px;
 }
+.share-url-row .icon-button {
+  gap: 6px;
+  padding-inline: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .share-native {
   margin-top: 12px;
 }

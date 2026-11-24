@@ -148,7 +148,7 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
         text: copy.textContent?.trim(),
       };
     }),
-  ).toEqual({ besideLink: true, text: '' });
+  ).toEqual({ besideLink: true, text: 'コピー' });
   await copyLink.click();
   await expect(browser.locator('html')).toHaveAttribute('data-copied', firstPhaseUrl);
   await expect(screen.getByText('リンクをコピーしました。')).toBeVisible();
