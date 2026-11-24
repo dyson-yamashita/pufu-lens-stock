@@ -483,13 +483,17 @@
   {
     "id": "REFLECTION-001",
     "estimatedSeconds": 12,
-    "title": "振り返りの周期設定と自動で届いた問いへの回答",
+    "title": "振り返りの周期設定と問いカードの自動追加",
     "sources": [
       "src/features/projects/ProjectForm.tsx",
-      "src/features/questions/Reflections.tsx",
       "src/features/questions/Questions.tsx",
+      "src/features/questions/QuestionPage.tsx",
+      "src/features/questions/QuestionSettings.tsx",
       "src/features/questions/questions.css",
       "server/api/routes/reflections.ts",
+      "server/api/routes/question-collection.ts",
+      "server/api/routes/question-details.ts",
+      "server/api/queries.ts",
       "server/api/routes/projects.ts",
       "server/features/questions/reflection-repository.ts",
       "server/features/questions/reflection-generation.ts",
@@ -497,8 +501,8 @@
     ],
     "aspects": [
       "プロジェクト設定を開いた直後はプロジェクト名の入力欄にフォーカスが移らない",
-      "プロジェクトの詳細設定で毎月を保存・再表示し、月初の自動生成から参照ストックの表示・回答の保存・再表示までを両画面幅で確認",
-      "すべての周期の締め時刻、繰り越し、前の問いが未回答のまま次の問いが自動追加されること、プロジェクトごとの資料の分離、非公開のAPIはVitestで検証"
+      "毎月の周期を保存し、月初に問い・気づきの一覧へカードが自動で追加されること、参照ストックの表示とメモの保存・再表示を両画面幅で確認",
+      "すべての周期の締め時刻、未回答の問いの追加、保存済みの回答のメモ表示、見送り済みを除くこと、本人に限定したカードの読み書きはVitestで検証"
     ]
   },
   {

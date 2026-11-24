@@ -66,7 +66,6 @@ export function stockOriginFromHistory(): StockOrigin {
 export type PufuSource = {
   questionId: string | null;
   projectId: string | null;
-  fromReflection?: true;
 };
 
 export function pufuSourceFromHistory(): PufuSource {
@@ -77,7 +76,6 @@ export function pufuSourceFromHistory(): PufuSource {
     ? {
         questionId: source.questionId,
         projectId: source.projectId,
-        ...(source.fromReflection === true && { fromReflection: true as const }),
       }
     : { questionId: null, projectId: null };
 }

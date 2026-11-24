@@ -12,10 +12,15 @@ export default function QuestionSettings({
   question: QuestionDetail;
   projects: Pick<Project, 'id' | 'name'>[];
   disabled: boolean;
-  onSave: (input: { note: string; project_id: string; stock_ids: string[] }) => Promise<void>;
+  onSave: (input: {
+    note: string;
+    project_id?: string;
+    stock_ids?: string[];
+    generation?: number;
+  }) => Promise<void>;
 }) {
   useLanguage();
-  const [noteDraft, setNote] = useState<string>();
+  const [noteDraft, setNote] = useState<{ text: string; generation?: number }>();
   const [projectDraft, setProjectId] = useState<string>();
   const [stocksDraft, setStocks] = useState<RelationOption[]>();
   const stocks =
@@ -30,7 +35,7 @@ export default function QuestionSettings({
             },
           ]
         : []);
-  const note = noteDraft ?? question.note;
+  const note = noteDraft?.text ?? question.note;
   const projectId = projectDraft ?? question.project_id;
   const savedStockCount = question.stocks?.length ?? (question.stock_id ? 1 : 0);
   const projectLocked =
@@ -47,7 +52,11 @@ export default function QuestionSettings({
     setError('');
     setSaved(false);
     try {
-      await onSave({ note, project_id: projectId, stock_ids: stocks.map((stock) => stock.id) });
+      await onSave(
+        question.is_reflection
+          ? { note, generation: noteDraft?.generation ?? question.reflection_generation }
+          : { note, project_id: projectId, stock_ids: stocks.map((stock) => stock.id) },
+      );
       setNote(undefined);
       setProjectId(undefined);
       setStocks(undefined);
@@ -69,7 +78,11 @@ export default function QuestionSettings({
         aria-describedby="question-note-help"
         value={note}
         onInput={(event) => {
-          setNote(event.currentTarget.value);
+          const text = event.currentTarget.value;
+          setNote((draft) => ({
+            text,
+            generation: draft?.generation ?? question.reflection_generation,
+          }));
           setSaved(false);
         }}
         rows={5}
@@ -77,44 +90,50 @@ export default function QuestionSettings({
         disabled={busy || disabled}
         placeholder={t('ui.question_settings.what_you_noticed_or_want_to_try_next')}
       />
-      <label htmlFor="question-project">{t('ui.app.destination_project')}</label>
-      <select
-        id="question-project"
-        value={projectId}
-        disabled={busy || disabled || projectLocked}
-        aria-describedby={projectLocked ? 'question-project-help' : undefined}
-        onChange={(event) => {
-          setProjectId(event.target.value);
-          setSaved(false);
-        }}
-      >
-        {!projects.some((project) => project.id === question.project_id) && (
-          <option value={question.project_id}>{question.project_name}</option>
-        )}
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
-      </select>
-      {projectLocked && (
-        <p className="field-hint" id="question-project-help">
-          {question.source === 'ai' && question.stock_id
-            ? t('ui.question_settings.ai_generated_questions_belong_to_the_same_project_as')
-            : t('ui.question_settings.the_destination_matches_the_related_stocks_change_it_from')}
-        </p>
+      {!question.is_reflection && (
+        <>
+          <label htmlFor="question-project">{t('ui.app.destination_project')}</label>
+          <select
+            id="question-project"
+            value={projectId}
+            disabled={busy || disabled || projectLocked}
+            aria-describedby={projectLocked ? 'question-project-help' : undefined}
+            onChange={(event) => {
+              setProjectId(event.target.value);
+              setSaved(false);
+            }}
+          >
+            {!projects.some((project) => project.id === question.project_id) && (
+              <option value={question.project_id}>{question.project_name}</option>
+            )}
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          {projectLocked && (
+            <p className="field-hint" id="question-project-help">
+              {question.source === 'ai' && question.stock_id
+                ? t('ui.question_settings.ai_generated_questions_belong_to_the_same_project_as')
+                : t(
+                    'ui.question_settings.the_destination_matches_the_related_stocks_change_it_from',
+                  )}
+            </p>
+          )}
+          <RelationPicker
+            key={projectId}
+            kind="stocks"
+            projectId={projectId}
+            value={stocks}
+            disabled={busy || disabled}
+            onChange={(value) => {
+              setStocks(value);
+              setSaved(false);
+            }}
+          />
+        </>
       )}
-      <RelationPicker
-        key={projectId}
-        kind="stocks"
-        projectId={projectId}
-        value={stocks}
-        disabled={busy || disabled}
-        onChange={(value) => {
-          setStocks(value);
-          setSaved(false);
-        }}
-      />
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -122,7 +141,11 @@ export default function QuestionSettings({
       )}
       {saved && (
         <p className="field-hint" role="status">
-          {t('ui.question_settings.note_destination_and_relations_saved')}
+          {t(
+            question.is_reflection
+              ? 'ui.question_settings.note_saved'
+              : 'ui.question_settings.note_destination_and_relations_saved',
+          )}
         </p>
       )}
       <div className="form-actions">

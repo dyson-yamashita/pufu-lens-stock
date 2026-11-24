@@ -79,6 +79,7 @@ export type Question = StockRelations & {
   id: string;
   stock_id: string | null;
   source: 'ai' | 'user';
+  is_reflection?: 0 | 1;
   is_favorite: 0 | 1;
   has_pufu: 0 | 1;
   text: string | null;
@@ -93,7 +94,7 @@ export type Question = StockRelations & {
   article_status: Stock['status'] | null;
   domain: string | null;
 };
-export type QuestionDetail = Question & { note: string };
+export type QuestionDetail = Question & { note: string; reflection_generation?: number };
 export const questionSettingsSchema = z
   .strictObject({
     note: z.string().max(2000, 'メモは2,000文字以内で入力してください。').optional(),

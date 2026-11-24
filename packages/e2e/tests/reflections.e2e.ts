@@ -1,7 +1,7 @@
 import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
 
-test('REFLECTION-001 周期を設定し、自動で届いた問いの記録と回答を確認する', async ({
+test('REFLECTION-001 周期を設定し、振り返りの問いが通常の一覧に追加される', async ({
   app,
   browser,
   screen,
@@ -40,8 +40,7 @@ test('REFLECTION-001 周期を設定し、自動で届いた問いの記録と�
     stockIds.push(id);
   }
   await app.open(`/#questions/${fixture.projectId}`);
-  await expect(screen.getByRole('heading', '振り返り', { exact: true })).toBeVisible();
-  await expect(screen.getByText('期間を選んで振り返る', { exact: true })).toHaveCount(0);
+  await expect(screen.getByRole('heading', '振り返り', { exact: true })).toHaveCount(0);
   const jstOffset = 9 * 3600000;
   const today = new Date(Date.now() + jstOffset);
   const cutoff = Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1) - jstOffset;
@@ -71,28 +70,38 @@ test('REFLECTION-001 周期を設定し、自動で届いた問いの記録と�
     await setOtherSchedules(true);
   }
 
-  const card = browser.locator('.reflection-card');
-  const source = card.getByRole('button', new RegExp(title));
+  const card = browser.locator('.question-grid .question-card');
+  const source = card.getByRole('button', title, { exact: true });
   await expect(source).toBeVisible({ timeout: 30000 });
-  await expect(browser.locator('.reflection-card .question-text')).toContainText(title);
+  await expect(browser.locator('.question-grid .question-text')).toContainText(title);
   await source.click();
   await expect(screen.getByRole('heading', title, { exact: true })).toBeVisible();
   await browser.back();
   await expect(source).toBeVisible();
 
-  const answer = '説明を短くする前に、最初の操作で迷う場所を見ておく。';
-  await card.getByLabel('気づいたこと', { exact: true }).fill(answer);
-  await card.getByRole('button', '振り返りとして保存', { exact: true }).click();
-  await expect(card.getByText(answer, { exact: true })).toBeVisible();
+  await card.getByRole('button', /問い・気づきの詳細を開く/).click();
+  const noteTab = screen.getByRole('tab', 'メモ', { exact: true });
+  await noteTab.click();
+  const note = '説明を短くする前に、最初の操作で迷う場所を見ておく。';
+  const input = screen.getByRole('textbox', 'メモ', { exact: true });
+  await input.fill(note);
+  await screen.getByRole('button', '変更を保存', { exact: true }).click();
+  await expect(screen.getByText('メモを保存しました。', { exact: true })).toBeVisible();
   await browser.reload();
-  await expect(card.getByText(answer, { exact: true })).toBeVisible();
-  const result = await fixture.request(`/reflections?project_id=${fixture.projectId}`);
-  const [saved] = result.reflections as {
-    answer: string;
-    end_at: string;
+  await noteTab.click();
+  await expect(input).toHaveValue(note);
+  const result = await fixture.request(
+    `/questions?project_id=${fixture.projectId}&include_reflections=true`,
+  );
+  const [saved] = result.questions as {
+    id: string;
+    is_reflection: number;
     stocks: { id: string }[];
   }[];
-  expect(saved.answer).toBe(answer);
-  expect(saved.end_at).toBe(new Date(cutoff).toISOString());
+  expect(saved.is_reflection).toBe(1);
   expect(saved.stocks.map(({ id }) => id)).toEqual([stockIds[0]]);
+  const { question } = (await fixture.request(`/questions/${saved.id}`)) as {
+    question: { note: string };
+  };
+  expect(question.note).toBe(note);
 });

@@ -38,7 +38,7 @@ beforeEach(() => {
     requested.push(path);
     if (path === '/api/config') return { demo: false, googleConfigured: true, aiEnabled: false };
     if (path === '/api/v1/me') return { user };
-    if (path === '/api/v1/projects') return { projects: [] };
+    if (path === '/api/v1/projects?include_reflections=true') return { projects: [] };
     if (path.startsWith('/api/v1/stocks')) return { stocks: [], total: 0 };
     if (path.startsWith('/api/v1/memory')) return { memory: null, pending: false, error: null };
     throw new Error('想定外の取得先');
