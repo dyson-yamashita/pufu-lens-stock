@@ -56,7 +56,7 @@
     "dom-to-image": "^2.6.0",
     "hono": "^4.13.18",
     "html-to-image": "^1.11.11",
-    "i18next": "^23.10.1",
+    "i18next": "^26.3.4",
     "i18next-browser-languagedetector": "^7.2.0",
     "ipaddr.js": "^2.2.0",
     "leader-line-new": "^1.1.9",
