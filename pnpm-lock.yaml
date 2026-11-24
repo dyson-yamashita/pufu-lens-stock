@@ -177,6 +177,9 @@ importers:
       wrangler:
         specifier: 4.151.0
         version: 4.151.0(@cloudflare/workers-types@5.20261014.1)(@types/node@22.20.5)
+      xstate:
+        specifier: 5.33.4
+        version: 5.33.4
 
   packages/e2e:
     devDependencies:
@@ -3096,6 +3099,9 @@ packages:
       utf-8-validate:
         optional: true
 
+  xstate@5.33.4:
+    resolution: {integrity: sha512-eGNMu3BNqU0Z85P+ouYG5OCZqIABU+QsW6vUieFt9p9gOGs3C+BL10Exg7XdRPSXPQKlP6XoYpYf93r9VmW8mQ==}
+
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
@@ -5642,6 +5648,8 @@ snapshots:
   wrappy@1.0.2: {}
 
   ws@8.21.0: {}
+
+  xstate@5.33.4: {}
 
   yallist@3.1.1: {}
 
