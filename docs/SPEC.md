@@ -241,7 +241,9 @@ D1の`comments`テーブルに`target_type`（`stock / question / pufu`）、`ta
 
 `/p/:key`、`/p/:key/stocks/:id`、`/p/:key/questions/:id`、`/p/:key/pufus/:id` はWorkerが既存公開APIと同じ権限・公開フィールドだけから初期HTMLを生成します。個別URLと一覧の通常リンク、ページ固有title・description・canonical・OGP、問い・ストック・プ譜の Article JSON-LD を提供し、既存ハッシュURLもブラウザーで引き継ぎます。プ譜の `?phase=N` は過去局面の閲覧用で、正規URLは最新のプ譜です。検索掲載OFFと局面指定URLはnoindexです。公開JSONもnoindexです。
 
-トップ（`/`・`/en`）とマニュアル（`/manual`・`/en/manual`）、法務はビルド時の言語別静的HTMLをWorkerが配信します。`Accept-Language` による自動転送は行わず、hreflang（x-default含む）とURL言語に一致する `lang`・title・description・canonicalを付けます。これらの公開HTMLと `/llms.txt`、存在しないパスの hard 404 は `/p/*` と同じ Hono `secureHeaders()` を通します（HSTS・X-Frame-Options など。既定スタックはCSPを設定しません）。
+トップ（`/`・`/en`）とマニュアル（`/manual`・`/en/manual`）、法務はビルド時の言語別静的HTMLをWorkerが配信します。`Accept-Language` による自動転送は行わず、hreflang（x-default含む）とURL言語に一致する `lang`・title・description・canonicalを付けます。これらの公開HTMLと `/llms.txt`、存在しないパスの hard 404 は `/p/*` と同じ Hono `secureHeaders()` を通します（HSTS・X-Frame-Options など）。
+
+ビルド済みのHTML応答では、スクリプトの読み込みとフレームへの埋め込みを同一オリジンに制限し、`object-src` と `base-uri` を `'none'` とするCSPを適用します。日英トップの成功応答に限り、ログイン後のプ譜のPNG保存に必要な `wasm-unsafe-eval` を許可します。ブラウザーの起動時にZodを `jitless` に設定し、通常の検証処理を使います。
 
 `/robots.txt` はクロールを許可し、`/sitemap.xml` から静的ページの `/sitemaps/site.xml` と、プロジェクト別の `/sitemaps/:key/project.xml`、最大1,000行の固定範囲を読む `/sitemaps/:key/questions-:bucket.xml`・`/sitemaps/:key/pufus-:bucket.xml`・`/sitemaps/:key/stocks-:bucket.xml` を案内します。掲載許可した公開プロジェクトと公開可能なストック・問い・プ譜、および言語別のトップ・マニュアル・法務を列挙し、日付がある箇所は `lastmod` を付けます。分割XMLの読み取りは索引で範囲を制限しますが、サイトマップ一覧の集約コストは掲載対象件数に比例するため、運用時の計測対象です。HTML・OGPメタ情報・サイトマップは `Cache-Control: no-store` で保存せず、毎回現在の公開設定を確認します。OGP画像は公開ロゴを使用し、内容由来の画像キャッシュは作りません。日英トップのOGP・Xカードと公開ページのOGPには、ビルド時にロゴのSHA-256先頭16桁から計算した `?v=` を画像URLに付け、画像の差し替え時だけURLを更新します。共有先がページを再取得するまで、既存のプレビューが残る場合があります。非公開化・削除後はHTMLも404となり本文・OGPを返しません。DB障害時は古い内容へフォールバックしません。存在しないパスはSPAの200ではなくHTTP 404を返します。
 

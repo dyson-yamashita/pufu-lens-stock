@@ -61,10 +61,13 @@ async function allow(value = true) {
   });
 }
 it('公開本文と個別リンクを初期HTMLで返し、検索掲載は初期OFF、HEADも同じ制御になる', async () => {
+  const documentCsp =
+    "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
   const res = await read(`/p/${key}`);
   expect(res.status).toBe(200);
   expect(res.headers.get('Content-Type')).toContain('text/html');
   expect(res.headers.get('Cache-Control')).toBe('no-store');
+  expect(res.headers.get('Content-Security-Policy')).toBe(documentCsp);
   expect(res.headers.get('X-Robots-Tag')).toBe('noindex, follow');
   const html = await res.text();
   const { document } = parseHTML(html);
@@ -85,6 +88,7 @@ it('公開本文と個別リンクを初期HTMLで返し、検索掲載は初期
   const head = await read(`/p/${key}`, 'HEAD');
   expect(head.status).toBe(200);
   expect(await head.text()).toBe('');
+  expect(head.headers.get('Content-Security-Policy')).toBe(documentCsp);
   expect(head.headers.get('X-Robots-Tag')).toBe('noindex, follow');
 });
 it('プ譜と問いの個別URLは本文、固有title、OGPを返し、利用者入力をエスケープする', async () => {
@@ -280,6 +284,7 @@ it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.t
   const llms = await read('/llms.txt');
   expect(llms.status).toBe(200);
   expect(llms.headers.get('Strict-Transport-Security')).toContain('max-age=');
+  expect(llms.headers.get('Content-Security-Policy')).toBeNull();
   const llmsText = await llms.text();
   expect(llmsText).toContain('Sitemap:');
   expect(llmsText).toContain('/en/manual');
@@ -287,6 +292,9 @@ it('問い・プ譜・ストックHTMLにArticle JSON-LDを埋め込み、llms.t
   expect(missing.status).toBe(404);
   expect(missing.headers.get('Strict-Transport-Security')).toContain('max-age=');
   expect(missing.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+  expect(missing.headers.get('Content-Security-Policy')).toBe(
+    "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'",
+  );
 });
 
 it('本文採用モードの原文全体を公開HTMLへ安全に表示する', async () => {
