@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { relationIdsSchema, type PufuRelations } from './relations';
 import type { ArticleSummary, MemoryData } from './domain';
 
-export const pufuEditorVersion = '0.9.19';
+export const pufuEditorVersion = '0.9.20';
 export { elementKeys, pufuScoreSchema } from '@pufu-lens/pufu-image/model';
 import { pufuScoreSchema } from '@pufu-lens/pufu-image/model';
 export type PufuScore = z.infer<typeof pufuScoreSchema>;

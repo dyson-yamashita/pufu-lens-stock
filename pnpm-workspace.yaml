@@ -4,7 +4,7 @@ packages:
 
 # 固定・検証済みのバージョンに限り、公開後24時間の待機を除外する。
 minimumReleaseAgeExclude:
-  - '@goto-lab/pufu-editor@0.9.19'
+  - '@goto-lab/pufu-editor@0.9.20'
   - '@napi-rs/canvas@1.0.13'
   - '@napi-rs/canvas-android-arm64@1.0.13'
   - '@napi-rs/canvas-darwin-arm64@1.0.13'
@@ -19,8 +19,6 @@ minimumReleaseAgeExclude:
   - '@napi-rs/canvas-win32-x64-msvc@1.0.13'
 
 overrides:
-  # Pufu Editor 0.9.19 declares an i18next 23 peer. Use the app's patched version.
-  '@goto-lab/pufu-editor@0.9.19>i18next': ^26.3.4
   # e2e 0.21.3 pins zod 4.6.1; use the patched compatible release.
   e2e>zod: 4.6.7
   undici: ^7.29.1

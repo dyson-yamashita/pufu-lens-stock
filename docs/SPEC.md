@@ -186,7 +186,7 @@ Worker更新前に `0022_account_deletion.sql` を適用してください。`DE
 
 画面の「JSONから作成」では、pufu editorのJSONをファイル選択またはテキストエリアへの貼り付けで取り込み、AI生成せず保存します。問い・ストックの選択欄は表示せず、問いから開いた場合やAI作成で選択済みの場合も関連を紐付けません。編集画面の「JSONをインポート」も両方の入力方法に対応し、未保存の編集は確認後に置き換え、「保存」で選択中の局面に反映します。元アプリの管理情報付きエクスポートも受け付け、ルートの獲得目標・勝利条件・中間目的/施策・八要素だけを取り出して既存スキーマで検証します。所有者・保存先・局面番号などの管理情報は取り込みません。いずれの入力もUTF-8で256KiBまでです。
 
-通常画面は選択中の局面の保存済みSVGを表示し、画像を押すとピンチ拡大・ドラッグ移動ができるモーダルを開きます。画像右下の「編集する」で `@goto-lab/pufu-editor@0.9.19` のReactコンポーネントを組み込んだ編集モーダルを開きます。狭い表示領域ではエディター標準の全体マップで横並びのプ譜を移動・閲覧します。iframeは使用せず、同梱のTailwind CSSをビルド時に `.pufu-editor-root` 配下に限定しています。初期データを編集中に再取得して差し替えず、「保存」で `getScoreJson` の内容を取得して画像を更新します。未保存のまま編集画面を閉じる・画面を離れる際は確認し、別画面からの同時保存は更新番号で競合を検出します。JSONは保存済みの局面をエディター標準の `ProjectScoreModel` 形式でダウンロードできます。個人・プロジェクトのメモリはプ譜生成に使いません。過去にメモリを参照して生成した完成済みプ譜のスナップショットは保持します。
+通常画面は選択中の局面の保存済みSVGを表示し、画像を押すとピンチ拡大・ドラッグ移動ができるモーダルを開きます。画像右下の「編集する」で `@goto-lab/pufu-editor@0.9.20` のReactコンポーネントを組み込んだ編集モーダルを開きます。狭い表示領域ではエディター標準の全体マップで横並びのプ譜を移動・閲覧します。iframeは使用せず、同梱のTailwind CSSをビルド時に `.pufu-editor-root` 配下に限定しています。初期データを編集中に再取得して差し替えず、「保存」で `getScoreJson` の内容を取得して画像を更新します。未保存のまま編集画面を閉じる・画面を離れる際は確認し、別画面からの同時保存は更新番号で競合を検出します。JSONは保存済みの局面をエディター標準の `ProjectScoreModel` 形式でダウンロードできます。個人・プロジェクトのメモリはプ譜生成に使いません。過去にメモリを参照して生成した完成済みプ譜のスナップショットは保持します。
 
 「ダウンロード」を押すと形式選択のダイアログを開き、JSONまたは画像（PNG）を選べます。選択中の局面の保存済み内容を出力します。PNGはプレビューと同じ画像生成処理・日本語フォント・テーマを使用し、ブラウザ内のWASMで生成します。WASMとフォントはPNG出力時に読み込み、画像・プ譜を外部サービスへ送信せず、AIやサーバー側の画像保存を使用しません。
 
@@ -364,7 +364,7 @@ Worker更新前に `0025_pufu_image_links.sql` を適用してください。追
 { "question_id": "保存した問いのID", "pufu_id": "get_questionのpufusから選んだID" }
 ```
 
-ID指定時の返却項目は `question_id`（紐付けなしはnull）、`pufu_id`、`project_id`、`updated_at`、`revision`、`phase`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.19` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
+ID指定時の返却項目は `question_id`（紐付けなしはnull）、`pufu_id`、`project_id`、`updated_at`、`revision`、`phase`、`projectScore` です。互換用のID省略時は従来のJSON形式を維持し、`pufu_id` を追加しません。`projectScore` はJSON文字列ではなく、利用中の `@goto-lab/pufu-editor@0.9.20` の [ProjectScoreModel](https://github.com/goto-lab/pufu-editor/blob/main/src/lib/models.ts) と同じJSONオブジェクトです。既存の保存用 `pufuScoreSchema` で形式を検証し、保存済みのJSONをそのまま返します。Editorの `getScoreJson`／JSONエクスポートと同じ構造で、`purposes[].measures`、全要素のUUID・文章・コメント・色と任意の施策ID・進捗を保持します。未設定の進捗を追加せず、配列の並べ替えや補完もしません。
 
 `updated_at` は指定したプ譜の更新日時で、読み取れない日時は `null` です。問いが存在しない・他人の問い・許可プロジェクト外は既存詳細取得と同じ404、scope不足は403です。
 
@@ -626,7 +626,7 @@ WorkflowのAI試行ごとにAsyncLocalStorageで応答の計測を隔離し、�
 
 `ai_attempts` の追加時に `ai_usage_daily` へ日本時間の日別件数を加算し、応答使用量の保存時にNeuronsと計測済み件数を原子的に更新します。30日後の詳細履歴整理でも日別累計は保持し、退会時に所有者の削除へ連動して消去します。集計には本文・生成結果を含めません。`GET /api/v1/me/usage` は本人のセッションのみ許可し、`no-store` で登録件数・Neurons・未計測件数と期間だけを返します。
 
-`short-uuid@4.2.2` のAPIを保ち、依存する `uuid` だけをCommonJS対応の修正版 `11.1.1` 以上へoverrideしています。[GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) の修正を取り込み、エディター `0.9.19` のID生成・編集データ形式を維持します。
+`short-uuid@4.2.2` のAPIを保ち、依存する `uuid` だけをCommonJS対応の修正版 `11.1.1` 以上へoverrideしています。[GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) の修正を取り込み、エディター `0.9.20` のID生成・編集データ形式を維持します。
 
 ## ローカル開発
 
@@ -822,7 +822,7 @@ gh api repos/{owner}/{repo}/rulesets
 
 依存関係は `pnpm-lock.yaml` と `pnpm install --frozen-lockfile` で固定します。脆弱性対策のoverrideと依存パッケージのビルド許可は `pnpm-workspace.yaml` にまとめ、許可済みの `esbuild`・`sharp`・`workerd` のビルドスクリプトだけを実行します。従来から実行していない `core-js-pure` のインストールスクリプトは、pnpm 11でも実行しないよう明示しています。開発用のWranglerも明示的な依存として固定しています。
 
-pnpm 11の公開後24時間の待機設定を維持しつつ、ロックファイルに固定・検証済みの `@goto-lab/pufu-editor@0.9.19` と `@napi-rs/canvas@1.0.13` およびそのOS別パッケージの同じバージョンだけを `minimumReleaseAgeExclude` に列挙しています。別バージョンや新しい依存は、この例外の対象になりません。
+pnpm 11の公開後24時間の待機設定を維持しつつ、ロックファイルに固定・検証済みの `@goto-lab/pufu-editor@0.9.20` と `@napi-rs/canvas@1.0.13` およびそのOS別パッケージの同じバージョンだけを `minimumReleaseAgeExclude` に列挙しています。別バージョンや新しい依存は、この例外の対象になりません。
 
 同一mainのデプロイは直列実行し、実行中の処理は後続pushでキャンセルしません。待機中の古い実行はGitHubのconcurrencyにより最新の実行へ置き換わる場合があります。マイグレーション後にWorker更新が失敗しても、成功済みのDB変更は戻りません。マイグレーションは旧Workerとも動く追加的な変更にし、削除・破壊的な変更は別途手順を検討してください。再実行では適用済みのマイグレーションをスキップします。
 
