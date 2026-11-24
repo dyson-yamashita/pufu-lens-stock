@@ -119,7 +119,7 @@ export function PublicPufuDetail({
         {phase % 2 === 0 ? t('ui.public_projects.reflection') : t('ui.app.pufu')}
         {t('ui.public_projects.read_only')}
       </p>
-      <div className="pufu-toolbar share-anchor">
+      <div className="pufu-toolbar public-pufu-toolbar share-anchor">
         <div
           className="pufu-phase-navigation"
           data-share-phase-navigation

@@ -687,17 +687,9 @@
 .share-anchor {
   position: relative;
 }
-.share-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.share-heading > :first-child {
-  min-width: 0;
-}
-.share-anchor > .share-control {
-  margin-inline-start: auto;
+.pufu-toolbar.public-pufu-toolbar {
+  flex-direction: column;
+  align-items: flex-start;
 }
 .share-link {
   display: inline-flex;
@@ -706,7 +698,7 @@
   gap: 5px;
   min-width: 44px;
   min-height: 44px;
-  padding: 0 4px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--primary);
@@ -723,7 +715,7 @@
   position: absolute;
   z-index: 5;
   inset-block-start: 100%;
-  inset-inline-end: 0;
+  inset-inline-start: 0;
   width: min(100%, 390px);
   padding: 10px 16px 16px;
   border: 1px solid var(--border);
@@ -731,14 +723,11 @@
   background: var(--card);
   box-shadow: 0 6px 20px var(--shadow);
 }
-.share-panel-heading,
-.share-panel-actions {
+.share-panel-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-.share-panel-heading {
   justify-content: space-between;
 }
 .share-panel-heading h2 {
@@ -759,11 +748,23 @@
   font-size: 13px;
   font-weight: 600;
 }
-.share-panel input {
-  width: 100%;
+.share-url-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.share-url-row input {
   font-size: 16px;
 }
-.share-panel-actions {
+.share-url-row .icon-button {
+  gap: 6px;
+  padding-inline: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.share-native {
   margin-top: 12px;
 }
 .share-panel .share-status {

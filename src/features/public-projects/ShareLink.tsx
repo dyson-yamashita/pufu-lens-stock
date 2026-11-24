@@ -39,7 +39,6 @@ export function ShareLink({ target, source, visibility }: ShareLinkProps) {
 
   return (
     <div
-      className="share-control"
       onBlur={(event) => {
         const next = event.relatedTarget;
         if (!open || !next || event.currentTarget.contains(next)) return;
@@ -175,19 +174,19 @@ function ShareActions({ path }: { path: string }) {
     <>
       <p>{t('share.public')}</p>
       <label htmlFor={id}>{t('share.url')}</label>
-      <input id={id} ref={input} type="url" readOnly value={url} />
-      <div className="share-panel-actions">
-        <button type="button" className="button primary" onClick={copy}>
-          <Copy size={16} aria-hidden="true" />
-          {t('share.copy')}
+      <div className="share-url-row">
+        <input id={id} ref={input} type="url" readOnly value={url} />
+        <button type="button" className="icon-button" aria-label={t('share.copy')} onClick={copy}>
+          <Copy size={18} aria-hidden="true" />
+          {t('ui.public_projects.copy')}
         </button>
-        {canShare && (
-          <button type="button" className="button secondary" onClick={share}>
-            <Share2 size={16} aria-hidden="true" />
-            {t('share.native')}
-          </button>
-        )}
       </div>
+      {canShare && (
+        <button type="button" className="button secondary share-native" onClick={share}>
+          <Share2 size={16} aria-hidden="true" />
+          {t('share.native')}
+        </button>
+      )}
       <p className="share-status" role="status">
         {notice && t(`share.${notice}`)}
       </p>

@@ -100,8 +100,8 @@ export default function QuestionPage({
         <ArrowLeft size={16} aria-hidden="true" />
         {resolve ? t('ui.app.back_to_question_or_insight') : backLabel}
       </button>
-      <header className="page-header share-anchor">
-        <div>
+      <header className="page-header">
+        <div className="share-anchor">
           <h1>
             {resolve
               ? t('ui.question_page.create_pufu_from_a_task')
@@ -112,14 +112,14 @@ export default function QuestionPage({
               ? t('ui.question_page.describe_what_you_want_to_achieve_as_a_task')
               : t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}
           </p>
+          {!resolve && question?.project_id && (
+            <ShareLink
+              key={question.project_id}
+              source={{ projectId: question.project_id }}
+              target={{ kind: 'question', id: question.id }}
+            />
+          )}
         </div>
-        {!resolve && question?.project_id && (
-          <ShareLink
-            key={question.project_id}
-            source={{ projectId: question.project_id }}
-            target={{ kind: 'question', id: question.id }}
-          />
-        )}
       </header>
       {error && (
         <p className="form-error" role="alert">

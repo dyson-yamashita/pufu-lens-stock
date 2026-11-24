@@ -149,7 +149,7 @@ export function PublicStockDetailPage({
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_stocks')}
       </a>
-      <div className="share-heading share-anchor">
+      <div className="share-anchor">
         <h2 className="public-detail-title">{t('ui.public_projects.stock_details')}</h2>
         <ShareLink source={{ publicId }} target={{ kind: 'stock', id: data.stock.id }} />
       </div>
