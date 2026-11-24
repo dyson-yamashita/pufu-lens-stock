@@ -19,6 +19,7 @@ import LegalLinks from '../legal/LegalLinks';
 import { PublicProjectDirectory } from '../public-projects/PublicProjectDirectory';
 import ThemeToggle from '../settings/ThemeToggle';
 import HomeSections from './HomeSections';
+import pufiCardImage from './pufi-card.webp';
 
 export function Login({ config, onLogin }: { config: Config; onLogin: () => Promise<void> }) {
   useLanguage();
@@ -138,6 +139,14 @@ export function Login({ config, onLogin }: { config: Config; onLogin: () => Prom
               <span>{t('ui.app.interests')}</span>
               <span>{t('ui.app.fresh_perspectives')}</span>
             </div>
+            <img
+              className="art-article-pufi"
+              src={pufiCardImage}
+              alt=""
+              width="256"
+              height="208"
+              decoding="async"
+            />
           </div>
           <div className="art-memory">
             <div className="art-memory-icon">

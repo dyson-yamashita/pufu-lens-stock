@@ -211,6 +211,7 @@
   border-color: var(--border);
 }
 .art-article {
+  --art-copy-width: 52%;
   position: relative;
   width: 340px;
   margin: 84px auto 0;
@@ -218,6 +219,7 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 13px;
+  overflow-wrap: anywhere;
   transform: rotate(-5deg);
 }
 .art-article h3 {
@@ -227,27 +229,61 @@
   margin: 0 0 20px;
   color: var(--primary);
 }
+.art-article h3:lang(ja) {
+  max-width: var(--art-copy-width);
+}
 .art-rule {
-  width: 100%;
+  width: var(--art-copy-width);
   height: 5px;
   background: var(--wash);
   border-radius: 3px;
   margin: 11px 0;
 }
 .art-rule.short {
-  width: 70%;
+  width: 38%;
 }
 .art-tags {
   display: flex;
+  flex-wrap: wrap;
+  max-width: var(--art-copy-width);
   gap: 8px;
   margin-top: 20px;
   font-size: 8px;
   color: var(--muted);
 }
+.art-tags:lang(en) {
+  max-width: 60%;
+}
 .art-tags span {
   background: var(--wash);
   padding: 5px 8px;
   border-radius: 3px;
+}
+.art-article-pufi {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 16px;
+  transform: translateY(-50%);
+  width: 136px;
+  height: auto;
+  /* Crop the wordmark below the illustration. */
+  aspect-ratio: 16 / 13;
+  object-fit: cover;
+  object-position: top;
+  opacity: 0.68;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.art-article-pufi:lang(en) {
+  inset-block-start: auto;
+  inset-block-end: 16px;
+  transform: none;
+  width: 112px;
+}
+:root[data-theme='dark'] .art-article-pufi {
+  opacity: 0.5;
+  mix-blend-mode: normal;
+  mask-image: radial-gradient(ellipse, #000 44%, transparent 70%);
 }
 .art-memory {
   display: flex;
