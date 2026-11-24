@@ -1,26 +1,62 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { questionSettingsSchema } from '../../../shared/domain';
+import { z } from 'zod';
+import { questionSettingsSchema, type QuestionDetail } from '../../../shared/domain';
 import { type PufuSummary } from '../../../shared/pufu';
-import type { AppEnv } from '../../env';
+import type { AppEnv, Env } from '../../env';
 import { generateQuestionPufuImage } from '../../features/pufu/images/pufu-images';
 import { readQuestionPufu } from '../../features/pufu/pufu-read';
 import { firstPhaseTaskColumn } from '../../features/pufu/pufu-title';
-import { replaceRelations, validateRelations } from '../../features/relations/relations';
+import {
+  ownedReflectionCard,
+  reflectionIdForQuestion,
+} from '../../features/questions/reflection-repository';
+import {
+  replaceRelations,
+  validateRelations,
+  withRelations,
+} from '../../features/relations/relations';
 import { now } from '../../infrastructure/db';
 import { observeOperation } from '../../infrastructure/diagnostics';
 import { dispatchJobs } from '../../infrastructure/jobs/jobs';
 import { ownedProject, ownedQuestion } from '../context';
-import { pufuColumns } from '../queries';
+import { pufuColumns, questionCardColumns, reflectionQuestionJoins } from '../queries';
 import { body } from '../validation';
+
+const reflectionNoteSchema = z.strictObject({
+  note: questionSettingsSchema.shape.note.unwrap(),
+  generation: z.number().int().positive(),
+});
+
+async function readReflectionCard(env: Env, reflectionId: string, userId: string) {
+  const question = await env.DB.prepare(
+    `SELECT ${questionCardColumns},q.note,q.reflection_generation FROM ${reflectionQuestionJoins}
+    WHERE q.reflection_id=? AND p.user_id=?`,
+  )
+    .bind(reflectionId, userId)
+    .first<QuestionDetail>();
+  if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
+  return withRelations(question);
+}
 
 export function registerQuestionDetailsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/questions/:id', async (c) => {
-    const question = await ownedQuestion(c);
+    const principal = c.get('principal');
+    const reflectionId = reflectionIdForQuestion(principal, c.req.param('id'));
+    const question =
+      reflectionId === null
+        ? await ownedQuestion(c)
+        : await readReflectionCard(c.env, reflectionId, principal.user.id);
+    const relatedPufus =
+      reflectionId === null
+        ? 'EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pufu_scores.id AND pq.question_id=?)'
+        : `status='ready' AND id IN (SELECT ref.value FROM reflections r, json_each(r.pufu_ids) ref
+        WHERE r.id=? AND r.dismissed_at IS NULL)`;
     const pufus = await c.env.DB.prepare(
-      `SELECT ${pufuColumns},${firstPhaseTaskColumn('pufu_scores')} FROM pufu_scores WHERE EXISTS (SELECT 1 FROM pufu_questions pq WHERE pq.pufu_id=pufu_scores.id AND pq.question_id=?) AND user_id = ? AND project_id=? ORDER BY created_at DESC,id DESC`,
+      `SELECT ${pufuColumns},${firstPhaseTaskColumn('pufu_scores')} FROM pufu_scores
+      WHERE ${relatedPufus} AND user_id=? AND project_id=? ORDER BY created_at DESC,id DESC`,
     )
-      .bind(question.id, c.get('principal').user.id, question.project_id)
+      .bind(reflectionId ?? question.id, principal.user.id, question.project_id)
       .all<PufuSummary>();
     c.executionCtx.waitUntil(
       observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
@@ -29,9 +65,28 @@ export function registerQuestionDetailsRoutes(app: Hono<AppEnv>) {
   });
 
   app.patch('/api/v1/questions/:id', async (c) => {
+    const principal = c.get('principal');
+    const { user } = principal;
+    const reflectionId = reflectionIdForQuestion(principal, c.req.param('id'));
+    if (reflectionId !== null) {
+      const data = await body(c, reflectionNoteSchema);
+      const result = await c.env.DB.prepare(
+        `UPDATE reflections SET answer=? WHERE ${ownedReflectionCard} AND generation=? AND status<>'queued'`,
+      )
+        .bind(data.note || null, reflectionId, user.id, data.generation)
+        .run();
+      const question = await readReflectionCard(c.env, reflectionId, user.id);
+      if (!result.meta.changes)
+        throw new HTTPException(409, {
+          message:
+            question.reflection_generation === data.generation
+              ? 'このプロジェクトの振り返りを作成中です。完了後にお試しください。'
+              : '振り返りが更新されました。再読み込みしてお試しください。',
+        });
+      return c.json({ question });
+    }
     const data = await body(c, questionSettingsSchema);
     const question = await ownedQuestion(c);
-    const { user } = c.get('principal');
     const projectId = data.project_id ?? question.project_id;
     await ownedProject(c.env, user.id, projectId);
     if (question.stock_id && projectId !== question.project_id)
@@ -112,8 +167,20 @@ export function registerQuestionDetailsRoutes(app: Hono<AppEnv>) {
   });
 
   app.delete('/api/v1/questions/:id', async (c) => {
+    const principal = c.get('principal');
+    const { user } = principal;
+    const reflectionId = reflectionIdForQuestion(principal, c.req.param('id'));
+    if (reflectionId !== null) {
+      const result = await c.env.DB.prepare(
+        `UPDATE reflections SET dismissed_at=? WHERE ${ownedReflectionCard}`,
+      )
+        .bind(now(), reflectionId, user.id)
+        .run();
+      if (!result.meta.changes)
+        throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
+      return c.json({ ok: true });
+    }
     const question = await ownedQuestion(c);
-    const { user } = c.get('principal');
     const statements: D1PreparedStatement[] = [];
     if (question.source === 'ai') {
       statements.push(

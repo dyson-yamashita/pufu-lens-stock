@@ -1109,6 +1109,8 @@ export const en: Record<string, string> = {
   'ui.question_page.explore_this_question_or_insight': 'Explore this question or insight',
   'ui.question_page.delete_question_or_insight': 'Delete question or insight',
   'ui.question_page.delete_this_question_or_insight': 'Delete this question or insight?',
+  'ui.question_page.remove_from_list': 'Remove from list',
+  'ui.question_page.remove_question_from_list': 'Remove this question from the list?',
   'ui.question_page.question_or_insight_awaiting_generation':
     'Question or insight awaiting generation',
   'ui.question_page.question_or_insight_generating_or_failed':
@@ -1126,6 +1128,7 @@ export const en: Record<string, string> = {
     'The destination matches the related stocks. Change it from the source article, or remove the stock relations and save.',
   'ui.question_settings.note_destination_and_relations_saved':
     'Note, destination and relations saved.',
+  'ui.question_settings.note_saved': 'Note saved.',
   'ui.questions.open_question_or_insight_value': 'Open question or insight: {{value0}}',
   'ui.questions.one_question_or_insight_will_be_generated_after_the':
     'One question or insight will be generated after the article summary finishes.',
@@ -1147,27 +1150,12 @@ export const en: Record<string, string> = {
     'Take the next step with questions and insights',
   'ui.questions.use_add_question_or_insight_to_save_thoughts_from':
     'Use Add question or insight to save thoughts from everyday life or conversations.',
-  'reflection.heading': 'Reflection',
-  'reflection.automatic_hint':
-    'Once you have three new stocks, they can be used for an automatic reflection question.',
-  'reflection.back': 'Back to reflection',
-  'reflection.question': 'Reflection question',
   'reflection.schedule': 'Reflection frequency',
   'reflection.period.weekly': 'Every week',
   'reflection.period.biweekly': 'Every two weeks',
   'reflection.period.monthly': 'Every month',
   'reflection.schedule_hint':
     'Weekly and two-week periods close on Mondays. Monthly periods close on the first of the month. Dates use Japan time.',
-  'reflection.generating': 'Putting together a reflection question.',
-  'reflection.no_alternative': 'No other question came up for this period.',
-  'reflection.failed': 'Could not create a reflection question.',
-  'reflection.sources': 'What prompted this question',
-  'reflection.answer': 'What did you notice?',
-  'reflection.saved_answer': 'Saved reflection',
-  'reflection.save_answer': 'Save reflection',
-  'reflection.alternative': 'See another question',
-  'reflection.dismiss': 'Skip for now',
-  'reflection.retry': 'Retry',
   'reflection.busy': 'A reflection is in progress for this project. Try again when it finishes.',
   'reflection.changed': 'This reflection was updated. Reload and try again.',
   'ui.relation_picker.optional_multiple_selections_allowed':
@@ -1241,9 +1229,9 @@ export const en: Record<string, string> = {
   'manual.question_generation_heading': 'Manage automatic reflection questions',
   'manual.question_delete_heading': 'Delete a question or insight',
   'ui.user_manual.use_questions_insights_or_all_questions_insights_to_view':
-    'In Questions & insights, see Reflection for automatically added questions. AI uses stocks from the period and can draw on memory and Pufu from the same project.',
+    'AI-generated reflection questions appear automatically as cards in Questions & insights. AI uses stocks from the period and can draw on memory and Pufu from the same project.',
   'manual.reflection_answer':
-    'Open the records that prompted the question and choose Save reflection to keep what you noticed. You can also choose See another question or Skip for now. Reflection questions and answers are visible in your account only.',
+    'Open the question to find the stocks and Pufu that prompted it. Use the Note tab to save what you noticed. Reflection questions and their notes are visible only in your account.',
   'ui.user_manual.use_add_question_or_insight_to_save_your_own':
     'Open Add question or insight. Choose a project, enter your text, and press the button of the same name to save.',
   'manual.question_link_stocks':
@@ -1257,7 +1245,7 @@ export const en: Record<string, string> = {
   'ui.user_manual.to_stop_automatic_question_generation_turn_off_automatically_generate':
     'Under Advanced settings for the project, set Reflection frequency to Every week, Every two weeks, or Every month. The default is Every week. Pufu Lens adds a question if there are at least three eligible stocks since the last automatic question and the records support a specific question. New questions are added even while earlier questions are unanswered. To pause, turn off Automatically add reflection questions.',
   'ui.user_manual.to_delete_a_question_or_insight_open_other_actions':
-    'To delete a question or insight, open Other actions at the bottom of its details and select Delete question or insight. Its comments are also deleted; related Pufu, phases and stocks remain.',
+    'To delete a question or insight, open Other actions at the bottom of its details and select Delete question or insight. For an automatically added reflection question, choose Remove from list. Related Pufu, phases and stocks remain.',
   'ui.user_manual.develop_solutions_with_pufu': 'Develop solutions with Pufu',
   'ui.user_manual.use_all_pufu_in_the_side_menu_or_the':
     "Use All Pufu in the side menu or the Pufu tab to list, open and edit saved Pufu. The library can be filtered by project; a project's own screen shows its Pufu. Queued, generating and failed items are also visible.",

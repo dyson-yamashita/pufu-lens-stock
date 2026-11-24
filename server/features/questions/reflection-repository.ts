@@ -4,7 +4,7 @@ import {
   type Reflection,
   type ReflectionList,
 } from '../../../shared/reflections';
-import type { Env } from '../../env';
+import type { Env, Principal } from '../../env';
 import { projectListFilter } from '../projects/project-access';
 import { firstPhaseTaskColumn } from '../pufu/pufu-title';
 
@@ -14,6 +14,21 @@ export const usableReflectionStock = `a.user_id=s.user_id AND (
   OR TRIM(a.input_text,char(9,10,13,32,160,12288))<>''
 )`;
 export const reflectionRegenerationJobPrefix = 'reflection-regeneration-';
+export const reflectionQuestionIdPrefix = 'reflection-';
+export const visibleReflection = (alias: string) =>
+  `${alias}.dismissed_at IS NULL AND ${alias}.text IS NOT NULL`;
+export const ownedReflectionCard = `id=? AND ${visibleReflection('reflections')}
+  AND EXISTS (SELECT 1 FROM projects WHERE id=reflections.project_id AND user_id=?)`;
+
+export function includesReflectionCards(principal: Principal, option: string | undefined) {
+  return principal.kind === 'session' && option === 'true';
+}
+
+export function reflectionIdForQuestion(principal: Principal, questionId: string): string | null {
+  return principal.kind === 'session' && questionId.startsWith(reflectionQuestionIdPrefix)
+    ? questionId.slice(reflectionQuestionIdPrefix.length)
+    : null;
+}
 
 export function reflectionJobStatement(env: Env, reflectionId: string | null) {
   return env.DB.prepare(
@@ -94,7 +109,7 @@ export async function listReflections(
           WHERE pf.project_id=p.id AND pf.user_id=p.user_id AND pf.status='ready'
         )) AS pufus_json
     FROM reflections r JOIN projects p ON p.id=r.project_id
-    WHERE p.user_id=? AND ${scope.sql} AND r.dismissed_at IS NULL AND r.text IS NOT NULL
+    WHERE p.user_id=? AND ${scope.sql} AND ${visibleReflection('r')}
     ORDER BY (r.answer IS NOT NULL),r.created_at DESC,r.id DESC LIMIT ? OFFSET ?`,
   )
     .bind(userId, ...scope.params, limit + 1, (page - 1) * limit)

@@ -5,6 +5,10 @@ import { reflectionPeriodSchema } from '../../../shared/reflections';
 import type { AppEnv } from '../../env';
 import { historyPrefix, queueHistoryCleanup } from '../../features/memory/memory-history';
 import { projectScopeJson } from '../../features/projects/project-access';
+import {
+  includesReflectionCards,
+  visibleReflection,
+} from '../../features/questions/reflection-repository';
 import { cleanupStockImages } from '../../features/stocks/stock-images';
 import { dirtyMemoryStatements, orphanCleanupStatements } from '../../infrastructure/db';
 import { observeOperation } from '../../infrastructure/diagnostics';
@@ -24,8 +28,19 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/projects', async (c) => {
     const principal = c.get('principal');
     const { user } = principal;
+    const reflectionCount = includesReflectionCards(principal, c.req.query('include_reflections'))
+      ? `+ (SELECT COUNT(*) FROM reflections r WHERE r.project_id=p.id AND ${visibleReflection('r')})`
+      : '';
     const result = await c.env.DB.prepare(
-      "SELECT p.id, p.name, p.description, p.show_in_all_lists, p.include_in_user_memory, p.auto_generate_questions, p.reflection_period, p.created_at, COUNT(s.id) AS count, COALESCE(SUM(a.status = 'ready'), 0) AS ready_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id) AS question_count, (SELECT COUNT(*) FROM questions q WHERE q.project_id = p.id AND q.source = 'user') AS user_question_count, (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id = p.id AND pf.user_id = p.user_id) AS pufu_count FROM projects p LEFT JOIN stocks s ON s.project_id = p.id LEFT JOIN articles a ON a.id = s.article_id WHERE p.user_id = ? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?))) GROUP BY p.id ORDER BY p.created_at, p.id",
+      `SELECT p.id,p.name,p.description,p.show_in_all_lists,p.include_in_user_memory,
+        p.auto_generate_questions,p.reflection_period,p.created_at,COUNT(s.id) AS count,
+        COALESCE(SUM(a.status='ready'),0) AS ready_count,
+        (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id) ${reflectionCount} AS question_count,
+        (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND q.source='user') AS user_question_count,
+        (SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id=p.id AND pf.user_id=p.user_id) AS pufu_count
+      FROM projects p LEFT JOIN stocks s ON s.project_id=p.id LEFT JOIN articles a ON a.id=s.article_id
+      WHERE p.user_id=? AND (? IS NULL OR p.id IN (SELECT value FROM json_each(?)))
+      GROUP BY p.id ORDER BY p.created_at,p.id`,
     )
       .bind(user.id, projectScopeJson(principal), projectScopeJson(principal))
       .all();

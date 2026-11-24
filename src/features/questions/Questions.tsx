@@ -15,7 +15,6 @@ import SearchField from '../../components/SearchField';
 import { applicationError, intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { api, send } from '../../lib/api';
 import QuestionLabels from './QuestionLabels';
-import Reflections from './Reflections';
 function QuestionBody({ question, onOpen }: { question: Question; onOpen?: () => void }) {
   useLanguage();
   return (
@@ -160,7 +159,6 @@ export default function Questions({
   onScope,
   onOpen,
   onQuestion,
-  onReflectionPufu,
   active = true,
   isMobile = false,
 }: {
@@ -171,7 +169,6 @@ export default function Questions({
   onScope: (projectId: string | null) => void;
   onOpen: (stockId: string, tab?: 'question' | 'summary') => Promise<void>;
   onQuestion: (id: string) => void;
-  onReflectionPufu?: (id: string) => void;
   active?: boolean;
   isMobile?: boolean;
 }) {
@@ -204,6 +201,7 @@ export default function Questions({
         source: filter === 'favorites' ? 'all' : filter,
         page: String(page),
         limit: String(pageSize),
+        include_reflections: 'true',
       });
       if (filter === 'favorites') params.set('favorite', 'true');
       if (projectId) params.set('project_id', projectId);
@@ -237,14 +235,6 @@ export default function Questions({
   }, [projectId, search, filter, page, pageSize, refresh, reload, active]);
   return (
     <section className="questions-page" aria-label={t('ui.questions.project_questions_insights')}>
-      <Reflections
-        key={projectId ?? 'all'}
-        projects={projects}
-        projectId={projectId}
-        active={active}
-        onStock={(id) => onOpen(id, 'summary')}
-        onPufu={onReflectionPufu}
-      />
       <SearchField
         label={t('ui.questions.search_questions_insights')}
         placeholder={t('ui.questions.search_questions_insights_article_titles_and_notes')}
@@ -343,7 +333,7 @@ export default function Questions({
                     onClick={async () => {
                       setOpening(stock.id);
                       try {
-                        await onOpen(stock.id);
+                        await onOpen(stock.id, question.is_reflection ? 'summary' : undefined);
                       } catch (e) {
                         setError(applicationError((e as Error).message));
                       } finally {

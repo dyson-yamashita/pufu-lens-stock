@@ -33,6 +33,80 @@ theorem non_session_read_denied (r : Auth.Request) (owner : Option Nat) (user : 
     simp [read, allowed, Auth.apiAllowed, Auth.authenticated, Auth.routeAllowed,
       Auth.tokenRoute, Auth.mcpRoute, h]
 
+def cardAllowed (r : Auth.Request) (method : Auth.Method) (owner : Option Nat)
+    (user : Nat) (entry : Entry) : Bool :=
+  (r.kind == .session) && Auth.apiAllowed { r with method := method, route := .questionRead } &&
+    (owner == some user) && !entry.dismissed && entry.text.isSome
+
+def readCard (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry) : Option Entry :=
+  if cardAllowed r .get owner user entry then some entry else none
+
+def listCard (includeReflections : Bool) (r : Auth.Request) (owner : Option Nat)
+    (user : Nat) (entry : Entry) : Option Entry :=
+  if includeReflections then readCard r owner user entry else none
+
+theorem mcp_card_read_denied (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry)
+    (kind : r.kind = .mcp) : readCard r owner user entry = none := by
+  simp [readCard, cardAllowed, kind]
+
+theorem foreign_card_read_denied (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry)
+    (foreign : owner ≠ some user) : readCard r owner user entry = none := by
+  simp [readCard, cardAllowed, foreign]
+
+theorem dismissed_card_read_denied (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry)
+    (dismissed : entry.dismissed = true) : readCard r owner user entry = none := by
+  simp [readCard, cardAllowed, dismissed]
+
+theorem unfinished_card_read_denied (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry)
+    (unfinished : entry.text = none) : readCard r owner user entry = none := by
+  simp [readCard, cardAllowed, unfinished]
+
+theorem default_list_omits_card (r : Auth.Request) (owner : Option Nat) (user : Nat) (entry : Entry) :
+    listCard false r owner user entry = none := by
+  simp [listCard]
+
+def cardGeneration (entry : Entry) : Nat :=
+  if entry.status == .queued then entry.generation - 1 else entry.generation
+
+theorem queued_card_displays_previous_generation (entry : Entry) (queued : entry.status = .queued) :
+    cardGeneration entry = entry.generation - 1 := by
+  simp [cardGeneration, queued]
+
+structure CardState where
+  entry : Entry
+  favorite : Bool
+  deriving DecidableEq, Repr
+
+inductive CardEdit where
+  | note (generation : Nat) (value : Option Nat) | favorite (value : Bool) | remove
+
+def editCard (r : Auth.Request) (owner : Option Nat) (user : Nat) (edit : CardEdit)
+    (before : CardState) : CardState :=
+  let method := match edit with | .remove => Auth.Method.delete | _ => Auth.Method.patch
+  if cardAllowed r method owner user before.entry then
+    match edit with
+    | .note generation value =>
+      if before.entry.status == .queued || before.entry.generation != generation then before
+      else { before with entry := { before.entry with answer := value } }
+    | .favorite value => { before with favorite := value }
+    | .remove => { before with entry := { before.entry with dismissed := true } }
+  else before
+
+theorem foreign_card_edit_unchanged (r : Auth.Request) (owner : Option Nat) (user : Nat)
+    (edit : CardEdit) (before : CardState) (foreign : owner ≠ some user) :
+    editCard r owner user edit before = before := by
+  simp [editCard, cardAllowed, foreign]
+
+theorem queued_card_note_unchanged (r : Auth.Request) (owner : Option Nat) (user : Nat)
+    (generation : Nat) (value : Option Nat) (before : CardState) (queued : before.entry.status = .queued) :
+    editCard r owner user (.note generation value) before = before := by
+  simp [editCard, queued]
+
+theorem stale_card_note_unchanged (r : Auth.Request) (owner : Option Nat) (user : Nat)
+    (generation : Nat) (value : Option Nat) (before : CardState) (stale : before.entry.generation ≠ generation) :
+    editCard r owner user (.note generation value) before = before := by
+  simp [editCard, stale]
+
 inductive Period where
   | weekly | biweekly | monthly
   deriving DecidableEq, Repr
@@ -179,6 +253,16 @@ theorem moved_stock_preserves_previous_question (entry : Entry) (candidate : Can
 def web : Auth.Request := ⟨.session, true, true, true, true, .patch, .other⟩
 def initial : Entry := ⟨1, .queued, none, [], [], none, false⟩
 def generated : Entry := ⟨1, .ready, some 10, [20], [30], none, false⟩
+
+theorem card_success_and_denial_reachable :
+    let before : CardState := ⟨generated, false⟩
+    listCard true web (some 1) 1 generated = some generated ∧
+    editCard web (some 1) 1 (.note 1 (some 12)) before = ⟨{ generated with answer := some 12 }, false⟩ ∧
+    editCard web (some 1) 1 (.favorite true) before = ⟨generated, true⟩ ∧
+    readCard web (some 1) 1 (editCard web (some 1) 1 .remove before).entry = none ∧
+    readCard { web with kind := .anonymous } (some 1) 1 generated = none ∧
+    editCard { web with sameOrigin := false } (some 1) 1 .remove before = before := by
+  decide
 
 theorem success_reachable :
     configurePeriod web (some 1) 1 .weekly .monthly = .monthly ∧

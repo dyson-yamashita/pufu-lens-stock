@@ -2,8 +2,10 @@ import { HTTPException } from 'hono/http-exception';
 import type { PufuRelations, RelatedQuestion, RelatedStock } from '../../../shared/relations';
 import type { Env } from '../../env';
 
+export const stockRelationsJson = (alias: string) =>
+  `(SELECT json_group_array(json_object('id',s.id,'title',COALESCE(s.title,a.title))) FROM question_stocks qs JOIN stocks s ON s.id=qs.stock_id JOIN articles a ON a.id=s.article_id WHERE qs.question_id=${alias}.id ORDER BY s.id)`;
 export const stockRelationsColumn = (alias: string) =>
-  `(SELECT json_group_array(json_object('id',s.id,'title',COALESCE(s.title,a.title))) FROM question_stocks qs JOIN stocks s ON s.id=qs.stock_id JOIN articles a ON a.id=s.article_id WHERE qs.question_id=${alias}.id ORDER BY s.id) AS stocks_json`;
+  `${stockRelationsJson(alias)} AS stocks_json`;
 export const pufuRelationsColumns = (
   alias: string,
 ) => `(SELECT json_group_array(json_object('id',q.id,'text',q.text,'source',q.source)) FROM pufu_questions pq JOIN questions q ON q.id=pq.question_id WHERE pq.pufu_id=${alias}.id ORDER BY q.id) AS questions_json,

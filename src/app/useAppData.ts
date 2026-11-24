@@ -76,7 +76,7 @@ export function useAppData({ session, navigation, filters, setError }: Options) 
         const [projectData, stockData, memoryData, tokenData] = await Promise.all([
           api<{
             projects: Project[];
-          }>('/api/v1/projects', { signal: controller.signal }),
+          }>('/api/v1/projects?include_reflections=true', { signal: controller.signal }),
           api<{
             stocks: Stock[];
             total: number;
