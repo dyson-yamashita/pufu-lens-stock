@@ -77,6 +77,8 @@ MCP・iOSショートカット・SNS連携など、外部入力・認証主体�
 | B11 / P1    | 利用枠の予約 → AI呼出し → 完了/再試行              | 予約なしの呼出し、同一操作の重複予約、並行要求での上限超過を防ぐ条件を調べる。待機・失敗・再試行を含む遷移と窓時間を定義する。利用記録や予約は拒否時にも変化し得るため、全DB不変ではなく残高・件数・操作状態の性質を選ぶ                                                                                                                                                                      | [利用枠](../server/features/usage/usage.ts)、[AIアクセス](../server/infrastructure/ai/ai-access.ts)、[usage-limits](../tests/usage-limits.test.ts)、[ai-neurons](../tests/ai-neurons.test.ts)                                                                                     |
 | B12 / P0    | SNS連携（現行はX）: 資格情報の登録・削除・外部取得 | 本人のセッションだけで連携状態の取得・資格情報の登録/更新/削除を許可し、MCP・ショートカット用トークンでは管理できない。保存・復号・外部取得で同じユーザーの資格情報を使い、平文を状態API応答・エラーへ返さない。未登録・削除済みの状態では資格情報の新たな読込を拒否する。Xの認証/閲覧権限エラーを取得成功と扱わず、外部リダイレクトを追跡して資格情報を転送しない                            | [integrations API](../server/api/routes/integrations.ts)、[API許可表](../server/api/middleware/authentication.ts)、[X取得・資格情報](../server/features/integrations/x.ts)、[x-integrationテスト](../tests/x-integration.test.ts)                                                 |
 
+B04はLeanで安全条件と成功・拒否への到達を証明し、作成・局面追加・再送・競合・権限変更の操作列をVitestで照合する。 [B04の仕様とMBT](../formal/verification/specs/mcp-writes.md#操作順序のmbt)
+
 SNSはB12として主要対象に含める。現行のX連携は利用者がBearer Tokenを登録する方式であり、SNS用OAuth認可・refreshや投稿機能はこの調査では仮定しない。`configured` はローカルの登録状態で、X側でのトークンの有効性を保証しない。暗号方式自体の正しさ、X側の失効、削除前に読み出し済みの資格情報を使う実行中リクエストの取消しは未検証として分ける。ほかのSNSを導入するときは、プロバイダーごとの所有者・必要権限・失効・取得/投稿等の操作範囲を調べ、同じルールで対象一覧を更新する。
 
 P2の追加候補も次のIDで最小モデルを追加した。

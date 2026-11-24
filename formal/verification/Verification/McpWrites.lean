@@ -275,12 +275,4 @@ theorem append_stale_reachable :
     (append permitted sampleState { sampleRequest with revision := 0 }).accepted = false := by
   decide
 
-theorem append_late_replay_reachable :
-    let saved := commit sampleState sampleRequest
-    let later := { saved with revision := 10, currentPhase := 8, ready := false }
-    (append permitted later sampleRequest).accepted = true ∧
-    (append permitted later sampleRequest).created = false ∧
-    (append permitted later sampleRequest).phase = 2 ∧
-    (append permitted later sampleRequest).revision = 2 := by decide
-
 end Verification.McpWrites
