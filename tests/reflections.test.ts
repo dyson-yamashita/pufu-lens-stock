@@ -105,6 +105,28 @@ describe('プロジェクトの自動振り返り', () => {
       stocks: [{ id: '最初の観察' }, { id: '最後の観察' }],
       pufus: [{ id: 'score', title: '説明を減らすプ譜' }],
     });
+    const cards = await app.request(
+      `/api/v1/questions?include_reflections=true&project_id=alice-project&q=${encodeURIComponent(text)}`,
+    );
+    expect(await cards.json()).toMatchObject({
+      total: 1,
+      questions: [
+        {
+          id: `reflection-${question.id}`,
+          source: 'ai',
+          status: 'ready',
+          is_reflection: 1,
+          text,
+          stocks: [{ id: '最初の観察' }, { id: '最後の観察' }],
+          has_pufu: 1,
+        },
+      ],
+    });
+    const details = await app.request(`/api/v1/questions/reflection-${question.id}`);
+    expect(await details.json()).toMatchObject({
+      question: { note: '', reflection_generation: 1 },
+      pufus: [{ id: 'score' }],
+    });
     expect(ai).toHaveBeenCalledTimes(1);
     const context = JSON.parse(ai.mock.calls[0][1].messages[1].content);
     expect(context.stocks.map((stock: { title: string }) => stock.title)).toEqual([
@@ -146,8 +168,128 @@ describe('プロジェクトの自動振り返り', () => {
       end_at: new Date(nextWeek).toISOString(),
       stocks: [{ id: '週明け' }, { id: '週の途中' }],
     });
+    const pages = await Promise.all(
+      [1, 2].map(async (page) => {
+        const response = await app.request(
+          `/api/v1/questions?include_reflections=true&project_id=alice-project&limit=2&page=${page}`,
+        );
+        return (await response.json()) as { total: number; questions: { id: string }[] };
+      }),
+    );
+    expect(pages.map(({ total }) => total)).toEqual([3, 3]);
+    expect(pages.map((page) => page.questions.length)).toEqual([2, 1]);
+    expect(pages.flatMap((page) => page.questions.map(({ id }) => id)).sort()).toEqual(
+      ['related-question', ...reflections.map(({ id }) => `reflection-${id}`)].sort(),
+    );
     expect((await update(question.id, { action: 'dismiss', generation: 1 })).status).toBe(200);
     expect(await list()).toEqual([next]);
+  });
+
+  it('保存済みの振り返りを本人のカードに表示し、回答をメモとして扱う', async () => {
+    const db = app.env.DB;
+    await db.batch([
+      db.prepare(
+        "UPDATE projects SET is_public=1,public_id='reflection-public' WHERE id='alice-project'",
+      ),
+      db.prepare(
+        `INSERT INTO reflections(id,project_id,start_at,end_at,status,text,answer,dismissed_at)
+         VALUES ('old-answer','alice-project','2025-01-01','2025-01-06','ready','以前の問い？','保存済みの回答',NULL),
+                ('old-dismissed','alice-project','2025-01-06','2025-01-13','ready','見送った問い？',NULL,'2025-01-14'),
+                ('in-progress','alice-second','2025-01-13','2025-01-20','queued',NULL,NULL,NULL)`,
+      ),
+    ]);
+    const path = '/api/v1/questions/reflection-old-answer';
+    const collection = '/api/v1/questions?include_reflections=true';
+    const projects = '/api/v1/projects?include_reflections=true';
+    const result = await app.request(collection);
+    expect(result.headers.get('cache-control')).toBe('no-store');
+    expect(await result.json()).toMatchObject({
+      total: 1,
+      questions: [{ id: 'reflection-old-answer', text: '以前の問い？', is_favorite: 0 }],
+    });
+    expect(await (await app.request('/api/v1/questions')).json()).toMatchObject({ total: 0 });
+    expect(await (await app.request(projects)).json()).toMatchObject({
+      projects: expect.arrayContaining([
+        expect.objectContaining({ id: 'alice-project', question_count: 1 }),
+      ]),
+    });
+    expect(await (await app.request(path)).json()).toMatchObject({
+      question: { note: '保存済みの回答' },
+    });
+    expect((await app.request(path, { user: 'bob' })).status).toBe(404);
+    expect((await app.request(path, { headers: { Cookie: '' } })).status).toBe(401);
+    const publication = await app.request('/api/public/projects/reflection-public/questions', {
+      headers: { Cookie: '' },
+    });
+    expect(await publication.json()).toMatchObject({ items: [] });
+    expect(
+      (
+        await app.request(
+          '/api/public/projects/reflection-public/questions/reflection-old-answer',
+          {
+            headers: { Cookie: '' },
+          },
+        )
+      ).status,
+    ).toBe(404);
+    const { user } = (await (await app.request('/api/v1/me')).json()) as { user: User };
+    const mcp = createApp({ kind: 'mcp', user, tokenProjectId: 'alice-project' });
+    const mcpGet = (endpoint: string) =>
+      mcp.fetch(new Request(`${app.env.APP_URL}${endpoint}`), app.env, app.ctx);
+    expect(await (await mcpGet(collection)).json()).toMatchObject({ total: 0 });
+    expect((await mcpGet(path)).status).toBe(404);
+    expect(await (await mcpGet(projects)).json()).toMatchObject({
+      projects: [{ id: 'alice-project', question_count: 0 }],
+    });
+
+    expect(
+      (
+        await app.request(path, {
+          method: 'PATCH',
+          body: { note: '他人の変更', generation: 1 },
+          user: 'bob',
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (await app.request(path, { method: 'PATCH', body: { project_id: 'alice-second' } })).status,
+    ).toBe(400);
+    const saveNote = (generation: number) =>
+      app.request(path, {
+        method: 'PATCH',
+        body: { note: '追記した回答', generation },
+      });
+    await db
+      .prepare("UPDATE reflections SET status='queued',generation=2 WHERE id='old-answer'")
+      .run();
+    expect(await (await app.request(path)).json()).toMatchObject({
+      question: { note: '保存済みの回答', reflection_generation: 1 },
+    });
+    expect((await saveNote(2)).status).toBe(409);
+    await db.prepare("UPDATE reflections SET status='ready' WHERE id='old-answer'").run();
+    expect((await saveNote(1)).status).toBe(409);
+    expect(await (await app.request(path)).json()).toMatchObject({
+      question: { note: '保存済みの回答', reflection_generation: 2 },
+    });
+    const updated = await saveNote(2);
+    expect(await updated.json()).toMatchObject({ question: { note: '追記した回答' } });
+    const favorite = await app.request(`${path}/favorite`, {
+      method: 'PATCH',
+      body: { is_favorite: true },
+    });
+    expect(await favorite.json()).toEqual({ id: 'reflection-old-answer', is_favorite: 1 });
+    expect(await (await app.request(`${collection}&favorite=true`)).json()).toMatchObject({
+      total: 1,
+      questions: [{ id: 'reflection-old-answer', is_favorite: 1 }],
+    });
+    expect((await app.request(path, { method: 'DELETE' })).status).toBe(200);
+    expect((await app.request(path)).status).toBe(404);
+    expect(await (await app.request(collection)).json()).toMatchObject({ total: 0 });
+    expect(await (await app.request(projects)).json()).toMatchObject({
+      projects: expect.arrayContaining([
+        expect.objectContaining({ id: 'alice-project', question_count: 0 }),
+      ]),
+    });
   });
 
   it.each(['summary', 'note'])(

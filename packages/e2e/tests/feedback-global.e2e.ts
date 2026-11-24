@@ -56,7 +56,7 @@ test('FEEDBACK-007 無反応のコントロールを全画面共通で検知す�
   const refresh = new Promise<void>((resolve) => {
     releaseRefresh = resolve;
   });
-  await browser.route(`${fixture.url}/api/v1/projects`, async (route) => {
+  await browser.route(`${fixture.url}/api/v1/projects?include_reflections=true`, async (route) => {
     await refresh;
     await route.continue();
   });

@@ -317,7 +317,6 @@ export default function App({
                 }
                 refresh={refresh}
                 onQuestion={openQuestion}
-                onReflectionPufu={(id) => openPufu(id, true)}
                 onScope={(id) => {
                   if (libraryView) filterProject(id);
                   else navigate('questions', id);
@@ -398,9 +397,7 @@ export default function App({
                 backLabel={
                   pufuSource.questionId
                     ? t('ui.app.back_to_question_or_insight')
-                    : pufuSource.fromReflection
-                      ? t('reflection.back')
-                      : t('ui.app.back_to_pufu_list')
+                    : t('ui.app.back_to_pufu_list')
                 }
                 onBack={backFromPufu}
                 onGuard={setNavigationGuard}

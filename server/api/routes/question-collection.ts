@@ -14,12 +14,24 @@ import {
   projectListFilter,
   resolveProjectId,
 } from '../../features/projects/project-access';
+import {
+  includesReflectionCards,
+  ownedReflectionCard,
+  reflectionIdForQuestion,
+  reflectionQuestionIdPrefix,
+} from '../../features/questions/reflection-repository';
 import { validateRelations, withRelations } from '../../features/relations/relations';
 import { now } from '../../infrastructure/db';
 import { observeOperation } from '../../infrastructure/diagnostics';
 import { dispatchJobs } from '../../infrastructure/jobs/jobs';
 import { ownedProject } from '../context';
-import { questionColumns, questionJoins } from '../queries';
+import {
+  questionCardColumns,
+  questionCardJoins,
+  questionColumns,
+  questionJoins,
+  reflectionCardStocks,
+} from '../queries';
 import { body } from '../validation';
 
 export function registerQuestionCollectionRoutes(app: Hono<AppEnv>) {
@@ -33,7 +45,7 @@ export function registerQuestionCollectionRoutes(app: Hono<AppEnv>) {
     const pageSize = limit.data;
     const projectId = resolveProjectId(principal, c.req.query('project_id') || null);
     if (projectId) await ownedProject(c.env, user.id, projectId);
-    const query = (c.req.query('q') ?? '').slice(0, 200).replace(/[\\%_]/g, '\\$&');
+    const query = (c.req.query('q') ?? '').slice(0, 200);
     const status = c.req.query('status') ?? 'all';
     if (!['all', 'ready', 'processing', 'failed'].includes(status)) throw new HTTPException(400);
     const source = c.req.query('source') ?? 'all';
@@ -42,17 +54,34 @@ export function registerQuestionCollectionRoutes(app: Hono<AppEnv>) {
     if (!['true', 'false'].includes(favorite)) throw new HTTPException(400);
     const page = Math.max(1, Math.min(5000, Math.trunc(Number(c.req.query('page')) || 1)));
     const projects = projectListFilter(projectId, allowedProjectIds(principal));
-    const where =
-      'p.user_id = ? AND ' +
-      projects.sql +
-      " AND (COALESCE(q.text, '') LIKE ? ESCAPE '\\' OR COALESCE(s.title, a.title, '') LIKE ? ESCAPE '\\' OR COALESCE(s.note, '') LIKE ? ESCAPE '\\') AND (? = 'all' OR (? = 'processing' AND q.status IN ('queued','generating')) OR q.status = ?) AND (? = 'all' OR q.source = ?)" +
-      (favorite === 'true' ? ' AND q.is_favorite = 1' : '');
+    const includeReflections = includesReflectionCards(
+      principal,
+      c.req.query('include_reflections'),
+    );
+    const columns = includeReflections ? questionCardColumns : questionColumns;
+    const joins = includeReflections ? questionCardJoins : questionJoins;
+    const projectScope = `p.user_id=? AND ${projects.sql}`;
+    const cardProjects = includeReflections
+      ? `WITH question_card_projects AS (SELECT p.id FROM projects p WHERE ${projectScope})`
+      : '';
+    // D1のLIKEパターン上限にかからないよう、部分文字列を直接照合する。
+    const matches = (field: string) => `instr(lower(${field}),lower(?))>0`;
+    const reflectionSearch = includeReflections
+      ? `OR EXISTS (SELECT 1 ${reflectionCardStocks}
+        WHERE ${matches('COALESCE(rs.title,ra.title)')} OR ${matches('rs.note')})`
+      : '';
+    const where = `${includeReflections ? '' : `${projectScope} AND `}
+      (${matches("COALESCE(q.text,'')")} OR ${matches("COALESCE(s.title,a.title,'')")}
+        OR ${matches("COALESCE(s.note,'')")} ${reflectionSearch})
+      AND (?='all' OR (?='processing' AND q.status IN ('queued','generating')) OR q.status=?)
+      AND (?='all' OR q.source=?)${favorite === 'true' ? ' AND q.is_favorite=1' : ''}`;
     const params = [
       user.id,
       ...projects.params,
-      `%${query}%`,
-      `%${query}%`,
-      `%${query}%`,
+      query,
+      query,
+      query,
+      ...(includeReflections ? [query, query] : []),
       status,
       status,
       status,
@@ -62,11 +91,11 @@ export function registerQuestionCollectionRoutes(app: Hono<AppEnv>) {
     const [rows, totals] = await observeOperation('d1', 'questions_list', () =>
       c.env.DB.batch<Record<string, unknown>>([
         c.env.DB.prepare(
-          `SELECT ${questionColumns} FROM ${questionJoins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT ? OFFSET ?`,
+          `${cardProjects} SELECT ${columns} FROM ${joins} WHERE ${where} ORDER BY q.created_at DESC, q.id DESC LIMIT ? OFFSET ?`,
         ).bind(...params, pageSize, (page - 1) * pageSize),
-        c.env.DB.prepare(`SELECT COUNT(*) AS count FROM ${questionJoins} WHERE ${where}`).bind(
-          ...params,
-        ),
+        c.env.DB.prepare(
+          `${cardProjects} SELECT COUNT(*) AS count FROM ${joins} WHERE ${where}`,
+        ).bind(...params),
       ]),
     );
     c.executionCtx.waitUntil(
@@ -151,11 +180,20 @@ export function registerQuestionCollectionRoutes(app: Hono<AppEnv>) {
 
   app.patch('/api/v1/questions/:id/favorite', async (c) => {
     const data = await body(c, z.strictObject({ is_favorite: z.boolean() }));
-    const question = await c.env.DB.prepare(
-      'UPDATE questions SET is_favorite = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?) RETURNING id, is_favorite',
-    )
-      .bind(Number(data.is_favorite), now(), c.req.param('id'), c.get('principal').user.id)
-      .first<Pick<Question, 'id' | 'is_favorite'>>();
+    const principal = c.get('principal');
+    const id = c.req.param('id');
+    const reflectionId = reflectionIdForQuestion(principal, id);
+    const value = Number(data.is_favorite);
+    const question = await (
+      reflectionId === null
+        ? c.env.DB.prepare(
+            'UPDATE questions SET is_favorite = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM projects WHERE id = questions.project_id AND user_id = ?) RETURNING id, is_favorite',
+          ).bind(value, now(), id, principal.user.id)
+        : c.env.DB.prepare(
+            `UPDATE reflections SET is_favorite=? WHERE ${ownedReflectionCard}
+          RETURNING '${reflectionQuestionIdPrefix}'||id AS id,is_favorite`,
+          ).bind(value, reflectionId, principal.user.id)
+    ).first<Pick<Question, 'id' | 'is_favorite'>>();
     if (!question) throw new HTTPException(404, { message: '問い・気づきが見つかりません。' });
     return c.json(question);
   });

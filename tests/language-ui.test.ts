@@ -58,7 +58,7 @@ beforeEach(() => {
       if (!user) throw new ApiError('Unauthorized', 401);
       return { user };
     }
-    if (path === '/api/v1/projects') return { projects: [] };
+    if (path === '/api/v1/projects?include_reflections=true') return { projects: [] };
     if (path === '/api/v1/me/usage') return new Promise(() => {});
     if (path.startsWith('/api/v1/stocks')) return { stocks: [], total: 0 };
     if (path.startsWith('/api/v1/memory')) return { memory: null, pending: false, error: null };

@@ -14,6 +14,54 @@
       "theorem": "foreign_period_update_denied"
     },
     {
+      "name": "B16-card-session",
+      "old": "  (r.kind == .session) && Auth.apiAllowed { r with method := method, route := .questionRead } &&",
+      "new": "  Auth.apiAllowed { r with method := method, route := .questionRead } &&",
+      "theorem": "mcp_card_read_denied"
+    },
+    {
+      "name": "B16-card-owner",
+      "old": "    (owner == some user) && !entry.dismissed && entry.text.isSome",
+      "new": "    !entry.dismissed && entry.text.isSome",
+      "theorem": "foreign_card_edit_unchanged"
+    },
+    {
+      "name": "B16-card-dismissed",
+      "old": "    (owner == some user) && !entry.dismissed && entry.text.isSome",
+      "new": "    (owner == some user) && entry.text.isSome",
+      "theorem": "dismissed_card_read_denied"
+    },
+    {
+      "name": "B16-card-text",
+      "old": "    (owner == some user) && !entry.dismissed && entry.text.isSome",
+      "new": "    (owner == some user) && !entry.dismissed",
+      "theorem": "unfinished_card_read_denied"
+    },
+    {
+      "name": "B16-card-list-option",
+      "old": "  if includeReflections then readCard r owner user entry else none",
+      "new": "  readCard r owner user entry",
+      "theorem": "default_list_omits_card"
+    },
+    {
+      "name": "B16-card-note-queued",
+      "old": "      if before.entry.status == .queued || before.entry.generation != generation then before",
+      "new": "      if before.entry.generation != generation then before",
+      "theorem": "queued_card_note_unchanged"
+    },
+    {
+      "name": "B16-card-note-generation",
+      "old": "      if before.entry.status == .queued || before.entry.generation != generation then before",
+      "new": "      if before.entry.status == .queued then before",
+      "theorem": "stale_card_note_unchanged"
+    },
+    {
+      "name": "B16-card-displayed-generation",
+      "old": "  if entry.status == .queued then entry.generation - 1 else entry.generation",
+      "new": "  entry.generation",
+      "theorem": "queued_card_displays_previous_generation"
+    },
+    {
       "name": "B16-reservation",
       "old": "      !busy && quotaAvailable then",
       "new": "      !busy then",

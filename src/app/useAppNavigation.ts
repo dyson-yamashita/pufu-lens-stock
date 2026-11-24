@@ -83,11 +83,7 @@ export function useAppNavigation({
     resetPage();
   };
 
-  const navigateDetail = (
-    view: 'question' | 'resolve' | 'pufu',
-    id: string,
-    fromReflection = false,
-  ) => {
+  const navigateDetail = (view: 'question' | 'resolve' | 'pufu', id: string) => {
     window.location.hash = id ? `${view}/${encodeURIComponent(id)}` : questionListContext.hash;
     if (view === 'pufu') {
       const fromQuestion = route.view === 'question' || route.view === 'resolve';
@@ -97,7 +93,6 @@ export function useAppNavigation({
           pufuSource: {
             questionId: fromQuestion ? route.detailId! : null,
             projectId: fromQuestion ? questionListContext.projectId : route.projectId,
-            ...(fromReflection && { fromReflection: true as const }),
           } satisfies PufuSource,
         },
         '',
@@ -161,16 +156,15 @@ export function useAppNavigation({
     window.dispatchEvent(new window.Event('hashchange'));
   };
 
-  const openPufu = (id: string, fromReflection = false) => {
-    const view = fromReflection ? 'questions' : 'pufus';
+  const openPufu = (id: string) => {
     setQuestionListContext({
-      view,
+      view: 'pufus',
       projectId: route.projectId,
       scope: listProjectId,
-      hash: `#${view}${route.projectId ? `/${encodeURIComponent(route.projectId)}` : ''}`,
+      hash: `#pufus${route.projectId ? `/${encodeURIComponent(route.projectId)}` : ''}`,
       scroll: window.scrollY,
     });
-    navigateDetail('pufu', id, fromReflection);
+    navigateDetail('pufu', id);
   };
 
   const backFromPufu = () => {
@@ -178,8 +172,7 @@ export function useAppNavigation({
       navigateDetail('question', pufuSource.questionId);
       return;
     }
-    const view = pufuSource.fromReflection ? 'questions' : 'pufus';
-    window.location.hash = `#${view}${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
+    window.location.hash = `#pufus${pufuSource.projectId ? `/${encodeURIComponent(pufuSource.projectId)}` : ''}`;
   };
 
   const navigate = (view: Route['view'], projectId: string | null = null) => {

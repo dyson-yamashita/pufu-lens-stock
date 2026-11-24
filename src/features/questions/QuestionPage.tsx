@@ -10,12 +10,12 @@ import PufuForm from '../pufu/PufuForm';
 import { ShareLink } from '../public-projects/ShareLink';
 import QuestionLabels from './QuestionLabels';
 import QuestionSettings from './QuestionSettings';
-const detailTabs = () =>
+const detailTabs = (isReflection: boolean) =>
   [
     ['body', t('ui.app.content')],
     ['pufus', t('ui.app.pufu')],
     ['comments', t('ui.app.comments')],
-    ['settings', t('ui.app.note_destination')],
+    ['settings', t(isReflection ? 'ui.app.note_2' : 'ui.app.note_destination')],
   ] as const;
 export default function QuestionPage({
   id,
@@ -51,6 +51,9 @@ export default function QuestionPage({
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const isReflection = question?.is_reflection === 1;
+  const resolving = resolve && !isReflection;
+  const tabs = detailTabs(isReflection).filter(([key]) => !isReflection || key !== 'comments');
   const detailsVersion = useRef(0);
   useEffect(() => {
     if (deleting) return;
@@ -91,7 +94,7 @@ export default function QuestionPage({
     <section
       className="question-detail-page"
       aria-label={
-        resolve
+        resolving
           ? t('ui.question_page.create_pufu_from_a_task')
           : t('ui.public_projects.question_or_insight_details')
       }
@@ -103,16 +106,16 @@ export default function QuestionPage({
       <header className="page-header">
         <div className="share-anchor">
           <h1>
-            {resolve
+            {resolving
               ? t('ui.question_page.create_pufu_from_a_task')
               : t('ui.public_projects.question_or_insight_details')}
           </h1>
           <p>
-            {resolve
+            {resolving
               ? t('ui.question_page.describe_what_you_want_to_achieve_as_a_task')
               : t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}
           </p>
-          {!resolve && question?.project_id && (
+          {!resolving && !isReflection && question?.project_id && (
             <ShareLink
               key={question.project_id}
               source={{ projectId: question.project_id }}
@@ -135,32 +138,32 @@ export default function QuestionPage({
         )
       ) : (
         <>
-          {!resolve && (
+          {!resolving && (
             <div
               className="detail-tabs question-detail-tabs"
               role="tablist"
               aria-label={t('ui.public_projects.question_or_insight_details')}
               onKeyDown={(event) => {
-                const index = detailTabs().findIndex(([key]) => key === tab);
+                const index = tabs.findIndex(([key]) => key === tab);
                 const next =
                   event.key === 'ArrowRight'
-                    ? (index + 1) % detailTabs().length
+                    ? (index + 1) % tabs.length
                     : event.key === 'ArrowLeft'
-                      ? (index + detailTabs().length - 1) % detailTabs().length
+                      ? (index + tabs.length - 1) % tabs.length
                       : event.key === 'Home'
                         ? 0
                         : event.key === 'End'
-                          ? detailTabs().length - 1
+                          ? tabs.length - 1
                           : -1;
                 if (next < 0) return;
                 event.preventDefault();
-                setTab(detailTabs()[next][0]);
+                setTab(tabs[next][0]);
                 const buttons =
                   event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]');
                 buttons[next]?.focus();
               }}
             >
-              {detailTabs().map(([key, label]) => (
+              {tabs.map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -178,11 +181,11 @@ export default function QuestionPage({
             </div>
           )}
           <div
-            role={resolve ? undefined : 'tabpanel'}
+            role={resolving ? undefined : 'tabpanel'}
             id={`${tabsId}-panel-body`}
-            aria-labelledby={resolve ? undefined : `${tabsId}-tab-body`}
-            tabIndex={resolve ? undefined : 0}
-            hidden={!resolve && tab !== 'body'}
+            aria-labelledby={resolving ? undefined : `${tabsId}-tab-body`}
+            tabIndex={resolving ? undefined : 0}
+            hidden={!resolving && tab !== 'body'}
           >
             <article className="question-detail-card">
               <div className="question-detail-meta">
@@ -269,7 +272,7 @@ export default function QuestionPage({
               </div>
             </article>
           </div>
-          {resolve ? (
+          {resolving ? (
             <PufuForm
               projects={projects}
               projectId={question.project_id}
@@ -289,9 +292,11 @@ export default function QuestionPage({
                 <div className="section-head pufu-list-heading">
                   <div>
                     <h2>{t('ui.public_projects.pufu_for_this_question_or_insight')}</h2>
-                    <p>
-                      {t('ui.question_page.create_ideas_for_each_task_and_develop_them_through')}
-                    </p>
+                    {!isReflection && (
+                      <p>
+                        {t('ui.question_page.create_ideas_for_each_task_and_develop_them_through')}
+                      </p>
+                    )}
                   </div>
                   <span className="result-count">{t('count.items', { count: pufus.length })}</span>
                 </div>
@@ -319,29 +324,35 @@ export default function QuestionPage({
                 ) : (
                   <div className="pufu-empty">
                     <p>{t('ui.public_projects.no_pufu_for_this_question_or_insight_yet')}</p>
-                    <p>{t('ui.question_page.create_actionable_ideas_from_a_task_you_want_to')}</p>
+                    {!isReflection && (
+                      <p>{t('ui.question_page.create_actionable_ideas_from_a_task_you_want_to')}</p>
+                    )}
                   </div>
                 )}
-                <div className="question-resolve-action">
-                  <button
-                    className="button primary"
-                    onClick={onResolve}
-                    disabled={deleting || question.status !== 'ready' || !question.text}
-                  >
-                    {t('ui.question_page.explore_this_question_or_insight')}
-                    <ArrowRight size={18} aria-hidden="true" />
-                  </button>
+                {!isReflection && (
+                  <div className="question-resolve-action">
+                    <button
+                      className="button primary"
+                      onClick={onResolve}
+                      disabled={deleting || question.status !== 'ready' || !question.text}
+                    >
+                      {t('ui.question_page.explore_this_question_or_insight')}
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              {!isReflection && (
+                <div
+                  role="tabpanel"
+                  id={`${tabsId}-panel-comments`}
+                  aria-labelledby={`${tabsId}-tab-comments`}
+                  tabIndex={0}
+                  hidden={tab !== 'comments'}
+                >
+                  <Comments targetType="question" targetId={id} />
                 </div>
-              </div>
-              <div
-                role="tabpanel"
-                id={`${tabsId}-panel-comments`}
-                aria-labelledby={`${tabsId}-tab-comments`}
-                tabIndex={0}
-                hidden={tab !== 'comments'}
-              >
-                <Comments targetType="question" targetId={id} />
-              </div>
+              )}
               <div
                 role="tabpanel"
                 id={`${tabsId}-panel-settings`}
@@ -370,8 +381,16 @@ export default function QuestionPage({
                 />
               </div>
               <DeleteAction
-                label={t('ui.question_page.delete_question_or_insight')}
-                title={t('ui.question_page.delete_this_question_or_insight')}
+                label={t(
+                  isReflection
+                    ? 'ui.question_page.remove_from_list'
+                    : 'ui.question_page.delete_question_or_insight',
+                )}
+                title={t(
+                  isReflection
+                    ? 'ui.question_page.remove_question_from_list'
+                    : 'ui.question_page.delete_this_question_or_insight',
+                )}
                 disabled={deleting || favoriteBusy || saving}
                 onDelete={async () => {
                   setDeleting(true);
@@ -393,9 +412,11 @@ export default function QuestionPage({
                   {t('ui.question_page.project')}
                   {question.project_name}
                 </p>
-                <p>
-                  {t('ui.question_page.delete_this_question_or_insight_and_its_comments_related')}
-                </p>
+                {!isReflection && (
+                  <p>
+                    {t('ui.question_page.delete_this_question_or_insight_and_its_comments_related')}
+                  </p>
+                )}
               </DeleteAction>
             </>
           )}
