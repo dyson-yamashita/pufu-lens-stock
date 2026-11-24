@@ -19,24 +19,9 @@ env:
   CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
 
 jobs:
-  validate:
-    uses: ./.github/workflows/validate.yml
-
-  check:
-    name: Check
-    needs: validate
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Require all validation jobs to pass
-        env:
-          VALIDATION_RESULT: ${{ needs.validate.result }}
-        run: test "$VALIDATION_RESULT" = success
-
+  # The main ruleset requires the PR CI Check before merge.
   deploy:
     name: Deploy production
-    needs: check
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
