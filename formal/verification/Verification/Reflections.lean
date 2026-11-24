@@ -96,7 +96,7 @@ structure Schedule where
   deriving DecidableEq, Repr
 
 def schedule (s : Schedule) (cutoff : Nat) : Schedule :=
-  if s.autoEnabled && s.onboarded && decide (s.latestEnd < cutoff) && !s.unanswered && !s.generating &&
+  if s.autoEnabled && s.onboarded && decide (s.latestEnd < cutoff) && !s.generating &&
       (decide (3 ≤ s.eligibleStocks)) && s.changedMaterials then
     { s with latestEnd := cutoff, generating := true }
   else s
@@ -109,9 +109,13 @@ theorem disabled_blocks_schedule (s : Schedule) (cutoff : Nat) (off : s.autoEnab
     schedule s cutoff = s := by
   simp [schedule, off]
 
-theorem unanswered_blocks_schedule (s : Schedule) (cutoff : Nat) (unanswered : s.unanswered = true) :
-    schedule s cutoff = s := by
-  simp [schedule, unanswered]
+theorem schedules_with_unanswered (s : Schedule) (cutoff : Nat)
+    (enabled : s.autoEnabled = true) (onboarded : s.onboarded = true)
+    (nextPeriod : s.latestEnd < cutoff) (idle : s.generating = false)
+    (enough : 3 ≤ s.eligibleStocks) (changed : s.changedMaterials = true) :
+    schedule { s with unanswered := true } cutoff =
+      { s with unanswered := true, latestEnd := cutoff, generating := true } := by
+  simp [schedule, enabled, onboarded, nextPeriod, idle, enough, changed]
 
 theorem fewer_than_three_cannot_schedule (s : Schedule) (cutoff : Nat)
     (sparse : s.eligibleStocks < 3) : schedule s cutoff = s := by
@@ -178,7 +182,7 @@ def generated : Entry := ⟨1, .ready, some 10, [20], [30], none, false⟩
 
 theorem success_reachable :
     configurePeriod web (some 1) 1 .weekly .monthly = .monthly ∧
-    (schedule ⟨true, true, 7, false, false, 3, true⟩ 14).latestEnd = 14 ∧
+    (schedule ⟨true, true, 7, true, false, 3, true⟩ 14).latestEnd = 14 ∧
     mayStartAutomatic true 14 14 = true ∧
     commit (some 1) 1 1 true (some ⟨10, [20], [30]⟩) true true (some initial) = some generated ∧
     regenerate web (some 1) 1 1 false false true ⟨generated, 0, 0⟩ =

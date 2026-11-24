@@ -89,7 +89,7 @@ P2の追加候補も次のIDで最小モデルを追加した。
 - **B14 / P2 — 添付画像/PDF・AI出力の取込み:** 所有者、入力サイズ・形式・状態、ストレージ保存を確定する条件を先にモデル化する。画像/PDFパーサーやLLMの内容全体の正しさを小さなモデルで証明したとは書かない。[stock-images](../server/features/stocks/stock-images.ts)、[PDF](../server/features/stocks/pdf/pdf.ts)、[stock-imagesテスト](../tests/stock-images.test.ts)。
 - **B15 / P1 — テキストストックの本文編集**。本人のWebセッション、現在の記事参照と世代、テキスト種別を確認し、拒否や同文再送では本文・関連・世代・ジョブを維持する。共有中は編集したストックだけを付け替え、公開先の別コピーを保持する。本文編集は関連メモリの旧世代を失効させる。要約の世代確定はB08で検証する。[仕様と実装の対応](../formal/verification/specs/text-stock.md)、[本文テスト](../tests/text-stocks.test.ts)。
 
-- **B16 / P1 — 期間の振り返り**。本人のWebセッション、周期設定の所有者、再生成の世代と利用枠、自動追加の締めと未回答の扱いを確認する。生成結果と回答は現在の世代と所属を照合して確定する。プロジェクト削除後に遅れた生成結果を確定しない。[モデルと実装の対応](../formal/verification/specs/reflections.md) [照合テスト](../tests/reflections.test.ts)
+- **B16 / P1 — 期間の振り返り**。本人のWebセッション、周期設定の所有者、再生成の世代と利用枠、自動追加の締めと未回答のままの追加を確認する。生成結果と回答は現在の世代と所属を照合して確定する。プロジェクト削除後に遅れた生成結果を確定しない。[モデルと実装の対応](../formal/verification/specs/reflections.md) [照合テスト](../tests/reflections.test.ts)
 
 ## 今回の実施範囲と今後の拡張
 
