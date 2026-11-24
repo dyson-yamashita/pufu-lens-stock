@@ -3,8 +3,21 @@ import { ArticleWorkflow, MemoryWorkflow } from '../server/infrastructure/jobs/w
 import type { Job } from '../server/env';
 import type { Stock } from '../shared/domain';
 import { createApp } from '../server/api/app';
-import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
+import { applyMigration, mockEvent, mockStep, pauseOperation, testApp } from './helpers';
 import { legacyQuestionStatements } from './legacy-questions-fixture';
+import { articleSummaryPaths } from './models/article-summary';
+
+const summaryCases = articleSummaryPaths.map(({ steps }) => {
+  const operations = steps.slice(1);
+  return { name: operations.map(({ event }) => event.type).join(' → '), operations };
+});
+
+it('B08 MBTは新旧どちらの完了順でも新しいジョブの再配送まで通す', () => {
+  expect(summaryCases.map(({ name }) => name).sort()).toEqual([
+    'editText → completeCurrent → completeOriginal → redeliverCurrent',
+    'editText → completeOriginal → completeCurrent → redeliverCurrent',
+  ]);
+});
 
 describe('URLとテキストのストック', () => {
   let app: Awaited<ReturnType<typeof testApp>>;
@@ -221,31 +234,119 @@ describe('URLとテキストのストック', () => {
     expect(await (await save()).json()).toMatchObject({ id, duplicate: true });
   });
 
-  it('B08 編集と競合した旧要約は本文・メモリ世代・問いの処理を確定しない', async () => {
-    const { id } = (await (await save()).json()) as { id: string };
+  it.each(summaryCases)('B08 MBT $name', async ({ operations }) => {
+    const saved = await save();
+    expect(saved.status).toBe(202);
+    const { id } = (await saved.json()) as { id: string };
     const { version } = await content(id);
     const { article_id: articleId } = (await detail(id)).stock;
+    // 旧データの待機中の問いを残し、新しい要約だけが問いを予約できる状態にする。
+    await app.env.DB.batch(legacyQuestionStatements(app.env, id));
     const revised = '要約の確定前に編集した本文';
-    const revision = () =>
-      app.env.DB.prepare("SELECT memory_revision FROM projects WHERE id='alice-project'").first(
-        'memory_revision',
-      );
-    const before = Number(await revision());
-    await run(
+    const memoryRevisions = async () =>
+      (
+        await app.env.DB.batch<{ memory_revision: number }>([
+          app.env.DB.prepare("SELECT memory_revision FROM projects WHERE id='alice-project'"),
+          app.env.DB.prepare("SELECT memory_revision FROM users WHERE id='alice'"),
+        ])
+      ).map(({ results }) => results[0].memory_revision);
+    const [projectRevision, userRevision] = await memoryRevisions();
+    const followUpJobs = async () =>
+      (
+        await app.env.DB.prepare(
+          "SELECT kind,target_id,revision FROM processing_jobs WHERE kind IN ('project_memory','question','user_memory')",
+        ).all<Pick<Job, 'kind' | 'target_id' | 'revision'>>()
+      ).results;
+    const previousJobs = await followUpJobs();
+    expect(previousJobs.some(({ kind }) => kind === 'question')).toBe(false);
+    const commit = pauseOperation<void>('旧要約のcommit-summary');
+    const original = run(
       'article',
       articleId,
       mockStep(undefined, async (name) => {
-        if (name === 'commit-summary') expect((await edit(id, version, revised)).status).toBe(202);
+        if (name === 'commit-summary') await commit.pause();
       }),
     );
-    expect((await detail(id)).stock).toMatchObject({ status: 'queued', summary: null });
-    expect(await revision()).toBe(before + 1);
-    expect(
-      await app.env.DB.prepare("SELECT id FROM processing_jobs WHERE kind='question'").first(),
-    ).toBeNull();
-    await run('article', articleId);
-    expect((await detail(id)).stock.summary?.overview).toBe(revised);
-    expect(await revision()).toBe(before + 2);
+    let currentJobId: string | null = null;
+    const runCurrent = async () => {
+      expect(currentJobId).not.toBeNull();
+      await new ArticleWorkflow(app.ctx, app.env).run(mockEvent(currentJobId!), mockStep());
+    };
+    const execute = {
+      editText: async () => {
+        expect((await edit(id, version, revised)).status).toBe(202);
+        currentJobId = await app.env.DB.prepare(
+          "SELECT id FROM processing_jobs WHERE kind='article' AND target_id=? AND revision=2",
+        )
+          .bind(articleId)
+          .first<string>('id');
+        expect(currentJobId).toEqual(expect.any(String));
+      },
+      completeOriginal: async () => {
+        commit.resume();
+        await original;
+      },
+      completeCurrent: runCurrent,
+      redeliverCurrent: runCurrent,
+    };
+    try {
+      await commit.waitForPause(original);
+      for (const { event, state } of operations) {
+        await execute[event.type]();
+        const ready = state.hasTag('summaryReady');
+        const revisionIncrement = ready ? 2 : 1;
+        const article = await app.env.DB.prepare(
+          'SELECT generation,content_key FROM articles WHERE id=?',
+        )
+          .bind(articleId)
+          .first<{ generation: number; content_key: string | null }>();
+        expect(article).toMatchObject({ generation: 2 });
+        expect((await content(id)).content).toBe(revised);
+        expect((await detail(id)).stock).toMatchObject({
+          article_id: articleId,
+          status: ready ? 'ready' : 'queued',
+          summary: ready ? { overview: revised } : null,
+        });
+        if (ready) {
+          expect(article?.content_key).toEqual(expect.any(String));
+          const stored = await app.env.CONTENT.get(article!.content_key!);
+          expect(await stored?.text()).toBe(revised);
+        } else expect(article?.content_key).toBeNull();
+        expect(await memoryRevisions()).toEqual([
+          projectRevision + revisionIncrement,
+          userRevision + revisionIncrement,
+        ]);
+        const expectedJobs = [
+          ...previousJobs,
+          ...(ready
+            ? [
+                {
+                  kind: 'project_memory',
+                  target_id: 'alice-project',
+                  revision: projectRevision + 2,
+                },
+                { kind: 'question', target_id: id, revision: 2 },
+                { kind: 'user_memory', target_id: 'alice', revision: userRevision + 2 },
+              ]
+            : []),
+        ];
+        const jobs = await followUpJobs();
+        expect(jobs, event.type).toHaveLength(expectedJobs.length);
+        expect(jobs, event.type).toEqual(expect.arrayContaining(expectedJobs));
+        const articleJobs = await app.env.DB.prepare(
+          "SELECT id,revision,status FROM processing_jobs WHERE kind='article' AND target_id=? ORDER BY revision",
+        )
+          .bind(articleId)
+          .all<Pick<Job, 'id' | 'revision' | 'status'>>();
+        expect(articleJobs.results, event.type).toMatchObject([
+          { revision: 1, status: state.hasTag('originalFinished') ? 'done' : 'running' },
+          { id: currentJobId, revision: 2, status: ready ? 'done' : 'dispatched' },
+        ]);
+      }
+    } finally {
+      commit.resume();
+      await Promise.allSettled([original]);
+    }
   });
 
   it('B08 本文変更前に計算したメモリを編集中に確定しない', async () => {

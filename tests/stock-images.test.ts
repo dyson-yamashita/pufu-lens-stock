@@ -3,9 +3,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createApp } from '../server/api/app';
 import { cleanupStockImages } from '../server/features/stocks/stock-images';
 import { stockImageMaxBytes, type StockImage } from '../shared/stock-images';
-import { testApp } from './helpers';
+import { pauseOperation, testApp } from './helpers';
 import worker from '../server/index';
 import { mcpToken } from './mcp-helpers';
+import { stockImageUploadPaths } from './models/stock-image-upload';
 import type { Principal } from '../server/env';
 import { searchBindings } from './search-helpers';
 import { syncSearchIndex } from '../server/infrastructure/ai/search-index';
@@ -43,7 +44,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
   await app.dispose();
 });
-const upload = (
+const upload = async (
   bytes = png,
   type = 'image/png',
   headers = {},
@@ -336,22 +337,126 @@ it('通信再試行は画像を重複させず、同じIDで異なる画像の�
   expect(await objects()).toHaveLength(1);
 });
 
-it('親削除中に同じリクエストIDを再利用しても、古い保存処理は新しい画像を変更しない', async () => {
-  const requestId = crypto.randomUUID();
-  const headers = { 'Idempotency-Key': requestId };
-  vi.mocked(app.env.CONTENT.put).mockImplementationOnce(
-    async (...args: Parameters<typeof originalPut>) => {
-      await app.request('/api/v1/projects/alice-project', { method: 'DELETE' });
-      expect((await upload(png, 'image/png', headers, '/api/v1/stocks/other/images')).status).toBe(
-        201,
-      );
-      return originalPut(...args);
-    },
+const imageCases = stockImageUploadPaths.map(({ steps }) => {
+  const operations = steps.slice(1);
+  return { name: operations.map(({ event }) => event.type).join(' → '), operations };
+});
+
+it('B14 MBTはストック・プロジェクトの削除ごとに両方の完了順と再送・掃除を通す', () => {
+  expect(imageCases.map(({ name }) => name).sort()).toEqual(
+    ['deleteProject', 'deleteStock'].flatMap((deletion) =>
+      ['completeOriginal → completeReplacement', 'completeReplacement → completeOriginal'].map(
+        (order) =>
+          `${deletion} → beginReplacement → replayReplacement → cleanup → ${order} → cleanup → replayReplacement`,
+      ),
+    ),
   );
-  expect((await upload(png, 'image/png', headers)).status).toBe(409);
-  await app.request('/api/v1/me');
-  expect((await app.request(`/api/v1/stocks/other/images/${requestId}`)).status).toBe(200);
-  expect(await objects()).toHaveLength(1);
+});
+
+it.each(imageCases)('B14 MBT $name', async ({ operations }) => {
+  const id = crypto.randomUUID();
+  const replacementBase = '/api/v1/stocks/other/images';
+  const replacementBytes = Uint8Array.from(
+    readFileSync(new URL('./fixtures/detail-image.png', import.meta.url)),
+  );
+  const uploadReplacement = () =>
+    upload(
+      replacementBytes,
+      'image/png',
+      { 'Idempotency-Key': id, 'X-File-Name': 'replacement.png' },
+      replacementBase,
+    );
+  const originalPutGate = pauseOperation<string>('旧画像のR2 PUT前');
+  const replacementPutGate = pauseOperation<string>('再添付画像のR2 PUT後');
+  const put = vi.mocked(app.env.CONTENT.put).mockImplementationOnce(async (...args) => {
+    await originalPutGate.pause(args[0]);
+    return originalPut(...args);
+  });
+  const original = upload(png, 'image/png', { 'Idempotency-Key': id });
+  let replacement: Promise<Response> | undefined;
+  let replacementKey: string | undefined;
+  let replacementImage: StockImage | undefined;
+  const deleteParent = async (path: string) => {
+    expect((await app.request(path, { method: 'DELETE' })).status).toBe(200);
+    expect((await app.request(`${base}/${id}`)).status).toBe(404);
+  };
+  const execute = {
+    deleteStock: () => deleteParent('/api/v1/stocks/stock'),
+    deleteProject: () => deleteParent('/api/v1/projects/alice-project'),
+    beginReplacement: async () => {
+      put.mockImplementationOnce(async (...args) => {
+        const stored = await originalPut(...args);
+        await replacementPutGate.pause(args[0]);
+        return stored;
+      });
+      replacement = uploadReplacement();
+      replacementKey = await replacementPutGate.waitForPause(replacement);
+    },
+    completeOriginal: async () => {
+      originalPutGate.resume();
+      expect((await original).status).toBe(409);
+    },
+    completeReplacement: async () => {
+      replacementPutGate.resume();
+      const response = await replacement!;
+      expect(response.status).toBe(201);
+      replacementImage = ((await response.json()) as { image: StockImage }).image;
+    },
+    replayReplacement: async (ready: boolean) => {
+      const response = await uploadReplacement();
+      expect(response.status).toBe(ready ? 200 : 409);
+      if (ready) expect(await response.json()).toEqual({ image: replacementImage });
+    },
+    cleanup: () => cleanupStockImages(app.env),
+  };
+  try {
+    const originalKey = await originalPutGate.waitForPause(original);
+    expect(
+      await app.env.DB.prepare('SELECT id,stock_id,content_key,status FROM stock_images').first(),
+    ).toEqual({ id, stock_id: 'stock', content_key: originalKey, status: 'pending' });
+    for (const { event, state } of operations) {
+      const ready = state.hasTag('replacementReady');
+      const pending = state.hasTag('replacementPending');
+      const cleanupQueued = state.hasTag('originalCleanupQueued');
+      await execute[event.type](ready);
+      // testApp.requestは旧画像の失敗時に登録されたwaitUntilの掃除も待つ。
+      const image = await app.request(`${replacementBase}/${id}`);
+      expect(image.status, event.type).toBe(ready ? 200 : 404);
+      if (ready) expect(new Uint8Array(await image.arrayBuffer())).toEqual(replacementBytes);
+      if (replacementKey) expect(replacementKey).not.toBe(originalKey);
+      const [images, cleanup, writes] = await app.env.DB.batch([
+        app.env.DB.prepare('SELECT id,stock_id,content_key,status FROM stock_images'),
+        app.env.DB.prepare('SELECT content_key FROM stock_image_cleanup'),
+        app.env.DB.prepare('SELECT content_key FROM stock_image_writes ORDER BY content_key'),
+      ]);
+      expect(images.results, event.type).toEqual(
+        pending || ready
+          ? [
+              {
+                id,
+                stock_id: 'other',
+                content_key: replacementKey,
+                status: ready ? 'ready' : 'pending',
+              },
+            ]
+          : [],
+      );
+      expect(cleanup.results).toEqual(cleanupQueued ? [{ content_key: originalKey }] : []);
+      expect(writes.results).toEqual(
+        [...(cleanupQueued ? [originalKey] : []), ...(pending ? [replacementKey!] : [])]
+          .sort()
+          .map((content_key) => ({ content_key })),
+      );
+      expect((await objects()).map(({ key }) => key)).toEqual(
+        pending || ready ? [replacementKey] : [],
+      );
+      expect(put).toHaveBeenCalledTimes(pending || ready ? 2 : 1);
+    }
+  } finally {
+    originalPutGate.resume();
+    replacementPutGate.resume();
+    await Promise.allSettled([original, replacement]);
+  }
 });
 
 it('MCPの保存中にストックが許可範囲外へ移動した場合は添付を確定しない', async () => {
