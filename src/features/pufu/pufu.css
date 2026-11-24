@@ -319,12 +319,12 @@ article.pufu-list-item {
   cursor: pointer;
   padding: 12px 0;
 }
-.pufu-toolbar > div {
+.pufu-toolbar-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .pufu-phase-bar {
   display: flex;

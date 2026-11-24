@@ -311,12 +311,15 @@
       "src/app/AppPageHeader.tsx",
       "src/features/stocks/StockDetail.tsx",
       "src/features/questions/QuestionPage.tsx",
-      "src/features/pufu/PufuEditor.tsx"
+      "src/features/questions/questions.css",
+      "src/features/pufu/PufuEditor.tsx",
+      "src/features/pufu/pufu.css"
     ],
     "aspects": [
       "所有者・匿名閲覧者がプロジェクト、ストック、問い、プ譜の公開リンクを取得。非公開プロジェクトでは公開設定の案内を表示し、非公開化後は送信済みのURLも404になる",
       "公開・所有者画面でプ譜の局面を切り替えると共有URLも切り替わり、匿名でそのURLを開くと指定局面が表示される。公開条件を満たさないプ譜は共有できない",
-      "コピーと対応端末の共有メニューに同じURLを渡し、コピーできない環境ではURLを選択する。desktopとphoneで横はみ出しとTabによる共有欄の終了を確認"
+      "desktopとphoneで一覧・詳細の共有ボタンの左揃え、URL欄の右隣にあるコピーアイコンとラベル、横はみ出しがないこと、Tabによる共有欄の終了を確認",
+      "コピーと対応端末の共有メニューに同じURLを渡し、コピーできない環境ではURLを選択する"
     ]
   },
   {

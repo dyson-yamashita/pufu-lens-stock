@@ -101,12 +101,12 @@ export function PublicQuestionDetail({
         <ArrowLeft size={16} aria-hidden="true" />
         {t('ui.public_projects.back_to_questions_insights')}
       </a>
-      <header className="page-header share-anchor">
-        <div>
+      <header className="page-header">
+        <div className="share-anchor">
           <h2 className="page-title">{t('ui.public_projects.question_or_insight_details')}</h2>
           <p>{t('ui.public_projects.reflect_on_a_question_or_insight_and_take_the')}</p>
+          <ShareLink source={{ publicId }} target={{ kind: 'question', id: data.question.id }} />
         </div>
-        <ShareLink source={{ publicId }} target={{ kind: 'question', id: data.question.id }} />
       </header>
       <article className="question-detail-card">
         <div className="question-detail-meta">

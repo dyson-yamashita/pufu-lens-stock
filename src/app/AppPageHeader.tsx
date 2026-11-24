@@ -65,8 +65,8 @@ export function AppPageHeader({
       : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
   return (
     <>
-      <header className="page-header share-anchor">
-        <div>
+      <header className="page-header">
+        <div className="share-anchor">
           <h1
             className="section-heading"
             aria-label={
@@ -118,8 +118,6 @@ export function AppPageHeader({
                             t('ui.app.keep_interesting_articles_and_new_ideas_together')}
             </p>
           )}
-        </div>
-        <div className="header-actions">
           {selected && ['stocks', 'questions', 'pufus'].includes(route.view) && (
             <ShareLink
               key={selected.id}
@@ -127,6 +125,8 @@ export function AppPageHeader({
               target={{ kind: 'project' }}
             />
           )}
+        </div>
+        <div className="header-actions">
           {libraryView && (
             <div className="header-project-select">
               <label htmlFor="project-scope">{t('ui.app.projects')}</label>
