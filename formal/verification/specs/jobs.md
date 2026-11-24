@@ -26,6 +26,16 @@
 
 [jobs.json](../mutations/jobs.json) はrevision、owner、lease時刻、dispatcher生存user、記事世代、待機状態の条件を各1箇所だけ除去する。指定した拒否定理の証明失敗を確認し、構文・依存・型のエラーを検出成功に数えない。
 
+## 操作順序のMBT
+
+旧ジョブが要約確定を待つ間に本文を編集し、旧・新のジョブをどちらから完了するかで2経路を生成する。各経路の最後に、完了済みの新ジョブを同じIDで再配送する。 [要約のXStateモデル](../../../tests/models/article-summary.ts)
+
+編集APIと `ArticleWorkflow` を呼び、旧ジョブを `commit-summary` 直前で止めて順序を制御する。旧データの待機中の問いを用意し、新しい要約が確定した時点でのみ、その世代の問いとメモリのジョブが1回ずつ追加されることを確認する。各操作後に本文、要約、記事の世代、ユーザー・プロジェクトのメモリrevision、ジョブの登録と状態、記事行が参照するR2本文を照合する。対象はテキストストック1件の連続2世代と、完了済みWorkflowの再配送である。 [テキストストックの照合テスト](../../../tests/text-stocks.test.ts)
+
+```sh
+pnpm run test tests/text-stocks.test.ts -t 'B08 MBT'
+```
+
 ## 前提と限界
 
 - D1 batchのSQL順序/原子性、`changes()`、外部キー、固定したDBスキーマを前提とする。owner IDの再利用やprojectの所有者付替えは現行経路にない。`belongsToUser` はproject事前照会と保存SQLのuser対応を表し、DB中の既存memoryがownerに対応する到達可能な状態だけを扱う。

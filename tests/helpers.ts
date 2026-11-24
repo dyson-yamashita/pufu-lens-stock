@@ -241,6 +241,32 @@ export async function testApp(
     },
   };
 }
+export function pauseOperation<T>(label: string) {
+  let reached!: (value: T) => void;
+  const paused = new Promise<T>((resolve) => {
+    reached = resolve;
+  });
+  let resume!: () => void;
+  const resumed = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  return {
+    pause(value: T) {
+      reached(value);
+      return resumed;
+    },
+    waitForPause(running: Promise<unknown>) {
+      return Promise.race([
+        paused,
+        running.then(() => {
+          throw new Error(`${label}に到達する前に処理が終了しました。`);
+        }),
+      ]);
+    },
+    resume,
+  };
+}
+
 export const mockStep = (maxResultBytes?: number, beforeStep?: (name: string) => Promise<void>) => {
   const names = new Set<string>();
   return {

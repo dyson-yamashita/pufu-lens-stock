@@ -4,7 +4,7 @@
 
 - [stockImagesApp](../../../server/features/stocks/stock-images.ts) はAPI認証後にショートカットtokenを拒否し、stockのownerと許可projectを確認する。ファイル名、5MiB以内、[imageType](../../../server/features/stocks/image-type.ts)の検出形式とContent-Typeの一致を検査する。
 - 新規IDの条件付きINSERTはpendingも含む件数が5未満のときだけ予約する。R2 PUT後のUPDATEは、同じid/content_key、現時点のowner/projectを再照会してreadyを確定する。失敗時はそのkeyの行だけを削除し、外部オブジェクトの掃除を予約する。id再使用で別keyの新しい行を消さない。
-- GET/一覧はreadyのみ。pendingの再送は409、同じ画像のready再送は200、異なる内容なら409。再送規則のLeanモデル化は今回含めず、既存テストで確認する。
+- GET/一覧はreadyのみ。pendingの再送は409、同じ画像のready再送は200、異なる内容なら409。再送規則はMBTと実装の照合テストで確認する。
 - [PDFクライアント](../../../server/features/stocks/pdf/pdf-client.ts) は入力Content-Lengthの10MiB上限、サービス有無、20秒中断、応答1MiB上限、title文字列/300文字以下、text文字列/200〜120000文字を確認してから結果を返す。422かつerrorが文字列なら解析失敗として返す。現行クライアントは、422でもerrorが文字列でなくtitle/textが正常なら採用する（今回変更しない）。専用[Worker](../../../server/features/stocks/pdf/pdf-worker.ts)も入力の実バイト数を制限し、解析を重ねず、DB/認証情報を持たない。
 - [parseAiJson](../../../server/infrastructure/ai/ai.ts) はchat envelope/終了理由、JSON decode、呼出元のZodスキーマを通した値だけを返す。finish_reasonはstop・null・省略を許可する。reasoning_contentは回答として採用しない。
 
@@ -18,13 +18,23 @@
 | oversized_denied / signature_mismatch_denied                                                                  | limitedBytes / imageType + Content-Type                   | stock-imagesの「形式偽装・SVG・空・過大入力…」                      |
 | pending_counts_towards_limit / reservation_bounded                                                            | INSERTのCOUNT条件                                         | stock-imagesの「並行アップロードでも上限…」                         |
 | reservation_keeps_ready                                                                                       | pending INSERTとready条件のGET                            | boundary-intake-verificationの「R2保存中のpending画像…」            |
-| finalize_deleted_parent_denied / finalize_scope_rechecked / finalize_owner_rechecked / finalize_key_rechecked | PUT後のowner/project/key付きUPDATE、失敗時のkey付きDELETE | stock-imagesの「親削除…同じリクエストID…」「MCPの保存中に…移動…」   |
+| finalize_deleted_parent_denied / finalize_scope_rechecked / finalize_owner_rechecked / finalize_key_rechecked | PUT後のowner/project/key付きUPDATE、失敗時のkey付きDELETE | stock-imagesのB14 MBTと「MCPの保存中に…移動…」                      |
 | denied_finalize_keeps_ready / successful_finalize                                                             | UPDATE成功のready化、失敗のcleanup予約                    | 上記と新規pending観測テスト                                         |
 | pdf_error_status_denied / pdf_422_error_denied / pdf_short_text_denied / pdf_large_response_denied            | PDFクライアントのHTTP/error条件と出力境界                 | 新規「PDFサービス出力の文字数境界…」、実Workerのpdf-worker          |
 | invalid_ai_schema_denied / incomplete_chat_denied                                                             | parseAiJsonのZod、終了理由の検査                          | ai-outputの「不完全または不正なchat応答…」「AIが指定を守らず上限…」 |
 | image_success_reachable / image_rejection_reachable / output_success_reachable / pdf_422_shape_reachable      | 正常・拒否状態の具体例                                    | 新規テストのready確定とpending再送409、既存AI正常応答               |
 
 [変異](../mutations/intake.json)はowner・検出形式・最終project・object key・PDF本文下限・AIスキーマを外し、それぞれ対応する定理が失敗することを確認する。
+
+## 操作順序のMBT
+
+旧画像の保存中にストックまたはプロジェクトを削除し、残った別のストックへ同じリクエストIDで異なる画像を添付する。旧・新どちらの確定処理が先に終わる場合も通る4経路を生成し、再添付の保存中と確定後に再送・掃除を行う。 [添付のXStateモデル](../../../tests/models/stock-image-upload.ts)
+
+HTTP入口を使い、旧画像のR2 PUT前と再添付画像のPUT後で順序を制御する。保存中の再送は409で、GETはreadyになるまで404を返す。旧画像の添付は409を返し、書込みを終えた旧キーのR2オブジェクトだけが掃除される。再添付画像のD1行とR2データが保たれ、確定後の再送が同じ応答を返すことを照合する。R2はローカルのMiniflareで実行する。 [添付画像の照合テスト](../../../tests/stock-images.test.ts)
+
+```sh
+pnpm run test tests/stock-images.test.ts -t 'B14 MBT'
+```
 
 ## 前提と未検証
 
