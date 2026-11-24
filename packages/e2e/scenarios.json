@@ -303,7 +303,9 @@
     "id": "PUBLIC-002",
     "title": "公開ページとプ譜局面の共有",
     "sources": [
+      "server/features/public-projects/public-projects.ts",
       "src/features/public-projects/ShareLink.tsx",
+      "src/features/public-projects/useResource.ts",
       "src/features/public-projects/PublicProjectPage.tsx",
       "src/features/public-projects/PublicStocks.tsx",
       "src/features/public-projects/PublicQuestions.tsx",
@@ -317,7 +319,7 @@
       "src/features/pufu/pufu.css"
     ],
     "aspects": [
-      "所有者・匿名閲覧者がプロジェクト、ストック、問い、プ譜の公開リンクを取得。非公開プロジェクトでは公開設定の案内を表示し、非公開化後は送信済みのURLも404になる",
+      "所有者・匿名閲覧者がプロジェクト、ストック、問い、プ譜の公開リンクを取得。非公開プロジェクトの一覧・詳細では共有ボタンを表示しない。非公開化後に所有者の画面へ戻るとボタンと開いていた共有欄が消え、共有済みのURLは404になる",
       "公開・所有者画面でプ譜の局面を切り替えると共有URLも切り替わり、匿名でそのURLを開くと指定局面が表示される。公開条件を満たさないプ譜は共有できない",
       "desktopとphoneで一覧・詳細の共有ボタンの左揃え、URL欄の右隣にあるコピーアイコンとラベル、横はみ出しがないこと、Tabによる共有欄の終了を確認",
       "コピーと対応端末の共有メニューに同じURLを渡し、コピーできない環境ではURLを選択する"

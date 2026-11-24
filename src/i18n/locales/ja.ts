@@ -811,8 +811,6 @@ export const ja: Record<string, string> = {
   'share.question': '問い・気づきを共有',
   'share.pufu': '第{{number}}局面を共有',
   'share.public': 'ログインなしで閲覧できます。',
-  'share.private': 'このプロジェクトは非公開です。',
-  'share.settings': '公開設定を確認',
   'share.url': '公開リンク',
   'share.copy': 'リンクをコピー',
   'share.native': '別のアプリで共有',

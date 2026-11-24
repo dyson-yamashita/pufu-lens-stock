@@ -401,6 +401,13 @@ it('画面遷移の総回数を日次で確定し、各公開画面と所有者�
       items: [{ view_count: views }],
     });
   expect((await app.request(publication, { user: 'bob' })).status).toBe(404);
+  const publicationWithoutStats = `${publication}?include_view_stats=false`;
+  const state = await app.request(publicationWithoutStats);
+  expect(state.status).toBe(200);
+  expect(await state.json()).toMatchObject({
+    publication: { is_public: true, public_id: key, view_stats: null },
+  });
+  expect((await app.request(publicationWithoutStats, { user: 'bob' })).status).toBe(404);
   const privateResult = await app.request(publication, {
     method: 'PATCH',
     body: { is_public: false, public_description: '' },

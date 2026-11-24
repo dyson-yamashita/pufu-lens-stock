@@ -120,7 +120,7 @@ export function AppPageHeader({
           )}
           {selected && ['stocks', 'questions', 'pufus'].includes(route.view) && (
             <ShareLink
-              key={selected.id}
+              key={`${selected.id}/${route.view}`}
               source={{ projectId: selected.id }}
               target={{ kind: 'project' }}
             />

@@ -1,5 +1,5 @@
 import { Copy, Share2, X } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Publication } from '../../../shared/public-project';
 import { publicHref } from '../../../shared/public-route';
 import { Spinner } from '../../components/Spinner';
@@ -11,10 +11,13 @@ type ShareTarget =
   | { kind: 'stock' | 'question'; id: string }
   | { kind: 'pufu'; id: string; phase: number };
 
-type ShareLinkProps = {
+type ShareButtonProps = {
   target: ShareTarget;
-  source: { publicId: string } | { projectId: string };
   visibility?: { open: boolean; onChange: (open: boolean) => void };
+};
+
+type ShareLinkProps = ShareButtonProps & {
+  source: { publicId: string } | { projectId: string };
 };
 
 function sharePath(publicId: string, target: ShareTarget) {
@@ -24,14 +27,47 @@ function sharePath(publicId: string, target: ShareTarget) {
   return target.kind === 'pufu' ? `${detail}?phase=${target.phase}` : detail;
 }
 
-export function ShareLink({ target, source, visibility }: ShareLinkProps) {
+export function ShareLink({ source, ...buttonProps }: ShareLinkProps) {
+  return 'projectId' in source ? (
+    <OwnerShareLink {...buttonProps} projectId={source.projectId} />
+  ) : (
+    <ShareButton {...buttonProps} publicId={source.publicId} />
+  );
+}
+
+function OwnerShareLink({ projectId, ...buttonProps }: ShareButtonProps & { projectId: string }) {
+  const { data, reload } = useResource<{ publication: Publication }>(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/publication?include_view_stats=false`,
+  );
+  useEffect(() => {
+    function refreshWhenVisible() {
+      if (document.visibilityState === 'visible') reload();
+    }
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [reload]);
+  const publication = data?.publication;
+  if (!publication?.is_public || !publication.public_id) return null;
+  return <ShareButton {...buttonProps} publicId={publication.public_id} verify />;
+}
+
+function ShareButton({
+  target,
+  publicId,
+  visibility,
+  verify = false,
+}: ShareButtonProps & { publicId: string; verify?: boolean }) {
   useLanguage();
   const [localOpen, setLocalOpen] = useState(false);
   const open = visibility?.open ?? localOpen;
   const setOpen = visibility?.onChange ?? setLocalOpen;
   const panelId = useId();
   const trigger = useRef<HTMLButtonElement>(null);
-  const access = 'publicId' in source ? sharePath(source.publicId, target) : source;
+  const path = sharePath(publicId, target);
   function close() {
     setOpen(false);
     trigger.current?.focus();
@@ -81,38 +117,11 @@ export function ShareLink({ target, source, visibility }: ShareLinkProps) {
               <X size={18} aria-hidden="true" />
             </button>
           </div>
-          {typeof access === 'string' ? (
-            <ShareActions key={access} path={access} />
-          ) : (
-            <OwnerShareDetails
-              key={access.projectId}
-              projectId={access.projectId}
-              target={target}
-            />
-          )}
+          {verify ? <VerifiedShareDetails path={path} /> : <ShareActions key={path} path={path} />}
         </section>
       )}
     </div>
   );
-}
-
-function OwnerShareDetails({ projectId, target }: { projectId: string; target: ShareTarget }) {
-  const id = encodeURIComponent(projectId);
-  const { data, error, reload } = useResource<{ publication: Publication }>(
-    `/api/v1/projects/${id}/publication`,
-  );
-  if (!data) return <ShareLoading error={error} retry={reload} />;
-  if (!data.publication.is_public || !data.publication.public_id)
-    return (
-      <>
-        <p>{t('share.private')}</p>
-        <a className="text-link" href={`#settings/${id}`}>
-          {t('share.settings')}
-        </a>
-      </>
-    );
-
-  return <VerifiedShareDetails path={sharePath(data.publication.public_id, target)} />;
 }
 
 function VerifiedShareDetails({ path }: { path: string }) {
