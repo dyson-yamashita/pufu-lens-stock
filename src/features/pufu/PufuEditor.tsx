@@ -241,7 +241,11 @@ export default function PufuEditor({
         </div>
       </div>
       <div className="pufu-toolbar share-anchor">
-        <div>
+        <ShareLink
+          source={{ projectId: pufu.project_id }}
+          target={{ kind: 'pufu', id: pufu.id, phase: savedPhase.number }}
+        />
+        <div className="pufu-toolbar-actions">
           <button
             className="button secondary"
             data-feedback-action="download"
@@ -254,10 +258,6 @@ export default function PufuEditor({
             <Download size={16} aria-hidden="true" />
             {t('ui.pufu_editor.download')}
           </button>
-          <ShareLink
-            source={{ projectId: pufu.project_id }}
-            target={{ kind: 'pufu', id: pufu.id, phase: savedPhase.number }}
-          />
           {isLatest && (
             <button
               className="button secondary"
@@ -329,7 +329,7 @@ export default function PufuEditor({
             <span className="field-hint" role="status">
               {dirty ? t('ui.pufu_editor.unsaved_changes') : t('ui.pufu_editor.saved')}
             </span>
-            <div>
+            <div className="pufu-toolbar-actions">
               <button
                 className="button primary"
                 disabled={busy}

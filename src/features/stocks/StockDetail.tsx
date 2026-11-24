@@ -189,6 +189,11 @@ export function StockDetail({
         </div>
       )}
       <div className="stock-detail-links share-anchor">
+        <ShareLink
+          key={stock.project_id}
+          source={{ projectId: stock.project_id }}
+          target={{ kind: 'stock', id: stock.id }}
+        />
         {stock.source_type === 'url' && (
           <a
             className="original-link"
@@ -212,11 +217,6 @@ export function StockDetail({
               setError(applicationError((e as Error).message));
             }
           }}
-        />
-        <ShareLink
-          key={stock.project_id}
-          source={{ projectId: stock.project_id }}
-          target={{ kind: 'stock', id: stock.id }}
         />
       </div>
       <div className="detail-tabs" aria-label={t('ui.app.article_views')}>

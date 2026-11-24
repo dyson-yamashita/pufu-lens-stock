@@ -91,13 +91,13 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
               <Globe size={14} aria-hidden="true" />
               {t('ui.public_projects.public')}
             </span>
-            <div className="share-heading share-anchor">
+            <div className="share-anchor">
               <h1>{data.project.name}</h1>
+              {data.project.public_description && (
+                <p className="public-lead">{data.project.public_description}</p>
+              )}
               {!match && <ShareLink source={{ publicId }} target={{ kind: 'project' }} />}
             </div>
-            {data.project.public_description && (
-              <p className="public-lead">{data.project.public_description}</p>
-            )}
             <nav className="public-tabs" aria-label={t('ui.public_projects.public_projects')}>
               <a
                 href={publicLink('#stocks')}

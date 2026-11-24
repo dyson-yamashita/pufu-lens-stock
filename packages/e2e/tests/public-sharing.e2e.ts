@@ -12,6 +12,16 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
   const link = screen.getByLabel('公開リンク', { exact: true });
   const settings = `/projects/${fixture.projectId}/publication`;
 
+  async function expectShareAlignedLeft() {
+    const offset = await browser.evaluate(() => {
+      const button = document.querySelector('.share-link');
+      const anchor = button?.closest('.share-anchor');
+      if (!button || !anchor) return null;
+      return button.getBoundingClientRect().left - anchor.getBoundingClientRect().left;
+    });
+    expect(offset).toBe(0);
+  }
+
   await app.open(`/#project/${fixture.projectId}`);
   await share.click();
   await expect(screen.getByText('このプロジェクトは非公開です。')).toBeVisible();
@@ -67,6 +77,7 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
     await app.open(owner);
     await share.click();
     await expect(link).toHaveValue(`${fixture.url}${canonical}`);
+    await expectShareAlignedLeft();
   }
   const firstPhaseUrl = `${fixture.url}${pufuPath}?phase=1`;
   await screen.getByRole('button', '前の局面へ').click();
@@ -91,6 +102,7 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
     await expect(share).toHaveCount(1);
     await share.click();
     await expect(link).toHaveValue(`${fixture.url}${canonical}`);
+    await expectShareAlignedLeft();
     expect(
       await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -123,6 +135,20 @@ test('PUBLIC-002 公開中の項目と表示中のプ譜局面を共有する', 
   await expect(screen.getByRole('heading', '第1局面を共有')).toBeVisible();
   await expect(link).toHaveValue(firstPhaseUrl);
 
+  expect(
+    await browser.evaluate(() => {
+      const input = document.querySelector('.share-panel input');
+      const copy = document.querySelector('.share-panel button[aria-label="リンクをコピー"]');
+      if (!input || !copy) return null;
+      const field = input.getBoundingClientRect();
+      const button = copy.getBoundingClientRect();
+      return {
+        besideLink:
+          button.left >= field.right && button.top < field.bottom && button.bottom > field.top,
+        text: copy.textContent?.trim(),
+      };
+    }),
+  ).toEqual({ besideLink: true, text: '' });
   await copyLink.click();
   await expect(browser.locator('html')).toHaveAttribute('data-copied', firstPhaseUrl);
   await expect(screen.getByText('リンクをコピーしました。')).toBeVisible();
