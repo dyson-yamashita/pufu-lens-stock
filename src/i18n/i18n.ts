@@ -22,7 +22,7 @@ const resources: Record<Language, { translation: Record<string, string> }> = {
 void instance.init({
   lng: 'ja',
   fallbackLng: 'en',
-  initImmediate: false,
+  initAsync: false,
   keySeparator: false,
   resources,
   interpolation: { escapeValue: false },
