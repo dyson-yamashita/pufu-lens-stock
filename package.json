@@ -31,7 +31,7 @@
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run format:check && pnpm run build",
     "db:migrate:local": "wrangler d1 migrations apply stock-db --local",
     "db:migrate:production": "wrangler d1 migrations apply stock-db --remote --env production --config dist/pufu_lens_stock/wrangler.json",
-    "deploy:workers": "wrangler deploy --config dist/pufu_lens_pdf_parser/wrangler.json && wrangler deploy --config dist/pufu_lens_stock/wrangler.json",
+    "deploy:workers": "bash scripts/deploy-workers.sh",
     "deploy": "pnpm run build:production && pnpm run deploy:workers",
     "e2e:check": "node scripts/e2e/check.ts",
     "e2e:ci": "node scripts/e2e/run.ts --mode ci",
