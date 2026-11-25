@@ -774,7 +774,7 @@ Workers AI、Browser Run、Workflowsの利用量に応じた費用が発生し�
 
 ### GitHub Actionsによる自動デプロイ
 
-[CI](../.github/workflows/ci.yml) は、`main` 向けPRの作成・更新時に検証のみを実行します。[Cloudflare Deploy](../.github/workflows/cloudflare-deploy.yml) は、PRのマージなどで `main` が更新されたときだけ起動し、検証成功後に既存の本番環境へデプロイします。PRの更新時はデプロイ用ワークフロー自体が起動しません。元リポジトリ `dyson-yamashita/pufu-lens-stock` の `main` 更新だけがデプロイ対象です。forkのPRや別ブランチからはデプロイしません。文書だけの変更でも、main更新時はデプロイ用ワークフローの対象です。
+[CI](../.github/workflows/ci.yml) は、`main` 向けPRの作成・更新時に検証のみを実行します。[Cloudflare Deploy](../.github/workflows/cloudflare-deploy.yml) は、PRのマージなどで `main` が更新されたときだけ起動し、本番設定でビルドしてから既存の本番環境へデプロイします。PRの更新時はデプロイ用ワークフロー自体が起動しません。元リポジトリ `dyson-yamashita/pufu-lens-stock` の `main` 更新だけがデプロイ対象です。forkのPRや別ブランチからはデプロイしません。文書だけの変更でも、main更新時はデプロイ用ワークフローの対象です。
 
 初期設定として、リポジトリの **Settings → Environments → New environment** で `production` を作成し、Environment secretsに次の2つを登録してください。値をIssue・PR・チャットや設定ファイルに貼り付けないでください。
 
@@ -801,7 +801,7 @@ APIトークンは [Cloudflare公式のCI/CD手順](https://developers.cloudflar
 
 GitHubのRulesetは、PRのマージだけでは有効になりません。設定定義は [.github/main-ruleset.json](../.github/main-ruleset.json) にあります。`main` への更新にはPRを必須とし、force pushとブランチ削除を禁止します。管理者を含めてルールのバイパスを許可しません。個人で運用できるよう、他者による承認の必須件数は0件です。
 
-この定義は直接pushの禁止を対象とし、必須ステータスチェックは含みません。上記の `Check` 成功もマージ条件にする場合は、GitHubでそのチェックを追加設定してください。
+この定義を適用した後、GitHubのRulesetで `Check` を必須ステータスチェックに追加し、マージ前にブランチが最新の `main` に追従していることを要求してください。本番デプロイはこのマージ条件に依存します。
 
 管理権限のあるアカウントで、リポジトリのルートから適用します。既存の同名Rulesetがある場合は新規作成せず、そのルールを更新してください。
 
@@ -816,7 +816,7 @@ gh api repos/{owner}/{repo}/rulesets
 
 実行順は次のとおりです。
 
-1. [共通の検証ワークフロー](../.github/workflows/validate.yml) をSecretsなしで実行します。型チェック・lint・整形チェック・ビルド・依存監査のジョブと、Vitestの全テストを2分割したジョブを並列実行します。各ジョブで `pnpm install --frozen-lockfile` を行い、テストの内容・分離設定・実行対象は変えません。片方のテストが失敗しても残りの分割は実行し、すべての検証が成功した場合だけ従来の必須チェック `Check` が成功します。失敗・キャンセル・スキップは成功扱いにしません。並列化により同時に使うランナー数は増えます。ローカルの `pnpm run check` は従来どおり全検証を実行します。
+1. マージ前にPRの [CI](../.github/workflows/ci.yml) で検証し、必須チェック `Check` を通過させます。マージ後のデプロイではこの検証を繰り返しません。
 2. デプロイジョブの `pnpm install --frozen-lockfile` はSecretsを渡さず実行します。`pnpm run build:production` にだけEnvironment secretsの `APP_URL`、`D1_DATABASE_ID`、`OAUTH_KV_ID` を渡します。Cloudflareのデプロイ認証情報やGoogle OAuthのSecretはビルドに渡しません。
 3. 最後のステップだけに `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` のSecretsを渡し、未設定なら値を表示せず停止します。未適用の本番D1マイグレーションを順に適用し、成功後に `pnpm run deploy:workers` でPDF専用Worker、本体Workerの順に更新します。PDF専用Workerの配置が失敗したら本体の更新を行いません。
 
