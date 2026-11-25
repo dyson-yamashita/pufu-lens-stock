@@ -1,5 +1,6 @@
 import { initPufuWasm, renderPufuPng } from '@pufu-lens/pufu-image';
 import wasmUrl from '@resvg/resvg-wasm/index_bg.wasm?url';
+import fontUrl from '../../assets/pufu-jp.otf?url';
 import type { Language } from '../../../shared/locale';
 import type { PufuScore } from '../../../shared/pufu';
 import { pufuImageLabels } from '../../../shared/pufu-image-labels';
@@ -10,7 +11,7 @@ export async function createPufuPng(
   theme: 'light' | 'dark',
   language: Language = getLanguage(),
 ) {
-  const [response] = await Promise.all([fetch('/fonts/pufu-jp.otf'), initPufuWasm(wasmUrl)]);
+  const [response] = await Promise.all([fetch(fontUrl), initPufuWasm(wasmUrl)]);
   if (!response.ok)
     throw new Error(t('ui.pufu-download.could_not_load_the_image_font_please_try_again'));
   const font = new Uint8Array(await response.arrayBuffer());

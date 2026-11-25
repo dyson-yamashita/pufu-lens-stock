@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import fontUrl from '../src/assets/pufu-jp.otf?url';
 import { afterEach, expect, it, vi } from 'vitest';
 import { createPufuPng } from '../src/features/pufu/pufu-download';
 import { pufuScoreSchema } from '../shared/pufu';
@@ -31,5 +32,5 @@ it('日本語フォントと実際のWASMで両テーマのPNGを生成し、取
   }
   expect(images[0]).not.toEqual(images[1]);
   expect(score).toEqual(original);
-  expect(fetch).toHaveBeenLastCalledWith('/fonts/pufu-jp.otf');
+  expect(fetch).toHaveBeenLastCalledWith(fontUrl);
 });
