@@ -29,10 +29,11 @@ export const ja: Record<string, string> = {
   'footprints.backfill': '過去の足あとを生成',
   'footprints.backfill_hint':
     '保存済みのメモリ履歴を、保存した設定に従って古い順に分析します。生成には時間がかかります。',
-  'footprints.backfill_accepted': '過去の足あとの生成を受け付けました。',
+  'footprints.generating': '生成中',
+  'footprints.generation_pending': '足あとを生成しています。',
   'footprints.backfill_failed': '過去の足あとの生成を開始できませんでした。',
   'footprints.manual':
-    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、「メモリ・足あと」タブで足あとを押すと詳細が開きます。初回の要約や各変化の下にあるリンクから、関連する記録を開けます。「続く」はタイムラインの点で記録します。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。',
+    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、「メモリ・足あと」タブで足あとを押すと詳細が開きます。初回の要約や各変化の下にあるリンクから、関連する記録を開けます。「続く」はタイムラインの点で記録します。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。足あとを生成している間はタブに「生成中」と表示され、完了すると過去の足あとを再び生成できます。',
   'footprints.manual_reanalysis':
     '作成済みの足あとを作り直すときは、対象の足あとを開き、「この期間を再分析」を押します。元の分析は「元の分析を見る」で確認できます。',
   'footprints.manual_publication':
@@ -575,6 +576,11 @@ export const ja: Record<string, string> = {
   'ui.app.try_writing_about_what_you_want_to_achieve_and':
     '以下について書いてみましょう。\n\n・実現したいこと、取り組む目的\n・使える時間や予算\n・利用できる技術や道具、活動環境\n・競合する活動、気になる問題',
   'ui.app.advanced_settings': '詳細設定',
+  'ui.app.advanced_all_lists': '全体の一覧に表示',
+  'ui.app.advanced_user_memory': 'ユーザーメモリ更新',
+  'ui.app.advanced_auto_questions': '振り返りの問いを自動追加',
+  'ui.app.advanced_on': 'オン',
+  'ui.app.advanced_off': 'オフ',
   'ui.app.include_in_all_stocks_questions_insights_and_pufu_lists':
     'すべてのストック・問い・気づき・プ譜の一覧に表示する',
   'ui.app.when_off_this_project_s_stocks_questions_insights_and':

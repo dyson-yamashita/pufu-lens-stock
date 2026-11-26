@@ -304,6 +304,10 @@
   .library-tabs svg {
     display: none;
   }
+  .library-tab-memory-label {
+    flex-direction: column;
+    gap: 2px;
+  }
   .project-tabs button {
     flex: 1;
     justify-content: center;

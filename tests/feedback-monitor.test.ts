@@ -67,6 +67,15 @@ it('normalizes API keys and excludes identity and feedback so the assistant cann
   expect(feedbackRequestKey('/api/v1/feedback/manual-search', 'POST')).toBeNull();
   expect(feedbackRequestKey('/api/v1/me', 'GET')).toBeNull();
 });
+it('does not treat automatic footprint polling as a response to a click', () => {
+  for (let i = 0; i < 4; i++) {
+    click();
+    beginFeedbackRequest('/api/v1/projects/private-id/footprints?status_only=1', 'GET')('success');
+    vi.advanceTimersByTime(10);
+  }
+  vi.advanceTimersByTime(1500);
+  expect(detector.evaluate().reasons).toEqual([{ type: 'rage_click', action: 'control' }]);
+});
 it('keeps native validation on separate inputs and stops monitoring on logout cleanup', () => {
   const field = document.createElement('input');
   document.body.appendChild(field);

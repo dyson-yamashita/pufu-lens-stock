@@ -1,3 +1,4 @@
+import { readdir } from 'node:fs/promises';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
   saveMemoryWithHistory,
@@ -5,8 +6,9 @@ import {
 } from '../server/features/memory/memory-history';
 import { queueFootprintJobs } from '../server/features/memory/footprint-repository';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
+import type { Project } from '../shared/domain';
 import type { FootprintAnalysis, OwnedFootprintDetail } from '../shared/footprints';
-import { mockEvent, mockStep, testApp } from './helpers';
+import { applyMigration, mockEvent, mockStep, testApp } from './helpers';
 
 const project = 'alice-project';
 const endpoint = `/api/v1/projects/${project}/footprints`;
@@ -82,6 +84,58 @@ const workflow = () => new ArticleWorkflow({} as ExecutionContext, app.env);
 const run = (revision: number, id = `footprint-${project}-${revision}`) =>
   workflow().run(mockEvent(id), mockStep());
 
+it('足あとの間隔を省略すると5回になり、選択肢にない1回は受付しない', async () => {
+  const path = '/api/v1/projects';
+  const response = await app.request(path, { method: 'POST', body: { name: 'New project' } });
+  expect(response.status).toBe(201);
+  const { id } = (await response.json()) as { id: string };
+  const { projects } = (await (await app.request(path)).json()) as { projects: Project[] };
+  expect(projects.find((item) => item.id === id)?.footprint_interval).toBe(5);
+  const body = { name: 'Invalid interval', footprint_interval: 1 };
+  expect((await app.request(path, { method: 'POST', body })).status).toBe(400);
+  expect((await app.request(`${path}/${id}`, { method: 'PATCH', body })).status).toBe(400);
+});
+
+it('既存の1回を5回へ移行し、3回・5回・10回と進行中の生成間隔は引き継ぐ', async () => {
+  const migration = '0063_project_footprint_interval.sql';
+  const migrations = (await readdir(new URL('../migrations/', import.meta.url)))
+    .filter((name) => name.endsWith('.sql') && name < migration)
+    .sort();
+  const legacy = await testApp({ migrations });
+  try {
+    const db = legacy.env.DB;
+    await db.batch([
+      db.prepare("UPDATE projects SET footprint_interval=1 WHERE id='alice-project'"),
+      db.prepare("UPDATE projects SET footprint_interval=10 WHERE id='alice-second'"),
+      db.prepare(
+        "INSERT INTO projects(id,user_id,name,footprint_interval) VALUES ('five','alice','Five',5)",
+      ),
+      db.prepare(
+        "INSERT INTO footprint_backfills(project_id,max_revision,interval) VALUES ('alice-project',10,1)",
+      ),
+    ]);
+    await applyMigration(db, migration);
+    await db.prepare("INSERT INTO projects(id,user_id,name) VALUES ('new','alice','New')").run();
+    const { results } = await db
+      .prepare('SELECT id,footprint_interval FROM projects ORDER BY id')
+      .all();
+    expect(results).toEqual([
+      { id: 'alice-project', footprint_interval: 5 },
+      { id: 'alice-second', footprint_interval: 10 },
+      { id: 'bob-project', footprint_interval: 3 },
+      { id: 'five', footprint_interval: 5 },
+      { id: 'new', footprint_interval: 5 },
+    ]);
+    expect(
+      await db
+        .prepare("SELECT interval,active FROM footprint_backfills WHERE project_id='alice-project'")
+        .first(),
+    ).toEqual({ interval: 1, active: 1 });
+  } finally {
+    await legacy.dispose();
+  }
+});
+
 it('正常保存された異なる版だけを数え、オフ中の回数と間隔変更を次の保存に引き継ぐ', async () => {
   await save(2);
   await save(5);
@@ -89,16 +143,18 @@ it('正常保存された異なる版だけを数え、オフ中の回数と間�
   await saveMemoryWithHistory(app.env, input(90), []); // superseded
   await save(9);
   await save(15);
-  await settings(5, false);
+  await save(18);
+  await save(20);
+  await settings(10, false);
   await save(22);
   await save(28);
-  await settings(1, true);
-  expect((await reserved()).map((row) => row.revision)).toEqual([2, 15]);
+  await settings(3, true);
+  expect((await reserved()).map((row) => row.revision)).toEqual([2, 20]);
   await save(36);
   expect(await reserved()).toEqual([
     { revision: 2, previous_revision: null, revisions: '[2]', update_count: 1 },
-    { revision: 15, previous_revision: 2, revisions: '[5,9,15]', update_count: 3 },
-    { revision: 36, previous_revision: 15, revisions: '[22,28,36]', update_count: 3 },
+    { revision: 20, previous_revision: 2, revisions: '[5,9,15,18,20]', update_count: 5 },
+    { revision: 36, previous_revision: 20, revisions: '[22,28,36]', update_count: 3 },
   ]);
 });
 
@@ -132,10 +188,15 @@ it('明示操作で履歴を分割生成し、既存の予約を再利用する'
   }
   await queueFootprintJobs(app.env);
   expect(await reserved()).toEqual([]);
+  const statusPath = `${endpoint}?status_only=1`;
+  const status = async () => (await app.request(statusPath)).json();
+  expect(await status()).toEqual({ pending: false });
+  expect((await app.request(statusPath, { user: 'bob' })).status).toBe(404);
   expect((await app.request(`${endpoint}/backfill`, { method: 'POST', user: 'bob' })).status).toBe(
     404,
   );
   expect((await app.request(`${endpoint}/backfill`, { method: 'POST' })).status).toBe(202);
+  expect(await status()).toEqual({ pending: true });
   app.env.LOCAL_DEMO_ENABLED = 'true';
   await Promise.all([queueFootprintJobs(app.env), queueFootprintJobs(app.env)]);
   expect(await reserved()).toHaveLength(1);
@@ -143,6 +204,7 @@ it('明示操作で履歴を分割生成し、既存の予約を再利用する'
   await queueFootprintJobs(app.env);
   await run(30);
   await queueFootprintJobs(app.env);
+  expect(await status()).toEqual({ pending: false });
   expect(await reserved()).toEqual([
     { revision: 10, previous_revision: null, revisions: '[10]', update_count: 1 },
     { revision: 30, previous_revision: 10, revisions: '[14,18,30]', update_count: 3 },
@@ -176,6 +238,7 @@ it('明示操作で履歴を分割生成し、既存の予約を再利用する'
 
 it('期間内の根拠を変化ごとに保存し、未知の参照を拒否して同じ対象を再試行する', async () => {
   const db = app.env.DB;
+  await settings(3, true);
   await save(1);
   await save(4);
   const recordedAt = new Date().toISOString();
@@ -304,7 +367,7 @@ it('期間内の根拠を変化ごとに保存し、未知の参照を拒否し�
 });
 
 it('同じプ譜の複数局面を参照したときに、各根拠の局面を保存する', async () => {
-  await settings(1, true);
+  await settings(3, true);
   await save(1);
   const db = app.env.DB;
   const recordedAt = new Date().toISOString();
@@ -324,6 +387,8 @@ it('同じプ譜の複数局面を参照したときに、各根拠の局面を�
       .bind(recordedAt),
   ]);
   await save(2);
+  await save(3);
+  await save(4);
   app.env.AI = {
     run: async (_model, request) => {
       const context = JSON.parse(
@@ -342,12 +407,12 @@ it('同じプ譜の複数局面を参照したときに、各根拠の局面を�
   await queueFootprintJobs(app.env);
   await run(1);
   await queueFootprintJobs(app.env);
-  await run(2);
+  await run(4);
   const links = [
     { kind: 'pufu', id: 'phase-record', phase: 1 },
     { kind: 'pufu', id: 'phase-record', phase: 2 },
   ];
-  expect(await (await app.request(`${endpoint}/2`)).json()).toMatchObject({
+  expect(await (await app.request(`${endpoint}/4`)).json()).toMatchObject({
     analysis: { changes: [{ text: 'The goal changed', links }] },
     links,
   });
@@ -475,6 +540,7 @@ it('初回の再分析で取り組みごとの根拠を保存し、公開表示�
 
 it('選択した期間だけ再分析し、重複要求を防いで元の足あとと公開用の原稿を保持する', async () => {
   const db = app.env.DB;
+  await settings(3, true);
   app.env.AI = {
     run: async (_model, call) => ({
       response: mockAnalysis(
@@ -691,7 +757,7 @@ it('公開プロジェクトから非公開に戻した後の足あとを、個�
       method: 'PATCH',
       body: { is_public, public_description: '' },
     });
-  await settings(1, true);
+  await settings(3, true);
   await app.env.DB.prepare(
     `INSERT INTO questions(id,project_id,text,status,source)
     VALUES('previous-public-question',?,'An earlier public question','ready','user')`,
@@ -714,9 +780,11 @@ it('公開プロジェクトから非公開に戻した後の足あとを、個�
   });
   expect((await changeVisibility(false)).status).toBe(200);
   await save(2);
+  await save(3);
+  await save(4);
   await queueFootprintJobs(app.env);
-  await run(2);
-  expect(await (await app.request(`${endpoint}/2`)).json()).toMatchObject({
+  await run(4);
+  expect(await (await app.request(`${endpoint}/4`)).json()).toMatchObject({
     kind: 'deepening',
     shared: null,
   });
@@ -827,7 +895,7 @@ it('AI 応答中に削除された根拠を含む結果を保存しない', asyn
 
 it('対象の版が保存された後に移った問いを過去の分析へ含めない', async () => {
   const db = app.env.DB;
-  await settings(1, false);
+  await settings(3, false);
   await db
     .prepare(
       `INSERT INTO questions(id,project_id,text,status,source,created_at,updated_at)

@@ -1,4 +1,5 @@
 import { ProjectFootprints } from '../features/footprints/ProjectFootprints';
+import { useProjectFootprints } from '../features/footprints/useProjectFootprints';
 import { ArrowLeft, BookOpen, Check } from 'lucide-react';
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Stock, User } from '../../shared/domain';
@@ -135,6 +136,19 @@ export default function App({
     !loading && !error && !search && stockSource === 'all' && firstStepsDone.some((done) => !done);
 
   const selected = projects.find((project) => project.id === route.projectId);
+  const showLibraryTabs =
+    route.view === 'stocks' ||
+    route.view === 'questions' ||
+    route.view === 'pufus' ||
+    route.view === 'settings' ||
+    route.view === 'memory';
+  const showFootprintTimeline =
+    route.view === 'memory' && selected?.include_in_user_memory === true;
+  const footprints = useProjectFootprints(
+    user?.onboarding_completed_at && showLibraryTabs ? selected?.id : undefined,
+    showFootprintTimeline,
+    showFootprintTimeline ? memoryResponse.memory?.revision : undefined,
+  );
 
   useEffect(() => {
     if (!notice) return;
@@ -261,11 +275,13 @@ export default function App({
               setModal={setModal}
             />
           )}
-          {(route.view === 'stocks' ||
-            route.view === 'questions' ||
-            route.view === 'pufus' ||
-            route.view === 'settings' ||
-            route.view === 'memory') && <AppLibraryTabs route={route} navigate={navigate} />}
+          {showLibraryTabs && (
+            <AppLibraryTabs
+              route={route}
+              navigate={navigate}
+              footprintsPending={footprints.pending === true}
+            />
+          )}
           {notice && (
             <div className="toast" role="status">
               <Check size={18} aria-hidden="true" />
@@ -444,6 +460,7 @@ export default function App({
                 <ProjectForm
                   key={selected.id}
                   project={selected}
+                  footprints={footprints}
                   onDone={(id, settings) => {
                     applyProjectSettings(id, settings);
                     completed(t('ui.app.project_settings_saved'));
@@ -499,11 +516,12 @@ export default function App({
             </Integrations>
           ) : route.view === 'memory' ? (
             <div className="memory-page">
-              {route.projectId && selected?.include_in_user_memory && (
+              {route.projectId && showFootprintTimeline && (
                 <ProjectFootprints
                   key={`footprints-${route.projectId}`}
                   projectId={route.projectId}
-                  memoryRevision={memoryResponse.memory?.revision}
+                  points={footprints.points}
+                  onKind={footprints.updatePointKind}
                 />
               )}
               <MemoryPanel
