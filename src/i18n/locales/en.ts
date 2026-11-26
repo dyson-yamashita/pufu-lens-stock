@@ -16,6 +16,8 @@ export const en: Record<string, string> = {
   'footprints.changes': 'Changes and supporting records',
   'footprints.triggers': 'Triggers from your records',
   'footprints.current': 'This time',
+  'footprints.starting_point': 'At the start of the record',
+  'footprints.main_activities': 'Main activities',
   'footprints.perspectives': 'Changes by perspective',
   'footprints.evidence': 'Related records',
   'footprints.link.stock': 'Stock',
@@ -30,7 +32,7 @@ export const en: Record<string, string> = {
   'footprints.backfill_accepted': 'Past footprints are queued.',
   'footprints.backfill_failed': 'Could not start generating past footprints.',
   'footprints.manual':
-    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a footprint in the Memory & Footprints tab to open its details. Supporting records appear below the changes they explain. A continuing footprint appears as a point on the timeline. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints.',
+    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a footprint in the Memory & Footprints tab to open its details. Open supporting records from the links below the initial summary or individual changes. A continuing footprint appears as a point on the timeline. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints.',
   'footprints.manual_reanalysis':
     'To redo a footprint, open its details and select “Reanalyze this period.” Select “View original analysis” to read the original.',
   'footprints.manual_publication':

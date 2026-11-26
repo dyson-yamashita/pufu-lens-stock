@@ -4,6 +4,7 @@ import { parseHTML } from 'linkedom/worker';
 import { publicDocumentAssetPaths } from '../../../shared/public-document-routes';
 import {
   publicFootprintEvidenceHref,
+  type FootprintStatement,
   type PublicFootprint,
   type PublicFootprintPage,
 } from '../../../shared/footprints';
@@ -76,26 +77,36 @@ function footprintBody(item: PublicFootprint, projectKey: string) {
       : '';
   const section = (heading: string, body: string) =>
     body ? `<h4>${heading}</h4>${paragraph(body)}` : '';
+  const statements = (heading: string, items: FootprintStatement[]) =>
+    items.length
+      ? `<h4>${heading}</h4><ul class="footprints-statements">${items.map(({ text, links }) => `<li>${paragraph(text)}${records(links)}</li>`).join('')}</ul>`
+      : '';
   const changes = analysis.changes ?? [];
   const cited = new Set(
     changes.flatMap((change) =>
       change.links.map((record) => publicFootprintEvidenceHref(projectKey, record)),
     ),
   );
-  const related = records(
-    links.filter((record) => !cited.has(publicFootprintEvidenceHref(projectKey, record))),
+  const related = links.filter(
+    (record) => !cited.has(publicFootprintEvidenceHref(projectKey, record)),
   );
+  const beginning = item.kind === 'beginning';
+  const startingSummary = beginning ? analysis.current : '';
+  const { action, strategy, interests, questions } = analysis.perspectives;
   const perspectives = Object.entries(footprintPerspectives)
     .map(([key, label]) => {
       const value = analysis.perspectives[key as keyof typeof footprintPerspectives];
       return value ? `<dt>${label}</dt><dd>${escape(value)}</dd>` : '';
     })
     .join('');
-  return `${header}<h3>${escape(analysis.title)}</h3>${section('以前', analysis.before)}${section('今回', analysis.current)}${
-    changes.length
-      ? `<h4>変化と根拠</h4><ul>${changes.map((change) => `<li>${paragraph(change.text)}${records(change.links)}</li>`).join('')}</ul>`
-      : ''
-  }${perspectives ? `<h4>観点別の変化</h4><dl>${perspectives}</dl>` : ''}${related ? `<h4>関連する記録</h4>${related}` : ''}`;
+  const topics = beginning
+    ? `${section('主な取り組み', action || strategy)}${section('関心', interests || questions)}`
+    : perspectives && `<h4>観点別の変化</h4><dl>${perspectives}</dl>`;
+  return `${header}<h3>${escape(analysis.title)}</h3>${section('以前', analysis.before)}${
+    startingSummary
+      ? statements('記録を始めた時点', [{ text: startingSummary, links: related }])
+      : section('今回', analysis.current)
+  }${statements('変化と根拠', changes)}${topics}${!startingSummary && related.length ? `<h4>関連する記録</h4>${records(related)}` : ''}`;
 }
 function pageNumber(value: string | undefined) {
   const page = value === undefined ? 1 : Number(value);

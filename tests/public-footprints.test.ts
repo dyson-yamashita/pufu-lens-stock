@@ -172,20 +172,26 @@ it('掲載済みの「続く」は日付と分類だけを公開ページに返�
   expect(html).not.toContain('PRIVATE_');
 });
 
-it('公開データから生成した分析を、同じ根拠と観点で本人・匿名APIと公開HTMLに表示する', async () => {
+it.each(['beginning', 'deepening'] as const)('公開根拠を表示する (%s)', async (kind) => {
+  const beginning = kind === 'beginning';
   const source = { kind: 'question', id: 'shared-question', label: '公開された問い' };
+  const startingSummary = '記録を始めた時点の要約';
+  const change = '問いの範囲が広がった。';
+  const strategy = 'ストックとプ譜の入口を整える。';
+  const question = '新たに比較できる問い';
   const shared = {
     analysis: {
       ...JSON.parse(analysis).analysis,
+      kind,
       title: '公開された分析 <確認>',
-      before: '以前の見方',
-      current: '追加された判断材料',
-      changes: [{ text: '問いの範囲が広がった。', links: [source] }],
+      before: beginning ? '' : '以前の見方',
+      current: beginning ? startingSummary : '追加された判断材料',
+      changes: beginning ? [] : [{ text: change, links: [source] }],
       process: '過程の保存済み本文',
       meaning: '意味の保存済み本文',
       interpretation: '記録から分かる解釈',
       unchanged: '継続点の保存済み本文',
-      perspectives: { questions: '新たに比較できる問い' },
+      perspectives: { questions: question, strategy: beginning ? strategy : '' },
     },
     links: [source],
   };
@@ -193,7 +199,7 @@ it('公開データから生成した分析を、同じ根拠と観点で本人�
     point(1, [], JSON.stringify(shared)),
     app.env.DB.prepare(
       `INSERT INTO questions(id,project_id,source,text,status,updated_at)
-      VALUES (?1,?2,'user','公開された問い','ready',?3)`,
+    VALUES (?1,?2,'user','公開された問い','ready',?3)`,
     ).bind(source.id, project, start),
     app.env.DB.prepare(
       'UPDATE project_footprints SET public_id=?,dependencies=? WHERE project_id=? AND revision=1',
@@ -204,7 +210,7 @@ it('公開データから生成した分析を、同じ根拠と観点で本人�
     ),
   ]);
   const key = await share();
-  const item = { ...shared, start_at: start, end_at: end, kind: 'deepening' };
+  const item = { ...shared, start_at: start, end_at: end, kind };
   expect(await (await get(key)).json()).toMatchObject({ items: [{ id: 'shared-id', ...item }] });
   expect(await (await app.request(`${privateFootprints}/1`)).json()).toMatchObject({
     shared: item,
@@ -219,13 +225,25 @@ it('公開データから生成した分析を、同じ根拠と観点で本人�
   const html = await response.text();
   const { document } = parseHTML(html);
   expect(document.querySelector('article h3')?.textContent).toBe(shared.analysis.title);
-  expect(document.querySelector('article dl dd')?.textContent).toBe('新たに比較できる問い');
-  expect(document.querySelector('article .footprints-evidence-links a')?.getAttribute('href')).toBe(
+  if (beginning) {
+    expect(document.querySelector('article dl')).toBeNull();
+    expect(document.querySelector('article')?.textContent).toContain(strategy);
+    expect(document.querySelector('article')?.textContent).toContain(question);
+  } else {
+    expect(document.querySelector('article dl dd')?.textContent).toBe(question);
+  }
+  const statement = document.querySelector('article .footprints-statements > li');
+  expect(statement?.querySelector('p')?.textContent).toBe(beginning ? startingSummary : change);
+  expect(statement?.querySelector('.footprints-evidence-links a')?.getAttribute('href')).toBe(
     `/p/${key}/questions/${source.id}`,
   );
   expect(
     Array.from(document.querySelectorAll('article h4'), (heading) => heading.textContent),
-  ).toEqual(['以前', '今回', '変化と根拠', '観点別の変化']);
+  ).toEqual(
+    beginning
+      ? ['記録を始めた時点', '主な取り組み', '関心']
+      : ['以前', '今回', '変化と根拠', '観点別の変化'],
+  );
   for (const text of [
     shared.analysis.process,
     shared.analysis.meaning,
