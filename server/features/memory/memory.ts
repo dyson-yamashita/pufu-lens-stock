@@ -173,21 +173,24 @@ export function memorySourceStatements(
   id: string,
   revision: number,
   inputs: MemoryInput[],
+  contentKey: string,
 ): D1PreparedStatement[] {
   // memorySaveStatementと同じbatchで実行。古い結果はメモリと履歴の両方を公開しない。
   const current = `EXISTS (SELECT 1 FROM memories m WHERE m.id=? AND m.revision=?
     AND ((m.project_id IS NULL AND m.revision=(SELECT memory_revision FROM users WHERE id=m.user_id))
-      OR (m.project_id IS NOT NULL AND m.revision=(SELECT memory_revision FROM projects WHERE id=m.project_id))))`;
+      OR (m.project_id IS NOT NULL AND m.revision=(SELECT memory_revision FROM projects WHERE id=m.project_id))))
+    AND EXISTS (SELECT 1 FROM memory_versions WHERE content_key=?)`;
   return [
     env.DB.prepare(`DELETE FROM memory_sources WHERE memory_id=? AND ${current}`).bind(
       id,
       id,
       revision,
+      contentKey,
     ),
     ...inputs.map((input) =>
       env.DB.prepare(
         `INSERT INTO memory_sources(memory_id,article_id,source_hash) SELECT ?,?,? WHERE ${current}`,
-      ).bind(id, input.source.articleId, input.hash, id, revision),
+      ).bind(id, input.source.articleId, input.hash, id, revision, contentKey),
     ),
   ];
 }

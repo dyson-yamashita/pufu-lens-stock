@@ -1,3 +1,4 @@
+import { footprintJobPrefix, queueFootprintJobs } from '../../features/memory/footprint-repository';
 import type { Env, Job } from '../../env';
 import { cleanupDeletedAccounts } from '../../features/auth/account';
 import { cleanupMemoryHistory } from '../../features/memory/memory-history';
@@ -33,7 +34,7 @@ export async function dispatchJobs(env: Env): Promise<void> {
   for (const job of expired.results) await stopWaitingJob(env, job);
   const pending = await observeOperation('d1', 'dispatch_pending', () =>
     env.DB.prepare(
-      "SELECT * FROM processing_jobs WHERE status = 'pending' AND (kind='cleanup' OR EXISTS (SELECT 1 FROM users u WHERE u.id=processing_jobs.user_id AND u.onboarding_completed_at IS NOT NULL)) AND NOT (kind = 'question' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id = s.project_id WHERE s.id = processing_jobs.target_id AND p.auto_generate_questions = 0)) AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')) ORDER BY CASE kind WHEN 'article' THEN 0 WHEN 'cleanup' THEN 1 WHEN 'question' THEN 2 ELSE 3 END, created_at LIMIT 20",
+      `SELECT * FROM processing_jobs WHERE status = 'pending' AND (kind='cleanup' OR EXISTS (SELECT 1 FROM users u WHERE u.id=processing_jobs.user_id AND u.onboarding_completed_at IS NOT NULL)) AND NOT (kind = 'question' AND EXISTS (SELECT 1 FROM stocks s JOIN projects p ON p.id = s.project_id WHERE s.id = processing_jobs.target_id AND p.auto_generate_questions = 0)) AND NOT EXISTS (SELECT 1 FROM ai_deferrals d WHERE d.job_id=processing_jobs.id AND d.retry_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')) ORDER BY CASE WHEN id LIKE '${footprintJobPrefix}%' THEN 4 WHEN kind='article' THEN 0 WHEN kind='cleanup' THEN 1 WHEN kind='question' THEN 2 ELSE 3 END, created_at LIMIT 20`,
     ).all<Job>(),
   );
   for (const job of pending.results) {
@@ -205,6 +206,11 @@ export async function scheduledMaintenance(env: Env, scheduledAt = Date.now()): 
     } catch (error) {
       logDiagnosticError('reflection_schedule', error);
     }
+  }
+  try {
+    await queueFootprintJobs(env);
+  } catch (error) {
+    logDiagnosticError('footprint_schedule', error);
   }
   await dispatchJobs(env);
 }

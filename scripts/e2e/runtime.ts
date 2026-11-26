@@ -195,7 +195,14 @@ export default { ...worker, async fetch(request, env, ctx) {
         kv_namespaces: [{ binding: 'OAUTH_KV', id: '00000000000000000000000000000000' }],
         ratelimits: built.ratelimits,
         workflows: built.workflows,
-        vars: { APP_URL: url, LOCAL_DEMO_ENABLED: 'true', AI_MODEL: 'e2e-no-ai' },
+        vars: {
+          APP_URL: url,
+          LOCAL_DEMO_ENABLED: 'true',
+          AI_MODEL: 'e2e-no-ai',
+          // 同一のデモ利用者を使うシナリオ間で日次枠を使い切らないようにする。
+          // 本番の日次枠は Vitest の利用制限テストで検証する。
+          AI_MEMORY_DAILY_LIMIT: '200',
+        },
       }),
     );
     const wrangler = join(repo, 'node_modules/wrangler/bin/wrangler.js');

@@ -1,3 +1,4 @@
+import { footprintIntervals, type FootprintInterval } from '../../../shared/footprints';
 import { Check, Copy } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Project } from '../../../shared/domain';
@@ -9,13 +10,25 @@ import { applicationError, t, useLanguage } from '../../i18n/i18n';
 import { api, send } from '../../lib/api';
 import { ProjectPublicationSettings } from '../public-projects';
 
+export type ProjectSettings = Pick<
+  Project,
+  | 'name'
+  | 'description'
+  | 'show_in_all_lists'
+  | 'include_in_user_memory'
+  | 'auto_generate_questions'
+  | 'reflection_period'
+  | 'footprints_enabled'
+  | 'footprint_interval'
+>;
+
 export function ProjectForm({
   project,
   onDone,
   onDelete,
 }: {
   project?: Project;
-  onDone: (id: string) => void;
+  onDone: (id: string, settings: ProjectSettings) => void;
   onDelete: () => void;
 }) {
   useLanguage();
@@ -37,6 +50,13 @@ export function ProjectForm({
     project?.reflection_period ?? 'weekly',
   );
   const reflectionPeriodId = useId();
+  const [footprintsEnabled, setFootprintsEnabled] = useState(project?.footprints_enabled ?? true);
+  const [footprintInterval, setFootprintInterval] = useState<FootprintInterval>(
+    project?.footprint_interval ?? 3,
+  );
+  const footprintsEnabledId = useId();
+  const footprintIntervalId = useId();
+  const [backfill, setBackfill] = useState<'idle' | 'busy' | 'accepted' | 'error'>('idle');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [idCopied, setIdCopied] = useState(false);
@@ -49,21 +69,22 @@ export function ProjectForm({
           setBusy(true);
           setError('');
           try {
-            const data = await send<{
-              id: string;
-            }>(
+            const settings: ProjectSettings = {
+              name: name.trim(),
+              description: description.trim(),
+              show_in_all_lists: showInAllLists,
+              include_in_user_memory: includeInUserMemory,
+              auto_generate_questions: autoGenerateQuestions,
+              reflection_period: reflectionPeriod,
+              footprints_enabled: footprintsEnabled,
+              footprint_interval: footprintInterval,
+            };
+            const data = await send<{ id: string }>(
               project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
-              {
-                name,
-                description,
-                show_in_all_lists: showInAllLists,
-                include_in_user_memory: includeInUserMemory,
-                auto_generate_questions: autoGenerateQuestions,
-                reflection_period: reflectionPeriod,
-              },
+              settings,
               project ? 'PATCH' : 'POST',
             );
-            onDone(project?.id ?? data.id);
+            onDone(project?.id ?? data.id, settings);
           } catch (e) {
             setError(applicationError((e as Error).message));
           } finally {
@@ -197,6 +218,64 @@ export function ProjectForm({
           <p id={`${reflectionPeriodId}-hint`} className="project-memory-hint">
             {t('reflection.schedule_hint')}
           </p>
+          <label className="project-memory-toggle" htmlFor={footprintsEnabledId}>
+            <span>{t('footprints.auto_add')}</span>
+            <input
+              id={footprintsEnabledId}
+              type="checkbox"
+              role="switch"
+              checked={footprintsEnabled}
+              disabled={busy}
+              onChange={(event) => setFootprintsEnabled(event.target.checked)}
+            />
+          </label>
+          <label htmlFor={footprintIntervalId}>{t('footprints.interval')}</label>
+          <select
+            id={footprintIntervalId}
+            value={footprintInterval}
+            disabled={busy}
+            onChange={(event) => {
+              const value = footprintIntervals.find(
+                (interval) => String(interval) === event.target.value,
+              );
+              if (value) setFootprintInterval(value);
+            }}
+          >
+            {footprintIntervals.map((interval) => (
+              <option key={interval} value={interval}>
+                {t('footprints.interval_option', { count: interval })}
+              </option>
+            ))}
+          </select>
+          {project && (
+            <>
+              <p className="project-memory-hint">{t('footprints.backfill_hint')}</p>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy || backfill === 'busy' || backfill === 'accepted'}
+                onClick={async () => {
+                  setBackfill('busy');
+                  try {
+                    await send(
+                      `/api/v1/projects/${encodeURIComponent(project.id)}/footprints/backfill`,
+                      {},
+                      'POST',
+                    );
+                    setBackfill('accepted');
+                  } catch {
+                    setBackfill('error');
+                  }
+                }}
+              >
+                {t('footprints.backfill')}
+              </button>
+              <p role="status" className="project-memory-hint">
+                {backfill === 'accepted' && t('footprints.backfill_accepted')}
+                {backfill === 'error' && t('footprints.backfill_failed')}
+              </p>
+            </>
+          )}
         </details>
         <FormError error={error} />
         <div className="form-actions">

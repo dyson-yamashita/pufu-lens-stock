@@ -16,6 +16,7 @@ export type Operation =
   | 'dispatch_pending'
   | 'workflow_dispatch'
   | 'search_index_maintenance'
+  | 'footprint_schedule'
   | 'reflection_schedule'
   | 'pufu_image_link_cleanup'
   | 'api_request'

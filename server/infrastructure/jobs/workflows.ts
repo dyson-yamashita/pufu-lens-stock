@@ -1,3 +1,5 @@
+import { runFootprint } from '../../features/memory/footprint-generation';
+import { footprintJobPrefix } from '../../features/memory/footprint-repository';
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import type { ArticleSummary, MemoryData } from '../../../shared/domain';
 import { resolveLanguage } from '../../../shared/locale';
@@ -136,6 +138,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
     if (!job || job.status === 'done') return;
     if (job.kind === 'pufu') return runPufu(this.env, job, step);
     if (job.purpose === 'reflection') return runReflection(this.env, job, step);
+    if (job.id.startsWith(footprintJobPrefix)) return runFootprint(this.env, job, step);
     if (job.kind === 'question') return runQuestion(this.env, job, step);
     if (job.kind === 'cleanup') {
       await step.do('delete-orphan-body', retry, async () => {

@@ -12,7 +12,7 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Project } from '../../shared/domain';
 import { ShareLink } from '../features/public-projects/ShareLink';
 import { t } from '../i18n/i18n';
@@ -22,6 +22,7 @@ import type { ModalState } from './types';
 
 type Props = {
   selected: Project | undefined;
+  projectFootprints?: ReactNode;
   route: Route;
   integrationTab: 'shortcuts' | 'mcp' | 'sns' | null;
   libraryView: boolean;
@@ -32,6 +33,7 @@ type Props = {
 };
 export function AppPageHeader({
   selected,
+  projectFootprints,
   route,
   integrationTab,
   libraryView,
@@ -63,6 +65,15 @@ export function AppPageHeader({
     route.view === 'settings'
       ? t('ui.app.project_settings')
       : (globalHeaderLabels()[route.view] ?? headerLabels()[route.view]);
+  const stockAction = route.view === 'stocks' && (
+    <button
+      className="button primary"
+      onClick={() => setModal(projects.length ? { type: 'save' } : { type: 'project' })}
+    >
+      <Plus size={18} aria-hidden="true" />
+      {projects.length ? t('ui.app.save_article') : t('ui.app.create_project')}
+    </button>
+  );
   return (
     <>
       <header className="page-header">
@@ -147,15 +158,7 @@ export function AppPageHeader({
               </div>
             </div>
           )}
-          {route.view === 'stocks' && (
-            <button
-              className="button primary"
-              onClick={() => setModal(projects.length ? { type: 'save' } : { type: 'project' })}
-            >
-              <Plus size={18} aria-hidden="true" />
-              {projects.length ? t('ui.app.save_article') : t('ui.app.create_project')}
-            </button>
-          )}
+          {!projectFootprints && stockAction}
           {route.view === 'questions' && (
             <button
               className="button primary"
@@ -177,6 +180,10 @@ export function AppPageHeader({
           )}
         </div>
       </header>
+      {projectFootprints}
+      {projectFootprints && (
+        <div className="header-actions project-stock-actions">{stockAction}</div>
+      )}
     </>
   );
 }

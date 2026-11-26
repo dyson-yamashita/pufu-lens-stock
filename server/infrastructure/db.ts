@@ -1,3 +1,4 @@
+import { footprintJobPrefix } from '../features/memory/footprint-repository';
 import { resolveLanguage, type Language } from '../../shared/locale';
 import type { Env, Job, JobStateGuard } from '../env';
 
@@ -57,7 +58,7 @@ export function jobFailureStatements(
         AND EXISTS(SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')`,
       ).bind(job.target_id, job.revision, job.user_id, job.id),
     );
-  } else if (job.kind === 'question') {
+  } else if (job.kind === 'question' && !job.id.startsWith(footprintJobPrefix)) {
     statements.push(
       env.DB.prepare(
         "UPDATE questions SET status = 'failed', error = ?, updated_at = ? WHERE stock_id = ? AND source = 'ai' AND generation = ? AND status != 'ready' AND EXISTS (SELECT 1 FROM stocks WHERE id = questions.stock_id AND user_id = ?) AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='failed')",
@@ -163,15 +164,20 @@ export function memorySaveStatement(
     model: string;
     contextHash?: string;
     language?: Language;
+    onlyIfUnversioned?: boolean;
   },
 ): D1PreparedStatement {
   const predicate = input.projectId
     ? 'EXISTS (SELECT 1 FROM projects WHERE id = ? AND user_id = ? AND memory_revision = ?)'
     : 'EXISTS (SELECT 1 FROM users WHERE id = ? AND id = ? AND memory_revision = ?)';
+  const id = input.projectId ? `project-${input.projectId}` : `user-${input.userId}`;
+  const firstSave = input.onlyIfUnversioned
+    ? 'AND NOT EXISTS (SELECT 1 FROM memory_versions WHERE memory_id=? AND revision=?)'
+    : '';
   return env.DB.prepare(
-    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at, context_hash, language) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at, context_hash = excluded.context_hash, language = excluded.language, force_full = 0`,
+    `INSERT INTO memories (id, user_id, project_id, revision, text, data_json, article_count, model, updated_at, context_hash, language) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${predicate} ${firstSave} ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, text = excluded.text, data_json = excluded.data_json, article_count = excluded.article_count, model = excluded.model, updated_at = excluded.updated_at, context_hash = excluded.context_hash, language = excluded.language, force_full = 0`,
   ).bind(
-    input.projectId ? `project-${input.projectId}` : `user-${input.userId}`,
+    id,
     input.userId,
     input.projectId,
     input.revision,
@@ -185,6 +191,7 @@ export function memorySaveStatement(
     input.projectId ?? input.userId,
     input.userId,
     input.revision,
+    ...(input.onlyIfUnversioned ? [id, input.revision] : []),
   );
 }
 export function orphanCleanupStatements(env: Env, userId: string): D1PreparedStatement[] {

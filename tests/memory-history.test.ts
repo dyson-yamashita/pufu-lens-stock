@@ -222,7 +222,10 @@ it.each(['writer-stopped', 'd1-failed'])(
     await cleanupMemoryHistory(app.env);
     expect((await bucket.list()).objects).toHaveLength(0);
     // An unresolved intent must also catch a PUT that finishes after an earlier retry.
-    await originalPut('alice/project-alice-project/1.json', '{}');
+    const { content_key } = (await db
+      .prepare('SELECT content_key FROM memory_history_writes')
+      .first<{ content_key: string }>())!;
+    await originalPut(content_key, '{}');
     await cleanupMemoryHistory(app.env);
     expect((await bucket.list()).objects).toHaveLength(0);
     expect(await db.prepare('SELECT revision FROM memory_versions').first()).toBeNull();
@@ -261,4 +264,41 @@ it('同じ版の再試行が成功しても先行する未確認PUTのintentを�
   expect((await bucket.list()).objects).toHaveLength(1);
   await cleanupMemoryHistory(app.env);
   expect((await bucket.list()).objects).toHaveLength(0);
+});
+
+it('並行する同一版では先に確定した本文と出典を維持する', async () => {
+  const bucket = app.env.MEMORY_HISTORY;
+  const put = bucket.put.bind(bucket);
+  let entered!: () => void;
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const restore = overrideBucket('put', async (...args: Parameters<R2Bucket['put']>) => {
+    entered();
+    await gate;
+    return put(...args);
+  });
+  const delayed = save(1);
+  await started;
+  restore();
+  try {
+    await saveMemoryWithHistory(app.env, { ...input(1), text: '先に確定した本文' }, []);
+  } finally {
+    release();
+  }
+  await delayed;
+  expect(await app.env.DB.prepare('SELECT text FROM memories').first('text')).toBe(
+    '先に確定した本文',
+  );
+  expect(await (await app.request(path('/1'))).json()).toMatchObject({
+    version: { text: '先に確定した本文' },
+  });
+  expect((await bucket.list()).objects).toHaveLength(1);
+  expect(
+    await app.env.DB.prepare('SELECT COUNT(*) AS count FROM project_footprints').first('count'),
+  ).toBe(1);
 });

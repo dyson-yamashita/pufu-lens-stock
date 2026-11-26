@@ -1,3 +1,4 @@
+import { footprintJobPrefix } from '../memory/footprint-repository';
 import type { WorkflowStep } from 'cloudflare:workers';
 import type { Env, Job } from '../../env';
 import { meteredOperation, observeAiUsage } from '../../infrastructure/ai/ai-neurons';
@@ -222,6 +223,7 @@ export async function aiStep<T extends object>(
           .run();
         throw error;
       }
+      const footprint = job.id.startsWith(footprintJobPrefix);
       const guard =
         job.kind === 'user_memory'
           ? 'SELECT 1 FROM users WHERE id=? AND memory_revision=? AND onboarding_completed_at IS NOT NULL'
@@ -229,11 +231,15 @@ export async function aiStep<T extends object>(
             ? 'SELECT 1 FROM pufu_scores WHERE id=? AND generation=? AND user_id=?'
             : job.purpose === 'reflection'
               ? 'SELECT 1 FROM reflections r JOIN projects p ON p.id=r.project_id WHERE r.id=? AND r.generation=? AND p.user_id=?'
-              : null;
+              : footprint
+                ? 'SELECT 1 FROM project_footprints f JOIN projects p ON p.id=f.project_id WHERE f.job_id=? AND p.user_id=?'
+                : null;
       const guardValues =
         job.kind === 'user_memory'
           ? [job.user_id, job.revision]
-          : [job.target_id, job.revision, job.user_id];
+          : footprint
+            ? [job.id, job.user_id]
+            : [job.target_id, job.revision, job.user_id];
       await env.DB.prepare(
         guard
           ? `UPDATE ai_calls SET status='done',result_json=CASE WHEN EXISTS(${guard}) AND NOT EXISTS(SELECT 1 FROM privacy_cleanup_jobs WHERE id=?) THEN ? ELSE NULL END,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`
@@ -263,7 +269,11 @@ export async function deferLimitedJob(env: Env, job: Job, error: unknown): Promi
         `UPDATE ${table} SET status='queued',error=? WHERE id=? AND user_id=? AND generation=? AND status!='ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='pending')`,
       ).bind(message, job.target_id, job.user_id, job.revision, job.id),
     );
-  } else if (job.kind === 'question' && job.purpose !== 'reflection') {
+  } else if (
+    job.kind === 'question' &&
+    job.purpose !== 'reflection' &&
+    !job.id.startsWith(footprintJobPrefix)
+  ) {
     statements.push(
       env.DB.prepare(
         "UPDATE questions SET status='queued',error=? WHERE stock_id=? AND generation=? AND source='ai' AND status!='ready' AND EXISTS (SELECT 1 FROM processing_jobs WHERE id=? AND status='pending')",

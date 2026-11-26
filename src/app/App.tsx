@@ -1,3 +1,4 @@
+import { ProjectFootprints } from '../features/footprints/ProjectFootprints';
 import { ArrowLeft, BookOpen, Check } from 'lucide-react';
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Stock, User } from '../../shared/domain';
@@ -112,6 +113,7 @@ export default function App({
   const {
     refresh,
     projects,
+    applyProjectSettings,
     stocks,
     savingStockFavorites,
     memoryResponse,
@@ -250,6 +252,18 @@ export default function App({
           {!detailFlow && (
             <AppPageHeader
               selected={selected}
+              projectFootprints={
+                route.view === 'stocks' &&
+                route.projectId &&
+                selected?.include_in_user_memory &&
+                page === 1 && (
+                  <ProjectFootprints
+                    key={route.projectId}
+                    projectId={route.projectId}
+                    memoryRevision={memoryResponse.memory?.revision}
+                  />
+                )
+              }
               route={route}
               integrationTab={integrationTab}
               libraryView={libraryView}
@@ -441,7 +455,10 @@ export default function App({
                 <ProjectForm
                   key={selected.id}
                   project={selected}
-                  onDone={() => completed(t('ui.app.project_settings_saved'))}
+                  onDone={(id, settings) => {
+                    applyProjectSettings(id, settings);
+                    completed(t('ui.app.project_settings_saved'));
+                  }}
                   onDelete={() => {
                     completed(t('ui.app.project_deleted'));
                     filterProject(null);
@@ -549,6 +566,7 @@ export default function App({
         modal={modal}
         setModal={setModal}
         projects={projects}
+        applyProjectSettings={applyProjectSettings}
         completed={completed}
         navigate={navigate}
         listProjectId={listProjectId}

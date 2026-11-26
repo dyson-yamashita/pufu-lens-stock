@@ -3,7 +3,7 @@ import type { Project } from '../../shared/domain';
 import { Modal } from '../components/Modal';
 import { TokenForm } from '../features/integrations/TokenForm';
 import MemoryRebuildForm from '../features/memory/MemoryRebuildForm';
-import { ProjectForm } from '../features/projects/ProjectForm';
+import { ProjectForm, type ProjectSettings } from '../features/projects/ProjectForm';
 import PufuForm from '../features/pufu/PufuForm';
 import PufuModal from '../features/pufu/PufuModal';
 import QuestionForm from '../features/questions/QuestionForm';
@@ -17,6 +17,7 @@ type Props = {
   modal: ModalState;
   setModal: Dispatch<SetStateAction<ModalState>>;
   projects: Project[];
+  applyProjectSettings: (id: string, settings: ProjectSettings) => void;
   completed: (message: string, stock?: SavedStock | undefined) => void;
   navigate: (
     view:
@@ -51,6 +52,7 @@ export function AppModals({
   modal,
   setModal,
   projects,
+  applyProjectSettings,
   completed,
   navigate,
   listProjectId,
@@ -83,7 +85,8 @@ export function AppModals({
         >
           <ProjectForm
             project={modal.project}
-            onDone={(id) => {
+            onDone={(id, settings) => {
+              if (modal.project) applyProjectSettings(id, settings);
               completed(modal.project ? t('ui.app.project_updated') : t('ui.app.project_created'));
               navigate('stocks', id);
             }}
