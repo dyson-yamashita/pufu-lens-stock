@@ -17,8 +17,7 @@
   padding-block: 0.125rem 0.25rem;
   overscroll-behavior-inline: contain;
 }
-.footprints-point,
-.footprints-toggle {
+.footprints-point {
   appearance: none;
   border: 0;
   background: transparent;
@@ -48,6 +47,9 @@
 }
 .footprints-point[aria-pressed='true'] {
   font-weight: 700;
+}
+.footprints-point:disabled {
+  cursor: default;
 }
 .footprints-dot {
   width: 0.75rem;
@@ -82,22 +84,16 @@
 .footprints-continuing .footprints-dot {
   transform: scale(0.65);
 }
-.footprints-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.875rem;
-  min-height: 44px;
-  margin-inline: auto;
-}
-.footprints-toggle[aria-expanded='true'] svg {
-  transform: rotate(180deg);
-}
 .footprints-detail {
   padding-block: 1rem;
   margin-top: 0.4rem;
   border-top: 1px solid var(--border);
   overflow-wrap: anywhere;
+}
+.footprints-modal .footprints-detail {
+  padding-block-end: 0;
+  border-top: 0;
+  margin-block-start: 0;
 }
 .footprints-period {
   font-size: 0.85rem;
@@ -142,30 +138,16 @@
   list-style: none;
   font-size: 0.875rem;
 }
-.footprints-publication {
-  margin-block-start: 1rem;
-  padding-block-start: 0.75rem;
-  border-block-start: 1px solid var(--border);
-}
-.footprints-publication > summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-.footprints-publication > p {
-  margin-block: 0.5rem;
-  font-size: 0.875rem;
-}
-.footprints-publication-actions {
+.footprints-reanalysis {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-block-start: 0.75rem;
+  margin-block-start: 1rem;
 }
-.footprints-public-summary h2 {
-  font-size: 1.15rem;
-  margin-block-end: 0.5rem;
+.footprints-reanalysis p {
+  flex-basis: 100%;
+  font-size: 0.875rem;
 }
-.footprints-public-summary p:last-child {
+.footprints-approved-summary {
   white-space: pre-wrap;
 }

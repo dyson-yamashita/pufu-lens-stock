@@ -217,4 +217,99 @@ theorem dispatch_rejection_reachable :
       ⟨.pending, 0, 1, false⟩ := by
   decide
 
+namespace Reanalysis
+
+structure Facts where
+  owner : Bool
+  memoryUpdates : Bool
+  hasDetails : Bool
+  sourcesCurrent : Bool
+  deriving DecidableEq, Repr
+
+structure State where
+  original : Nat
+  period : Nat
+  history : Nat
+  approvedCopy : Nat
+  generation : Nat
+  jobId : Nat
+  pending : Bool
+  result : Option Nat
+  deriving DecidableEq, Repr
+
+def eligible (facts : Facts) : Bool :=
+  facts.owner && facts.memoryUpdates && facts.hasDetails && facts.sourcesCurrent
+
+def enqueue (facts : Facts) (session sameOrigin historyAvailable : Bool)
+    (expected newJob : Nat) (s : State) : State :=
+  if (eligible facts && session && sameOrigin && historyAvailable && !s.pending) &&
+      s.generation == expected then
+    { s with jobId := newJob, generation := s.generation + 1, pending := true }
+  else s
+
+def mayAnalyze (facts : Facts) (running inputsCurrent : Bool) (jobId : Nat) (s : State) : Bool :=
+  eligible facts && running && inputsCurrent && s.pending && s.jobId == jobId
+
+def save (facts : Facts) (running inputsCurrent : Bool) (jobId output : Nat) (s : State) : State :=
+  if mayAnalyze facts running inputsCurrent jobId s then
+    { s with result := some output, pending := false }
+  else s
+
+def revoke (s : State) : State := { s with pending := false }
+
+theorem off_then_on_cannot_commit (facts : Facts) (running inputsCurrent : Bool)
+    (jobId output : Nat) (s : State) :
+    save facts running inputsCurrent jobId output (revoke s) = revoke s := by
+  simp [save, mayAnalyze, revoke]
+
+theorem enqueue_requires_current_generation (facts : Facts) (session origin historyAvailable : Bool)
+    (expected newJob : Nat) (s : State) (h : s.generation ≠ expected) :
+    enqueue facts session origin historyAvailable expected newJob s = s := by
+  simp [enqueue, h]
+
+theorem enqueue_requires_no_active_job (facts : Facts) (session origin historyAvailable : Bool)
+    (expected newJob : Nat) (s : State) (h : s.pending = true) :
+    enqueue facts session origin historyAvailable expected newJob s = s := by
+  simp [enqueue, h]
+
+theorem nonowner_cannot_enqueue (facts : Facts) (session origin historyAvailable : Bool)
+    (expected newJob : Nat) (s : State) (h : facts.owner = false) :
+    enqueue facts session origin historyAvailable expected newJob s = s := by
+  simp [enqueue, eligible, h]
+
+theorem stale_job_preserves_result (facts : Facts) (running inputsCurrent : Bool)
+    (jobId output : Nat) (s : State) (h : s.jobId ≠ jobId) :
+    save facts running inputsCurrent jobId output s = s := by
+  simp [save, mayAnalyze, h]
+
+theorem revoked_memory_rejects_analysis (facts : Facts) (running inputsCurrent : Bool)
+    (jobId output : Nat) (s : State) (h : facts.memoryUpdates = false) :
+    mayAnalyze facts running inputsCurrent jobId s = false ∧
+      save facts running inputsCurrent jobId output s = s := by
+  simp [save, mayAnalyze, eligible, h]
+
+theorem removed_input_preserves_result (facts : Facts) (running : Bool)
+    (jobId output : Nat) (s : State) : save facts running false jobId output s = s := by
+  simp [save, mayAnalyze]
+
+theorem protected_fields_preserved (facts : Facts) (running inputsCurrent : Bool)
+    (jobId output : Nat) (s : State) :
+    let next := save facts running inputsCurrent jobId output s
+    next.original = s.original ∧ next.period = s.period ∧ next.history = s.history ∧
+      next.approvedCopy = s.approvedCopy := by
+  simp only [save]
+  split <;> simp
+
+def initialState : State := ⟨10, 11, 12, 13, 0, 0, false, none⟩
+def allowed : Facts := ⟨true, true, true, true⟩
+
+theorem enqueue_and_save_reachable :
+    let queued := enqueue allowed true true true 0 8 initialState
+    queued.pending = true ∧ (save allowed true true 8 20 queued).result = some 20 := by decide
+
+theorem continuing_is_rejected :
+    enqueue { allowed with hasDetails := false } true true true 0 8 initialState = initialState := by decide
+
+end Reanalysis
+
 end Verification.Jobs

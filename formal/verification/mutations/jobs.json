@@ -36,6 +36,24 @@
       "old": "job.status == .pending && (current.any (fun actual => decide (revision < actual)))",
       "new": "current.any (fun actual => decide (revision < actual))",
       "theorem": "running_job_is_not_retired"
+    },
+    {
+      "name": "B08-reanalysis-request-generation",
+      "old": "s.generation == expected then",
+      "new": "true then",
+      "theorem": "enqueue_requires_current_generation"
+    },
+    {
+      "name": "B08-reanalysis-running-job",
+      "old": "eligible facts && running && inputsCurrent && s.pending && s.jobId == jobId",
+      "new": "eligible facts && running && inputsCurrent && s.pending",
+      "theorem": "stale_job_preserves_result"
+    },
+    {
+      "name": "B08-reanalysis-memory-disabled",
+      "old": "facts.owner && facts.memoryUpdates && facts.hasDetails && facts.sourcesCurrent",
+      "new": "facts.owner && facts.hasDetails && facts.sourcesCurrent",
+      "theorem": "revoked_memory_rejects_analysis"
     }
   ]
 }

@@ -1,4 +1,8 @@
-import { footprintJobPrefix } from '../memory/footprint-repository';
+import {
+  footprintJobCacheGuard,
+  footprintJobPrefix,
+  isFootprintReanalysis,
+} from '../memory/footprint-repository';
 import type { WorkflowStep } from 'cloudflare:workers';
 import type { Env, Job } from '../../env';
 import { meteredOperation, observeAiUsage } from '../../infrastructure/ai/ai-neurons';
@@ -24,6 +28,14 @@ const category = (kind: Job['kind']) => (kind.endsWith('_memory') ? 'memory' : k
 // 手動の振り返りは受付時点で枠を確保する。通常の自動生成は起動時まで待つ。
 const waitingQuestion = `j.kind='question' AND j.status='pending' AND j.id NOT LIKE '${reflectionRegenerationJobPrefix}%'`;
 type OperationGuard = { sql: string; params: (string | number | null)[] };
+function reanalysisGuard(job: Job, running = false): OperationGuard | undefined {
+  if (!isFootprintReanalysis(job.id)) return undefined;
+  const status = running ? "='running'" : "IN ('dispatched','running')";
+  return {
+    sql: `EXISTS(${footprintJobCacheGuard(job.id)}) AND EXISTS(SELECT 1 FROM processing_jobs WHERE id=? AND status ${status})`,
+    params: [job.id, job.user_id, job.id],
+  };
+}
 export function reserveOperation(
   env: Env,
   job: Pick<Job, 'id' | 'user_id' | 'kind'>,
@@ -128,16 +140,17 @@ export async function retryAt(
 
 export async function admitJob(env: Env, job: Job): Promise<boolean> {
   if (job.kind === 'cleanup') return true;
-  await env.DB.batch([reserveOperation(env, job)]);
+  const guard = reanalysisGuard(job);
+  await env.DB.batch([reserveOperation(env, job, guard)]);
   return Boolean(
     await env.DB.prepare(
       `SELECT o.id FROM ai_operations o JOIN users u ON u.id=o.user_id
         WHERE o.id=? AND u.onboarding_completed_at IS NOT NULL AND (? != 'question' OR (
         SELECT COUNT(*) FROM ai_operations o JOIN processing_jobs j ON j.id=o.id
         WHERE o.user_id=? AND j.id!=? AND j.status NOT IN ('done','failed')
-        AND NOT (${waitingQuestion})) < ?)`,
+        AND NOT (${waitingQuestion})) < ?) AND (${guard?.sql ?? '1'})`,
     )
-      .bind(job.id, job.kind, job.user_id, job.id, limits(env).concurrent)
+      .bind(job.id, job.kind, job.user_id, job.id, limits(env).concurrent, ...(guard?.params ?? []))
       .first(),
   );
 }
@@ -148,6 +161,7 @@ export async function aiStep<T extends object>(
   step: WorkflowStep,
   name: string,
   operation: () => Promise<T>,
+  retention?: (result: T) => OperationGuard,
 ): Promise<T> {
   const outcome = await step.do(
     name,
@@ -179,11 +193,13 @@ export async function aiStep<T extends object>(
         throw new Error('AI処理の再試行上限に達しました。');
       const attempt = crypto.randomUUID();
       const config = limits(env);
+      const attemptGuard = reanalysisGuard(job, true);
       const results = await env.DB.batch([
         env.DB.prepare(
           `INSERT INTO ai_calls (id,job_id,user_id,status) SELECT ?,?,?,'running'
         WHERE (SELECT COUNT(*) FROM ai_attempts WHERE user_id=? AND created_at>?) < ?
         AND (SELECT COUNT(*) FROM ai_calls WHERE user_id=? AND status='running') < ?
+        AND (${attemptGuard?.sql ?? '1'})
         ON CONFLICT(id) DO UPDATE SET status='running', attempts=ai_calls.attempts+1, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
         WHERE ai_calls.status='failed' AND ai_calls.attempts<? AND ai_calls.retry_blocked=0`,
         ).bind(
@@ -195,6 +211,7 @@ export async function aiStep<T extends object>(
           config.calls,
           job.user_id,
           config.concurrentCalls,
+          ...(attemptGuard?.params ?? []),
           MAX_ATTEMPTS,
         ),
         env.DB.prepare('INSERT INTO ai_attempts (id,user_id) SELECT ?,? WHERE changes()=1').bind(
@@ -224,22 +241,25 @@ export async function aiStep<T extends object>(
         throw error;
       }
       const footprint = job.id.startsWith(footprintJobPrefix);
+      const retentionGuard = retention?.(result);
       const guard =
-        job.kind === 'user_memory'
+        retentionGuard?.sql ??
+        (job.kind === 'user_memory'
           ? 'SELECT 1 FROM users WHERE id=? AND memory_revision=? AND onboarding_completed_at IS NOT NULL'
           : job.kind === 'pufu'
             ? 'SELECT 1 FROM pufu_scores WHERE id=? AND generation=? AND user_id=?'
             : job.purpose === 'reflection'
               ? 'SELECT 1 FROM reflections r JOIN projects p ON p.id=r.project_id WHERE r.id=? AND r.generation=? AND p.user_id=?'
               : footprint
-                ? 'SELECT 1 FROM project_footprints f JOIN projects p ON p.id=f.project_id WHERE f.job_id=? AND p.user_id=?'
-                : null;
+                ? footprintJobCacheGuard(job.id)
+                : null);
       const guardValues =
-        job.kind === 'user_memory'
+        retentionGuard?.params ??
+        (job.kind === 'user_memory'
           ? [job.user_id, job.revision]
           : footprint
             ? [job.id, job.user_id]
-            : [job.target_id, job.revision, job.user_id];
+            : [job.target_id, job.revision, job.user_id]);
       await env.DB.prepare(
         guard
           ? `UPDATE ai_calls SET status='done',result_json=CASE WHEN EXISTS(${guard}) AND NOT EXISTS(SELECT 1 FROM privacy_cleanup_jobs WHERE id=?) THEN ? ELSE NULL END,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`

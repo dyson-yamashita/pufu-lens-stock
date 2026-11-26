@@ -1,5 +1,56 @@
 namespace Verification.Publication
 
+namespace SharedAnalysis
+
+structure Analysis where
+  publicInputs : Bool
+  sourcesCurrent : Bool
+  continuing : Bool
+  text : Nat
+  deriving DecidableEq, Repr
+
+inductive Display where
+  | point
+  | detail (text : Nat)
+  deriving DecidableEq, Repr
+
+def projection (a : Analysis) : Option Display :=
+  if a.publicInputs && a.sourcesCurrent then
+    some (if a.continuing then .point else .detail a.text)
+  else none
+
+def shared (publicProject memoryUpdates originalCurrent : Bool)
+    (original reanalysis : Analysis) (approved : Option Display) : Option Display :=
+  if publicProject && memoryUpdates then
+    (projection reanalysis).orElse (fun _ => (projection original).orElse
+      (fun _ => if originalCurrent then approved else none))
+  else none
+
+theorem private_inputs_never_project (a : Analysis) (h : a.publicInputs = false) :
+    projection a = none := by simp [projection, h]
+
+theorem changed_sources_never_project (a : Analysis) (h : a.sourcesCurrent = false) :
+    projection a = none := by simp [projection, h]
+
+theorem continuing_projected_as_point (a : Analysis) (h : a.continuing = true)
+    (hPublic : a.publicInputs = true) (hCurrent : a.sourcesCurrent = true) :
+    projection a = some .point := by simp [projection, h, hPublic, hCurrent]
+
+theorem closed_project_hides_analysis (memoryUpdates originalCurrent : Bool)
+    (original reanalysis : Analysis) (approved : Option Display) :
+    shared false memoryUpdates originalCurrent original reanalysis approved = none := by simp [shared]
+
+theorem shared_success_reachable :
+    shared true true true ⟨false, true, false, 70⟩ ⟨true, true, false, 80⟩ none = some (.detail 80) := by decide
+
+theorem shared_private_rejection_reachable :
+    shared true true true ⟨false, true, false, 70⟩ ⟨false, true, false, 80⟩ none = none := by decide
+
+theorem shared_current_independent_of_original :
+    shared true true false ⟨true, false, false, 70⟩ ⟨true, true, false, 80⟩ none = some (.detail 80) := by decide
+
+end SharedAnalysis
+
 /-- IDs and revisions stand for opaque DB values; a fresh revision is modeled by successor. -/
 structure State where
   present : Bool

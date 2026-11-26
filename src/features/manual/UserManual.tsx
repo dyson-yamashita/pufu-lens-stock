@@ -191,6 +191,7 @@ const sections = (tr: typeof t) => [
             <p>{tr('manual.memory_history')}</p>
             <p>{tr('manual.memory_history_storage')}</p>
             <p>{tr('footprints.manual')}</p>
+            <p>{tr('footprints.manual_reanalysis')}</p>
             <p>{tr('footprints.manual_publication')}</p>
           </details>
           <details>

@@ -4,6 +4,7 @@ import {
   publishFootprint,
   readFootprint,
   startFootprintBackfill,
+  startFootprintReanalysis,
   unpublishFootprint,
 } from '../../features/memory/footprint-repository';
 import { Hono } from 'hono';
@@ -153,6 +154,23 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
     const detail = await readFootprint(c.env, user.id, id, revision);
     if (!detail) throw new HTTPException(404);
     return c.json(detail);
+  });
+
+  app.post('/api/v1/projects/:id/footprints/:revision/reanalysis', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    const revision = footprintRevision(c.req.param('revision'));
+    const { generation } = await body(
+      c,
+      z.strictObject({ generation: z.number().int().nonnegative() }),
+    );
+    if (!(await startFootprintReanalysis(c.env, user.id, id, revision, generation)))
+      throw new HTTPException(409);
+    c.executionCtx.waitUntil(
+      observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
+    );
+    return c.json({ generation: generation + 1 }, 202);
   });
 
   app.patch('/api/v1/projects/:id/footprints/:revision/publication', async (c) => {

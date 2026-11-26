@@ -9,11 +9,13 @@ export function FootprintTimeline<Id extends string | number>({
   points,
   selected,
   followLatest,
+  opensDialog = false,
   onSelect,
 }: {
   points: TimelinePoint<Id>[];
   selected: Id;
   followLatest: boolean;
+  opensDialog?: boolean;
   onSelect: (id: Id) => void;
 }) {
   useLanguage();
@@ -36,6 +38,8 @@ export function FootprintTimeline<Id extends string | number>({
           key={id}
           className={`footprints-point footprints-${kind}`}
           aria-pressed={id === selected}
+          aria-haspopup={opensDialog && kind !== 'continuing' ? 'dialog' : undefined}
+          disabled={kind === 'continuing'}
           onClick={() => onSelect(id)}
         >
           <time dateTime={end_at}>{date.format(new Date(end_at))}</time>
