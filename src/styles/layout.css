@@ -331,9 +331,6 @@
   margin-left: auto;
   max-width: 100%;
 }
-.project-stock-actions {
-  margin-bottom: 12px;
-}
 .header-actions:empty {
   display: none;
 }

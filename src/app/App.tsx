@@ -252,18 +252,6 @@ export default function App({
           {!detailFlow && (
             <AppPageHeader
               selected={selected}
-              projectFootprints={
-                route.view === 'stocks' &&
-                route.projectId &&
-                selected?.include_in_user_memory &&
-                page === 1 && (
-                  <ProjectFootprints
-                    key={route.projectId}
-                    projectId={route.projectId}
-                    memoryRevision={memoryResponse.memory?.revision}
-                  />
-                )
-              }
               route={route}
               integrationTab={integrationTab}
               libraryView={libraryView}
@@ -510,6 +498,13 @@ export default function App({
             </Integrations>
           ) : route.view === 'memory' ? (
             <div className="memory-page">
+              {route.projectId && selected?.include_in_user_memory && (
+                <ProjectFootprints
+                  key={`footprints-${route.projectId}`}
+                  projectId={route.projectId}
+                  memoryRevision={memoryResponse.memory?.revision}
+                />
+              )}
               <MemoryPanel
                 key={route.projectId ?? 'user'}
                 historyProjectId={route.projectId ?? undefined}

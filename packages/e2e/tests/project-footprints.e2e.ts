@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { expect } from 'e2e';
 import { test } from '../src/fixtures.ts';
 
-test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先頭だけで詳細を開ける', async ({
+test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクトのメモリタブで詳細を開ける', async ({
   app,
   browser,
   screen,
@@ -44,13 +44,6 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   }
 
   for (let index = 1; index <= 4; index++) await addMemoryStock(index);
-  for (let index = 0; index < 21; index++) {
-    await fixture.request('/stocks', 'POST', {
-      project_id: id,
-      type: 'url',
-      url: `https://www.youtube.com/playlist?list=e2e-footprints-${index}`,
-    });
-  }
   const deadline = Date.now() + 25000;
   while (Date.now() < deadline) {
     const scheduled = await fetch(`${fixture.url}/api/__e2e__/scheduled?time=${Date.now()}`, {
@@ -65,15 +58,15 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   }
 
   await app.open(`/#project/${id}`);
-  const points = browser.locator('.footprints-timeline button');
   const heading = screen.getByRole('heading', 'プロジェクトの足あと', { exact: true });
-  const toggle = browser.locator('.footprints-toggle');
-  await expect(heading).toBeVisible();
   await expect(
-    browser
-      .locator('.footprints + .project-stock-actions')
-      .getByRole('button', '記事をストック', { exact: true }),
+    browser.locator('.page-header').getByRole('button', '記事をストック', { exact: true }),
   ).toBeVisible();
+  await expect(heading).toHaveCount(0);
+  await screen.getByRole('button', 'メモリ', { exact: true }).click();
+  await expect(browser.locator('.memory-page .footprints')).toBeVisible();
+  const points = browser.locator('.footprints-timeline button');
+  const toggle = browser.locator('.footprints-toggle');
   expect((await points.allTextContents()).length).toBeGreaterThan(3);
   await expect(points.last()).toHaveAttribute('aria-pressed', 'true');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -95,12 +88,8 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   await screen.getByRole('button', '詳細を閉じる', { exact: true }).click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
-  const pagination = browser.locator('.pagination');
-  await pagination.getByRole('button', '次へ', { exact: true }).click();
-  await expect(heading).toHaveCount(0);
-  await pagination.getByRole('button', '前へ', { exact: true }).click();
-  await expect(heading).toBeVisible();
-  await screen.getByRole('button', 'メモリ', { exact: true }).click();
+  await app.open('/#memory');
+  await expect(browser.locator('.memory-page .full-memory')).toBeVisible();
   await expect(heading).toHaveCount(0);
 
   await app.open(`/#settings/${id}`);
@@ -111,7 +100,7 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
   await screen.getByRole('button', '過去の足あとを生成', { exact: true }).click();
   await expect(screen.getByText(/過去の足あとの生成を受け付けました/)).toBeVisible();
-  await app.open(`/#project/${id}`);
+  await app.open(`/#memory/${id}`);
   await expect(heading).toBeVisible();
 
   // The saved setting must be reflected during navigation even while the list refresh is delayed.
@@ -140,9 +129,9 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
       await save.click();
       await expect(save).toBeEnabled();
       await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
-      await app.open(`/#project/${id}`);
+      await app.open(`/#memory/${id}`);
       await expect(
-        screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
+        screen.getByRole('heading', `${fixture.projectName}のメモリ`, { exact: true }),
       ).toBeVisible();
       if (enabled) await expect(heading).toBeVisible();
       else await expect(heading).toHaveCount(0);
