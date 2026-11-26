@@ -789,6 +789,13 @@ test('PUBLIC-001 公開前に確認し匿名で閲覧でき非公開化後は取
   await expect(publicViewCounts).toHaveCount(0);
   await app.open(`/p/${publicId}`);
   await expect(screen.getByRole('heading', fixture.projectName)).toBeVisible();
+  await expect(browser.locator('.public-tabs a')).toHaveText([
+    'ストック',
+    '問い・気づき',
+    'プ譜',
+    '足あと',
+  ]);
+  await expect(browser.locator('.public-tabs a svg')).toHaveCount(0);
   await expect(browser.locator('.public-stock-card .public-summary')).toHaveText(verbatimText);
   await expect(publicViewCounts).toHaveCount(0);
   const preview = '.public-stock-card .public-summary + .article-image-previews';

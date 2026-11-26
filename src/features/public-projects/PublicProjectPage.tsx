@@ -1,4 +1,4 @@
-import { ArrowRight, CircleHelp, Footprints, Globe, Layers, Network } from 'lucide-react';
+import { ArrowRight, Globe } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { PublicProjectDetail } from '../../../shared/public-project';
 import { publicHash } from '../../../shared/public-route';
@@ -121,9 +121,7 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                     : undefined
                 }
               >
-                <Layers size={18} aria-hidden="true" />
                 {t('ui.app.stocks')}
-                <span>{data.project.stock_count}</span>
               </a>
               <a
                 href={publicLink('#questions')}
@@ -131,23 +129,18 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                   hash === '#questions' || match?.[1] === 'question' ? 'page' : undefined
                 }
               >
-                <CircleHelp size={18} aria-hidden="true" />
                 {t('ui.app.questions_insights')}
-                <span>{data.project.question_count}</span>
               </a>
               <a
                 href={publicLink('#pufus')}
                 aria-current={hash === '#pufus' || match?.[1] === 'pufu' ? 'page' : undefined}
               >
-                <Network size={18} aria-hidden="true" />
                 {t('ui.app.pufu')}
-                <span>{data.project.pufu_count}</span>
               </a>
               <a
                 href={publicLink('#footprints')}
                 aria-current={hash === '#footprints' ? 'page' : undefined}
               >
-                <Footprints size={18} aria-hidden="true" />
                 {t('footprints.public_tab')}
               </a>
             </nav>
