@@ -251,6 +251,18 @@ export default function App({
           {!detailFlow && (
             <AppPageHeader
               selected={selected}
+              projectFootprints={
+                route.view === 'stocks' &&
+                route.projectId &&
+                selected?.include_in_user_memory &&
+                page === 1 && (
+                  <ProjectFootprints
+                    key={route.projectId}
+                    projectId={route.projectId}
+                    memoryRevision={memoryResponse.memory?.revision}
+                  />
+                )
+              }
               route={route}
               integrationTab={integrationTab}
               libraryView={libraryView}
@@ -258,13 +270,6 @@ export default function App({
               filterProject={filterProject}
               projects={projects}
               setModal={setModal}
-            />
-          )}
-          {route.view === 'stocks' && route.projectId && page === 1 && (
-            <ProjectFootprints
-              key={route.projectId}
-              projectId={route.projectId}
-              memoryRevision={memoryResponse.memory?.revision}
             />
           )}
           {(route.view === 'stocks' ||

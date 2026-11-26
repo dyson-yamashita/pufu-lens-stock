@@ -202,7 +202,7 @@ export function ProjectFootprints({
         {open
           ? t('footprints.close')
           : t('footprints.open', { date: date.format(new Date(point.end_at)) })}
-        <ChevronDown size={16} aria-hidden="true" />
+        <ChevronDown size={14} aria-hidden="true" />
       </button>
       <div id={panelId} className="footprints-detail" hidden={!open}>
         {open &&

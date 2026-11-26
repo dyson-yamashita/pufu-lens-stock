@@ -67,6 +67,11 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   const heading = screen.getByRole('heading', 'プロジェクトの足あと', { exact: true });
   const toggle = browser.locator('.footprints-toggle');
   await expect(heading).toBeVisible();
+  await expect(
+    browser
+      .locator('.footprints + .project-stock-actions')
+      .getByRole('button', '記事をストック', { exact: true }),
+  ).toBeVisible();
   expect((await points.allTextContents()).length).toBeGreaterThan(3);
   await expect(points.last()).toHaveAttribute('aria-pressed', 'true');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -105,4 +110,20 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   await expect(screen.getByText(/過去の足あとの生成を受け付けました/)).toBeVisible();
   await app.open(`/#project/${id}`);
   await expect(heading).toBeVisible();
+
+  for (const enabled of [false, true]) {
+    await app.open(`/#settings/${id}`);
+    await advanced.click();
+    await screen
+      .getByRole('switch', 'ストック追加時にユーザーのメモリを更新する', { exact: true })
+      .click();
+    await screen.getByRole('button', '保存', { exact: true }).click();
+    await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
+    await app.open(`/#project/${id}`);
+    await expect(
+      screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
+    ).toBeVisible();
+    if (enabled) await expect(heading).toBeVisible();
+    else await expect(heading).toHaveCount(0);
+  }
 });

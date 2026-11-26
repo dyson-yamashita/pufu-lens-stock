@@ -20,11 +20,10 @@ export const en: Record<string, string> = {
   'footprints.backfill': 'Generate past footprints',
   'footprints.backfill_hint':
     'Analyze stored memory versions in chronological order using the saved interval. This can take some time.',
-  'footprints.backfill_accepted':
-    'Past footprints are queued. They will appear on the first Stocks page as they are generated.',
+  'footprints.backfill_accepted': 'Past footprints are queued.',
   'footprints.backfill_failed': 'Could not start generating past footprints.',
   'footprints.manual':
-    'Project footprints trace changes in interests, understanding, and questions. On the first Stocks page, select a date and open its details to see how the change unfolded and which records relate to it. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints. Footprints are private.',
+    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a date on the first Stocks page and open its details to see how the change unfolded and which records relate to it. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints. Footprints are private.',
   'footprints.kind.beginning': 'Beginning',
   'footprints.kind.discovery': 'Discovery',
   'footprints.kind.deepening': 'Deepening',

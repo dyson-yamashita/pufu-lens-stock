@@ -440,6 +440,8 @@
       "src/features/footprints/ProjectFootprints.tsx",
       "src/features/footprints/footprints.css",
       "src/app/App.tsx",
+      "src/app/AppPageHeader.tsx",
+      "src/styles/layout.css",
       "src/features/projects/ProjectForm.tsx",
       "server/api/routes/projects.ts",
       "server/features/memory/footprint-generation.ts",
@@ -451,7 +453,7 @@
     "aspects": [
       "設定の既定値・間隔の保存・過去履歴生成の受付",
       "古い順のタイムライン・最新選択・詳細の開閉・スマホの横スクロール",
-      "ストックの先頭のみ表示・オフでも既存の足あとを閲覧"
+      "ストックの先頭のみ表示・足あとの下に記事を追加するボタン・自動追加オフでも閲覧・ユーザーメモリ更新オフでは非表示"
     ]
   },
   {
