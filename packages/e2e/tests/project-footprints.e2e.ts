@@ -14,10 +14,12 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   await advanced.click();
   const automatic = screen.getByRole('switch', '足あとの自動追加', { exact: true });
   const interval = screen.getByRole('combobox', '足あとの追加間隔', { exact: true });
+  const save = screen.getByRole('button', '保存', { exact: true });
   await expect(automatic).toBeChecked();
   await expect(interval).toHaveValue('3');
   await interval.selectOption({ label: '1回' });
-  await screen.getByRole('button', '保存', { exact: true }).click();
+  await save.click();
+  await expect(save).toBeEnabled();
   await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
   await browser.reload();
   await advanced.click();
@@ -104,26 +106,49 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、ストックの先
   await app.open(`/#settings/${id}`);
   await advanced.click();
   await automatic.click();
-  await screen.getByRole('button', '保存', { exact: true }).click();
+  await save.click();
+  await expect(save).toBeEnabled();
   await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
   await screen.getByRole('button', '過去の足あとを生成', { exact: true }).click();
   await expect(screen.getByText(/過去の足あとの生成を受け付けました/)).toBeVisible();
   await app.open(`/#project/${id}`);
   await expect(heading).toBeVisible();
 
-  for (const enabled of [false, true]) {
-    await app.open(`/#settings/${id}`);
-    await advanced.click();
-    await screen
-      .getByRole('switch', 'ストック追加時にユーザーのメモリを更新する', { exact: true })
-      .click();
-    await screen.getByRole('button', '保存', { exact: true }).click();
-    await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
-    await app.open(`/#project/${id}`);
-    await expect(
-      screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
-    ).toBeVisible();
-    if (enabled) await expect(heading).toBeVisible();
-    else await expect(heading).toHaveCount(0);
+  // The saved setting must be reflected during navigation even while the list refresh is delayed.
+  let delayedProjectReads = 0;
+  let releaseProjectReads!: () => void;
+  const pendingProjectReads = new Promise<void>((resolve) => {
+    releaseProjectReads = resolve;
+  });
+  await browser.route(`${fixture.url}/api/v1/projects?include_reflections=true`, async (route) => {
+    delayedProjectReads++;
+    await pendingProjectReads;
+    await route.continue();
+  });
+  try {
+    for (const enabled of [false, true]) {
+      await app.open(`/#settings/${id}`);
+      await advanced.click();
+      const memoryUpdate = screen.getByRole(
+        'switch',
+        'ストック追加時にユーザーのメモリを更新する',
+        { exact: true },
+      );
+      if (enabled) await expect(memoryUpdate).not.toBeChecked();
+      else await expect(memoryUpdate).toBeChecked();
+      await memoryUpdate.click();
+      await save.click();
+      await expect(save).toBeEnabled();
+      await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
+      await app.open(`/#project/${id}`);
+      await expect(
+        screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
+      ).toBeVisible();
+      if (enabled) await expect(heading).toBeVisible();
+      else await expect(heading).toHaveCount(0);
+    }
+    expect(delayedProjectReads).toBeGreaterThan(0);
+  } finally {
+    releaseProjectReads();
   }
 });

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Project, Stock, TokenInfo } from '../../shared/domain';
 import type { useAppSession } from '../features/auth/useAppSession';
 import type { MemoryResponse } from '../features/memory/types';
+import type { ProjectSettings } from '../features/projects/ProjectForm';
 import { applicationError } from '../i18n/i18n';
 import { api, ApiError, send } from '../lib/api';
 import type { useAppNavigation } from './useAppNavigation';
@@ -32,6 +33,7 @@ export function useAppData({ session, navigation, filters, setError }: Options) 
   } = navigation;
   const { search, stockSource, page, pageSize, setPage } = filters;
   const [projects, setProjects] = useState<Project[]>([]);
+  const projectMutationVersion = useRef(0);
 
   const [stocks, setStocks] = useState<Stock[]>([]);
 
@@ -55,6 +57,13 @@ export function useAppData({ session, navigation, filters, setError }: Options) 
 
   const reload = () => setRefresh((value) => value + 1);
 
+  const applyProjectSettings = (id: string, settings: ProjectSettings) => {
+    projectMutationVersion.current++;
+    setProjects((current) =>
+      current.map((project) => (project.id === id ? { ...project, ...settings } : project)),
+    );
+  };
+
   useEffect(() => {
     if (!user?.onboarding_completed_at) return;
     const controller = new AbortController();
@@ -64,6 +73,7 @@ export function useAppData({ session, navigation, filters, setError }: Options) 
       if (inFlight) return;
       inFlight = true;
       const version = stockMutationVersion.current;
+      const projectVersion = projectMutationVersion.current;
       const params = new URLSearchParams({
         q: search,
         source: stockSource === 'favorites' ? 'all' : stockSource,
@@ -94,7 +104,7 @@ export function useAppData({ session, navigation, filters, setError }: Options) 
             : Promise.resolve({ tokens: [] }),
         ]);
         if (!controller.signal.aborted) {
-          setProjects(projectData.projects);
+          if (projectVersion === projectMutationVersion.current) setProjects(projectData.projects);
           if (version === stockMutationVersion.current) {
             setStocks(stockData.stocks);
             setTotal(stockData.total);
@@ -232,6 +242,7 @@ export function useAppData({ session, navigation, filters, setError }: Options) 
   return {
     refresh,
     projects,
+    applyProjectSettings,
     stocks,
     savingStockFavorites,
     memoryResponse,

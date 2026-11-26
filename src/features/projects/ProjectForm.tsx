@@ -10,13 +10,25 @@ import { applicationError, t, useLanguage } from '../../i18n/i18n';
 import { api, send } from '../../lib/api';
 import { ProjectPublicationSettings } from '../public-projects';
 
+export type ProjectSettings = Pick<
+  Project,
+  | 'name'
+  | 'description'
+  | 'show_in_all_lists'
+  | 'include_in_user_memory'
+  | 'auto_generate_questions'
+  | 'reflection_period'
+  | 'footprints_enabled'
+  | 'footprint_interval'
+>;
+
 export function ProjectForm({
   project,
   onDone,
   onDelete,
 }: {
   project?: Project;
-  onDone: (id: string) => void;
+  onDone: (id: string, settings: ProjectSettings) => void;
   onDelete: () => void;
 }) {
   useLanguage();
@@ -57,23 +69,22 @@ export function ProjectForm({
           setBusy(true);
           setError('');
           try {
-            const data = await send<{
-              id: string;
-            }>(
+            const settings: ProjectSettings = {
+              name: name.trim(),
+              description: description.trim(),
+              show_in_all_lists: showInAllLists,
+              include_in_user_memory: includeInUserMemory,
+              auto_generate_questions: autoGenerateQuestions,
+              reflection_period: reflectionPeriod,
+              footprints_enabled: footprintsEnabled,
+              footprint_interval: footprintInterval,
+            };
+            const data = await send<{ id: string }>(
               project ? `/api/v1/projects/${project.id}` : '/api/v1/projects',
-              {
-                name,
-                description,
-                show_in_all_lists: showInAllLists,
-                include_in_user_memory: includeInUserMemory,
-                auto_generate_questions: autoGenerateQuestions,
-                reflection_period: reflectionPeriod,
-                footprints_enabled: footprintsEnabled,
-                footprint_interval: footprintInterval,
-              },
+              settings,
               project ? 'PATCH' : 'POST',
             );
-            onDone(project?.id ?? data.id);
+            onDone(project?.id ?? data.id, settings);
           } catch (e) {
             setError(applicationError((e as Error).message));
           } finally {

@@ -113,6 +113,7 @@ export default function App({
   const {
     refresh,
     projects,
+    applyProjectSettings,
     stocks,
     savingStockFavorites,
     memoryResponse,
@@ -454,7 +455,10 @@ export default function App({
                 <ProjectForm
                   key={selected.id}
                   project={selected}
-                  onDone={() => completed(t('ui.app.project_settings_saved'))}
+                  onDone={(id, settings) => {
+                    applyProjectSettings(id, settings);
+                    completed(t('ui.app.project_settings_saved'));
+                  }}
                   onDelete={() => {
                     completed(t('ui.app.project_deleted'));
                     filterProject(null);
@@ -562,6 +566,7 @@ export default function App({
         modal={modal}
         setModal={setModal}
         projects={projects}
+        applyProjectSettings={applyProjectSettings}
         completed={completed}
         navigate={navigate}
         listProjectId={listProjectId}
