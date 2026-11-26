@@ -558,6 +558,10 @@ test('PUFU-001 プ譜を編集保存し新局面と過去局面を保持して�
   };
   expect(savedRelations.pufu.question_ids).toHaveLength(2);
   expect(savedRelations.pufu.stock_ids).toHaveLength(2);
+  await app.open(`/#pufu/${pufu.id}/1`);
+  await expect(browser.locator('.pufu-phase-number')).toHaveText('第1局面');
+  await app.open(`/#pufu/${pufu.id}`);
+  await expect(browser.locator('.pufu-phase-number')).toHaveText('第2局面');
   await screen.getByRole('button', '前の局面へ').click();
   await expect(browser.locator('.pufu-phase-number')).toHaveText('第1局面');
   // 詳細を開いた後のデプロイで、この画面が参照する古いJSが配信されなくなる状況を再現する。

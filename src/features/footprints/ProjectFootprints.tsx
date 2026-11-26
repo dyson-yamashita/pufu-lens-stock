@@ -1,8 +1,10 @@
-import { ChevronDown, Footprints, History, Sparkles, GitBranch, Sprout } from 'lucide-react';
+import { ChevronDown, Footprints, History, Sprout } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import type {
   FootprintDetail,
+  FootprintEvidence,
   FootprintPoint,
+  FootprintStatement,
   OwnedFootprintDetail,
 } from '../../../shared/footprints';
 import { intlLocale, t, useLanguage } from '../../i18n/i18n';
@@ -10,16 +12,66 @@ import { api } from '../../lib/api';
 import { FootprintPublicationEditor } from './FootprintPublicationEditor';
 import { FootprintTimeline } from './FootprintTimeline';
 
+const linkKey = ({ kind, id, phase }: FootprintEvidence) => JSON.stringify([kind, id, phase]);
+
+function EvidenceLinks({ links }: { links: FootprintEvidence[] }) {
+  if (!links.length) return null;
+  return (
+    <ul className="footprints-evidence-links">
+      {links.map((link) => {
+        const phase = link.kind === 'pufu' ? link.phase : undefined;
+        const href = `#${link.kind}/${encodeURIComponent(link.id)}${phase ? `/${phase}` : ''}`;
+        const label = link.label || t(`footprints.link.${link.kind}`);
+        return (
+          <li key={linkKey(link)}>
+            <a href={href}>
+              {phase ? `${label} · ${t('phase.number', { number: phase })}` : label}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function LinkedStatements({
+  heading,
+  items,
+  quote,
+}: {
+  heading: string;
+  items: FootprintStatement[];
+  quote?: boolean;
+}) {
+  if (!items.length) return null;
+  return (
+    <section>
+      <h4>{heading}</h4>
+      <ul className="footprints-statements">
+        {items.map(({ text, links }, index) => (
+          <li key={index}>
+            <p>{quote ? <q>{text}</q> : text}</p>
+            <EvidenceLinks links={links} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Detail({ detail }: { detail: FootprintDetail }) {
   const { analysis, links } = detail;
   const longDate = new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' });
   const period = longDate.formatRange(new Date(detail.start_at), new Date(detail.end_at));
   const stages = [
     { key: 'before', icon: History, content: analysis.before },
-    { key: 'triggers', icon: Sparkles, content: analysis.triggers },
-    { key: 'process', icon: GitBranch, content: analysis.process },
     { key: 'current', icon: Sprout, content: analysis.current },
   ];
+  const changes = analysis.changes ?? [];
+  const triggers = analysis.trigger_details ?? [];
+  const earlierRecords = analysis.trigger_details === undefined ? analysis.triggers : [];
+  const linked = new Set([...changes, ...triggers].flatMap(({ links }) => links.map(linkKey)));
+  const related = links.filter((link) => !linked.has(linkKey(link)));
   const perspectives = Object.entries(analysis.perspectives).filter(([, value]) => value);
   return (
     <>
@@ -35,20 +87,14 @@ function Detail({ detail }: { detail: FootprintDetail }) {
               <Icon size={20} aria-hidden="true" />
               <div>
                 <h4>{t(`footprints.${key}`)}</h4>
-                {typeof content === 'string' ? (
-                  <p>{content}</p>
-                ) : (
-                  <ul>
-                    {content.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                )}
+                <p>{content}</p>
               </div>
             </div>
           ))}
       </div>
-      {(['meaning', 'unchanged'] as const).map(
+      <LinkedStatements heading={t('footprints.changes')} items={changes} />
+      <LinkedStatements heading={t('footprints.triggers')} items={triggers} quote />
+      {(['process', 'meaning', 'interpretation', 'unchanged'] as const).map(
         (key) =>
           analysis[key] && (
             <section key={key}>
@@ -70,18 +116,17 @@ function Detail({ detail }: { detail: FootprintDetail }) {
           </dl>
         </section>
       )}
-      {links.length > 0 && (
+      {(earlierRecords.length > 0 || related.length > 0) && (
         <section>
           <h4>{t('footprints.evidence')}</h4>
-          <ul>
-            {links.map(({ kind, id, label }) => (
-              <li key={`${kind}/${id}`}>
-                <a href={`#${kind}/${encodeURIComponent(id)}`}>
-                  {label || t(`footprints.link.${kind}`)}
-                </a>
-              </li>
-            ))}
-          </ul>
+          {earlierRecords.length > 0 && (
+            <ul>
+              {earlierRecords.map((text, index) => (
+                <li key={index}>{text}</li>
+              ))}
+            </ul>
+          )}
+          <EvidenceLinks links={related} />
         </section>
       )}
     </>

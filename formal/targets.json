@@ -66,6 +66,7 @@
         "tests/mcp-relations.test.ts",
         "tests/public-projects.test.ts",
         "tests/public-footprints.test.ts",
+        "tests/project-footprints.test.ts",
         "tests/public-directory-cache.test.ts",
         "tests/pufu-image-links.test.ts",
         "tests/workflows.test.ts",
