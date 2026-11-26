@@ -140,4 +140,54 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   } finally {
     releaseProjectReads();
   }
+
+  const { publication } = (await fixture.request(`/projects/${id}/publication`, 'PATCH', {
+    is_public: true,
+    public_description: '',
+  })) as { publication: { public_id: string } };
+  const publicPage = `/p/${publication.public_id}`;
+  await toggle.click();
+  const editor = browser.locator('.footprints-publication summary');
+  const title = screen.getByLabel('公開用タイトル', { exact: true });
+  const summary = screen.getByLabel('公開用の説明', { exact: true });
+  for (const [point, heading, text] of [
+    [points.last(), '公開する見直し', '実践を続けて見直したこと。'],
+    [points.first(), '公開するはじまり', '記録を始めたきっかけ。'],
+  ] as const) {
+    await point.click();
+    await editor.click();
+    await expect(title).toHaveValue('');
+    await title.fill(heading);
+    await summary.fill(text);
+    await screen.getByRole('button', '公開ページに掲載', { exact: true }).click();
+    await expect(screen.getByText('公開ページに掲載しました。', { exact: true })).toBeVisible();
+  }
+
+  const cookies = await browser.cookies();
+  await app.clearState();
+  await app.open(publicPage);
+  const tab = screen.getByRole('link', '足あと', { exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-current', 'page');
+  await expect(points).toHaveCount(2);
+  await expect(points.last()).toHaveAttribute('aria-pressed', 'true');
+  await expect(screen.getByRole('heading', '公開する見直し', { exact: true })).toBeVisible();
+  await expect(screen.getByText('実践を続けて見直したこと。', { exact: true })).toBeVisible();
+  await expect(
+    screen.getByRole('heading', 'プロジェクトの記録が続く', { exact: true }),
+  ).toHaveCount(0);
+  await points.first().click();
+  await expect(screen.getByRole('heading', '公開するはじまり', { exact: true })).toBeVisible();
+
+  await browser.setCookies(cookies);
+  await app.open(`/#memory/${id}`);
+  await toggle.click();
+  await editor.click();
+  await expect(title).toHaveValue('公開する見直し');
+  await screen.getByRole('button', '掲載を取り消す', { exact: true }).click();
+  await expect(screen.getByText('掲載を取り消しました。', { exact: true })).toBeVisible();
+  await app.clearState();
+  await app.open(`${publicPage}?view=footprints`);
+  await expect(points).toHaveCount(1);
+  await expect(screen.getByRole('heading', '公開するはじまり', { exact: true })).toBeVisible();
 });

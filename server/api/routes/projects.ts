@@ -1,8 +1,10 @@
-import { footprintIntervalSchema } from '../../../shared/footprints';
+import { footprintIntervalSchema, footprintPublicationSchema } from '../../../shared/footprints';
 import {
   listFootprints,
+  publishFootprint,
   readFootprint,
   startFootprintBackfill,
+  unpublishFootprint,
 } from '../../features/memory/footprint-repository';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
@@ -32,6 +34,13 @@ const projectSchema = z.object({
   footprints_enabled: z.boolean().optional(),
   footprint_interval: footprintIntervalSchema.optional(),
 });
+
+function footprintRevision(value: string) {
+  const revision = Number(value);
+  if (!Number.isSafeInteger(revision) || revision < 0) throw new HTTPException(404);
+  return revision;
+}
+
 export function registerProjectsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/projects', async (c) => {
     const principal = c.get('principal');
@@ -140,11 +149,29 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
     const { user } = c.get('principal');
     const id = c.req.param('id');
     await ownedProject(c.env, user.id, id);
-    const revision = Number(c.req.param('revision'));
-    if (!Number.isSafeInteger(revision) || revision < 0) throw new HTTPException(404);
+    const revision = footprintRevision(c.req.param('revision'));
     const detail = await readFootprint(c.env, user.id, id, revision);
     if (!detail) throw new HTTPException(404);
     return c.json(detail);
+  });
+
+  app.patch('/api/v1/projects/:id/footprints/:revision/publication', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    const revision = footprintRevision(c.req.param('revision'));
+    const input = await body(c, footprintPublicationSchema);
+    const publication = await publishFootprint(c.env, user.id, id, revision, input);
+    if (!publication) throw new HTTPException(404);
+    return c.json({ publication });
+  });
+
+  app.delete('/api/v1/projects/:id/footprints/:revision/publication', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    await unpublishFootprint(c.env, user.id, id, footprintRevision(c.req.param('revision')));
+    return c.json({ ok: true });
   });
 
   app.post('/api/v1/projects/:id/footprints/backfill', async (c) => {

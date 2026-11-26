@@ -1,4 +1,10 @@
-import type { FootprintDetail, FootprintPoint } from '../../../shared/footprints';
+import type {
+  FootprintDetail,
+  FootprintPoint,
+  FootprintPublication,
+  OwnedFootprintDetail,
+  PublicFootprint,
+} from '../../../shared/footprints';
 import type { Env, Job } from '../../env';
 
 export const footprintJobPrefix = 'footprint-';
@@ -13,32 +19,51 @@ export type FootprintRow = {
 };
 export type Dependency = { kind: string; id: string; version: string };
 
-// The same ownership and version checks apply to generation, publication and reads.
-export const footprintSources = `
-WITH parents AS MATERIALIZED (
-  SELECT 'stock' AS kind,id,project_id,footprint_edited_at AS moved_at FROM stocks WHERE project_id=?1
-  UNION ALL SELECT 'question',id,project_id,footprint_moved_at FROM questions WHERE project_id=?1
-  UNION ALL SELECT 'pufu',id,project_id,footprint_moved_at FROM pufu_scores WHERE project_id=?1
+// The same project and version checks apply to generation, publication and reads.
+function sourcesForProject(project: string, dependency?: { kind: string; id: string }) {
+  const match = (kind: string, id: string) =>
+    dependency ? ` AND ${dependency.kind}='${kind}' AND ${id}=${dependency.id}` : '';
+  const phaseId = dependency && `CASE WHEN json_valid(${dependency.id}) THEN ${dependency.id} END`;
+  const matchPhase = dependency
+    ? ` AND ${dependency.kind}='phase' AND ph.pufu_id=json_extract(${phaseId},'$[0]')
+        AND ph.number=json_extract(${phaseId},'$[1]')`
+    : '';
+  return `
+WITH parents AS ${dependency ? 'NOT MATERIALIZED' : 'MATERIALIZED'} (
+  SELECT 'stock' AS kind,id,project_id,footprint_edited_at AS moved_at FROM stocks WHERE project_id=${project}
+  UNION ALL SELECT 'question',id,project_id,footprint_moved_at FROM questions WHERE project_id=${project}
+  UNION ALL SELECT 'pufu',id,project_id,footprint_moved_at FROM pufu_scores WHERE project_id=${project}
 )
 SELECT s.project_id,'stock' AS kind,s.id,
   json_array(s.article_id,s.footprint_edited_at,a.updated_at) AS version
 FROM stocks s JOIN articles a ON a.id=s.article_id AND a.user_id=s.user_id
-WHERE s.project_id=?1
-UNION ALL SELECT project_id,'question',id,json_array(updated_at,footprint_moved_at) FROM questions WHERE project_id=?1 AND status='ready'
+WHERE s.project_id=${project}${match('stock', 's.id')}
+UNION ALL SELECT project_id,'question',id,json_array(updated_at,footprint_moved_at)
+FROM questions WHERE project_id=${project} AND status='ready'${match('question', 'id')}
 UNION ALL SELECT project_id,'reflection',id,COALESCE(footprint_edited_at,created_at)
-FROM reflections WHERE project_id=?1 AND dismissed_at IS NULL AND status='ready'
+FROM reflections WHERE project_id=${project} AND dismissed_at IS NULL AND status='ready'${match('reflection', 'id')}
 UNION ALL SELECT p.project_id,'phase',json_array(ph.pufu_id,ph.number),json_array(ph.updated_at,p.footprint_moved_at)
 FROM pufu_phases ph JOIN pufu_scores p ON p.id=ph.pufu_id
-WHERE p.project_id=?1 AND p.status='ready'
+WHERE p.project_id=${project} AND p.status='ready'${matchPhase}
 UNION ALL SELECT p.project_id,'comment',c.id,json_array(c.target_type,c.target_id,c.phase,c.created_at,p.moved_at)
-FROM parents p JOIN comments c ON c.target_type=p.kind AND c.target_id=p.id
+FROM ${dependency ? 'comments c CROSS JOIN parents p' : 'parents p JOIN comments c'}
+ON c.target_type=p.kind AND c.target_id=p.id WHERE 1${match('comment', 'c.id')}
 `;
+}
+export const footprintSources = sourcesForProject('?1');
+const publicationEnabled = 'p.is_public=1 AND p.include_in_user_memory=1';
+const dependencyKind = "json_extract(d.value,'$.kind')";
+const dependencyId = "json_extract(d.value,'$.id')";
+const sourcesForDependency = `(${sourcesForProject('f.project_id', {
+  kind: dependencyKind,
+  id: dependencyId,
+})})`;
 
-const dependenciesPresent = (json: string) => `NOT EXISTS (
+const dependenciesPresent = (json: string, sources = 'sources') => `NOT EXISTS (
  SELECT 1 FROM json_each(${json}) d
  WHERE NOT EXISTS (
-   SELECT 1 FROM sources s WHERE s.project_id=f.project_id
-   AND s.kind=json_extract(d.value,'$.kind') AND s.id=json_extract(d.value,'$.id')
+   SELECT 1 FROM ${sources} s WHERE s.project_id=f.project_id
+   AND s.kind=${dependencyKind} AND s.id=${dependencyId}
    AND s.version=json_extract(d.value,'$.version')
  )
 )`;
@@ -74,8 +99,10 @@ export async function readFootprintRecord(
 ) {
   const row = await env.DB.prepare(
     `WITH sources AS MATERIALIZED (${footprintSources})
-     SELECT f.revision,f.start_at,f.end_at,f.result_json,f.dependencies
+     SELECT f.revision,f.start_at,f.end_at,f.result_json,f.dependencies,
+       (${publicationEnabled}) AS publication_enabled, a.title AS public_title,a.summary AS public_summary
      FROM project_footprints f JOIN projects p ON p.id=f.project_id
+     LEFT JOIN project_footprint_publications a ON a.project_id=f.project_id AND a.revision=f.revision
      WHERE p.user_id=?2 AND f.project_id=?1 AND f.revision=?3 AND f.result_json IS NOT NULL
        AND ${dependenciesPresent('f.dependencies')}`,
   )
@@ -86,18 +113,88 @@ export async function readFootprintRecord(
       end_at: string;
       result_json: string;
       dependencies: string;
+      publication_enabled: number;
+      public_title: string | null;
+      public_summary: string | null;
     }>();
   if (!row) return null;
-  const { result_json, dependencies, ...point } = row;
+  const { result_json, dependencies, publication_enabled, public_title, public_summary, ...point } =
+    row;
   const detail = JSON.parse(result_json) as Pick<FootprintDetail, 'analysis' | 'links'>;
   return {
     detail: { ...point, ...detail, kind: detail.analysis.kind },
     dependencies: JSON.parse(dependencies) as Dependency[],
+    publication_enabled: Boolean(publication_enabled),
+    publication:
+      public_title === null || public_summary === null
+        ? null
+        : { title: public_title, summary: public_summary },
   };
 }
 
-export async function readFootprint(env: Env, userId: string, projectId: string, revision: number) {
-  return (await readFootprintRecord(env, userId, projectId, revision))?.detail ?? null;
+export async function readFootprint(
+  env: Env,
+  userId: string,
+  projectId: string,
+  revision: number,
+): Promise<OwnedFootprintDetail | null> {
+  const record = await readFootprintRecord(env, userId, projectId, revision);
+  if (!record) return null;
+  const { detail, publication_enabled, publication } = record;
+  return { ...detail, publication_enabled, publication };
+}
+
+export function publishFootprint(
+  env: Env,
+  userId: string,
+  projectId: string,
+  revision: number,
+  publication: FootprintPublication,
+) {
+  return env.DB.prepare(
+    `INSERT INTO project_footprint_publications(project_id,revision,id,title,summary)
+     SELECT f.project_id,f.revision,?4,?5,?6
+     FROM project_footprints f JOIN projects p ON p.id=f.project_id
+     WHERE f.project_id=?1 AND p.user_id=?2 AND f.revision=?3 AND (${publicationEnabled})
+       AND f.result_json IS NOT NULL AND ${dependenciesPresent('f.dependencies', sourcesForDependency)}
+     ON CONFLICT(project_id,revision) DO UPDATE SET title=excluded.title,summary=excluded.summary
+     RETURNING title,summary`,
+  )
+    .bind(projectId, userId, revision, crypto.randomUUID(), publication.title, publication.summary)
+    .first<FootprintPublication>();
+}
+
+export function unpublishFootprint(env: Env, userId: string, projectId: string, revision: number) {
+  return env.DB.prepare(
+    `DELETE FROM project_footprint_publications WHERE project_id=?1 AND revision=?2
+     AND EXISTS(SELECT 1 FROM projects p WHERE p.id=?1 AND p.user_id=?3)`,
+  )
+    .bind(projectId, revision, userId)
+    .run();
+}
+
+export async function listPublicFootprints(env: Env, key: string, limit: number, offset: number) {
+  // The project gate, source versions and approved copy share one D1 read snapshot.
+  // Anonymous reads look up the referenced IDs without materializing unrelated sources.
+  const { results } = await env.DB.prepare(
+    `WITH public_project AS MATERIALIZED (
+       SELECT p.id,(${publicationEnabled}) AS enabled FROM projects p WHERE p.public_id=?1 AND p.is_public=1
+     )
+     SELECT r.id,r.start_at,r.end_at,r.kind,r.title,r.summary FROM public_project
+     LEFT JOIN (
+       SELECT a.id,f.revision,f.start_at,f.end_at,json_extract(f.result_json,'$.analysis.kind') AS kind,
+         a.title,a.summary
+       FROM project_footprint_publications a
+       CROSS JOIN project_footprints f ON f.project_id=a.project_id AND f.revision=a.revision
+       WHERE a.project_id=(SELECT id FROM public_project WHERE enabled=1) AND f.result_json IS NOT NULL
+         AND ${dependenciesPresent('f.dependencies', sourcesForDependency)}
+       ORDER BY f.end_at DESC,f.revision DESC LIMIT ?2 OFFSET ?3
+     ) r ON 1=1
+     ORDER BY r.end_at DESC,r.revision DESC`,
+  )
+    .bind(key, limit, offset)
+    .all<PublicFootprint | { id: null }>();
+  return results.length ? results.filter((row): row is PublicFootprint => row.id !== null) : null;
 }
 
 export async function footprintIsCurrent(env: Env, job: Job, dependencies: Dependency[]) {

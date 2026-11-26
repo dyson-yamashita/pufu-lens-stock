@@ -17,6 +17,7 @@ import { pufuScoreSchema } from '../../../shared/pufu';
 import type { StockImage } from '../../../shared/stock-images';
 import type { AppEnv } from '../../env';
 import { now } from '../../infrastructure/db';
+import { listPublicFootprints } from '../memory/footprint-repository';
 import { pufuRelationsColumns, stockRelationsColumn, withRelations } from '../relations/relations';
 import { ogImageResponse } from '../stocks/og-image';
 import { stockImageResponse } from '../stocks/stock-images';
@@ -162,6 +163,12 @@ export function publicProjectsApp() {
       .first<PublicProjectDetail>();
     if (!project) throw notFound();
     return c.json({ project });
+  });
+  app.get('/projects/:key/footprints', async (c) => {
+    const { page, limit, offset } = pageOptions(c.req.query('page'));
+    const items = await listPublicFootprints(c.env, c.req.param('key'), limit + 1, offset);
+    if (!items) throw notFound();
+    return c.json({ items: items.slice(0, limit), page, has_more: items.length > limit });
   });
   app.get('/projects/:key/stocks', async (c) => {
     const { page, limit, offset } = pageOptions(c.req.query('page'));

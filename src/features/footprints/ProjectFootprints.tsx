@@ -1,9 +1,14 @@
 import { ChevronDown, Footprints, History, Sparkles, GitBranch, Sprout } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
-import type { FootprintDetail, FootprintPoint } from '../../../shared/footprints';
+import { useEffect, useId, useMemo, useState } from 'react';
+import type {
+  FootprintDetail,
+  FootprintPoint,
+  OwnedFootprintDetail,
+} from '../../../shared/footprints';
 import { intlLocale, t, useLanguage } from '../../i18n/i18n';
 import { api } from '../../lib/api';
-import './footprints.css';
+import { FootprintPublicationEditor } from './FootprintPublicationEditor';
+import { FootprintTimeline } from './FootprintTimeline';
 
 function Detail({ detail }: { detail: FootprintDetail }) {
   const { analysis, links } = detail;
@@ -94,11 +99,11 @@ export function ProjectFootprints({
   const [points, setPoints] = useState<FootprintPoint[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [detail, setDetail] = useState<FootprintDetail | null>(null);
+  const [detail, setDetail] = useState<OwnedFootprintDetail | null>(null);
   const [failed, setFailed] = useState(false);
   const panelId = useId();
   const titleId = useId();
-  const timeline = useRef<HTMLDivElement>(null);
+  const timeline = useMemo(() => points.map((item) => ({ ...item, id: item.revision })), [points]);
   const endpoint = `/api/v1/projects/${encodeURIComponent(projectId)}/footprints`;
   const point = points.find((item) => item.revision === selected) ?? points.at(-1);
   const revision = point?.revision;
@@ -120,7 +125,7 @@ export function ProjectFootprints({
           );
         }
       } catch {
-        // The stock list remains available while the footprint endpoint recovers.
+        // Memory remains available while the footprint endpoint recovers.
       } finally {
         loading = false;
       }
@@ -138,13 +143,9 @@ export function ProjectFootprints({
     };
   }, [endpoint, memoryRevision]);
   useEffect(() => {
-    if (selected === null && timeline.current)
-      timeline.current.scrollLeft = timeline.current.scrollWidth;
-  }, [points, selected]);
-  useEffect(() => {
     if (!open || revision === undefined) return;
     const controller = new AbortController();
-    void api<FootprintDetail>(`${endpoint}/${revision}`, { signal: controller.signal }).then(
+    void api<OwnedFootprintDetail>(`${endpoint}/${revision}`, { signal: controller.signal }).then(
       (result) => {
         if (!controller.signal.aborted) setDetail(result);
       },
@@ -162,31 +163,17 @@ export function ProjectFootprints({
         <Footprints size={18} aria-hidden="true" />
         {t('footprints.title')}
       </h2>
-      <div
-        className="footprints-timeline"
-        ref={timeline}
-        role="group"
-        aria-label={t('footprints.title')}
-      >
-        {points.map(({ revision, end_at, kind }) => (
-          <button
-            type="button"
-            key={revision}
-            className={`footprints-point footprints-${kind}`}
-            aria-pressed={revision === point.revision}
-            onClick={() => {
-              if (revision === point.revision) return;
-              setDetail(null);
-              setFailed(false);
-              setSelected(revision);
-            }}
-          >
-            <time dateTime={end_at}>{date.format(new Date(end_at))}</time>
-            <span className="footprints-dot" aria-hidden="true" />
-            <span>{t(`footprints.kind.${kind}`)}</span>
-          </button>
-        ))}
-      </div>
+      <FootprintTimeline
+        points={timeline}
+        selected={point.revision}
+        followLatest={selected === null}
+        onSelect={(revision) => {
+          if (revision === point.revision) return;
+          setDetail(null);
+          setFailed(false);
+          setSelected(revision);
+        }}
+      />
       <button
         type="button"
         className="footprints-toggle"
@@ -207,7 +194,15 @@ export function ProjectFootprints({
       <div id={panelId} className="footprints-detail" hidden={!open}>
         {open &&
           (detail && detail.revision === revision ? (
-            <Detail detail={detail} />
+            <>
+              <Detail detail={detail} />
+              <FootprintPublicationEditor
+                key={revision}
+                endpoint={`${endpoint}/${revision}/publication`}
+                initial={detail.publication}
+                enabled={detail.publication_enabled}
+              />
+            </>
           ) : (
             <p role="status">{t(failed ? 'footprints.load_failed' : 'push.loading')}</p>
           ))}

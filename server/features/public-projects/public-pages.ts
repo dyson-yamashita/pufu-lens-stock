@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { parseHTML } from 'linkedom/worker';
 import { publicDocumentAssetPaths } from '../../../shared/public-document-routes';
+import type { PublicFootprintPage } from '../../../shared/footprints';
 import type {
   PublicList,
   PublicProjectDetail,
@@ -11,7 +12,7 @@ import type {
   PublicStock,
   PublicStockDetail,
 } from '../../../shared/public-project';
-import { publicPathPattern } from '../../../shared/public-route';
+import { publicPathPattern, publicProjectViews } from '../../../shared/public-route';
 import { elementKeys, pufuDisplayTitle, type PufuScore } from '../../../shared/pufu';
 import { articleJsonLd } from '../../../shared/seo';
 import { faqPath, homePath, legalPath, manualPath, siteOrigin } from '../../../shared/site-paths';
@@ -232,7 +233,7 @@ async function projectPage(c: Context<AppEnv>) {
     content = `${stockText(result.stock)}<h3>関連する問い</h3><ul>${result.questions.map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>${pagination(`${base}/stocks/${id}`, 'stocks', page, result.has_more)}`;
   } else {
     const view = c.req.query('view') ?? 'stocks';
-    if (!['stocks', 'questions', 'pufus'].includes(view)) throw new HTTPException(400);
+    if (!publicProjectViews.includes(view)) throw new HTTPException(400);
     if (view !== 'stocks') query.set('view', view);
     if (view === 'pufus') {
       const result = await readPublic<PublicList<PublicPufuSummary>>(
@@ -246,6 +247,22 @@ async function projectPage(c: Context<AppEnv>) {
         `${key}/questions?page=${page}`,
       );
       content = `<h2>問い・気づき</h2><ul>${result.items.map((q) => `<li>${link(`${base}/questions/${encodeURIComponent(q.id)}`, q.text)}</li>`).join('')}</ul>${pagination(base, view, page, result.has_more)}`;
+    } else if (view === 'footprints') {
+      const { items, has_more } = await readPublic<PublicFootprintPage>(
+        c,
+        `${key}/footprints?page=${page}`,
+      );
+      content = `<h2>足あと</h2>${
+        items.length
+          ? items
+              .reverse()
+              .map(
+                (item) =>
+                  `<article><time datetime="${escape(item.end_at)}">${escape(item.end_at.slice(0, 10))}</time><h3>${escape(item.title)}</h3>${paragraph(item.summary)}</article>`,
+              )
+              .join('')
+          : '<p>公開されている足あとはまだありません。</p>'
+      }${pagination(base, view, page, has_more)}`;
     } else {
       const result = await readPublic<PublicList<PublicStock>>(c, `${key}/stocks?page=${page}`);
       content = `<h2>ストック</h2>${result.items.map((s) => `${link(`${base}/stocks/${encodeURIComponent(s.id)}`, s.title)}${stockText(s, true)}`).join('')}${pagination(base, view, page, result.has_more)}`;
@@ -275,7 +292,7 @@ async function projectPage(c: Context<AppEnv>) {
   const assets = await c.env.ASSETS.fetch(new Request(new URL('/', c.env.APP_URL)));
   if (!assets.ok) throw new Error('Public HTML template unavailable');
   const template = await assets.text();
-  const body = `<div class="public-page"><header class="public-header"><a href="/" class="brand"><span class="brand-lockup"><img class="brand-mark" src="/pufu-lens-logo.jpg" alt="" width="38" height="38"><img class="brand-logo brand-logo-light" src="/pufu-lens-wordmark.svg" alt="Pufu Lens" width="1200" height="340"><img class="brand-logo brand-logo-dark" src="/pufu-lens-wordmark-dark.svg" alt="Pufu Lens" width="1200" height="340"></span></a></header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')}</nav>${content}</main></div>`;
+  const body = `<div class="public-page"><header class="public-header"><a href="/" class="brand"><span class="brand-lockup"><img class="brand-mark" src="/pufu-lens-logo.jpg" alt="" width="38" height="38"><img class="brand-logo brand-logo-light" src="/pufu-lens-wordmark.svg" alt="Pufu Lens" width="1200" height="340"><img class="brand-logo brand-logo-dark" src="/pufu-lens-wordmark-dark.svg" alt="Pufu Lens" width="1200" height="340"></span></a></header><main class="public-main"><h1>${escape(project.name)}</h1>${paragraph(project.public_description)}<nav>${link(base, 'ストック')} ${link(`${base}?view=questions`, '問い・気づき')} ${link(`${base}?view=pufus`, 'プ譜')} ${link(`${base}?view=footprints`, '足あと')}</nav>${content}</main></div>`;
   // Built home HTML may already carry canonical/hreflang/JSON-LD; remove those nodes
   // via DOM and set page-specific title/description/meta (avoids regex HTML sanitization).
   const document = assemblePublicDocument(template, {

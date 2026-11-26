@@ -59,3 +59,18 @@ export type FootprintDetail = FootprintPoint & {
   analysis: Omit<FootprintAnalysis, 'evidence' | 'triggers'> & { triggers: string[] };
   links: FootprintEvidence[];
 };
+
+export const footprintPublicationTitleLimit = 140;
+export const footprintPublicationSummaryLimit = 1000;
+export const footprintPublicationSchema = z.strictObject({
+  title: z.string().trim().min(1).max(footprintPublicationTitleLimit),
+  summary: z.string().trim().min(1).max(footprintPublicationSummaryLimit),
+});
+export type FootprintPublication = z.infer<typeof footprintPublicationSchema>;
+export type OwnedFootprintDetail = FootprintDetail & {
+  publication_enabled: boolean;
+  publication: FootprintPublication | null;
+};
+export type PublicFootprint = FootprintPublication &
+  Pick<FootprintDetail, 'kind' | 'start_at' | 'end_at'> & { id: string };
+export type PublicFootprintPage = { items: PublicFootprint[]; page: number; has_more: boolean };

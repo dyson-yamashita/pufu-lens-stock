@@ -1,11 +1,12 @@
 // Keep legacy hash links readable while giving each public resource an HTTP URL.
 export const publicPathPattern =
   /^\/p\/([A-Za-z0-9_-]+)(?:\/(stocks|questions|pufus)\/([A-Za-z0-9_-]+))?\/?$/;
+export const publicProjectViews = ['stocks', 'questions', 'pufus', 'footprints'];
 export function publicHref(base: string, hash: string): string {
   const detail = /^#(stock|question|pufu)\/([^/?]+)(?:\?from=(pufus))?$/.exec(hash);
   if (detail) return `${base}/${detail[1]}s/${detail[2]}${detail[3] ? '?from=pufus' : ''}`;
   const view = hash.slice(1);
-  return ['stocks', 'questions', 'pufus'].includes(view)
+  return publicProjectViews.includes(view)
     ? `${base}${view === 'stocks' ? '' : `?view=${view}`}`
     : base;
 }
