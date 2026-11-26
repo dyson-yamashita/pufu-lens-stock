@@ -47,20 +47,30 @@ test('FEEDBACK-007 無反応のコントロールを全画面共通で検知す�
   browser,
   fixture,
 }) => {
-  await app.open(`/#project/${fixture.projectId}`);
-  await expect(
-    screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
-  ).toBeVisible();
   // Hold background refreshes: their DOM updates acknowledge clicks as normal responses.
   let releaseRefresh!: () => void;
   const refresh = new Promise<void>((resolve) => {
     releaseRefresh = resolve;
   });
-  await browser.route(`${fixture.url}/api/v1/projects?include_reflections=true`, async (route) => {
-    await refresh;
-    await route.continue();
-  });
   try {
+    await browser.route(
+      `${fixture.url}/api/v1/projects/${fixture.projectId}/footprints?status_only=1`,
+      async (route) => {
+        await refresh;
+        await route.continue();
+      },
+    );
+    await app.open(`/#project/${fixture.projectId}`);
+    await expect(
+      screen.getByRole('heading', `${fixture.projectName}のストック`, { exact: true }),
+    ).toBeVisible();
+    await browser.route(
+      `${fixture.url}/api/v1/projects?include_reflections=true`,
+      async (route) => {
+        await refresh;
+        await route.continue();
+      },
+    );
     // A local fixture creates a truly inert button; no production service is broken.
     await browser.evaluate(() => {
       const button = document.createElement('button');
