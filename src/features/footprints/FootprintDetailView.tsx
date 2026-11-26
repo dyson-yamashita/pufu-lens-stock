@@ -88,16 +88,24 @@ export function FootprintDetailView({
       </>
     );
   const { analysis, links } = detail;
+  const beginning = detail.kind === 'beginning';
+  const startingSummary = beginning ? analysis.current : '';
   const stages = [
     { key: 'before', icon: History, content: analysis.before },
-    { key: 'current', icon: Sprout, content: analysis.current },
+    { key: 'current', icon: Sprout, content: startingSummary ? '' : analysis.current },
   ];
   const changes = analysis.changes ?? [];
   const triggers = analysis.trigger_details ?? [];
   const earlierRecords = analysis.trigger_details === undefined ? analysis.triggers : [];
   const linked = new Set([...changes, ...triggers].flatMap(({ links }) => links.map(linkKey)));
   const related = links.filter((link) => !linked.has(linkKey(link)));
+  const additionalRecords = startingSummary ? [] : related;
   const perspectives = Object.entries(analysis.perspectives).filter(([, value]) => value);
+  const { action, strategy, interests, questions } = analysis.perspectives;
+  const startingTopics = [
+    { heading: 'footprints.main_activities', text: action || strategy },
+    { heading: 'footprints.perspective.interests', text: interests || questions },
+  ];
   return (
     <>
       {periodLabel}
@@ -116,6 +124,11 @@ export function FootprintDetailView({
           ))}
       </div>
       <LinkedStatements
+        heading={t('footprints.starting_point')}
+        items={startingSummary ? [{ text: startingSummary, links: related }] : []}
+        evidenceHref={evidenceHref}
+      />
+      <LinkedStatements
         heading={t('footprints.changes')}
         items={changes}
         evidenceHref={evidenceHref}
@@ -126,20 +139,30 @@ export function FootprintDetailView({
         evidenceHref={evidenceHref}
         quote
       />
-      {perspectives.length > 0 && (
-        <section>
-          <h4>{t('footprints.perspectives')}</h4>
-          <dl>
-            {perspectives.map(([key, value]) => (
-              <div key={key}>
-                <dt>{t(`footprints.perspective.${key}`)}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
-      {(earlierRecords.length > 0 || related.length > 0) && (
+      {beginning
+        ? startingTopics.map(
+            ({ heading, text }) =>
+              text && (
+                <section key={heading}>
+                  <h4>{t(heading)}</h4>
+                  <p>{text}</p>
+                </section>
+              ),
+          )
+        : perspectives.length > 0 && (
+            <section>
+              <h4>{t('footprints.perspectives')}</h4>
+              <dl>
+                {perspectives.map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{t(`footprints.perspective.${key}`)}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+      {(earlierRecords.length > 0 || additionalRecords.length > 0) && (
         <section>
           <h4>{t('footprints.evidence')}</h4>
           {earlierRecords.length > 0 && (
@@ -149,7 +172,7 @@ export function FootprintDetailView({
               ))}
             </ul>
           )}
-          <EvidenceLinks links={related} evidenceHref={evidenceHref} />
+          <EvidenceLinks links={additionalRecords} evidenceHref={evidenceHref} />
         </section>
       )}
     </>

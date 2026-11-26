@@ -116,6 +116,9 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
     ).toBe(true);
 
   const evidence = { kind: 'stock', id: stockIds[3], label: '記録 4' } as const;
+  const startingSummary = '問いを育て、行動につなげる場を目指していた。';
+  const startingActivity = 'ストックとプ譜を行き来できる入口を整えた。';
+  const startingInterest = '人とAIが協力して問いを育てること。';
   const change = 'コード品質を確認する工程が判断材料に加わった。';
   const quote = '比較した記事を読んで、確認する工程を見直した。';
   const changeAnalysis = {
@@ -149,10 +152,17 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
             ? changeAnalysis
             : {
                 ...original.analysis,
+                current: startingSummary,
                 changes: undefined,
                 trigger_details: undefined,
                 interpretation: undefined,
                 triggers: ['以前の足あとに保存された記録。'],
+                perspectives: {
+                  ...original.analysis.perspectives,
+                  action: startingActivity,
+                  interests: startingInterest,
+                  knowledge: '初回の細かい観点。',
+                },
               },
         links: [evidence],
       }),
@@ -188,6 +198,22 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   await expect(
     screen.getByRole('heading', 'プロジェクトのはじまり', { exact: true }),
   ).toBeVisible();
+  expect(await browser.locator('.footprints-detail h4').allTextContents()).toEqual([
+    '記録を始めた時点',
+    '主な取り組み',
+    '関心',
+    '関連する記録',
+  ]);
+  await expect(screen.getByText(startingActivity, { exact: true })).toBeVisible();
+  await expect(screen.getByText(startingInterest, { exact: true })).toBeVisible();
+  const startingItem = browser.locator('.footprints-statements > li').first();
+  await expect(startingItem).toContainText(startingSummary);
+  await expect(startingItem.getByRole('link', '記録 4', { exact: true })).toHaveAttribute(
+    'href',
+    `#stock/${stockIds[3]}`,
+  );
+  await expect(screen.getByRole('link', '記録 4', { exact: true })).toHaveCount(1);
+  expect(await evidenceDecoration()).toBe('underline');
   await expect(screen.getByRole('heading', '関連する記録')).toBeVisible();
   await expect(screen.getByText('以前の足あとに保存された記録。')).toBeVisible();
   await expect(screen.getByRole('heading', '本人の記録にあるきっかけ')).toHaveCount(0);
