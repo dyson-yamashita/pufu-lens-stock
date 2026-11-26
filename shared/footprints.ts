@@ -1,12 +1,8 @@
 import { z } from 'zod';
 
-export const footprintIntervals = [1, 3, 5, 10] as const;
-export const footprintIntervalSchema = z.union([
-  z.literal(1),
-  z.literal(3),
-  z.literal(5),
-  z.literal(10),
-]);
+export const footprintIntervals = [3, 5, 10] as const;
+export const defaultFootprintInterval = 5;
+export const footprintIntervalSchema = z.literal(footprintIntervals);
 export type FootprintInterval = z.infer<typeof footprintIntervalSchema>;
 
 export const footprintKinds = [

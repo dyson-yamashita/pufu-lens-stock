@@ -1,8 +1,13 @@
-import { footprintIntervalSchema, footprintPublicationSchema } from '../../../shared/footprints';
+import {
+  defaultFootprintInterval,
+  footprintIntervalSchema,
+  footprintPublicationSchema,
+} from '../../../shared/footprints';
 import {
   listFootprints,
   publishFootprint,
   readFootprint,
+  readFootprintStatus,
   startFootprintBackfill,
   startFootprintReanalysis,
   unpublishFootprint,
@@ -95,7 +100,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         Number(data.auto_generate_questions ?? true),
         data.reflection_period ?? 'weekly',
         Number(data.footprints_enabled ?? true),
-        data.footprint_interval ?? 3,
+        data.footprint_interval ?? defaultFootprintInterval,
       ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
@@ -143,6 +148,8 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
     const { user } = c.get('principal');
     const id = c.req.param('id');
     await ownedProject(c.env, user.id, id);
+    if (c.req.query('status_only') === '1')
+      return c.json(await readFootprintStatus(c.env, user.id, id));
     return c.json(await listFootprints(c.env, user.id, id));
   });
 

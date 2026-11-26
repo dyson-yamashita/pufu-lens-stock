@@ -137,6 +137,21 @@ function sharedFootprint(row: SharedRow): SharedFootprint | null {
     : { kind, start_at, end_at, title: public_title, summary: public_summary };
 }
 
+function footprintStatusQuery(env: Env, userId: string, projectId: string) {
+  return env.DB.prepare(
+    `SELECT EXISTS(SELECT 1 FROM footprint_backfills b WHERE b.project_id=p.id AND b.active=1)
+     OR EXISTS(SELECT 1 FROM project_footprints f LEFT JOIN processing_jobs j ON j.id=f.job_id
+       WHERE f.project_id=p.id AND f.created_at IS NULL
+       AND (j.id IS NULL OR j.status IN ('pending','dispatched','running'))) AS pending
+     FROM projects p WHERE p.id=? AND p.user_id=?`,
+  ).bind(projectId, userId);
+}
+
+export async function readFootprintStatus(env: Env, userId: string, projectId: string) {
+  const pending = await footprintStatusQuery(env, userId, projectId).first<number>('pending');
+  return { pending: Boolean(pending) };
+}
+
 export async function listFootprints(env: Env, userId: string, projectId: string) {
   const [list, state] = await env.DB.batch<FootprintPoint | { pending: number }>([
     env.DB.prepare(
@@ -151,13 +166,7 @@ export async function listFootprints(env: Env, userId: string, projectId: string
          AND ((${currentOriginal}) OR (${currentReanalysis}))
        ORDER BY f.end_at,f.revision`,
     ).bind(projectId, userId),
-    env.DB.prepare(
-      `SELECT EXISTS(SELECT 1 FROM footprint_backfills b WHERE b.project_id=p.id AND b.active=1)
-       OR EXISTS(SELECT 1 FROM project_footprints f LEFT JOIN processing_jobs j ON j.id=f.job_id
-         WHERE f.project_id=p.id AND f.created_at IS NULL
-         AND (j.id IS NULL OR j.status IN ('pending','dispatched','running'))) AS pending
-       FROM projects p WHERE p.id=? AND p.user_id=?`,
-    ).bind(projectId, userId),
+    footprintStatusQuery(env, userId, projectId),
   ]);
   return {
     points: list.results as FootprintPoint[],

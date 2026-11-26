@@ -450,6 +450,8 @@
       "src/app/AppPageHeader.tsx",
       "src/styles/layout.css",
       "src/features/projects/ProjectForm.tsx",
+      "src/features/settings/settings.css",
+      "src/features/footprints/useProjectFootprints.ts",
       "server/api/routes/projects.ts",
       "server/features/memory/footprint-generation.ts",
       "server/features/memory/footprint-repository.ts",
@@ -461,7 +463,8 @@
       "shared/footprints.ts"
     ],
     "aspects": [
-      "設定の既定値・間隔の保存・過去履歴生成の受付",
+      "足あとの間隔は3・5・10回で初期値は5回。保存した間隔を再読み込み後も表示し、詳細設定を閉じたときは各トグルのオン・オフを表示",
+      "生成リクエストの送信中にタブを往復しても生成ボタンを無効にする。生成中はメモリ・足あとタブにも表示し、再読み込み後も状態を維持して生成終了後に解除",
       "メモリ・足あとタブで足あとの点からモーダルを開き、閉じた後にフォーカスが戻る。続くは点だけを残す。古い順のタイムライン・最新選択・スマホの横スクロール",
       "対象期間の再分析を開始し、元の分析と再分析の結果を切り替えて表示",
       "以前と今回の比較、本人の記録からの引用、過去形式の根拠を表示。各変化の下に下線付きの根拠リンクを表示し、ストックを開ける",

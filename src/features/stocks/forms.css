@@ -250,3 +250,16 @@ html:has(.stock-image-dialog[open]) {
   align-items: center;
   gap: 8px;
 }
+.library-tab-memory-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.library-tab-footprint-status {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--wash);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 600;
+}

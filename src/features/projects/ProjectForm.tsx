@@ -1,7 +1,11 @@
-import { footprintIntervals, type FootprintInterval } from '../../../shared/footprints';
 import { Check, Copy } from 'lucide-react';
 import { useId, useState } from 'react';
 import type { Project } from '../../../shared/domain';
+import {
+  defaultFootprintInterval,
+  footprintIntervals,
+  type FootprintInterval,
+} from '../../../shared/footprints';
 import { reflectionPeriods, type ReflectionPeriod } from '../../../shared/reflections';
 import DeleteAction from '../../components/DeleteAction';
 import { FormError } from '../../components/FormError';
@@ -24,10 +28,16 @@ export type ProjectSettings = Pick<
 
 export function ProjectForm({
   project,
+  footprints,
   onDone,
   onDelete,
 }: {
   project?: Project;
+  footprints?: {
+    pending: boolean | null;
+    submitting: boolean;
+    startBackfill: () => Promise<void>;
+  };
   onDone: (id: string, settings: ProjectSettings) => void;
   onDelete: () => void;
 }) {
@@ -52,15 +62,23 @@ export function ProjectForm({
   const reflectionPeriodId = useId();
   const [footprintsEnabled, setFootprintsEnabled] = useState(project?.footprints_enabled ?? true);
   const [footprintInterval, setFootprintInterval] = useState<FootprintInterval>(
-    project?.footprint_interval ?? 3,
+    project?.footprint_interval ?? defaultFootprintInterval,
   );
   const footprintsEnabledId = useId();
   const footprintIntervalId = useId();
-  const [backfill, setBackfill] = useState<'idle' | 'busy' | 'accepted' | 'error'>('idle');
+  const [backfillError, setBackfillError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [idCopied, setIdCopied] = useState(false);
   const [idCopyError, setIdCopyError] = useState('');
+  const generatingFootprints = footprints?.pending === true;
+  const backfillDisabled = busy || footprints?.submitting || footprints?.pending !== false;
+  const advancedToggles = [
+    ['ui.app.advanced_all_lists', showInAllLists],
+    ['ui.app.advanced_user_memory', includeInUserMemory],
+    ['ui.app.advanced_auto_questions', autoGenerateQuestions],
+    ['footprints.auto_add', footprintsEnabled],
+  ] as const;
   return (
     <>
       <form
@@ -154,7 +172,19 @@ export function ProjectForm({
           placeholder={t('ui.app.try_writing_about_what_you_want_to_achieve_and')}
         />
         <details className="project-advanced">
-          <summary>{t('ui.app.advanced_settings')}</summary>
+          <summary>
+            {t('ui.app.advanced_settings')}
+            <span className="project-advanced-status">
+              {advancedToggles.map(([label, enabled]) => (
+                <span className="project-advanced-setting" key={label}>
+                  {t(label)}{' '}
+                  <strong data-enabled={enabled}>
+                    {t(enabled ? 'ui.app.advanced_on' : 'ui.app.advanced_off')}
+                  </strong>
+                </span>
+              ))}
+            </span>
+          </summary>
           <label className="project-memory-toggle" htmlFor={listVisibilityId}>
             <span>{t('ui.app.include_in_all_stocks_questions_insights_and_pufu_lists')}</span>
             <input
@@ -247,32 +277,33 @@ export function ProjectForm({
               </option>
             ))}
           </select>
-          {project && (
+          {project && footprints && (
             <>
               <p className="project-memory-hint">{t('footprints.backfill_hint')}</p>
               <button
                 type="button"
                 className="button secondary"
-                disabled={busy || backfill === 'busy' || backfill === 'accepted'}
+                disabled={backfillDisabled}
                 onClick={async () => {
-                  setBackfill('busy');
+                  if (backfillDisabled) return;
+                  setBackfillError(false);
                   try {
-                    await send(
-                      `/api/v1/projects/${encodeURIComponent(project.id)}/footprints/backfill`,
-                      {},
-                      'POST',
-                    );
-                    setBackfill('accepted');
+                    await footprints.startBackfill();
                   } catch {
-                    setBackfill('error');
+                    setBackfillError(true);
                   }
                 }}
               >
                 {t('footprints.backfill')}
               </button>
               <p role="status" className="project-memory-hint">
-                {backfill === 'accepted' && t('footprints.backfill_accepted')}
-                {backfill === 'error' && t('footprints.backfill_failed')}
+                {generatingFootprints
+                  ? t('footprints.generation_pending')
+                  : backfillError
+                    ? t('footprints.backfill_failed')
+                    : footprints.pending === null
+                      ? t('push.loading')
+                      : null}
               </p>
             </>
           )}

@@ -1,5 +1,5 @@
 import { Footprints } from 'lucide-react';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { FootprintPoint, OwnedFootprintDetail } from '../../../shared/footprints';
 import { Modal } from '../../components/Modal';
 import { t, useLanguage } from '../../i18n/i18n';
@@ -154,13 +154,14 @@ function FootprintDetailPanel({
 
 export function ProjectFootprints({
   projectId,
-  memoryRevision,
+  points,
+  onKind,
 }: {
   projectId: string;
-  memoryRevision?: number;
+  points: FootprintPoint[];
+  onKind: (revision: number, kind: FootprintPoint['kind']) => void;
 }) {
   useLanguage();
-  const [points, setPoints] = useState<FootprintPoint[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const titleId = useId();
@@ -168,48 +169,6 @@ export function ProjectFootprints({
   const timeline = useMemo(() => points.map((item) => ({ ...item, id: item.revision })), [points]);
   const endpoint = `/api/v1/projects/${encodeURIComponent(projectId)}/footprints`;
   const point = points.find((item) => item.revision === selected) ?? points.at(-1);
-  const updateKind = useCallback((revision: number, kind: FootprintPoint['kind']) => {
-    setPoints((current) =>
-      current.some((item) => item.revision === revision && item.kind !== kind)
-        ? current.map((item) => (item.revision === revision ? { ...item, kind } : item))
-        : current,
-    );
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    let loading = false;
-    let pending = true;
-    const load = async () => {
-      if (loading || document.visibilityState !== 'visible') return;
-      loading = true;
-      try {
-        const response = await api<{ points: FootprintPoint[]; pending: boolean }>(endpoint, {
-          signal: controller.signal,
-        });
-        if (!controller.signal.aborted) {
-          pending = response.pending;
-          setPoints((current) =>
-            JSON.stringify(current) === JSON.stringify(response.points) ? current : response.points,
-          );
-        }
-      } catch {
-        // Memory remains available while the footprint endpoint recovers.
-      } finally {
-        loading = false;
-      }
-    };
-    void load();
-    const timer = window.setInterval(() => {
-      if (pending) void load();
-    }, 15000);
-    const refresh = () => void load();
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, [endpoint, memoryRevision]);
   if (!point) return null;
   return (
     <section className="footprints" aria-labelledby={titleId}>
@@ -241,7 +200,7 @@ export function ProjectFootprints({
             <FootprintDetailPanel
               key={`${endpoint}/${point.revision}`}
               endpoint={`${endpoint}/${point.revision}`}
-              onKind={updateKind}
+              onKind={onKind}
             />
           </div>
         </Modal>

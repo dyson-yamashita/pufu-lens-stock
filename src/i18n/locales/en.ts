@@ -27,10 +27,11 @@ export const en: Record<string, string> = {
   'footprints.backfill': 'Generate past footprints',
   'footprints.backfill_hint':
     'Analyze stored memory versions in chronological order using the saved interval. This can take some time.',
-  'footprints.backfill_accepted': 'Past footprints are queued.',
+  'footprints.generating': 'Generating',
+  'footprints.generation_pending': 'Generating project footprints.',
   'footprints.backfill_failed': 'Could not start generating past footprints.',
   'footprints.manual':
-    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a footprint in the Memory & Footprints tab to open its details. Supporting records appear below the changes they explain. A continuing footprint appears as a point on the timeline. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints.',
+    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a footprint in the Memory & Footprints tab to open its details. Supporting records appear below the changes they explain. A continuing footprint appears as a point on the timeline. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints. The tab shows “Generating” until you can generate past footprints again.',
   'footprints.manual_reanalysis':
     'To redo a footprint, open its details and select “Reanalyze this period.” Select “View original analysis” to read the original.',
   'footprints.manual_publication':
@@ -581,6 +582,11 @@ export const en: Record<string, string> = {
   'ui.app.try_writing_about_what_you_want_to_achieve_and':
     'Try writing about:\n\n• What you want to achieve and why\n• Available time and budget\n• Available technology, tools and working environment\n• Competing activities and concerns',
   'ui.app.advanced_settings': 'Advanced settings',
+  'ui.app.advanced_all_lists': 'Show in all lists',
+  'ui.app.advanced_user_memory': 'Update your memory',
+  'ui.app.advanced_auto_questions': 'Auto-add reflection questions',
+  'ui.app.advanced_on': 'On',
+  'ui.app.advanced_off': 'Off',
   'ui.app.include_in_all_stocks_questions_insights_and_pufu_lists':
     'Include in all stocks, questions & insights, and Pufu lists',
   'ui.app.when_off_this_project_s_stocks_questions_insights_and':
