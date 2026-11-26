@@ -72,7 +72,7 @@ function footprintBody(item: PublicFootprint, projectKey: string) {
   const { analysis, links } = item;
   const records = (items: typeof links) =>
     items.length
-      ? `<ul>${items.map((record) => `<li>${link(publicFootprintEvidenceHref(projectKey, record), record.label || '関連する記録')}</li>`).join('')}</ul>`
+      ? `<ul class="footprints-evidence-links">${items.map((record) => `<li>${link(publicFootprintEvidenceHref(projectKey, record), record.label || '関連する記録')}</li>`).join('')}</ul>`
       : '';
   const section = (heading: string, body: string) =>
     body ? `<h4>${heading}</h4>${paragraph(body)}` : '';
@@ -95,10 +95,7 @@ function footprintBody(item: PublicFootprint, projectKey: string) {
     changes.length
       ? `<h4>変化と根拠</h4><ul>${changes.map((change) => `<li>${paragraph(change.text)}${records(change.links)}</li>`).join('')}</ul>`
       : ''
-  }${section('変化の過程', analysis.process)}${section('変化の意味', analysis.meaning)}${section(
-    'AIの解釈',
-    analysis.interpretation ?? '',
-  )}${section('変わらないこと', analysis.unchanged)}${perspectives ? `<h4>観点別の変化</h4><dl>${perspectives}</dl>` : ''}${related ? `<h4>関連する記録</h4>${related}` : ''}`;
+  }${perspectives ? `<h4>観点別の変化</h4><dl>${perspectives}</dl>` : ''}${related ? `<h4>関連する記録</h4>${related}` : ''}`;
 }
 function pageNumber(value: string | undefined) {
   const page = value === undefined ? 1 : Number(value);

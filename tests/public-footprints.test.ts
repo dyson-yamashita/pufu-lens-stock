@@ -181,7 +181,10 @@ it('公開データから生成した分析を、同じ根拠と観点で本人�
       before: '以前の見方',
       current: '追加された判断材料',
       changes: [{ text: '問いの範囲が広がった。', links: [source] }],
+      process: '過程の保存済み本文',
+      meaning: '意味の保存済み本文',
       interpretation: '記録から分かる解釈',
+      unchanged: '継続点の保存済み本文',
       perspectives: { questions: '新たに比較できる問い' },
     },
     links: [source],
@@ -217,9 +220,19 @@ it('公開データから生成した分析を、同じ根拠と観点で本人�
   const { document } = parseHTML(html);
   expect(document.querySelector('article h3')?.textContent).toBe(shared.analysis.title);
   expect(document.querySelector('article dl dd')?.textContent).toBe('新たに比較できる問い');
-  expect(document.querySelector('article a')?.getAttribute('href')).toBe(
+  expect(document.querySelector('article .footprints-evidence-links a')?.getAttribute('href')).toBe(
     `/p/${key}/questions/${source.id}`,
   );
+  expect(
+    Array.from(document.querySelectorAll('article h4'), (heading) => heading.textContent),
+  ).toEqual(['以前', '今回', '変化と根拠', '観点別の変化']);
+  for (const text of [
+    shared.analysis.process,
+    shared.analysis.meaning,
+    shared.analysis.interpretation,
+    shared.analysis.unchanged,
+  ])
+    expect(html).not.toContain(text);
   expect(html).toContain('&lt;確認&gt;');
   await app.env.DB.prepare("UPDATE questions SET note='個人用のメモ',updated_at=? WHERE id=?")
     .bind(end, source.id)
