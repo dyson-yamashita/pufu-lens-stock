@@ -16,6 +16,8 @@ export const ja: Record<string, string> = {
   'footprints.changes': '変化と根拠',
   'footprints.triggers': '本人の記録にあるきっかけ',
   'footprints.current': '今回',
+  'footprints.starting_point': '記録を始めた時点',
+  'footprints.main_activities': '主な取り組み',
   'footprints.perspectives': '観点別の変化',
   'footprints.evidence': '関連する記録',
   'footprints.link.stock': 'ストック',
@@ -31,7 +33,7 @@ export const ja: Record<string, string> = {
   'footprints.generation_pending': '足あとを生成しています。',
   'footprints.backfill_failed': '過去の足あとの生成を開始できませんでした。',
   'footprints.manual':
-    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、「メモリ・足あと」タブで足あとを押すと詳細が開きます。根拠となる記録を、対応する変化のすぐ下から開けます。「続く」はタイムラインの点で記録します。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。足あとを生成している間はタブに「生成中」と表示され、完了すると過去の足あとを再び生成できます。',
+    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、「メモリ・足あと」タブで足あとを押すと詳細が開きます。初回の要約や各変化の下にあるリンクから、関連する記録を開けます。「続く」はタイムラインの点で記録します。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。足あとを生成している間はタブに「生成中」と表示され、完了すると過去の足あとを再び生成できます。',
   'footprints.manual_reanalysis':
     '作成済みの足あとを作り直すときは、対象の足あとを開き、「この期間を再分析」を押します。元の分析は「元の分析を見る」で確認できます。',
   'footprints.manual_publication':

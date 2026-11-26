@@ -374,7 +374,6 @@
   flex-shrink: 0;
   white-space: nowrap;
   align-items: center;
-  gap: 9px;
   padding: 16px;
   border-bottom: 2px solid transparent;
   color: var(--muted);
@@ -386,15 +385,11 @@
   border-bottom-color: var(--text);
   font-weight: 600;
 }
-.public-tabs a span {
-  font-size: 12px;
-}
 @media (max-width: 550px) {
   .public-tabs {
     gap: 0;
   }
   .public-tabs a {
-    gap: 6px;
     padding: 14px 8px;
     font-size: 13px;
   }
