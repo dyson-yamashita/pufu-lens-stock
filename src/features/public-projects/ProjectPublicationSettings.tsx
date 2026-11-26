@@ -161,6 +161,7 @@ function PublicationForm({
             <li>
               {t('ui.public_projects.questions_insights_and_the_latest_phases_and_reflections_of')}
             </li>
+            <li>{t('footprints.publication_scope')}</li>
           </ul>
           <p>
             <LockKeyhole size={15} aria-hidden="true" />

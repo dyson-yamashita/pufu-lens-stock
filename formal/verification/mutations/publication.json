@@ -18,6 +18,36 @@
       "old": "| none => .denied",
       "new": "| none => .database",
       "theorem": "missing_revision_fail_closed"
+    },
+    {
+      "name": "B06-footprint-copy-only",
+      "old": "then f.publication else none",
+      "new": "then some f.privateAnalysis else none",
+      "theorem": "footprint_read_requires_approval"
+    },
+    {
+      "name": "B06-footprint-project",
+      "old": "memoryUpdates = true ∧ f.belongsToProject = true ∧",
+      "new": "memoryUpdates = true ∧ True ∧",
+      "theorem": "footprint_other_project_denied"
+    },
+    {
+      "name": "B06-footprint-sources",
+      "old": "f.completed = true ∧ f.sourcesCurrent = true",
+      "new": "f.completed = true ∧ True",
+      "theorem": "footprint_stale_source_denied"
+    },
+    {
+      "name": "B06-footprint-memory-off",
+      "old": "memoryUpdates = true ∧ f.belongsToProject",
+      "new": "True ∧ f.belongsToProject",
+      "theorem": "footprint_memory_off_denied"
+    },
+    {
+      "name": "B06-footprint-edit-owner",
+      "old": "if mayEdit s e ∧ footprintEligible s memoryUpdates f then { f with publication := some copy }",
+      "new": "if True ∧ footprintEligible s memoryUpdates f then { f with publication := some copy }",
+      "theorem": "footprint_save_denied_preserves"
     }
   ]
 }

@@ -23,7 +23,25 @@ export const ja: Record<string, string> = {
   'footprints.backfill_accepted': '過去の足あとの生成を受け付けました。',
   'footprints.backfill_failed': '過去の足あとの生成を開始できませんでした。',
   'footprints.manual':
-    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、プロジェクトの「メモリ」タブで日付を選び、「変化を見る」を押すと、変化の過程や関連する記録が開きます。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。足あとは公開ページに表示されません。',
+    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、プロジェクトの「メモリ」タブで日付を選び、「変化を見る」を押すと、変化の過程や関連する記録が開きます。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。',
+  'footprints.manual_publication':
+    '公開プロジェクトでは、「変化を見る」→「公開ページに載せる内容」で、足あとごとに公開用のタイトルと説明を入力して掲載できます。掲載した内容は公開ページの「足あと」タブに表示され、同じ画面から取り消せます。メモリ更新をオフにすると掲載が一時停止し、オンに戻すと有効な掲載済みの足あとが再表示されます。',
+  'footprints.public_tab': '足あと',
+  'footprints.public_empty': '公開されている足あとはまだありません。',
+  'footprints.publication_scope': '個別に掲載した足あとの日付・変化の種類・公開用のタイトルと説明',
+  'footprints.publication_editor': '公開ページに載せる内容',
+  'footprints.publication_help':
+    '日付と変化の種類に加え、ここで入力したタイトルと説明が、公開ページの「足あと」タブに掲載されます。',
+  'footprints.publication_disabled':
+    'プロジェクトが公開され、メモリ更新がオンのときに掲載できます。',
+  'footprints.publication_title': '公開用タイトル',
+  'footprints.publication_summary': '公開用の説明',
+  'footprints.publication_publish': '公開ページに掲載',
+  'footprints.publication_update': '公開内容を更新',
+  'footprints.publication_remove': '掲載を取り消す',
+  'footprints.publication_saved': '公開ページに掲載しました。',
+  'footprints.publication_removed': '掲載を取り消しました。',
+  'footprints.publication_failed': '公開内容を保存できませんでした。',
   'footprints.kind.beginning': 'はじまり',
   'footprints.kind.discovery': '見つかる',
   'footprints.kind.deepening': '深まる',

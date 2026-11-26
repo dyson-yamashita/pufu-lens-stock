@@ -1,9 +1,10 @@
-import { ArrowRight, CircleHelp, Globe, Layers, Network } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowRight, CircleHelp, Footprints, Globe, Layers, Network } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { PublicProjectDetail } from '../../../shared/public-project';
 import { publicHash } from '../../../shared/public-route';
 import { manualHref, t, useLanguage } from '../../i18n/i18n';
 import { initialPublicPage, publicLink } from './public-routing';
+import { PublicFootprintList } from './PublicFootprintList';
 import { PublicBrand } from './PublicLayout';
 import { PublicPufuDetail } from './PublicPufuDetail';
 import { PublicPufuList } from './PublicPufuList';
@@ -25,6 +26,12 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
   const [stockPage, setStockPage] = useState(initialPublicPage);
   const [questionPage, setQuestionPage] = useState(initialPublicPage);
   const [pufuPage, setPufuPage] = useState(initialPublicPage);
+  const [footprintPage, setFootprintPage] = useState(initialPublicPage);
+  const tabs = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (data && hash === '#footprints' && tabs.current)
+      tabs.current.scrollLeft = tabs.current.scrollWidth;
+  }, [data, hash, language]);
   useEffect(() => {
     const listener = () => {
       setHash(
@@ -64,7 +71,9 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
       );
   else
     content =
-      hash === '#pufus' ? (
+      hash === '#footprints' ? (
+        <PublicFootprintList root={root} page={footprintPage} onPageChange={setFootprintPage} />
+      ) : hash === '#pufus' ? (
         <PublicPufuList root={root} page={pufuPage} onPageChange={setPufuPage} />
       ) : hash === '#questions' ? (
         <PublicQuestionList root={root} page={questionPage} onPageChange={setQuestionPage} />
@@ -98,11 +107,16 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
               )}
               {!match && <ShareLink source={{ publicId }} target={{ kind: 'project' }} />}
             </div>
-            <nav className="public-tabs" aria-label={t('ui.public_projects.public_projects')}>
+            <nav
+              ref={tabs}
+              className="public-tabs"
+              aria-label={t('ui.public_projects.public_projects')}
+            >
               <a
                 href={publicLink('#stocks')}
                 aria-current={
-                  match?.[1] === 'stock' || (!match && !['#questions', '#pufus'].includes(hash))
+                  match?.[1] === 'stock' ||
+                  (!match && !['#questions', '#pufus', '#footprints'].includes(hash))
                     ? 'page'
                     : undefined
                 }
@@ -128,6 +142,13 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
                 <Network size={18} aria-hidden="true" />
                 {t('ui.app.pufu')}
                 <span>{data.project.pufu_count}</span>
+              </a>
+              <a
+                href={publicLink('#footprints')}
+                aria-current={hash === '#footprints' ? 'page' : undefined}
+              >
+                <Footprints size={18} aria-hidden="true" />
+                {t('footprints.public_tab')}
               </a>
             </nav>
             {(hash === '#pufus' || match?.[1] === 'pufu') && (

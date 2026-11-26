@@ -1,6 +1,6 @@
 # B06 匿名公開・公開ID・ディレクトリキャッシュ
 
-対象モデルは `Verification.Publication`。製品コードの条件を変更せず、公開条件・キャッシュ選択と公開設定変更の最小状態遷移を記述する。
+対象モデルは `Verification.Publication`。公開条件、キャッシュ選択、公開設定と足あとの掲載の状態遷移を記述する。
 
 ## 実装・証明・照合テストの対応
 
@@ -15,6 +15,11 @@
 | `migrations/0035_public_directory_cache.sql` の公開プロジェクト更新トリガー、公開ID変更でもrevisionが変わる                                         | `changed_publication_invalidates_old_cache`                                                                                                                   | 新規 `boundary-public-verification.test.ts` の「公開IDを変更すると旧キャッシュを使わず、旧IDの匿名取得を拒否する」                                                                                               |
 | 成功と拒否が実際に可能な状態                                                                                                                        | `success_reachable`, `refusal_reachable`                                                                                                                      | 新規の公開ID変更テストと上記既存テスト                                                                                                                                                                           |
 
+足あとの変更と照合テストは `public-footprints.test.ts` を使う。
+
+- `listPublicFootprints` と公開HTMLの `?view=footprints` を `readPublishedFootprint` に対応させる。`footprint_read_requires_approval`、`footprint_other_project_denied`、`footprint_stale_source_denied`、`footprint_memory_off_denied` は、公開ID、同じプロジェクトの完成済み足あと、根拠の版、メモリ設定、掲載原稿を確認する。匿名APIとHTMLのテストでは、別プロジェクト・非掲載・取り消し・根拠削除・非公開化の拒否、限定した項目と文字のエスケープを確認する。
+- `PATCH` と `DELETE /api/v1/projects/:id/footprints/:revision/publication` を `saveFootprintCopy` と `removeFootprintCopy` に対応させる。拒否時の保持、成功時の元の分析の保持、正常・拒否状態の到達性を証明する。照合テストでは本人と匿名・別ユーザー・別Origin、無効な入力、未生成・根拠が無効な版の拒否、掲載行の更新・削除とプロジェクト削除の連鎖を確認する。
+
 追加テストは既存 `testApp` の実際のRequest/Response入口からHonoルート、MiniflareのD1・Cache APIまでを通す。公開IDの直接DB変更はキャッシュトリガーと旧URL拒否の照合用であり、公開IDを回転させる新しい製品APIを設けたものではない。公開画像・本文・privateフィールドの返却制限は既存public-projects/public-pagesテストを再利用する。
 
 ## 判定時点と保護状態
@@ -25,13 +30,18 @@
 
 公開状態に関係する変更の新しいrevisionにより、その後の要求は旧世代のキャッシュを参照しない。実装では非公開化後に旧世代への遅延putがあっても、後続要求は新世代を使う。この競合は既存「キャッシュの投入が非公開化より遅れても、後続の取得で古い一覧を返さない」で照合する。
 
+足あとの匿名取得は、公開ID、公開状態、メモリ設定、足あとの掲載・完成状態、根拠の所属と版を同一のD1照会で確認する。公開APIと公開HTMLには `no-store` を設定する。プロジェクトの非公開化やメモリ更新のオフは掲載原稿を保持したまま新規の匿名取得を止める。元の条件に戻すと、根拠が現行の掲載原稿が再表示される。個別の取り消しは原稿を削除し、プロジェクト・足あとの削除でも外部キーで原稿が削除される。
+
+掲載は本人の有効なセッションと同一Originで受け付け、書き込みのSQLで所有者、対象版、公開・メモリ設定と根拠を再確認する。取り消しは保存時点で所有者と対象版を確認する。拒否時は原稿も元の分析も保持する。掲載用の書き込みが成功すると対象版の原稿だけが変わり、プロジェクト設定、分析、根拠、メモリとその版・履歴、AI利用記録は保持する。許可されない管理操作に有効なBearerトークンを使った場合の認証時 `api_tokens.last_used_at` 更新は、この状態遷移の対象に含めない。
+
 ## 抽象化と保証しない範囲
 
 - revisionは実装ではランダムな文字列で、モデルは異なる世代を自然数の後続値で表す。DBトリガーの正常動作と新revisionの非衝突を前提にする。全SQLトリガーの実装そのものをLeanで解釈してはいない。
 - ディレクトリのDB結果は公開行だけを返す既存SQLに委ね、モデルはCache APIのキー選択を扱う。キャッシュの内部破損・不正なキー応答、JSON/HTMLの射影・エスケープ、D1やCloudflareの整合性全体は証明しない。
 - 最後の公開状態・revision照会より後の非公開化、削除、退会は進行中の応答を取り消す保証にならない。応答済みデータの回収も対象外である。
 - モデルとTypeScript/SQLの同値性は証明していない。個別の実装テストで対応を確認する。
+- 足あとのモデルは同一プロジェクト・完成状態・根拠現行性を別々の条件として表す。公開用タイトルと説明を一つの値に抽象化し、公開ID、日付、分類の限定列と版の結合、資料ごとの版の比較、外部キー、キャッシュヘッダー、HTMLの文字処理は実装と照合テストで確認する。所有者が文面に入力した内容の妥当性は所有者が確認する。
 
 ## 変異
 
-`mutations/publication.json` の3件は、非公開条件、世代一致、revision欠損時の拒否をそれぞれ除き、`detail_requires_public`、`cached_requires_current_generation`、`missing_revision_fail_closed` の証明を失敗させる。型や構文の不正による失敗は検出成功に数えない。
+`mutations/publication.json` は、非公開条件、世代一致、revision欠損時の拒否と、足あと掲載原稿の限定、所属、根拠現行性、メモリ設定、編集権限を一つずつ崩し、対応する定理の証明が失敗することを確認する。型や構文の不正による失敗は検出成功に数えない。

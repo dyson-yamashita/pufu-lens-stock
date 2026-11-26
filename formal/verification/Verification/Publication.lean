@@ -169,4 +169,78 @@ theorem refusal_reachable :
     directory true none ⟨10, 1⟩ 1 = .denied ∧
     changePublication exampleState { exampleEditor with user := 2 } false 99 = exampleState := by decide
 
+/-- The private analysis and the approved copy are separate values. -/
+structure Footprint where
+  belongsToProject : Bool
+  completed : Bool
+  sourcesCurrent : Bool
+  privateAnalysis : Nat
+  publication : Option Nat
+  deriving DecidableEq, Repr
+
+def footprintEligible (s : State) (memoryUpdates : Bool) (f : Footprint) : Prop :=
+  s.isPublic = true ∧ memoryUpdates = true ∧ f.belongsToProject = true ∧
+    f.completed = true ∧ f.sourcesCurrent = true
+
+instance (s : State) (memoryUpdates : Bool) (f : Footprint) :
+    Decidable (footprintEligible s memoryUpdates f) := inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _ ∧ _))
+
+def readPublishedFootprint (s : State) (key : Nat) (memoryUpdates : Bool) (f : Footprint) : Option Nat :=
+  if detailAllowed s key ∧ footprintEligible s memoryUpdates f then f.publication else none
+
+def saveFootprintCopy (s : State) (e : Editor) (memoryUpdates : Bool) (f : Footprint)
+    (copy : Nat) : Footprint :=
+  if mayEdit s e ∧ footprintEligible s memoryUpdates f then { f with publication := some copy }
+  else f
+
+def removeFootprintCopy (s : State) (e : Editor) (f : Footprint) : Footprint :=
+  if mayEdit s e ∧ f.belongsToProject = true then { f with publication := none } else f
+
+theorem footprint_read_requires_approval (s : State) (key : Nat) (memoryUpdates : Bool) (f : Footprint)
+    (copy : Nat) (h : readPublishedFootprint s key memoryUpdates f = some copy) :
+    detailAllowed s key ∧ footprintEligible s memoryUpdates f ∧ f.publication = some copy := by
+  by_cases allowed : detailAllowed s key ∧ footprintEligible s memoryUpdates f
+  · exact ⟨allowed.1, allowed.2, by simpa [readPublishedFootprint, allowed] using h⟩
+  · simp [readPublishedFootprint, allowed] at h
+
+theorem footprint_other_project_denied (s : State) (key : Nat) (memoryUpdates : Bool) (f : Footprint)
+    (h : f.belongsToProject = false) : readPublishedFootprint s key memoryUpdates f = none := by
+  simp [readPublishedFootprint, footprintEligible, h]
+
+theorem footprint_stale_source_denied (s : State) (key : Nat) (memoryUpdates : Bool) (f : Footprint)
+    (h : f.sourcesCurrent = false) : readPublishedFootprint s key memoryUpdates f = none := by
+  simp [readPublishedFootprint, footprintEligible, h]
+
+theorem footprint_memory_off_denied (s : State) (key : Nat) (f : Footprint) :
+    readPublishedFootprint s key false f = none := by
+  simp [readPublishedFootprint, footprintEligible]
+
+theorem footprint_save_denied_preserves (s : State) (e : Editor) (memoryUpdates : Bool)
+    (f : Footprint) (copy : Nat) (h : ¬ (mayEdit s e ∧ footprintEligible s memoryUpdates f)) :
+    saveFootprintCopy s e memoryUpdates f copy = f := by
+  simp [saveFootprintCopy, h]
+
+theorem footprint_remove_denied_preserves (s : State) (e : Editor) (f : Footprint)
+    (h : ¬ (mayEdit s e ∧ f.belongsToProject = true)) : removeFootprintCopy s e f = f := by
+  simp [removeFootprintCopy, h]
+
+theorem footprint_edits_preserve_checkpoint (s : State) (e : Editor) (memoryUpdates : Bool)
+    (f : Footprint) (copy : Nat) :
+    { saveFootprintCopy s e memoryUpdates f copy with publication := f.publication } = f ∧
+    { removeFootprintCopy s e f with publication := f.publication } = f := by
+  constructor
+  · unfold saveFootprintCopy
+    split <;> cases f <;> rfl
+  · unfold removeFootprintCopy
+    split <;> cases f <;> rfl
+
+def exampleFootprint : Footprint := ⟨true, true, true, 100, none⟩
+
+theorem footprint_success_and_refusal_reachable :
+    let published := saveFootprintCopy exampleState exampleEditor true exampleFootprint 101
+    readPublishedFootprint exampleState 7 true published = some 101 ∧
+    readPublishedFootprint exampleState 7 true exampleFootprint = none ∧
+    readPublishedFootprint exampleState 7 true (removeFootprintCopy exampleState exampleEditor published) = none ∧
+    saveFootprintCopy exampleState { exampleEditor with session := false } true exampleFootprint 101 = exampleFootprint := by decide
+
 end Verification.Publication

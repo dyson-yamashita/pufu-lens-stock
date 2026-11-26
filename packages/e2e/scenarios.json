@@ -434,11 +434,15 @@
   },
   {
     "id": "FOOTPRINT-001",
-    "estimatedSeconds": 15,
+    "estimatedSeconds": 22,
     "title": "プロジェクトの足あと",
     "sources": [
       "src/features/footprints/ProjectFootprints.tsx",
+      "src/features/footprints/FootprintPublicationEditor.tsx",
+      "src/features/footprints/FootprintTimeline.tsx",
       "src/features/footprints/footprints.css",
+      "src/features/public-projects/PublicFootprintList.tsx",
+      "src/features/public-projects/PublicProjectPage.tsx",
       "src/app/App.tsx",
       "src/app/AppPageHeader.tsx",
       "src/styles/layout.css",
@@ -446,6 +450,8 @@
       "server/api/routes/projects.ts",
       "server/features/memory/footprint-generation.ts",
       "server/features/memory/footprint-repository.ts",
+      "server/features/public-projects/public-projects.ts",
+      "server/features/public-projects/public-pages.ts",
       "server/infrastructure/jobs/jobs.ts",
       "server/features/memory/memory-history.ts",
       "shared/footprints.ts"
@@ -453,7 +459,8 @@
     "aspects": [
       "設定の既定値・間隔の保存・過去履歴生成の受付",
       "古い順のタイムライン・最新選択・詳細の開閉・スマホの横スクロール",
-      "プロジェクトのメモリタブのみ表示・ストックの既存保存ボタン・自動追加オフでも閲覧・ユーザーメモリ更新オフでは非表示"
+      "管理画面ではプロジェクトのメモリタブのみ表示・ストックの既存保存ボタン・自動追加オフでも閲覧・ユーザーメモリ更新オフでは非表示",
+      "足あとごとに公開用タイトル・説明を掲載し、匿名の公開タブで選択・閲覧。未掲載の足あとと個人用の分析は表示せず、取り消しを再読込後の公開画面に反映"
     ]
   },
   {
