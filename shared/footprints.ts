@@ -65,6 +65,11 @@ export type FootprintEvidence = {
   label: string;
   phase?: number;
 };
+export const publicFootprintEvidenceHref = (
+  projectKey: string,
+  { kind, id, phase }: FootprintEvidence,
+) =>
+  `/p/${encodeURIComponent(projectKey)}/${kind}s/${encodeURIComponent(id)}${kind === 'pufu' && phase ? `?phase=${phase}` : ''}`;
 export type FootprintStatement = { text: string; links: FootprintEvidence[] };
 export type FootprintPoint = {
   revision: number;
@@ -89,10 +94,26 @@ export const footprintPublicationSchema = z.strictObject({
   summary: z.string().trim().min(1).max(footprintPublicationSummaryLimit),
 });
 export type FootprintPublication = z.infer<typeof footprintPublicationSchema>;
+type ChangeKind = Exclude<FootprintPoint['kind'], 'continuing'>;
+type TimelineOnly = { kind: 'continuing' };
+export type SharedFootprint = { end_at: string } & (
+  | TimelineOnly
+  | ({ kind: ChangeKind; start_at: string } & (
+      FootprintPublication | Pick<FootprintDetail, 'analysis' | 'links'>
+    ))
+);
+export type FootprintReanalysis = {
+  generation: number;
+  status: 'idle' | 'pending' | 'ready' | 'failed';
+  result: TimelineOnly | (FootprintDetail & { kind: ChangeKind }) | null;
+  shared?: true;
+};
 export type OwnedFootprintDetail = FootprintDetail & {
   publication_enabled: boolean;
   publication: FootprintPublication | null;
+  reanalysis: FootprintReanalysis | null;
+  shared: SharedFootprint | null;
+  original_available: boolean;
 };
-export type PublicFootprint = FootprintPublication &
-  Pick<FootprintDetail, 'kind' | 'start_at' | 'end_at'> & { id: string };
+export type PublicFootprint = { id: string } & SharedFootprint;
 export type PublicFootprintPage = { items: PublicFootprint[]; page: number; has_more: boolean };

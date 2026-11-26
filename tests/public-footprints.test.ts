@@ -146,6 +146,89 @@ it('本人の同一Originセッションだけが足あとの公開内容を変�
   expect(await (await get(key)).json()).toMatchObject({ items: [revised] });
 });
 
+it('掲載済みの「続く」は日付と分類だけを公開ページに返す', async () => {
+  const stored = JSON.parse(analysis);
+  stored.analysis.kind = 'continuing';
+  await point(1, [], JSON.stringify(stored)).run();
+  const key = await share();
+  expect((await publish(1)).status).toBe(200);
+  expect(await (await get(key)).json()).toEqual({
+    items: [{ id: expect.any(String), end_at: end, kind: 'continuing' }],
+    page: 1,
+    has_more: false,
+  });
+  expect((await app.request(`${privateFootprints}/1`)).status).toBe(404);
+  const template = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  app.env.ASSETS = { fetch: async () => new Response(template) } as unknown as Fetcher;
+  const response = await worker.fetch(
+    new Request(`${app.env.APP_URL}/p/${key}?view=footprints`),
+    app.env,
+    app.ctx,
+  );
+  const html = await response.text();
+  expect(parseHTML(html).document.querySelector('article')?.textContent).toContain('続く');
+  expect(html).not.toContain(copy.title);
+  expect(html).not.toContain(copy.summary);
+  expect(html).not.toContain('PRIVATE_');
+});
+
+it('公開データから生成した分析を、同じ根拠と観点で本人・匿名APIと公開HTMLに表示する', async () => {
+  const source = { kind: 'question', id: 'shared-question', label: '公開された問い' };
+  const shared = {
+    analysis: {
+      ...JSON.parse(analysis).analysis,
+      title: '公開された分析 <確認>',
+      before: '以前の見方',
+      current: '追加された判断材料',
+      changes: [{ text: '問いの範囲が広がった。', links: [source] }],
+      interpretation: '記録から分かる解釈',
+      perspectives: { questions: '新たに比較できる問い' },
+    },
+    links: [source],
+  };
+  await app.env.DB.batch([
+    point(1, [], JSON.stringify(shared)),
+    app.env.DB.prepare(
+      `INSERT INTO questions(id,project_id,source,text,status,updated_at)
+      VALUES (?1,?2,'user','公開された問い','ready',?3)`,
+    ).bind(source.id, project, start),
+    app.env.DB.prepare(
+      'UPDATE project_footprints SET public_id=?,dependencies=? WHERE project_id=? AND revision=1',
+    ).bind(
+      'shared-id',
+      JSON.stringify([{ kind: 'question', id: source.id, version: '[null,null]' }]),
+      project,
+    ),
+  ]);
+  const key = await share();
+  const item = { ...shared, start_at: start, end_at: end, kind: 'deepening' };
+  expect(await (await get(key)).json()).toMatchObject({ items: [{ id: 'shared-id', ...item }] });
+  expect(await (await app.request(`${privateFootprints}/1`)).json()).toMatchObject({
+    shared: item,
+  });
+  const template = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  app.env.ASSETS = { fetch: async () => new Response(template) } as unknown as Fetcher;
+  const response = await worker.fetch(
+    new Request(`${app.env.APP_URL}/p/${key}?view=footprints`),
+    app.env,
+    app.ctx,
+  );
+  const html = await response.text();
+  const { document } = parseHTML(html);
+  expect(document.querySelector('article h3')?.textContent).toBe(shared.analysis.title);
+  expect(document.querySelector('article dl dd')?.textContent).toBe('新たに比較できる問い');
+  expect(document.querySelector('article a')?.getAttribute('href')).toBe(
+    `/p/${key}/questions/${source.id}`,
+  );
+  expect(html).toContain('&lt;確認&gt;');
+  await app.env.DB.prepare("UPDATE questions SET note='個人用のメモ',updated_at=? WHERE id=?")
+    .bind(end, source.id)
+    .run();
+  expect(await (await get(key)).json()).toMatchObject({ items: [{ id: 'shared-id', ...item }] });
+  await app.env.DB.prepare("UPDATE questions SET status='failed' WHERE id=?").bind(source.id).run();
+  expect(await (await get(key)).json()).toMatchObject({ items: [] });
+});
+
 it('根拠の削除、メモリ更新オフ、プロジェクトの非公開化・削除を取得時に反映する', async () => {
   const dependencies = [
     { kind: 'question', id: 'source', version: JSON.stringify([start, null]) },
@@ -207,8 +290,10 @@ it('同日の足あとが複数ページにまたがっても重複や取りこ�
   }
   const latest = (await (await get(key)).json()) as PublicFootprintPage;
   expect(latest.has_more).toBe(true);
-  expect(latest.items.map(({ title }) => Number(title))).toEqual(revisions.slice(1).reverse());
+  expect(latest.items.map((item) => ('title' in item ? Number(item.title) : null))).toEqual(
+    revisions.slice(1).reverse(),
+  );
   const past = (await (await get(key, 2)).json()) as PublicFootprintPage;
   expect(past.has_more).toBe(false);
-  expect(past.items.map(({ title }) => title)).toEqual(['1']);
+  expect(past.items.map((item) => ('title' in item ? item.title : null))).toEqual(['1']);
 });

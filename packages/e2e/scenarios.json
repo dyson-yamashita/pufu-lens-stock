@@ -439,8 +439,9 @@
     "estimatedSeconds": 22,
     "title": "プロジェクトの足あと",
     "sources": [
+      "src/app/AppLibraryTabs.tsx",
       "src/features/footprints/ProjectFootprints.tsx",
-      "src/features/footprints/FootprintPublicationEditor.tsx",
+      "src/features/footprints/FootprintDetailView.tsx",
       "src/features/footprints/FootprintTimeline.tsx",
       "src/features/footprints/footprints.css",
       "src/features/public-projects/PublicFootprintList.tsx",
@@ -454,16 +455,18 @@
       "server/features/memory/footprint-repository.ts",
       "server/features/public-projects/public-projects.ts",
       "server/features/public-projects/public-pages.ts",
+      "server/features/public-projects/public-sources.ts",
       "server/infrastructure/jobs/jobs.ts",
       "server/features/memory/memory-history.ts",
       "shared/footprints.ts"
     ],
     "aspects": [
       "設定の既定値・間隔の保存・過去履歴生成の受付",
-      "古い順のタイムライン・最新選択・詳細の開閉・スマホの横スクロール",
+      "メモリ・足あとタブで足あとの点からモーダルを開き、閉じた後にフォーカスが戻る。続くは点だけを残す。古い順のタイムライン・最新選択・スマホの横スクロール",
+      "対象期間の再分析を開始し、元の分析と再分析の結果を切り替えて表示",
       "詳細の先頭で以前と今回を比較し、各変化の下に対応する根拠リンクを表示。本人の記録を引用し、AIの解釈と過去形式の根拠も閲覧できる",
       "管理画面ではプロジェクトのメモリタブのみ表示・ストックの既存保存ボタン・自動追加オフでも閲覧・ユーザーメモリ更新オフでは非表示",
-      "足あとごとに公開用タイトル・説明を掲載し、匿名の公開タブで選択・閲覧。未掲載の足あとと個人用の分析は表示せず、取り消しを再読込後の公開画面に反映"
+      "公開記録から再分析した同じ内容をログイン後のモーダルと匿名の公開タブに表示。公開タブはインラインで続くの詳細を表示しない"
     ]
   },
   {

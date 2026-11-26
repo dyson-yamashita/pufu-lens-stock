@@ -48,6 +48,24 @@
       "old": "if mayEdit s e ∧ footprintEligible s memoryUpdates f then { f with publication := some copy }",
       "new": "if True ∧ footprintEligible s memoryUpdates f then { f with publication := some copy }",
       "theorem": "footprint_save_denied_preserves"
+    },
+    {
+      "name": "B06-footprint-public-analysis-provenance",
+      "old": "if a.publicInputs && a.sourcesCurrent then",
+      "new": "if a.sourcesCurrent then",
+      "theorem": "private_inputs_never_project"
+    },
+    {
+      "name": "B06-footprint-public-analysis-source",
+      "old": "if a.publicInputs && a.sourcesCurrent then",
+      "new": "if a.publicInputs then",
+      "theorem": "changed_sources_never_project"
+    },
+    {
+      "name": "B06-footprint-continuing-detail",
+      "old": "some (if a.continuing then .point else .detail a.text)",
+      "new": "some (.detail a.text)",
+      "theorem": "continuing_projected_as_point"
     }
   ]
 }

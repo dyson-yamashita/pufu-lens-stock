@@ -2,7 +2,11 @@ import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { parseHTML } from 'linkedom/worker';
 import { publicDocumentAssetPaths } from '../../../shared/public-document-routes';
-import type { PublicFootprintPage } from '../../../shared/footprints';
+import {
+  publicFootprintEvidenceHref,
+  type PublicFootprint,
+  type PublicFootprintPage,
+} from '../../../shared/footprints';
 import type {
   PublicList,
   PublicProjectDetail,
@@ -33,6 +37,69 @@ const escape = (value: unknown) =>
   );
 const link = (href: string, text: string) => `<a href="${escape(href)}">${escape(text)}</a>`;
 const paragraph = (text: string) => `<p>${escape(text)}</p>`;
+const footprintDates = new Intl.DateTimeFormat('ja-JP', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Tokyo',
+});
+const footprintKinds = {
+  beginning: 'はじまり',
+  discovery: '見つかる',
+  deepening: '深まる',
+  expansion: '広がる',
+  integration: 'つながる',
+  shift: '変わる',
+  convergence: '見えてくる',
+  resurgence: 'よみがえる',
+  pause: 'ひと休み',
+};
+const footprintPerspectives = {
+  interests: '関心',
+  knowledge: '知識・理解',
+  questions: '問い',
+  assumptions: '認識・前提',
+  purpose: '目的',
+  strategy: '戦略',
+  action: '行動',
+  environment: '外部環境',
+};
+function footprintBody(item: PublicFootprint, projectKey: string) {
+  if (item.kind === 'continuing')
+    return `<time datetime="${escape(item.end_at)}">${escape(footprintDates.format(new Date(item.end_at)))}</time> <span>続く</span>`;
+  const period = footprintDates.formatRange(new Date(item.start_at), new Date(item.end_at));
+  const header = paragraph(`${period} ／ ${footprintKinds[item.kind]}`);
+  if (!('analysis' in item))
+    return `${header}<h3>${escape(item.title)}</h3>${paragraph(item.summary)}`;
+  const { analysis, links } = item;
+  const records = (items: typeof links) =>
+    items.length
+      ? `<ul>${items.map((record) => `<li>${link(publicFootprintEvidenceHref(projectKey, record), record.label || '関連する記録')}</li>`).join('')}</ul>`
+      : '';
+  const section = (heading: string, body: string) =>
+    body ? `<h4>${heading}</h4>${paragraph(body)}` : '';
+  const changes = analysis.changes ?? [];
+  const cited = new Set(
+    changes.flatMap((change) =>
+      change.links.map((record) => publicFootprintEvidenceHref(projectKey, record)),
+    ),
+  );
+  const related = records(
+    links.filter((record) => !cited.has(publicFootprintEvidenceHref(projectKey, record))),
+  );
+  const perspectives = Object.entries(footprintPerspectives)
+    .map(([key, label]) => {
+      const value = analysis.perspectives[key as keyof typeof footprintPerspectives];
+      return value ? `<dt>${label}</dt><dd>${escape(value)}</dd>` : '';
+    })
+    .join('');
+  return `${header}<h3>${escape(analysis.title)}</h3>${section('以前', analysis.before)}${section('今回', analysis.current)}${
+    changes.length
+      ? `<h4>変化と根拠</h4><ul>${changes.map((change) => `<li>${paragraph(change.text)}${records(change.links)}</li>`).join('')}</ul>`
+      : ''
+  }${section('変化の過程', analysis.process)}${section('変化の意味', analysis.meaning)}${section(
+    'AIの解釈',
+    analysis.interpretation ?? '',
+  )}${section('変わらないこと', analysis.unchanged)}${perspectives ? `<h4>観点別の変化</h4><dl>${perspectives}</dl>` : ''}${related ? `<h4>関連する記録</h4>${related}` : ''}`;
+}
 function pageNumber(value: string | undefined) {
   const page = value === undefined ? 1 : Number(value);
   if (!Number.isInteger(page) || page < 1 || page > 5000) throw new HTTPException(400);
@@ -256,10 +323,7 @@ async function projectPage(c: Context<AppEnv>) {
         items.length
           ? items
               .reverse()
-              .map(
-                (item) =>
-                  `<article><time datetime="${escape(item.end_at)}">${escape(item.end_at.slice(0, 10))}</time><h3>${escape(item.title)}</h3>${paragraph(item.summary)}</article>`,
-              )
+              .map((item) => `<article>${footprintBody(item, key)}</article>`)
               .join('')
           : '<p>公開されている足あとはまだありません。</p>'
       }${pagination(base, view, page, has_more)}`;

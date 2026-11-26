@@ -1,133 +1,152 @@
-import { ChevronDown, Footprints, History, Sprout } from 'lucide-react';
-import { useEffect, useId, useMemo, useState } from 'react';
-import type {
-  FootprintDetail,
-  FootprintEvidence,
-  FootprintPoint,
-  FootprintStatement,
-  OwnedFootprintDetail,
-} from '../../../shared/footprints';
-import { intlLocale, t, useLanguage } from '../../i18n/i18n';
-import { api } from '../../lib/api';
-import { FootprintPublicationEditor } from './FootprintPublicationEditor';
+import { Footprints } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { FootprintPoint, OwnedFootprintDetail } from '../../../shared/footprints';
+import { Modal } from '../../components/Modal';
+import { t, useLanguage } from '../../i18n/i18n';
+import { api, ApiError, send } from '../../lib/api';
+import { FootprintDetailView } from './FootprintDetailView';
 import { FootprintTimeline } from './FootprintTimeline';
 
-const linkKey = ({ kind, id, phase }: FootprintEvidence) => JSON.stringify([kind, id, phase]);
-
-function EvidenceLinks({ links }: { links: FootprintEvidence[] }) {
-  if (!links.length) return null;
-  return (
-    <ul className="footprints-evidence-links">
-      {links.map((link) => {
-        const phase = link.kind === 'pufu' ? link.phase : undefined;
-        const href = `#${link.kind}/${encodeURIComponent(link.id)}${phase ? `/${phase}` : ''}`;
-        const label = link.label || t(`footprints.link.${link.kind}`);
-        return (
-          <li key={linkKey(link)}>
-            <a href={href}>
-              {phase ? `${label} · ${t('phase.number', { number: phase })}` : label}
-            </a>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function LinkedStatements({
-  heading,
-  items,
-  quote,
+function FootprintDetailPanel({
+  endpoint,
+  onKind,
 }: {
-  heading: string;
-  items: FootprintStatement[];
-  quote?: boolean;
+  endpoint: string;
+  onKind: (revision: number, kind: FootprintPoint['kind']) => void;
 }) {
-  if (!items.length) return null;
-  return (
-    <section>
-      <h4>{heading}</h4>
-      <ul className="footprints-statements">
-        {items.map(({ text, links }, index) => (
-          <li key={index}>
-            <p>{quote ? <q>{text}</q> : text}</p>
-            <EvidenceLinks links={links} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+  const [detail, setDetail] = useState<OwnedFootprintDetail | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [failedGeneration, setFailedGeneration] = useState<number | null>(null);
+  const [view, setView] = useState<'current' | 'original' | 'personal'>('current');
 
-function Detail({ detail }: { detail: FootprintDetail }) {
-  const { analysis, links } = detail;
-  const longDate = new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' });
-  const period = longDate.formatRange(new Date(detail.start_at), new Date(detail.end_at));
-  const stages = [
-    { key: 'before', icon: History, content: analysis.before },
-    { key: 'current', icon: Sprout, content: analysis.current },
-  ];
-  const changes = analysis.changes ?? [];
-  const triggers = analysis.trigger_details ?? [];
-  const earlierRecords = analysis.trigger_details === undefined ? analysis.triggers : [];
-  const linked = new Set([...changes, ...triggers].flatMap(({ links }) => links.map(linkKey)));
-  const related = links.filter((link) => !linked.has(linkKey(link)));
-  const perspectives = Object.entries(analysis.perspectives).filter(([, value]) => value);
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number | undefined;
+    let pending = true;
+    const load = async () => {
+      try {
+        const result = await api<OwnedFootprintDetail>(endpoint, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setDetail(result);
+        onKind(result.revision, result.shared?.kind ?? result.kind);
+        setFailed(false);
+        pending = result.reanalysis?.status === 'pending';
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && [401, 403, 404].includes(error.status)) {
+          setDetail(null);
+          pending = false;
+        }
+        setFailed(true);
+      }
+      if (pending) timer = window.setTimeout(() => void load(), 4000);
+    };
+    void load();
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [endpoint, onKind, refresh]);
+
+  if (!detail) return <p role="status">{t(failed ? 'footprints.load_failed' : 'push.loading')}</p>;
+  const reanalysis = detail.reanalysis;
+  const pending = reanalysis?.status === 'pending';
+  const result = detail.shared ?? reanalysis?.result;
+  const personal = detail.shared && !reanalysis?.shared ? reanalysis?.result : null;
+  const displayed =
+    view === 'original' && detail.original_available
+      ? detail
+      : ((view === 'personal' && personal ? personal : result) ?? detail);
+  const canViewOriginal =
+    detail.original_available &&
+    (reanalysis?.result != null || (detail.shared && 'summary' in detail.shared));
+
+  async function reanalyze() {
+    if (reanalysis == null || pending || submitting) return;
+    setSubmitting(true);
+    setFailedGeneration(null);
+    try {
+      const { generation } = await send<{ generation: number }>(`${endpoint}/reanalysis`, {
+        generation: reanalysis.generation,
+      });
+      setDetail((current) =>
+        current
+          ? { ...current, reanalysis: { ...reanalysis, generation, status: 'pending' } }
+          : current,
+      );
+      setView('current');
+    } catch {
+      setFailedGeneration(reanalysis.generation);
+    } finally {
+      setSubmitting(false);
+      setRefresh((value) => value + 1);
+    }
+  }
+
+  const reanalysisFailed =
+    reanalysis?.status === 'failed' || reanalysis?.generation === failedGeneration;
   return (
     <>
-      <p className="footprints-period">
-        {period} ／ {t(`footprints.kind.${detail.kind}`)}
-      </p>
-      <h3>{analysis.title}</h3>
-      <div className="footprints-stages">
-        {stages
-          .filter(({ content }) => content.length > 0)
-          .map(({ key, icon: Icon, content }) => (
-            <div className="footprints-stage" key={key}>
-              <Icon size={20} aria-hidden="true" />
-              <div>
-                <h4>{t(`footprints.${key}`)}</h4>
-                <p>{content}</p>
-              </div>
-            </div>
-          ))}
-      </div>
-      <LinkedStatements heading={t('footprints.changes')} items={changes} />
-      <LinkedStatements heading={t('footprints.triggers')} items={triggers} quote />
-      {(['process', 'meaning', 'interpretation', 'unchanged'] as const).map(
-        (key) =>
-          analysis[key] && (
-            <section key={key}>
-              <h4>{t(`footprints.${key}`)}</h4>
-              <p>{analysis[key]}</p>
-            </section>
-          ),
+      {displayed.kind === 'continuing' ? (
+        <p>{t('footprints.reanalysis_continuing')}</p>
+      ) : (
+        <FootprintDetailView detail={displayed} />
       )}
-      {perspectives.length > 0 && (
-        <section>
-          <h4>{t('footprints.perspectives')}</h4>
-          <dl>
-            {perspectives.map(([key, value]) => (
-              <div key={key}>
-                <dt>{t(`footprints.perspective.${key}`)}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
-      {(earlierRecords.length > 0 || related.length > 0) && (
-        <section>
-          <h4>{t('footprints.evidence')}</h4>
-          {earlierRecords.length > 0 && (
-            <ul>
-              {earlierRecords.map((text, index) => (
-                <li key={index}>{text}</li>
-              ))}
-            </ul>
+      {reanalysis && (
+        <div className="footprints-reanalysis">
+          <button
+            type="button"
+            className="button secondary"
+            onClick={reanalyze}
+            disabled={submitting || pending}
+          >
+            {t('footprints.reanalyze')}
+          </button>
+          {canViewOriginal && (
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setView(view === 'original' ? 'current' : 'original')}
+            >
+              {t(
+                view === 'original'
+                  ? detail.shared
+                    ? 'footprints.reanalysis_shared'
+                    : 'footprints.reanalysis_result'
+                  : 'footprints.reanalysis_original',
+              )}
+            </button>
           )}
-          <EvidenceLinks links={related} />
-        </section>
+          {personal && (
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setView(view === 'personal' ? 'current' : 'personal')}
+            >
+              {t(
+                view === 'personal'
+                  ? 'footprints.reanalysis_shared'
+                  : 'footprints.reanalysis_personal',
+              )}
+            </button>
+          )}
+          {(pending || reanalysisFailed || reanalysis.result) && (
+            <p role="status">
+              {t(
+                pending
+                  ? 'footprints.reanalysis_pending'
+                  : reanalysisFailed
+                    ? 'footprints.reanalysis_failed'
+                    : 'footprints.reanalysis_saved',
+              )}
+            </p>
+          )}
+          {detail.publication_enabled && !detail.shared && !pending && (
+            <p>{t('footprints.reanalysis_to_share')}</p>
+          )}
+        </div>
       )}
     </>
   );
@@ -144,14 +163,18 @@ export function ProjectFootprints({
   const [points, setPoints] = useState<FootprintPoint[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [detail, setDetail] = useState<OwnedFootprintDetail | null>(null);
-  const [failed, setFailed] = useState(false);
-  const panelId = useId();
   const titleId = useId();
+  const timelineHeading = useRef<HTMLHeadingElement>(null);
   const timeline = useMemo(() => points.map((item) => ({ ...item, id: item.revision })), [points]);
   const endpoint = `/api/v1/projects/${encodeURIComponent(projectId)}/footprints`;
   const point = points.find((item) => item.revision === selected) ?? points.at(-1);
-  const revision = point?.revision;
+  const updateKind = useCallback((revision: number, kind: FootprintPoint['kind']) => {
+    setPoints((current) =>
+      current.some((item) => item.revision === revision && item.kind !== kind)
+        ? current.map((item) => (item.revision === revision ? { ...item, kind } : item))
+        : current,
+    );
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     let loading = false;
@@ -187,24 +210,10 @@ export function ProjectFootprints({
       document.removeEventListener('visibilitychange', refresh);
     };
   }, [endpoint, memoryRevision]);
-  useEffect(() => {
-    if (!open || revision === undefined) return;
-    const controller = new AbortController();
-    void api<OwnedFootprintDetail>(`${endpoint}/${revision}`, { signal: controller.signal }).then(
-      (result) => {
-        if (!controller.signal.aborted) setDetail(result);
-      },
-      () => {
-        if (!controller.signal.aborted) setFailed(true);
-      },
-    );
-    return () => controller.abort();
-  }, [endpoint, open, revision]);
   if (!point) return null;
-  const date = new Intl.DateTimeFormat(intlLocale(), { month: 'numeric', day: 'numeric' });
   return (
     <section className="footprints" aria-labelledby={titleId}>
-      <h2 id={titleId}>
+      <h2 id={titleId} ref={timelineHeading} tabIndex={-1}>
         <Footprints size={18} aria-hidden="true" />
         {t('footprints.title')}
       </h2>
@@ -212,46 +221,31 @@ export function ProjectFootprints({
         points={timeline}
         selected={point.revision}
         followLatest={selected === null}
+        opensDialog
         onSelect={(revision) => {
-          if (revision === point.revision) return;
-          setDetail(null);
-          setFailed(false);
           setSelected(revision);
+          setOpen(true);
         }}
       />
-      <button
-        type="button"
-        className="footprints-toggle"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => {
-          setDetail(null);
-          setFailed(false);
-          if (!open) setSelected(point.revision);
-          setOpen(!open);
-        }}
-      >
-        {open
-          ? t('footprints.close')
-          : t('footprints.open', { date: date.format(new Date(point.end_at)) })}
-        <ChevronDown size={14} aria-hidden="true" />
-      </button>
-      <div id={panelId} className="footprints-detail" hidden={!open}>
-        {open &&
-          (detail && detail.revision === revision ? (
-            <>
-              <Detail detail={detail} />
-              <FootprintPublicationEditor
-                key={revision}
-                endpoint={`${endpoint}/${revision}/publication`}
-                initial={detail.publication}
-                enabled={detail.publication_enabled}
-              />
-            </>
-          ) : (
-            <p role="status">{t(failed ? 'footprints.load_failed' : 'push.loading')}</p>
-          ))}
-      </div>
+      {open && point.revision === selected && (
+        <Modal
+          title={t('footprints.title')}
+          onClose={() => {
+            setOpen(false);
+            if (point.kind === 'continuing')
+              window.requestAnimationFrame(() => timelineHeading.current?.focus());
+          }}
+          className="footprints-modal"
+        >
+          <div className="footprints-detail">
+            <FootprintDetailPanel
+              key={`${endpoint}/${point.revision}`}
+              endpoint={`${endpoint}/${point.revision}`}
+              onKind={updateKind}
+            />
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }
