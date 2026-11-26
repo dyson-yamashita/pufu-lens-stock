@@ -1,6 +1,10 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { expect } from 'e2e';
-import type { FootprintPoint, OwnedFootprintDetail } from '../../../shared/footprints.ts';
+import type {
+  FootprintPoint,
+  OwnedFootprintDetail,
+  PublicFootprintPage,
+} from '../../../shared/footprints.ts';
 import { test } from '../src/fixtures.ts';
 
 test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクトのメモリタブで詳細を開ける', async ({
@@ -114,6 +118,22 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   const evidence = { kind: 'stock', id: stockIds[3], label: '記録 4' } as const;
   const change = 'コード品質を確認する工程が判断材料に加わった。';
   const quote = '比較した記事を読んで、確認する工程を見直した。';
+  const changeAnalysis = {
+    ...original.analysis,
+    kind: 'deepening' as const,
+    title: 'エージェント運用の見直し',
+    before: '開発の自動化について調べていた。',
+    current: '実際の運用を設計するための判断材料が加わった。',
+    changes: [{ text: change, links: [evidence] }],
+    triggers: [quote],
+    trigger_details: [
+      { text: quote, links: [{ kind: 'stock' as const, id: stockIds[2], label: '記録 3' }] },
+    ],
+    process: '保存済みの変化の過程。',
+    meaning: '保存済みの変化の意味。',
+    interpretation: '品質管理への関心が具体化した可能性がある。',
+    unchanged: '保存済みの変わらないこと。',
+  };
   let preview: 'change' | 'legacy' | null = 'change';
   // The local demo uses extractive output. Exercise the two stored detail formats with fixtures.
   await browser.route(`${fixture.url}/api/v1${firstPath}`, (route) => {
@@ -126,19 +146,7 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
         kind: preview === 'change' ? 'deepening' : original.kind,
         analysis:
           preview === 'change'
-            ? {
-                ...original.analysis,
-                title: 'エージェント運用の見直し',
-                kind: 'deepening',
-                before: '開発の自動化について調べていた。',
-                current: '実際の運用を設計するための判断材料が加わった。',
-                changes: [{ text: change, links: [evidence] }],
-                triggers: [quote],
-                trigger_details: [
-                  { text: quote, links: [{ kind: 'stock', id: stockIds[2], label: '記録 3' }] },
-                ],
-                interpretation: '品質管理への関心が具体化した可能性がある。',
-              }
+            ? changeAnalysis
             : {
                 ...original.analysis,
                 changes: undefined,
@@ -157,16 +165,24 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
     '今回',
     '変化と根拠',
     '本人の記録にあるきっかけ',
-    'AIの解釈',
   ]);
   const changeItem = browser.locator('.footprints-statements > li').first();
   await expect(changeItem).toContainText(change);
   const citation = changeItem.getByRole('link', '記録 4', { exact: true });
   await expect(citation).toHaveAttribute('href', `#stock/${stockIds[3]}`);
   await expect(screen.getByRole('link', '記録 4', { exact: true })).toHaveCount(1);
+  const evidenceDecoration = () =>
+    browser.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('.footprints-statements a')!).textDecorationLine,
+    );
+  expect(await evidenceDecoration()).toBe('underline');
   await expect(browser.locator('.footprints-statements q')).toHaveText(quote);
-  await close.click();
+  await citation.click();
+  await expect(browser.locator('.stock-detail-title')).toContainText('記録 4');
+  await expect(dialog).toHaveCount(0);
   preview = 'legacy';
+  await app.open(`/#memory/${id}`);
   await points.first().click();
   await expect(points.first()).toHaveAttribute('aria-pressed', 'true');
   await expect(
@@ -274,8 +290,42 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   ).toBeVisible();
   await expect(browser.locator('.footprints-period')).toHaveText(period!);
   await expect(dialog).toHaveCount(0);
+
+  const publicApi = `${fixture.url}/api/public/projects/${publication.public_id}/footprints?page=1`;
+  const publicFootprints = (await (await fetch(publicApi)).json()) as PublicFootprintPage;
+  await browser.route(publicApi, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...publicFootprints,
+        items: publicFootprints.items.map((item) =>
+          item.kind === 'beginning'
+            ? {
+                ...item,
+                kind: changeAnalysis.kind,
+                analysis: { ...changeAnalysis, triggers: [], trigger_details: [] },
+                links: [evidence],
+              }
+            : item,
+        ),
+      }),
+    }),
+  );
   await app.open(`${publicPage}?view=footprints`);
   await expect(points).toHaveCount(2);
   await expect(points.last()).toBeDisabled();
+  await points.first().click();
+  const publicCitation = browser.locator('.footprints-statements').getByRole('link', '記録 4');
+  await expect(publicCitation).toBeVisible();
+  expect(await browser.locator('.footprints-detail h4').allTextContents()).toEqual([
+    '以前',
+    '今回',
+    '変化と根拠',
+  ]);
+  expect(await evidenceDecoration()).toBe('underline');
+  await expect(publicCitation).toHaveAttribute('href', `${publicPage}/stocks/${stockIds[3]}`);
+  await publicCitation.click();
+  await expect(browser.locator('.public-stock-detail')).toBeVisible();
   await browser.setCookies(cookies);
 });

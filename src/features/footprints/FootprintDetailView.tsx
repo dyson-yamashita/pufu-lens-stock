@@ -126,15 +126,6 @@ export function FootprintDetailView({
         evidenceHref={evidenceHref}
         quote
       />
-      {(['process', 'meaning', 'interpretation', 'unchanged'] as const).map(
-        (key) =>
-          analysis[key] && (
-            <section key={key}>
-              <h4>{t(`footprints.${key}`)}</h4>
-              <p>{analysis[key]}</p>
-            </section>
-          ),
-      )}
       {perspectives.length > 0 && (
         <section>
           <h4>{t('footprints.perspectives')}</h4>
