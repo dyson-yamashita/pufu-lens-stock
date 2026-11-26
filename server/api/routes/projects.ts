@@ -1,3 +1,9 @@
+import { footprintIntervalSchema } from '../../../shared/footprints';
+import {
+  listFootprints,
+  readFootprint,
+  startFootprintBackfill,
+} from '../../features/memory/footprint-repository';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
@@ -23,6 +29,8 @@ const projectSchema = z.object({
   include_in_user_memory: z.boolean().optional(),
   auto_generate_questions: z.boolean().optional(),
   reflection_period: reflectionPeriodSchema.optional(),
+  footprints_enabled: z.boolean().optional(),
+  footprint_interval: footprintIntervalSchema.optional(),
 });
 export function registerProjectsRoutes(app: Hono<AppEnv>) {
   app.get('/api/v1/projects', async (c) => {
@@ -33,7 +41,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
       : '';
     const result = await c.env.DB.prepare(
       `SELECT p.id,p.name,p.description,p.show_in_all_lists,p.include_in_user_memory,
-        p.auto_generate_questions,p.reflection_period,p.created_at,COUNT(s.id) AS count,
+        p.auto_generate_questions,p.reflection_period,p.footprints_enabled,p.footprint_interval,p.created_at,COUNT(s.id) AS count,
         COALESCE(SUM(a.status='ready'),0) AS ready_count,
         (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id) ${reflectionCount} AS question_count,
         (SELECT COUNT(*) FROM questions q WHERE q.project_id=p.id AND q.source='user') AS user_question_count,
@@ -50,6 +58,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         show_in_all_lists: Boolean(project.show_in_all_lists),
         include_in_user_memory: Boolean(project.include_in_user_memory),
         auto_generate_questions: Boolean(project.auto_generate_questions),
+        footprints_enabled: Boolean(project.footprints_enabled),
       })),
     });
   });
@@ -65,7 +74,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory, auto_generate_questions, reflection_period) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO projects (id, user_id, name, description, show_in_all_lists, include_in_user_memory, auto_generate_questions, reflection_period, footprints_enabled, footprint_interval) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       ).bind(
         id,
         user.id,
@@ -75,6 +84,8 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         Number(data.include_in_user_memory ?? true),
         Number(data.auto_generate_questions ?? true),
         data.reflection_period ?? 'weekly',
+        Number(data.footprints_enabled ?? true),
+        data.footprint_interval ?? 3,
       ),
       ...dirtyMemoryStatements(c.env, user.id, [id]),
     ]);
@@ -96,7 +107,7 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         Boolean(project.include_in_user_memory) !== data.include_in_user_memory);
     await c.env.DB.batch([
       c.env.DB.prepare(
-        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory), auto_generate_questions = COALESCE(?, auto_generate_questions), reflection_period = COALESCE(?, reflection_period) WHERE id = ? AND user_id = ?',
+        'UPDATE projects SET name = ?, description = ?, show_in_all_lists = COALESCE(?, show_in_all_lists), include_in_user_memory = COALESCE(?, include_in_user_memory), auto_generate_questions = COALESCE(?, auto_generate_questions), reflection_period = COALESCE(?, reflection_period), footprints_enabled = COALESCE(?, footprints_enabled), footprint_interval = COALESCE(?, footprint_interval) WHERE id = ? AND user_id = ?',
       ).bind(
         data.name,
         data.description,
@@ -104,6 +115,8 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         data.include_in_user_memory === undefined ? null : Number(data.include_in_user_memory),
         data.auto_generate_questions === undefined ? null : Number(data.auto_generate_questions),
         data.reflection_period ?? null,
+        data.footprints_enabled === undefined ? null : Number(data.footprints_enabled),
+        data.footprint_interval ?? null,
         id,
         user.id,
       ),
@@ -114,6 +127,32 @@ export function registerProjectsRoutes(app: Hono<AppEnv>) {
         observeOperation('background', 'dispatch_jobs', () => dispatchJobs(c.env)),
       );
     return c.json({ ok: true });
+  });
+
+  app.get('/api/v1/projects/:id/footprints', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    return c.json(await listFootprints(c.env, user.id, id));
+  });
+
+  app.get('/api/v1/projects/:id/footprints/:revision', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    const revision = Number(c.req.param('revision'));
+    if (!Number.isSafeInteger(revision) || revision < 0) throw new HTTPException(404);
+    const detail = await readFootprint(c.env, user.id, id, revision);
+    if (!detail) throw new HTTPException(404);
+    return c.json(detail);
+  });
+
+  app.post('/api/v1/projects/:id/footprints/backfill', async (c) => {
+    const { user } = c.get('principal');
+    const id = c.req.param('id');
+    await ownedProject(c.env, user.id, id);
+    await startFootprintBackfill(c.env, user.id, id);
+    return c.json({ ok: true }, 202);
   });
 
   app.delete('/api/v1/projects/:id', async (c) => {

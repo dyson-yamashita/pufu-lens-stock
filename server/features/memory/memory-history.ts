@@ -64,17 +64,32 @@ export async function cleanupMemoryHistory(env: Env) {
   }
 }
 
-function versionStatement(env: Env, input: MemorySaveInput, key: string, savedAt: string) {
+function versionStatement(
+  env: Env,
+  input: MemorySaveInput,
+  key: string,
+  savedAt: string,
+  sources: string[] | null = null,
+) {
   return env.DB.prepare(
     `INSERT OR IGNORE INTO memory_versions
-      (memory_id,revision,user_id,project_id,content_key,article_count,model,language,saved_at)
-     SELECT id,revision,user_id,project_id,?,article_count,model,language,?
+      (memory_id,revision,user_id,project_id,content_key,article_count,model,language,saved_at,footprint_live,footprint_source_ids)
+     SELECT id,revision,user_id,project_id,?,article_count,model,language,?,?,?
      FROM memories WHERE id=? AND user_id=? AND revision=?`,
-  ).bind(key, savedAt, memoryId(input.userId, input.projectId), input.userId, input.revision);
+  ).bind(
+    key,
+    savedAt,
+    Number(sources !== null),
+    sources === null ? null : JSON.stringify(sources),
+    memoryId(input.userId, input.projectId),
+    input.userId,
+    input.revision,
+  );
 }
 
 async function putVersion(env: Env, input: MemorySaveInput, savedAt: string) {
-  const key = `${historyPrefix(input.userId, input.projectId)}${input.revision}.json`;
+  const writeId = crypto.randomUUID();
+  const key = `${historyPrefix(input.userId, input.projectId)}${input.revision}-${writeId}.json`;
   const version: MemoryVersion = {
     revision: input.revision,
     saved_at: savedAt,
@@ -86,7 +101,6 @@ async function putVersion(env: Env, input: MemorySaveInput, savedAt: string) {
   };
   // Only the server binding can access this private bucket. Never issue object URLs.
   // Durable intent precedes external I/O and survives account/project cascades.
-  const writeId = crypto.randomUUID();
   await env.DB.prepare(
     'INSERT INTO memory_history_writes(id,content_key,user_id,project_id) VALUES (?,?,?,?)',
   )
@@ -103,6 +117,20 @@ function completeWriteStatement(env: Env, write: { key: string; writeId: string 
     `DELETE FROM memory_history_writes WHERE id=? AND EXISTS
      (SELECT 1 FROM memory_versions WHERE content_key=?)`,
   ).bind(write.writeId, write.key);
+}
+
+async function cleanupUncommittedVersion(env: Env, write: { key: string; writeId: string }) {
+  try {
+    // Acknowledged PUT whose D1 commit lost a race; its unique object is never published.
+    const pending = await env.DB.prepare('SELECT 1 FROM memory_history_writes WHERE id=?')
+      .bind(write.writeId)
+      .first();
+    if (!pending) return;
+    await env.MEMORY_HISTORY.delete(write.key);
+    await env.DB.prepare('DELETE FROM memory_history_writes WHERE id=?').bind(write.writeId).run();
+  } catch {
+    console.error('memory_history_write_cleanup_pending');
+  }
 }
 
 export async function saveMemoryWithHistory(
@@ -148,10 +176,11 @@ export async function saveMemoryWithHistory(
       language: resolveLanguage(previous.language),
     };
     const oldWrite = await putVersion(env, old, previous.updated_at);
-    await env.DB.batch([
+    const [, retired] = await env.DB.batch([
       versionStatement(env, old, oldWrite.key, previous.updated_at),
       completeWriteStatement(env, oldWrite),
     ]);
+    if (!retired.meta.changes) await cleanupUncommittedVersion(env, oldWrite);
   }
   const savedAt = now();
   const existing = await env.DB.prepare(
@@ -162,12 +191,19 @@ export async function saveMemoryWithHistory(
   // A replay after a successful D1 commit must not overwrite the immutable R2 version.
   if (!existing) {
     const write = await putVersion(env, input, savedAt);
-    await env.DB.batch([
-      memorySaveStatement(env, input),
-      ...memorySourceStatements(env, id, input.revision, inputs),
-      versionStatement(env, input, write.key, savedAt),
+    const result = await env.DB.batch([
+      memorySaveStatement(env, { ...input, onlyIfUnversioned: true }),
+      versionStatement(
+        env,
+        input,
+        write.key,
+        savedAt,
+        input.projectId ? inputs.map(({ source }) => source.articleId) : null,
+      ),
+      ...memorySourceStatements(env, id, input.revision, inputs, write.key),
       completeWriteStatement(env, write),
     ]);
+    if (!result.at(-1)?.meta.changes) await cleanupUncommittedVersion(env, write);
   }
   // A deletion can win while R2.put is in flight, after the normal deletion sweep.
   const stillOwned = input.projectId

@@ -1,3 +1,4 @@
+import { ProjectFootprints } from '../features/footprints/ProjectFootprints';
 import { ArrowLeft, BookOpen, Check } from 'lucide-react';
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Stock, User } from '../../shared/domain';
@@ -257,6 +258,13 @@ export default function App({
               filterProject={filterProject}
               projects={projects}
               setModal={setModal}
+            />
+          )}
+          {route.view === 'stocks' && route.projectId && page === 1 && (
+            <ProjectFootprints
+              key={route.projectId}
+              projectId={route.projectId}
+              memoryRevision={memoryResponse.memory?.revision}
             />
           )}
           {(route.view === 'stocks' ||

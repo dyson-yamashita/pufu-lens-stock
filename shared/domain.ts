@@ -1,3 +1,4 @@
+import type { FootprintInterval } from './footprints';
 import { z } from 'zod';
 import { legalVersions } from './legal';
 import { relationIdsSchema, type StockRelations } from './relations';
@@ -162,6 +163,8 @@ export type Project = {
   show_in_all_lists: boolean;
   include_in_user_memory: boolean;
   auto_generate_questions: boolean;
+  footprints_enabled?: boolean;
+  footprint_interval?: FootprintInterval;
   reflection_period: ReflectionPeriod;
   count: number;
   ready_count: number;

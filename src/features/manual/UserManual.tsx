@@ -190,6 +190,7 @@ const sections = (tr: typeof t) => [
             <summary>{tr('ui.memory_history.title')}</summary>
             <p>{tr('manual.memory_history')}</p>
             <p>{tr('manual.memory_history_storage')}</p>
+            <p>{tr('footprints.manual')}</p>
           </details>
           <details>
             <summary>{tr('manual.memory_sources_heading')}</summary>

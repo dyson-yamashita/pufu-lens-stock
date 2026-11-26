@@ -124,6 +124,8 @@ export async function testApp(
   if (!migrations.includes('0045_stock_skip_summary.sql'))
     migrations.push('0045_stock_skip_summary.sql');
   if (!migrations.includes('0046_stock_images.sql')) migrations.push('0046_stock_images.sql');
+  if (!migrations.includes('0059_project_footprints.sql'))
+    migrations.push('0059_project_footprints.sql');
   try {
     // 各ファイルのトランザクションは維持し、各SQLのprepareを同期RPCで往復させない。
     const plan = await Promise.all(
