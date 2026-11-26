@@ -400,7 +400,7 @@ it.each(['', '#project/project'])(
       [...document.querySelectorAll('.library-tabs button')].map((button) => button.textContent),
     ).toEqual(
       hash
-        ? ['ストック', '問い・気づき', 'プ譜', 'メモリ', '設定']
+        ? ['ストック', '問い・気づき', 'プ譜', 'メモリ・足あと', '設定']
         : ['ストック', '問い・気づき', 'プ譜', 'メモリ'],
     );
     await tab('プ譜');
