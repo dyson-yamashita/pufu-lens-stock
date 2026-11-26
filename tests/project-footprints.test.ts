@@ -454,6 +454,90 @@ it('旧形式で完了したAI呼び出しを再利用し、元の生成バー�
   });
 });
 
+it('初回の再分析で取り組みごとの根拠を保存し、公開表示に返す', async () => {
+  const db = app.env.DB;
+  await db.batch([
+    db.prepare(`INSERT INTO articles(id,user_id,canonical_url,source_url,title,domain,status,summary_json)
+      VALUES('beginning-article','alice','https://example.com/beginning','https://example.com/beginning',
+      'コメント機能を追加した記録','example.com','ready','{"overview":"コメント機能を追加した。"}')`),
+    db
+      .prepare(
+        `INSERT INTO stocks(id,user_id,project_id,article_id,note)
+        VALUES('beginning-stock','alice',?,'beginning-article','PRIVATE_START_NOTE')`,
+      )
+      .bind(project),
+    db
+      .prepare(
+        `INSERT INTO questions(id,project_id,text,status,source)
+        VALUES('beginning-question',?,'AIとどう問いを育てるか？','ready','user')`,
+      )
+      .bind(project),
+  ]);
+  app.env.LOCAL_DEMO_ENABLED = 'true';
+  await save(1);
+  await queueFootprintJobs(app.env);
+  await run(1);
+
+  const publication = await app.request(`/api/v1/projects/${project}/publication`, {
+    method: 'PATCH',
+    body: { is_public: true, public_description: '' },
+  });
+  expect(publication.status).toBe(200);
+  const {
+    publication: { public_id },
+  } = (await publication.json()) as { publication: { public_id: string } };
+  const path = `${endpoint}/1`;
+  expect(
+    (await app.request(`${path}/reanalysis`, { method: 'POST', body: { generation: 0 } })).status,
+  ).toBe(202);
+
+  const activity = 'コメント機能を追加した。';
+  const question = 'AIと問いを育てる方法について問いが立った。';
+  app.env.AI = {
+    run: async (_model, call) => {
+      const prompt = call.messages[1].content;
+      const { beginning, records } = JSON.parse(prompt) as {
+        beginning: boolean;
+        records: { kind: string; ref: number }[];
+      };
+      expect(beginning).toBe(true);
+      expect(prompt).not.toContain('PRIVATE_START_NOTE');
+      return {
+        response: {
+          ...mockAnalysis('beginning'),
+          changes: [
+            { text: activity, evidence: [records.find(({ kind }) => kind === 'stock')!.ref] },
+            { text: question, evidence: [records.find(({ kind }) => kind === 'question')!.ref] },
+          ],
+        },
+      };
+    },
+  };
+  const jobId = await db
+    .prepare('SELECT job_id FROM project_footprint_reanalyses WHERE project_id=? AND revision=1')
+    .bind(project)
+    .first<string>('job_id');
+  await run(1, jobId!);
+
+  const changes = [
+    { text: activity, links: [{ kind: 'stock', id: 'beginning-stock' }] },
+    { text: question, links: [{ kind: 'question', id: 'beginning-question' }] },
+  ];
+  const detail = (await (await app.request(path)).json()) as OwnedFootprintDetail;
+  expect(detail).toMatchObject({
+    analysis: { changes: [] },
+    reanalysis: {
+      status: 'ready',
+      result: { kind: 'beginning', analysis: { before: '', changes } },
+    },
+    shared: { kind: 'beginning', analysis: { before: '', changes, trigger_details: [] } },
+  });
+  const anonymous = await app.request(`/api/public/projects/${public_id}/footprints`, {
+    headers: { Cookie: '' },
+  });
+  expect(await anonymous.json()).toMatchObject({ items: [detail.shared] });
+});
+
 it('選択した期間だけ再分析し、重複要求を防いで元の足あとと公開用の原稿を保持する', async () => {
   const db = app.env.DB;
   await settings(3, true);
