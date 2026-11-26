@@ -29,9 +29,15 @@ export function reportFeedback(action: FeedbackAction, outcome: Outcome, key: st
 export function feedbackRequestKey(path: string, method: string) {
   if (!path.startsWith('/api/v1/')) return null;
   const segments = path.slice(8).split('?')[0].split('/');
+  const footprintPoll =
+    method === 'GET' &&
+    segments.length === 3 &&
+    segments[0] === 'projects' &&
+    segments[2] === 'footprints';
   if (
     ['feedback', 'config', 'onboarding'].includes(segments[0]) ||
-    (segments[0] === 'me' && method === 'GET')
+    (segments[0] === 'me' && method === 'GET') ||
+    footprintPoll
   )
     return null;
   const allowed = new Set([

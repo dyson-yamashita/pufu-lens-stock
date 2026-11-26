@@ -16,19 +16,32 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   const id = fixture.projectId;
   await app.open(`/#settings/${id}`);
   const advanced = browser.locator('.project-advanced summary');
+  const settingsSummary = browser.locator('.project-advanced summary .project-advanced-status');
+  for (const setting of [
+    '全体の一覧に表示 オン',
+    'ユーザーメモリ更新 オン',
+    '振り返りの問いを自動追加 オン',
+    '足あとの自動追加 オン',
+  ]) {
+    await expect(settingsSummary.getByText(setting, { exact: true })).toBeVisible();
+  }
   await advanced.click();
+  await expect(settingsSummary).toBeHidden();
   const automatic = screen.getByRole('switch', '足あとの自動追加', { exact: true });
   const interval = screen.getByRole('combobox', '足あとの追加間隔', { exact: true });
   const save = screen.getByRole('button', '保存', { exact: true });
   await expect(automatic).toBeChecked();
-  await expect(interval).toHaveValue('3');
-  await interval.selectOption({ label: '1回' });
+  await expect(interval).toHaveValue('5');
+  expect(
+    await browser.locator('.project-advanced > select:last-of-type option').allTextContents(),
+  ).toEqual(['3回', '5回', '10回']);
+  await interval.selectOption({ label: '3回' });
   await save.click();
   await expect(save).toBeEnabled();
   await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
   await browser.reload();
   await advanced.click();
-  await expect(interval).toHaveValue('1');
+  await expect(interval).toHaveValue('3');
 
   async function addMemoryStock(index: number) {
     const { id: stockId } = await fixture.request('/stocks', 'POST', {
@@ -48,15 +61,19 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
     throw new Error('メモリ更新が完了しませんでした。');
   }
 
-  const stockIds: string[] = [];
-  for (let index = 1; index <= 4; index++) stockIds.push(await addMemoryStock(index));
-  let savedPoints: FootprintPoint[] = [];
-  const deadline = Date.now() + 25000;
-  while (Date.now() < deadline) {
+  async function runScheduled() {
     const scheduled = await fetch(`${fixture.url}/api/__e2e__/scheduled?time=${Date.now()}`, {
       method: 'POST',
     });
     expect(scheduled.status).toBe(204);
+  }
+
+  const stockIds: string[] = [];
+  for (let index = 1; index <= 10; index++) stockIds.push(await addMemoryStock(index));
+  let savedPoints: FootprintPoint[] = [];
+  const deadline = Date.now() + 25000;
+  while (Date.now() < deadline) {
+    await runScheduled();
     const { points } = (await fixture.request(`/projects/${id}/footprints`)) as {
       points: FootprintPoint[];
     };
@@ -71,7 +88,8 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
     browser.locator('.page-header').getByRole('button', '記事をストック', { exact: true }),
   ).toBeVisible();
   await expect(heading).toHaveCount(0);
-  await screen.getByRole('button', 'メモリ・足あと', { exact: true }).click();
+  const memoryTab = screen.getByRole('button', 'メモリ・足あと', { exact: true });
+  await memoryTab.click();
   await expect(browser.locator('.memory-page .footprints')).toBeVisible();
   const points = browser.locator('.footprints-timeline button');
   const dialog = screen.getByRole('dialog', 'プロジェクトの足あと', { exact: true });
@@ -229,12 +247,53 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   await app.open(`/#settings/${id}`);
   await advanced.click();
   await automatic.click();
+  await advanced.click();
+  await expect(settingsSummary.getByText('足あとの自動追加 オフ', { exact: true })).toBeVisible();
+  await advanced.click();
   await save.click();
   await expect(save).toBeEnabled();
   await expect(screen.getByText('プロジェクトの設定を保存しました。')).toBeVisible();
-  await screen.getByRole('button', '過去の足あとを生成', { exact: true }).click();
-  await expect(screen.getByText(/過去の足あとの生成を受け付けました/)).toBeVisible();
-  await app.open(`/#memory/${id}`);
+  const backfill = screen.getByRole('button', '過去の足あとを生成', { exact: true });
+  const generating = memoryTab.getByText('生成中', { exact: true });
+  await expect(backfill).toBeEnabled();
+  let releaseBackfill!: () => void;
+  const pendingBackfillRequest = new Promise<void>((resolve) => {
+    releaseBackfill = resolve;
+  });
+  await browser.route(`${fixture.url}/api/v1/projects/${id}/footprints/backfill`, async (route) => {
+    await pendingBackfillRequest;
+    await route.continue();
+  });
+  try {
+    await backfill.click();
+    await memoryTab.click();
+    await screen.getByRole('button', '設定', { exact: true }).click();
+    await advanced.click();
+    await expect(backfill).toBeDisabled();
+  } finally {
+    releaseBackfill();
+  }
+  await expect(screen.getByText('足あとを生成しています。', { exact: true })).toBeVisible();
+  await expect(backfill).toBeDisabled();
+  await expect(generating).toBeVisible();
+  await browser.reload();
+  await advanced.click();
+  await expect(generating).toBeVisible();
+  await expect(backfill).toBeDisabled();
+  await memoryTab.click();
+  await expect(generating).toBeVisible();
+  await expect(heading).toBeVisible();
+  const finishBy = Date.now() + 10000;
+  while (Date.now() < finishBy) {
+    await runScheduled();
+    if (!(await fixture.request(`/projects/${id}/footprints?status_only=1`)).pending) break;
+    await delay(250);
+  }
+  await expect(generating).toHaveCount(0, { timeout: 10000 });
+  await app.open(`/#settings/${id}`);
+  await advanced.click();
+  await expect(backfill).toBeEnabled();
+  await memoryTab.click();
   await expect(heading).toBeVisible();
 
   // The saved setting must be reflected during navigation even while the list refresh is delayed.

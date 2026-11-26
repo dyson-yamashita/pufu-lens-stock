@@ -39,6 +39,29 @@
   font-size: 14px;
   font-weight: 600;
 }
+.project-advanced-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.project-advanced[open] .project-advanced-status {
+  display: none;
+}
+.project-advanced-setting {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.project-advanced-setting strong {
+  white-space: nowrap;
+}
+.project-advanced-setting strong[data-enabled='true'] {
+  color: var(--primary);
+}
 .project-memory-toggle {
   display: flex;
   align-items: center;

@@ -1,9 +1,11 @@
 import { CircleHelp, Layers, Network, Settings, Sparkles } from 'lucide-react';
+import { useId } from 'react';
 import { t } from '../i18n/i18n';
 import type { Route } from './navigation';
 
 type Props = {
   route: Route;
+  footprintsPending: boolean;
   navigate: (
     view:
       | 'memory'
@@ -23,7 +25,9 @@ type Props = {
     projectId?: string | null,
   ) => void;
 };
-export function AppLibraryTabs({ route, navigate }: Props) {
+export function AppLibraryTabs({ route, footprintsPending, navigate }: Props) {
+  const footprintStatusId = useId();
+  const memoryLabel = t(route.projectId ? 'ui.app.memory_footprints' : 'ui.app.memory');
   return (
     <>
       <div
@@ -57,10 +61,19 @@ export function AppLibraryTabs({ route, navigate }: Props) {
         <button
           className={route.view === 'memory' ? 'active' : ''}
           aria-pressed={route.view === 'memory'}
+          aria-label={memoryLabel}
+          aria-describedby={footprintsPending ? footprintStatusId : undefined}
           onClick={() => navigate('memory', route.projectId)}
         >
           <Sparkles size={16} aria-hidden="true" />
-          {t(route.projectId ? 'ui.app.memory_footprints' : 'ui.app.memory')}
+          <span className="library-tab-memory-label">
+            {memoryLabel}
+            {footprintsPending && (
+              <span className="library-tab-footprint-status" id={footprintStatusId}>
+                {t('footprints.generating')}
+              </span>
+            )}
+          </span>
         </button>
         {route.projectId && (
           <button
