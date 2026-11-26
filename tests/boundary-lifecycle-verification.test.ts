@@ -60,7 +60,9 @@ it.each(['user', 'project'] as const)(
       app.env.DB.prepare(ownerSql).bind(1),
     ]);
     const bucket = app.env.MEMORY_HISTORY;
+    let attemptedKey: string | undefined;
     replaceHistoryMethod('put', async (...args: Parameters<R2Bucket['put']>) => {
+      attemptedKey = args[0];
       const result = await bucket.put(...args);
       await app.env.DB.prepare(ownerSql).bind(2).run();
       return result;
@@ -77,13 +79,12 @@ it.each(['user', 'project'] as const)(
     expect(
       (await app.env.DB.prepare('SELECT revision FROM memory_versions').all()).results,
     ).toEqual([{ revision: 0 }]);
-    // External PUT has completed; the rejected D1 commit does not roll it back.
-    expect(await bucket.get(`alice/${id}/1.json`)).not.toBeNull();
+    // The acknowledged PUT is discarded after the database rejects the stale revision.
+    expect(attemptedKey).toBeDefined();
+    expect(await bucket.get(attemptedKey!)).toBeNull();
     expect(
-      await app.env.DB.prepare('SELECT content_key FROM memory_history_writes').first(
-        'content_key',
-      ),
-    ).toBe(`alice/${id}/1.json`);
+      await app.env.DB.prepare('SELECT content_key FROM memory_history_writes').first(),
+    ).toBeNull();
   },
 );
 
@@ -179,9 +180,13 @@ it('B10 退会完了後の遅いPUTとworker停止をcascade外のintentから�
 
   expect(await app.env.DB.prepare('SELECT * FROM account_deletions').first()).toBeNull();
   expect(await app.env.DB.prepare('SELECT * FROM memory_versions').first()).toBeNull();
-  expect(await bucket.get('alice/user-alice/0.json')).not.toBeNull();
+  const pending = await app.env.DB.prepare('SELECT content_key FROM memory_history_writes').first<{
+    content_key: string;
+  }>();
+  expect(pending?.content_key).toContain('alice/user-alice/');
+  expect(await bucket.get(pending!.content_key)).not.toBeNull();
   await cleanupMemoryHistory(app.env);
-  expect(await bucket.get('alice/user-alice/0.json')).toBeNull();
+  expect(await bucket.get(pending!.content_key)).toBeNull();
   expect(await app.env.DB.prepare('SELECT * FROM memory_history_writes').first()).not.toBeNull();
   expect(await bucket.get('bob/user-bob/1.json')).not.toBeNull();
   expect((await app.request('/api/v1/me')).status).toBe(401);
