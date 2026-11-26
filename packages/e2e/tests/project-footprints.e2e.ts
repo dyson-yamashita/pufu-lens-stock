@@ -119,6 +119,12 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   const startingSummary = '問いを育て、行動につなげる場を目指していた。';
   const startingActivity = 'ストックとプ譜を行き来できる入口を整えた。';
   const startingInterest = '人とAIが協力して問いを育てること。';
+  const startingPerspectives = {
+    ...original.analysis.perspectives,
+    action: startingActivity,
+    interests: startingInterest,
+    knowledge: '初回の細かい観点。',
+  };
   const change = 'コード品質を確認する工程が判断材料に加わった。';
   const quote = '比較した記事を読んで、確認する工程を見直した。';
   const changeAnalysis = {
@@ -157,12 +163,7 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
                 trigger_details: undefined,
                 interpretation: undefined,
                 triggers: ['以前の足あとに保存された記録。'],
-                perspectives: {
-                  ...original.analysis.perspectives,
-                  action: startingActivity,
-                  interests: startingInterest,
-                  knowledge: '初回の細かい観点。',
-                },
+                perspectives: startingPerspectives,
               },
         links: [evidence],
       }),
@@ -319,6 +320,8 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
 
   const publicApi = `${fixture.url}/api/public/projects/${publication.public_id}/footprints?page=1`;
   const publicFootprints = (await (await fetch(publicApi)).json()) as PublicFootprintPage;
+  const startingEvidence = { kind: 'stock', id: stockIds[0], label: '記録 1' } as const;
+  const startingChange = 'プロジェクトの調査記録をストックし始めた。';
   await browser.route(publicApi, (route) =>
     route.fulfill({
       status: 200,
@@ -329,9 +332,13 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
           item.kind === 'beginning'
             ? {
                 ...item,
-                kind: changeAnalysis.kind,
-                analysis: { ...changeAnalysis, triggers: [], trigger_details: [] },
-                links: [evidence],
+                analysis: {
+                  ...original.analysis,
+                  current: startingSummary,
+                  perspectives: startingPerspectives,
+                  changes: [{ text: startingChange, links: [startingEvidence] }],
+                },
+                links: [startingEvidence],
               }
             : item,
         ),
@@ -342,15 +349,19 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   await expect(points).toHaveCount(2);
   await expect(points.last()).toBeDisabled();
   await points.first().click();
-  const publicCitation = browser.locator('.footprints-statements').getByRole('link', '記録 4');
+  const publicChange = browser.locator('.footprints-statements > li').nth(1);
+  await expect(publicChange).toContainText(startingChange);
+  const publicCitation = publicChange.getByRole('link', '記録 1', { exact: true });
   await expect(publicCitation).toBeVisible();
   expect(await browser.locator('.footprints-detail h4').allTextContents()).toEqual([
-    '以前',
-    '今回',
+    '記録を始めた時点',
     '変化と根拠',
+    '主な取り組み',
+    '関心',
   ]);
+  await expect(screen.getByRole('link', '記録 1', { exact: true })).toHaveCount(1);
   expect(await evidenceDecoration()).toBe('underline');
-  await expect(publicCitation).toHaveAttribute('href', `${publicPage}/stocks/${stockIds[3]}`);
+  await expect(publicCitation).toHaveAttribute('href', `${publicPage}/stocks/${stockIds[0]}`);
   await publicCitation.click();
   await expect(browser.locator('.public-stock-detail')).toBeVisible();
   await browser.setCookies(cookies);
