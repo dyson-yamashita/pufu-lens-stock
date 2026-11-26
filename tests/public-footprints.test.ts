@@ -13,7 +13,17 @@ const editPath = (revision: number) => `${privateFootprints}/${revision}/publica
 const copy = { title: '公開する足あと <見直し>', summary: '公開用に書いた説明' };
 const anonymous = { headers: { Cookie: '' } };
 const analysis = JSON.stringify({
-  analysis: { kind: 'deepening', title: 'PRIVATE_ANALYSIS' },
+  analysis: {
+    kind: 'deepening',
+    title: 'PRIVATE_ANALYSIS',
+    changes: [
+      {
+        text: 'PRIVATE_CHANGE',
+        links: [{ kind: 'stock', id: 'PRIVATE_EVIDENCE', label: 'PRIVATE_NOTE' }],
+      },
+    ],
+    interpretation: 'PRIVATE_AI_INTERPRETATION',
+  },
   links: [{ kind: 'stock', id: 'PRIVATE_EVIDENCE', label: 'PRIVATE_NOTE' }],
 });
 const start = '2026-11-02T00:00:00.000Z';

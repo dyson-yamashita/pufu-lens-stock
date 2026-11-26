@@ -24,16 +24,27 @@ export const footprintKinds = [
 
 const evidenceRef = z.number().int().positive();
 const paragraph = z.string().trim().max(700);
+const evidenceStatement = z.object({
+  text: paragraph.min(1),
+  evidence: z.array(evidenceRef).min(1).max(5),
+});
 export const footprintAnalysisSchema = z.object({
   kind: z.enum(footprintKinds),
   title: z.string().trim().min(1).max(140),
   before: paragraph,
+  changes: z.array(evidenceStatement).max(6),
   triggers: z
-    .array(z.object({ text: paragraph.min(1), evidence: z.array(evidenceRef).min(1).max(5) }))
+    .array(
+      z.object({
+        quote: z.string().trim().min(1).max(300),
+        evidence: evidenceRef,
+      }),
+    )
     .max(6),
   process: paragraph,
   current: paragraph,
   meaning: paragraph,
+  interpretation: paragraph,
   unchanged: paragraph,
   perspectives: z.object({
     interests: paragraph,
@@ -48,7 +59,13 @@ export const footprintAnalysisSchema = z.object({
   evidence: z.array(evidenceRef).max(20),
 });
 export type FootprintAnalysis = z.infer<typeof footprintAnalysisSchema>;
-export type FootprintEvidence = { kind: 'stock' | 'question' | 'pufu'; id: string; label: string };
+export type FootprintEvidence = {
+  kind: 'stock' | 'question' | 'pufu';
+  id: string;
+  label: string;
+  phase?: number;
+};
+export type FootprintStatement = { text: string; links: FootprintEvidence[] };
 export type FootprintPoint = {
   revision: number;
   end_at: string;
@@ -56,7 +73,12 @@ export type FootprintPoint = {
 };
 export type FootprintDetail = FootprintPoint & {
   start_at: string;
-  analysis: Omit<FootprintAnalysis, 'evidence' | 'triggers'> & { triggers: string[] };
+  analysis: Omit<FootprintAnalysis, 'evidence' | 'triggers' | 'changes' | 'interpretation'> & {
+    triggers: string[];
+    changes?: FootprintStatement[];
+    trigger_details?: FootprintStatement[];
+    interpretation?: string;
+  };
   links: FootprintEvidence[];
 };
 

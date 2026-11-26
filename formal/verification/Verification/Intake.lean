@@ -197,6 +197,54 @@ theorem invalid_ai_schema_denied (o : AiOutput) (h : o.schemaAccepted = false) :
 theorem incomplete_chat_denied (o : AiOutput) (h : o.chatEnvelopeAccepted = false) :
     acceptAi o = false := by simp [acceptAi, h]
 
+/-- Reference numbers are zero-based. A quote denotes the identity of an excerpt. -/
+structure FootprintTrigger where
+  ref : Nat
+  quote : Nat
+  deriving DecidableEq, Repr
+
+structure FootprintRefs where
+  related : List Nat
+  changes : List (List Nat)
+  triggers : List FootprintTrigger
+  deriving DecidableEq, Repr
+
+/- Each source lists its exact owner excerpts. An empty list still represents an in-scope source. -/
+def footprintRefsAccepted (sources : List (List Nat)) (refs : FootprintRefs) : Bool :=
+  (refs.related ++ refs.changes.flatten ++ refs.triggers.map (·.ref)).all
+    (fun ref => (sources[ref]?).isSome)
+
+def footprintTriggerSupported (sources : List (List Nat)) (trigger : FootprintTrigger) : Bool :=
+  ((sources[trigger.ref]?).getD []).contains trigger.quote
+
+def resolveFootprintRefs (sources : List (List Nat)) (refs : FootprintRefs) : Option FootprintRefs :=
+  if footprintRefsAccepted sources refs then
+    some { refs with triggers := refs.triggers.filter (footprintTriggerSupported sources) }
+  else none
+
+theorem footprint_change_ref_requires_source (sources : List (List Nat)) (refs : FootprintRefs)
+    (ref : Nat) (accepted : footprintRefsAccepted sources refs = true)
+    (cited : ref ∈ refs.changes.flatten) : (sources[ref]?).isSome = true := by
+  simp only [footprintRefsAccepted, List.all_eq_true] at accepted
+  exact accepted ref (by simp [cited])
+
+theorem footprint_trigger_requires_owner_quote (sources : List (List Nat)) (trigger : FootprintTrigger)
+    (supported : footprintTriggerSupported sources trigger = true) :
+    ∃ excerpts, sources[trigger.ref]? = some excerpts ∧ trigger.quote ∈ excerpts := by
+  match h : sources[trigger.ref]? with
+  | some excerpts => exact ⟨excerpts, rfl, by simpa [footprintTriggerSupported, h] using supported⟩
+  | none => simp [footprintTriggerSupported, h] at supported
+
+theorem footprint_rejected_refs_have_no_result (sources : List (List Nat)) (refs : FootprintRefs)
+    (rejected : footprintRefsAccepted sources refs = false) :
+    resolveFootprintRefs sources refs = none := by
+  simp [resolveFootprintRefs, rejected]
+
+theorem footprint_reference_outcomes_reachable :
+    resolveFootprintRefs [[], [7]] ⟨[], [[0], [1]], [⟨0, 7⟩, ⟨1, 7⟩, ⟨1, 8⟩]⟩ =
+      some ⟨[], [[0], [1]], [⟨1, 7⟩]⟩ ∧
+    resolveFootprintRefs [[]] ⟨[], [[1]], []⟩ = none := by decide
+
 def goodAccess : Access := ⟨some 1, false, some [10]⟩
 def goodParent : Parent := ⟨true, 1, 10⟩
 def goodImage : ImageInput := ⟨true, 100, some .png, .png⟩

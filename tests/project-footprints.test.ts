@@ -5,6 +5,7 @@ import {
 } from '../server/features/memory/memory-history';
 import { queueFootprintJobs } from '../server/features/memory/footprint-repository';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
+import type { FootprintAnalysis } from '../shared/footprints';
 import { mockEvent, mockStep, testApp } from './helpers';
 
 const project = 'alice-project';
@@ -51,14 +52,19 @@ async function reserved() {
   return results;
 }
 
-const mockAnalysis = (kind: string, evidence: number[] = []) => ({
+const mockAnalysis = (
+  kind: FootprintAnalysis['kind'],
+  evidence: number[] = [],
+): FootprintAnalysis => ({
   kind,
   title: 'Observed changes',
   before: 'Before',
+  changes: [],
   triggers: [],
   process: 'Over time',
   current: 'Current',
   meaning: '',
+  interpretation: '',
   unchanged: '',
   perspectives: {
     interests: '',
@@ -159,27 +165,48 @@ it('明示操作で履歴を分割生成し、既存の予約を再利用する'
   });
 });
 
-it('中間メモリと期間内の根拠を使い、AI失敗時の再試行でも対象を維持し、根拠削除後は取得できない', async () => {
+it('期間内の根拠を変化ごとに保存し、未知の参照を拒否して同じ対象を再試行する', async () => {
   const db = app.env.DB;
   await save(1);
   await save(4);
+  const recordedAt = new Date().toISOString();
+  const ownerRecord = 'Seeing this review prompted me to compare our quality checks.';
   await db
     .prepare(
-      "INSERT INTO questions(id,project_id,text,status,source,created_at,updated_at) VALUES ('source-question',?,'Question during the period','ready','user',?,?)",
+      `INSERT INTO questions(id,project_id,text,status,source,created_at,updated_at) VALUES
+     ('ai-question',?1,'A generated question','ready','ai',?2,?2),
+     ('source-question',?1,'After seeing the review, should we change how we check quality?','ready','user',?2,?2)`,
     )
-    .bind(project, new Date().toISOString(), new Date().toISOString())
+    .bind(project, recordedAt)
     .run();
+  const comment = await app.request('/api/v1/comments', {
+    method: 'POST',
+    body: {
+      target_type: 'question',
+      target_id: 'source-question',
+      request_id: crypto.randomUUID(),
+      body: ownerRecord,
+    },
+  });
+  expect(comment.status).toBe(201);
   await save(8);
   await save(11);
   let observed:
-    { memories: { revision: number }[]; records: { ref: number; label: string }[] } | undefined;
+    | {
+        memories: { revision: number }[];
+        records: { ref: number; label: string; kind: string; ownerRecord?: string }[];
+      }
+    | undefined;
   const ai = vi.fn(async (_model: string, request: { messages: { content: string }[] }) => {
     observed = JSON.parse(request.messages[1].content) as NonNullable<typeof observed>;
     return {
-      response: mockAnalysis(
-        observed.memories.length === 1 ? 'beginning' : 'deepening',
-        observed.memories.length === 1 ? [] : [999],
-      ),
+      response:
+        observed.memories.length === 1
+          ? mockAnalysis('beginning')
+          : {
+              ...mockAnalysis('deepening', [1]),
+              changes: [{ text: 'Unknown citation', evidence: [999] }],
+            },
     };
   });
   app.env.AI = { run: ai };
@@ -189,8 +216,15 @@ it('中間メモリと期間内の根拠を使い、AI失敗時の再試行で�
   await expect(run(11)).rejects.toThrow('Invalid footprint classification or evidence');
   expect(observed?.memories.map(({ revision }) => revision)).toEqual([1, 4, 8, 11]);
   expect(observed?.records).toEqual([
-    expect.objectContaining({ ref: 1, label: 'Question during the period' }),
+    expect.objectContaining({ ref: 1, label: 'A generated question' }),
+    expect.objectContaining({ ref: 2, kind: 'question' }),
+    expect.objectContaining({ ref: 3, kind: 'comment', ownerRecord }),
   ]);
+  expect(observed?.records.slice(0, 2).map((record) => record.ownerRecord)).toEqual([
+    undefined,
+    undefined,
+  ]);
+  expect((await app.request(`${endpoint}/11`)).status).toBe(404);
   expect(
     await db
       .prepare('SELECT revision FROM memories WHERE project_id=?')
@@ -207,19 +241,143 @@ it('中間メモリと期間内の根拠を使い、AI失敗時の再試行で�
     .first<string>('job_id');
   ai.mockImplementationOnce(async (_model, request) => {
     observed = JSON.parse(request.messages[1].content) as NonNullable<typeof observed>;
-    return { response: mockAnalysis('deepening', [1]) };
+    return {
+      response: {
+        ...mockAnalysis('deepening'),
+        changes: [
+          { text: 'The generated question added a comparison point', evidence: [1] },
+          { text: 'A question about quality appeared', evidence: [2] },
+        ],
+        triggers: [
+          { quote: ownerRecord, evidence: 3 },
+          { quote: 'I changed the implementation.', evidence: 3 },
+          { quote: 'A generated question', evidence: 1 },
+          { quote: 'should we change how we check quality?', evidence: 2 },
+        ],
+        interpretation: 'Quality checks may be becoming a focus.',
+      },
+    };
   });
   await run(11, retryId!);
   expect(observed?.memories.map(({ revision }) => revision)).toEqual([1, 4, 8, 11]);
   expect(await (await app.request(`${endpoint}/11`)).json()).toMatchObject({
     kind: 'deepening',
-    analysis: { process: 'Over time' },
-    links: [{ kind: 'question', id: 'source-question' }],
+    analysis: {
+      process: 'Over time',
+      interpretation: 'Quality checks may be becoming a focus.',
+      changes: [
+        {
+          text: 'The generated question added a comparison point',
+          links: [{ kind: 'question', id: 'ai-question' }],
+        },
+        {
+          text: 'A question about quality appeared',
+          links: [{ kind: 'question', id: 'source-question' }],
+        },
+      ],
+      triggers: [ownerRecord],
+      trigger_details: [
+        {
+          text: ownerRecord,
+          links: [{ kind: 'question', id: 'source-question' }],
+        },
+      ],
+    },
+    links: [
+      { kind: 'question', id: 'ai-question' },
+      { kind: 'question', id: 'source-question' },
+    ],
   });
   expect((await app.request(`${endpoint}/11`, { user: 'bob' })).status).toBe(404);
   await db.prepare("DELETE FROM questions WHERE id='source-question'").run();
   expect((await app.request(`${endpoint}/11`)).status).toBe(404);
   expect(await (await app.request(endpoint)).json()).toMatchObject({ points: [{ revision: 1 }] });
+});
+
+it('同じプ譜の複数局面を参照したときに、各根拠の局面を保存する', async () => {
+  await settings(1, true);
+  await save(1);
+  const db = app.env.DB;
+  const recordedAt = new Date().toISOString();
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO pufu_scores(id,user_id,project_id,task,input_json,score_json,editor_version,status,current_phase)
+      VALUES ('phase-record','alice',?,'Compare plans','{}','{}','0.9.19','ready',2)`,
+      )
+      .bind(project),
+    db
+      .prepare(
+        `INSERT INTO pufu_phases(pufu_id,number,score_json,created_at,updated_at) VALUES
+      ('phase-record',1,'{"gainingGoal":{"text":"First goal"}}',?1,?1),
+      ('phase-record',2,'{"gainingGoal":{"text":"Second goal"}}',?1,?1)`,
+      )
+      .bind(recordedAt),
+  ]);
+  await save(2);
+  app.env.AI = {
+    run: async (_model, request) => {
+      const context = JSON.parse(
+        (request as { messages: { content: string }[] }).messages[1].content,
+      );
+      if (context.beginning) return { response: mockAnalysis('beginning') };
+      expect(context.records).toMatchObject([{ label: 'First goal' }, { label: 'Second goal' }]);
+      return {
+        response: {
+          ...mockAnalysis('shift'),
+          changes: [{ text: 'The goal changed', evidence: [1, 2] }],
+        },
+      };
+    },
+  };
+  await queueFootprintJobs(app.env);
+  await run(1);
+  await queueFootprintJobs(app.env);
+  await run(2);
+  const links = [
+    { kind: 'pufu', id: 'phase-record', phase: 1 },
+    { kind: 'pufu', id: 'phase-record', phase: 2 },
+  ];
+  expect(await (await app.request(`${endpoint}/2`)).json()).toMatchObject({
+    analysis: { changes: [{ text: 'The goal changed', links }] },
+    links,
+  });
+});
+
+it('旧形式で完了したAI呼び出しを再利用し、元の生成バージョンを保存する', async () => {
+  await save(1);
+  await queueFootprintJobs(app.env);
+  const jobId = `footprint-${project}-1`;
+  const analysis = {
+    ...mockAnalysis('beginning'),
+    changes: undefined,
+    interpretation: undefined,
+    evidence: undefined,
+    triggers: ['An original recorded event'],
+  };
+  await app.env.DB.prepare(
+    `INSERT INTO ai_calls(id,job_id,user_id,status,result_json) VALUES (?,?,'alice','done',?)`,
+  )
+    .bind(
+      `${jobId}:analyze-footprint-v1:${app.env.AI_MODEL}`,
+      jobId,
+      JSON.stringify({
+        result: { analysis, links: [], evidenceIds: [], dependencies: [], model: app.env.AI_MODEL },
+      }),
+    )
+    .run();
+  const ai = vi.fn();
+  app.env.AI = { run: ai };
+  await run(1);
+  expect(ai).not.toHaveBeenCalled();
+  expect(
+    await app.env.DB.prepare('SELECT prompt_version FROM project_footprints WHERE job_id=?')
+      .bind(jobId)
+      .first('prompt_version'),
+  ).toBe(1);
+  expect(await (await app.request(`${endpoint}/1`)).json()).toMatchObject({
+    analysis: { triggers: ['An original recorded event'] },
+  });
 });
 
 it('AI 応答中に削除された根拠を含む結果を保存しない', async () => {

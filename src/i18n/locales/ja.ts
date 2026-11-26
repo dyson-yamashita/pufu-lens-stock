@@ -4,10 +4,12 @@ export const ja: Record<string, string> = {
   'footprints.close': '詳細を閉じる',
   'footprints.load_failed': '足あとの詳細を読み込めませんでした。',
   'footprints.before': '以前',
-  'footprints.triggers': '変化のきっかけ',
+  'footprints.changes': '変化と根拠',
+  'footprints.triggers': '本人の記録にあるきっかけ',
   'footprints.process': '変化の過程',
-  'footprints.current': 'この時点',
+  'footprints.current': '今回',
   'footprints.meaning': '変化の意味',
+  'footprints.interpretation': 'AIの解釈',
   'footprints.unchanged': '変わらないこと',
   'footprints.perspectives': '観点別の変化',
   'footprints.evidence': '関連する記録',
@@ -23,7 +25,7 @@ export const ja: Record<string, string> = {
   'footprints.backfill_accepted': '過去の足あとの生成を受け付けました。',
   'footprints.backfill_failed': '過去の足あとの生成を開始できませんでした。',
   'footprints.manual':
-    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、プロジェクトの「メモリ」タブで日付を選び、「変化を見る」を押すと、変化の過程や関連する記録が開きます。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。',
+    '「プロジェクトの足あと」では、関心や理解、問いの変化をたどれます。「ストック追加時にユーザーのメモリを更新する」がオンのプロジェクトでは、プロジェクトの「メモリ」タブで日付を選び、「変化を見る」を押すと、以前と今回の状態を比較できます。根拠となる記録を、対応する変化のすぐ下から開けます。自動追加と間隔の変更、過去の足あとの生成は、プロジェクトの「設定」→「詳細設定」から行えます。',
   'footprints.manual_publication':
     '公開プロジェクトでは、「変化を見る」→「公開ページに載せる内容」で、足あとごとに公開用のタイトルと説明を入力して掲載できます。掲載した内容は公開ページの「足あと」タブに表示され、同じ画面から取り消せます。メモリ更新をオフにすると掲載が一時停止し、オンに戻すと有効な掲載済みの足あとが再表示されます。',
   'footprints.public_tab': '足あと',

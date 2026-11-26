@@ -4,10 +4,12 @@ export const en: Record<string, string> = {
   'footprints.close': 'Close details',
   'footprints.load_failed': 'Could not load the footprint details.',
   'footprints.before': 'Before',
-  'footprints.triggers': 'What prompted the change',
+  'footprints.changes': 'Changes and supporting records',
+  'footprints.triggers': 'Triggers from your records',
   'footprints.process': 'How it changed',
-  'footprints.current': 'At this point',
+  'footprints.current': 'This time',
   'footprints.meaning': 'What the change means',
+  'footprints.interpretation': 'AI interpretation',
   'footprints.unchanged': 'What stayed the same',
   'footprints.perspectives': 'Changes by perspective',
   'footprints.evidence': 'Related records',
@@ -23,7 +25,7 @@ export const en: Record<string, string> = {
   'footprints.backfill_accepted': 'Past footprints are queued.',
   'footprints.backfill_failed': 'Could not start generating past footprints.',
   'footprints.manual':
-    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a date in the project’s Memory tab and open its details to see how the change unfolded and which records relate to it. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints.',
+    'Project footprints trace changes in interests, understanding, and questions. For projects with “Update your memory when adding stocks” enabled, select a date in the project’s Memory tab and open its details to compare the two points in time. Open supporting records directly below the change they explain. Under project Settings → Advanced settings, manage automatic additions and the interval, or generate past footprints.',
   'footprints.manual_publication':
     'In a public project, open a footprint’s details and choose “Content for the public page” to write and publish a title and summary. Each published footprint appears in the Footprints tab on the public page. Use the same editor to remove it. Turning off memory updates hides the published footprints until you turn updates back on.',
   'footprints.public_tab': 'Footprints',

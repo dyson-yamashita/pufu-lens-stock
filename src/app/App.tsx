@@ -393,8 +393,9 @@ export default function App({
           ) : questionFlow ? (
             route.view === 'pufu' ? (
               <PufuPage
-                key={route.detailId}
+                key={`${route.detailId}/${route.pufuPhase ?? ''}`}
                 id={route.detailId!}
+                initialPhase={route.pufuPhase}
                 onQuestion={(id) => navigateDetail('question', id)}
                 backLabel={
                   pufuSource.questionId
