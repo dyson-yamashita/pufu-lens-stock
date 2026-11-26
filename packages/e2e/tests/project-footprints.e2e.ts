@@ -1,5 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { expect } from 'e2e';
+import type { FootprintPoint, OwnedFootprintDetail } from '../../../shared/footprints.ts';
 import { test } from '../src/fixtures.ts';
 
 test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクトのメモリタブで詳細を開ける', async ({
@@ -26,7 +27,7 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   await expect(interval).toHaveValue('1');
 
   async function addMemoryStock(index: number) {
-    await fixture.request('/stocks', 'POST', {
+    const { id: stockId } = await fixture.request('/stocks', 'POST', {
       project_id: id,
       type: 'text',
       title: `記録 ${index}`,
@@ -37,13 +38,15 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
       const { memory } = (await fixture.request(`/memory?project_id=${id}`)) as {
         memory?: { article_count: number };
       };
-      if (memory?.article_count === index) return;
+      if (memory?.article_count === index) return String(stockId);
       await delay(250);
     }
     throw new Error('メモリ更新が完了しませんでした。');
   }
 
-  for (let index = 1; index <= 4; index++) await addMemoryStock(index);
+  const stockIds: string[] = [];
+  for (let index = 1; index <= 4; index++) stockIds.push(await addMemoryStock(index));
+  let savedPoints: FootprintPoint[] = [];
   const deadline = Date.now() + 25000;
   while (Date.now() < deadline) {
     const scheduled = await fetch(`${fixture.url}/api/__e2e__/scheduled?time=${Date.now()}`, {
@@ -51,8 +54,9 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
     });
     expect(scheduled.status).toBe(204);
     const { points } = (await fixture.request(`/projects/${id}/footprints`)) as {
-      points: unknown[];
+      points: FootprintPoint[];
     };
+    savedPoints = points;
     if (points.length >= 4) break;
     await delay(250);
   }
@@ -80,11 +84,88 @@ test('FOOTPRINT-001 保存した間隔で足あとを作り、プロジェクト
   await expect(
     screen.getByRole('heading', 'プロジェクトの記録が続く', { exact: true }),
   ).toBeVisible();
+
+  const detailPath = (revision: number) => `/projects/${id}/footprints/${revision}`;
+  const latestPath = detailPath(savedPoints.at(-1)!.revision);
+  const original = (await fixture.request(latestPath)) as unknown as OwnedFootprintDetail;
+  const evidence = { kind: 'stock', id: stockIds[3], label: '記録 4' } as const;
+  const change = 'コード品質を確認する工程が判断材料に加わった。';
+  const quote = '比較した記事を読んで、確認する工程を見直した。';
+  let showExample = true;
+  // The local demo generates continuing points. Use its detail response as the base for rendering a change.
+  await browser.route(`${fixture.url}/api/v1${latestPath}`, (route) => {
+    if (!showExample) return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...original,
+        kind: 'deepening',
+        analysis: {
+          ...original.analysis,
+          title: 'エージェント運用の見直し',
+          kind: 'deepening',
+          before: '開発の自動化について調べていた。',
+          current: '実際の運用を設計するための判断材料が加わった。',
+          changes: [{ text: change, links: [evidence] }],
+          triggers: [quote],
+          trigger_details: [
+            { text: quote, links: [{ kind: 'stock', id: stockIds[2], label: '記録 3' }] },
+          ],
+          interpretation: '品質管理への関心が具体化した可能性がある。',
+        },
+        links: [evidence],
+      }),
+    });
+  });
+  await toggle.click();
+  await toggle.click();
+  await expect(screen.getByRole('heading', 'エージェント運用の見直し')).toBeVisible();
+  expect(await browser.locator('.footprints-detail h4').allTextContents()).toEqual([
+    '以前',
+    '今回',
+    '変化と根拠',
+    '本人の記録にあるきっかけ',
+    'AIの解釈',
+  ]);
+  const changeItem = browser.locator('.footprints-statements > li').first();
+  await expect(changeItem).toContainText(change);
+  const citation = changeItem.getByRole('link', '記録 4', { exact: true });
+  await expect(citation).toHaveAttribute('href', `#stock/${stockIds[3]}`);
+  await expect(screen.getByRole('link', '記録 4', { exact: true })).toHaveCount(1);
+  await expect(browser.locator('.footprints-statements q')).toHaveText(quote);
+  showExample = false;
+
+  const legacyPath = detailPath(savedPoints[0].revision);
+  const legacy = (await fixture.request(legacyPath)) as unknown as OwnedFootprintDetail;
+  let showLegacy = true;
+  await browser.route(`${fixture.url}/api/v1${legacyPath}`, (route) => {
+    if (!showLegacy) return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...legacy,
+        analysis: {
+          ...legacy.analysis,
+          changes: undefined,
+          trigger_details: undefined,
+          interpretation: undefined,
+          triggers: ['以前の足あとに保存された記録。'],
+        },
+        links: [evidence],
+      }),
+    });
+  });
   await points.first().click();
   await expect(points.first()).toHaveAttribute('aria-pressed', 'true');
   await expect(
     screen.getByRole('heading', 'プロジェクトのはじまり', { exact: true }),
   ).toBeVisible();
+  await expect(screen.getByRole('heading', '関連する記録')).toBeVisible();
+  await expect(screen.getByText('以前の足あとに保存された記録。')).toBeVisible();
+  await expect(screen.getByRole('heading', '本人の記録にあるきっかけ')).toHaveCount(0);
+  showLegacy = false;
   await screen.getByRole('button', '詳細を閉じる', { exact: true }).click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 

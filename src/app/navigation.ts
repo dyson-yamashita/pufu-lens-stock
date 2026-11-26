@@ -17,6 +17,7 @@ export type Route = {
     | 'pufu';
   projectId: string | null;
   detailId?: string;
+  pufuPhase?: number;
 };
 
 export type QuestionListContext = {
@@ -81,7 +82,8 @@ export function pufuSourceFromHistory(): PufuSource {
 }
 
 export function routeFromHash(): Route {
-  const [view, id] = window.location.hash.slice(1).split('/');
+  const [view, id, requestedPhase] = window.location.hash.slice(1).split('/');
+  const phase = Number(requestedPhase);
   return {
     view:
       view === 'memory' ||
@@ -116,5 +118,6 @@ export function routeFromHash(): Route {
       id
         ? decodeURIComponent(id)
         : undefined,
+    pufuPhase: view === 'pufu' && Number.isSafeInteger(phase) && phase > 0 ? phase : undefined,
   };
 }

@@ -29,6 +29,7 @@ const PufuEditor = lazy(async () => {
 });
 export default function PufuPage({
   id,
+  initialPhase,
   onQuestion,
   backLabel = t('ui.app.back_to_pufu_list'),
   onBack,
@@ -36,6 +37,7 @@ export default function PufuPage({
   onGuard,
 }: {
   id: string;
+  initialPhase?: number;
   onQuestion: (id: string) => void;
   backLabel?: string;
   onBack: () => void;
@@ -242,6 +244,7 @@ export default function PufuPage({
             <PufuEditor
               key={`${id}-${editorVersion}`}
               pufu={pufu}
+              initialPhase={initialPhase}
               onGuard={onGuard}
               onEditingStateChange={setEditorBlocked}
               onSaved={updateRevision}

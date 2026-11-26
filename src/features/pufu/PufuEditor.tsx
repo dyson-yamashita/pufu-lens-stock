@@ -25,11 +25,13 @@ const memoryDate = (value: string) =>
   }).format(new Date(value));
 export default function PufuEditor({
   pufu,
+  initialPhase,
   onGuard,
   onEditingStateChange,
   onSaved,
 }: {
   pufu: Pufu;
+  initialPhase?: number;
   onGuard: (guard: (() => boolean) | null) => void;
   onEditingStateChange?: (blocked: boolean) => void;
   onSaved?: (revision: number, saved?: PufuPhase, currentPhase?: number) => void;
@@ -39,7 +41,11 @@ export default function PufuEditor({
   const [revision, setRevision] = useState(pufu.revision);
   const [phases, setPhases] = useState(pufu.phases);
   // エディターは入力オブジェクトを直接変更するため、保存済みの局面とは参照を分ける。
-  const [editor, setEditor] = useState(() => structuredClone(pufu.phases.at(-1)!));
+  const [editor, setEditor] = useState(() =>
+    structuredClone(
+      pufu.phases.find(({ number }) => number === initialPhase) ?? pufu.phases.at(-1)!,
+    ),
+  );
   const [importVersion, setImportVersion] = useState(0);
   const editorKey = `${pufu.id}-phase-${editor.number}`;
   const currentPhase = phases.at(-1)!.number;

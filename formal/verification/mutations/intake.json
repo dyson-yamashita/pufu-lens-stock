@@ -38,6 +38,18 @@
       "theorem": "invalid_ai_schema_denied"
     },
     {
+      "name": "B14-footprint-change-refs",
+      "old": "refs.related ++ refs.changes.flatten ++ refs.triggers.map (·.ref)",
+      "new": "refs.related ++ refs.triggers.map (·.ref)",
+      "theorem": "footprint_change_ref_requires_source"
+    },
+    {
+      "name": "B14-footprint-trigger-quote",
+      "old": "((sources[trigger.ref]?).getD []).contains trigger.quote",
+      "new": "!((sources[trigger.ref]?).getD []).isEmpty",
+      "theorem": "footprint_trigger_requires_owner_quote"
+    },
+    {
       "name": "B14-pdf-error",
       "old": "(o.status == 422 && !o.errorIsString)",
       "new": "(o.status == 422)",
