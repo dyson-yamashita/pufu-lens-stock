@@ -12,7 +12,7 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { Project } from '../../shared/domain';
 import { ShareLink } from '../features/public-projects/ShareLink';
 import { t } from '../i18n/i18n';
@@ -22,7 +22,6 @@ import type { ModalState } from './types';
 
 type Props = {
   selected: Project | undefined;
-  projectFootprints?: ReactNode;
   route: Route;
   integrationTab: 'shortcuts' | 'mcp' | 'sns' | null;
   libraryView: boolean;
@@ -33,7 +32,6 @@ type Props = {
 };
 export function AppPageHeader({
   selected,
-  projectFootprints,
   route,
   integrationTab,
   libraryView,
@@ -158,7 +156,7 @@ export function AppPageHeader({
               </div>
             </div>
           )}
-          {!projectFootprints && stockAction}
+          {stockAction}
           {route.view === 'questions' && (
             <button
               className="button primary"
@@ -180,10 +178,6 @@ export function AppPageHeader({
           )}
         </div>
       </header>
-      {projectFootprints}
-      {projectFootprints && (
-        <div className="header-actions project-stock-actions">{stockAction}</div>
-      )}
     </>
   );
 }
