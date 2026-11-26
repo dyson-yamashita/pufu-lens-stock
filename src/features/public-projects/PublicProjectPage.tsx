@@ -72,7 +72,12 @@ export default function PublicProjectPage({ publicId }: { publicId: string }) {
   else
     content =
       hash === '#footprints' ? (
-        <PublicFootprintList root={root} page={footprintPage} onPageChange={setFootprintPage} />
+        <PublicFootprintList
+          root={root}
+          publicId={publicId}
+          page={footprintPage}
+          onPageChange={setFootprintPage}
+        />
       ) : hash === '#pufus' ? (
         <PublicPufuList root={root} page={pufuPage} onPageChange={setPufuPage} />
       ) : hash === '#questions' ? (

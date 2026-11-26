@@ -22,16 +22,12 @@ import { pufuRelationsColumns, stockRelationsColumn, withRelations } from '../re
 import { ogImageResponse } from '../stocks/og-image';
 import { stockImageResponse } from '../stocks/stock-images';
 import { japanDay, publicViewColumn } from './public-views';
+import { publicPufuWhere, publicQuestionWhere } from './public-sources';
+
+export { publicPufuWhere, publicQuestionWhere } from './public-sources';
 
 const notFound = () =>
   new HTTPException(404, { message: '公開されているページが見つかりません。' });
-// 再生成ではtextを保持する。未完成のAI問いはNULLなので公開しない。
-export const publicQuestionWhere = "(q.status='ready' OR (q.source='ai' AND q.text IS NOT NULL))";
-// 個別の公開詳細と同じ、完成済みで公開可能な問いに紐づくプ譜だけを数える。
-export const publicPufuWhere = `pf.user_id=p.user_id AND pf.status='ready'
-  AND EXISTS(SELECT 1 FROM pufu_questions pq JOIN questions q ON q.id=pq.question_id
-    WHERE pq.pufu_id=pf.id AND ${publicQuestionWhere})
-  AND COALESCE((SELECT ph.score_json FROM pufu_phases ph WHERE ph.pufu_id=pf.id AND ph.number=pf.current_phase),pf.score_json) IS NOT NULL`;
 const publicPufuCount = `(SELECT COUNT(*) FROM pufu_scores pf WHERE pf.project_id=p.id AND ${publicPufuWhere})`;
 const projectColumns = `p.public_id,p.name,p.public_description,p.published_at,
   (SELECT COUNT(*) FROM stocks s WHERE s.project_id=p.id) AS stock_count,

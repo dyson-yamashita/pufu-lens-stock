@@ -5,7 +5,7 @@ import {
 } from '../server/features/memory/memory-history';
 import { queueFootprintJobs } from '../server/features/memory/footprint-repository';
 import { ArticleWorkflow } from '../server/infrastructure/jobs/workflows';
-import type { FootprintAnalysis } from '../shared/footprints';
+import type { FootprintAnalysis, OwnedFootprintDetail } from '../shared/footprints';
 import { mockEvent, mockStep, testApp } from './helpers';
 
 const project = 'alice-project';
@@ -163,6 +163,15 @@ it('明示操作で履歴を分割生成し、既存の予約を再利用する'
       { revision: 30, kind: 'continuing' },
     ],
   });
+  expect((await app.request(`${endpoint}/30`)).status).toBe(404);
+  expect(
+    (
+      await app.request(`${endpoint}/30/reanalysis`, {
+        method: 'POST',
+        body: { generation: 0 },
+      })
+    ).status,
+  ).toBe(409);
 });
 
 it('期間内の根拠を変化ごとに保存し、未知の参照を拒否して同じ対象を再試行する', async () => {
@@ -379,6 +388,326 @@ it('旧形式で完了したAI呼び出しを再利用し、元の生成バー�
     analysis: { triggers: ['An original recorded event'] },
   });
 });
+
+it('選択した期間だけ再分析し、重複要求を防いで元の足あとと公開用の原稿を保持する', async () => {
+  const db = app.env.DB;
+  app.env.AI = {
+    run: async (_model, call) => ({
+      response: mockAnalysis(
+        JSON.parse(call.messages[1].content).beginning ? 'beginning' : 'deepening',
+      ),
+    }),
+  };
+  await save(1);
+  await save(4);
+  await db.batch([
+    db.prepare(`INSERT INTO articles(id,user_id,canonical_url,source_url,title,domain,status,input_text,summary_json)
+      VALUES('source-a','alice','https://example.com/a','https://example.com/a','公開ストック','example.com','ready',
+        'PRIVATE_SOURCE_TEXT','{"overview":"公開要約","keyPoints":[],"topics":[]}')`),
+    db
+      .prepare(
+        `INSERT INTO stocks(id,user_id,project_id,article_id,note)
+      VALUES('source-stock','alice',?,'source-a','PRIVATE_STOCK_NOTE')`,
+      )
+      .bind(project),
+    db
+      .prepare(
+        `INSERT INTO questions(id,project_id,text,note,status,source)
+      VALUES('source-q',?,'公開の問い','PRIVATE_QUESTION_NOTE','ready','user')`,
+      )
+      .bind(project),
+  ]);
+  expect(
+    (
+      await app.request('/api/v1/comments', {
+        method: 'POST',
+        body: {
+          target_type: 'question',
+          target_id: 'source-q',
+          request_id: crypto.randomUUID(),
+          body: 'PRIVATE_COMMENT',
+        },
+      })
+    ).status,
+  ).toBe(201);
+  for (const revision of [8, 11, 16]) await save(revision);
+  await queueFootprintJobs(app.env);
+  await run(1);
+  await queueFootprintJobs(app.env);
+  await run(11);
+  const path = `${endpoint}/11`;
+  const request = (generation: number, user = 'alice') =>
+    app.request(`${path}/reanalysis`, { method: 'POST', body: { generation }, user });
+  const detail = async () => (await (await app.request(path)).json()) as OwnedFootprintDetail;
+  const { reanalysis: initial, ...original } = await detail();
+  expect(initial).toEqual({ generation: 0, status: 'idle', result: null });
+  const publication = await app.request(`/api/v1/projects/${project}/publication`, {
+    method: 'PATCH',
+    body: { is_public: true, public_description: '' },
+  });
+  const {
+    publication: { public_id },
+  } = (await publication.json()) as { publication: { public_id: string } };
+  const copy = { title: 'Published title', summary: 'Approved summary' };
+  expect((await app.request(`${path}/publication`, { method: 'PATCH', body: copy })).status).toBe(
+    200,
+  );
+  const before = await reserved();
+  const readPublic = async () =>
+    (
+      await app.request(`/api/public/projects/${public_id}/footprints`, {
+        headers: { Cookie: '' },
+      })
+    ).json();
+  const publicBefore = await readPublic();
+  expect(publicBefore).toMatchObject({ items: [{ ...copy, kind: 'deepening' }] });
+  expect((await detail()).shared).toMatchObject(copy);
+
+  expect((await request(0, 'bob')).status).toBe(404);
+  expect(
+    (
+      await app.request(`${path}/reanalysis`, {
+        method: 'POST',
+        body: { generation: 0 },
+        headers: { Cookie: '' },
+      })
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await app.request(`${path}/reanalysis`, {
+        method: 'POST',
+        body: { generation: 0 },
+        headers: { Origin: 'https://outside.example' },
+      })
+    ).status,
+  ).toBe(403);
+  expect((await Promise.all([request(0), request(0)])).map((res) => res.status).sort()).toEqual([
+    202, 409,
+  ]);
+  expect((await request(1)).status).toBe(409);
+  expect((await detail()).reanalysis).toEqual({ generation: 1, status: 'pending', result: null });
+  const jobId = () =>
+    db
+      .prepare('SELECT job_id FROM project_footprint_reanalyses WHERE project_id=? AND revision=11')
+      .bind(project)
+      .first<string>('job_id');
+  const ai = vi.fn(async (_model: string, call: { messages: { content: string }[] }) => {
+    const prompt = call.messages[1].content;
+    const { period, memories, records } = JSON.parse(prompt) as {
+      period: string[];
+      memories: { revision: number }[];
+      records: { ref: number; label: string; kind: string }[];
+    };
+    expect(period).toEqual([original.start_at, original.end_at]);
+    expect(memories).toBeUndefined();
+    expect(prompt).not.toMatch(/PRIVATE_|Interest \d|Observed changes/);
+    expect(prompt).toContain('公開要約');
+    expect(prompt).toContain('公開の問い');
+    const stock = records.find(({ kind }) => kind === 'stock')!;
+    return {
+      response: {
+        ...mockAnalysis('shift'),
+        changes: [{ text: 'A documented change', evidence: [stock.ref] }],
+      },
+    };
+  });
+  app.env.AI = { run: ai };
+  await run(11, (await jobId())!);
+  expect(ai).toHaveBeenCalledTimes(1);
+  const result = await detail();
+  expect(result).toMatchObject({
+    analysis: original.analysis,
+    kind: original.kind,
+    reanalysis: {
+      generation: 1,
+      status: 'ready',
+      result: {
+        revision: 11,
+        end_at: original.end_at,
+        kind: 'shift',
+        analysis: { title: 'Observed changes' },
+      },
+    },
+  });
+  expect(result.shared).toMatchObject({
+    kind: 'shift',
+    analysis: {
+      changes: [{ text: 'A documented change', links: [{ kind: 'stock', id: 'source-stock' }] }],
+    },
+  });
+  const publicWithAnalysis = await readPublic();
+  expect(publicWithAnalysis).toEqual({
+    items: [{ id: expect.any(String), ...result.shared }],
+    page: 1,
+    has_more: false,
+  });
+  expect((await request(0)).status).toBe(409); // A delayed duplicate after completion.
+  expect((await request(1)).status).toBe(202);
+  expect((await detail()).reanalysis).toMatchObject({
+    generation: 2,
+    status: 'pending',
+    result: result.reanalysis!.result,
+  });
+  app.env.AI = { run: async () => ({ response: mockAnalysis('deepening', [999]) }) };
+  const failedJob = (await jobId())!;
+  await expect(run(11, failedJob)).rejects.toThrow('Invalid footprint classification or evidence');
+  expect((await detail()).reanalysis).toMatchObject({
+    generation: 2,
+    status: 'failed',
+    result: result.reanalysis!.result,
+  });
+  await db.prepare("DELETE FROM comments WHERE target_id='source-q'").run();
+  await db.prepare("UPDATE stocks SET note='更新した個人メモ' WHERE id='source-stock'").run();
+  expect(await detail()).toMatchObject({ original_available: false, shared: result.shared });
+  expect(await readPublic()).toEqual(publicWithAnalysis);
+  // A replaced attempt may have stopped between cache and checkpoint commits.
+  await db
+    .prepare(`UPDATE ai_calls SET result_json='{"interrupted":true}' WHERE job_id=?`)
+    .bind(failedJob)
+    .run();
+  expect((await request(2)).status).toBe(202);
+  expect(
+    await db
+      .prepare('SELECT result_json FROM ai_calls WHERE job_id=?')
+      .bind(failedJob)
+      .first('result_json'),
+  ).toBeNull();
+  app.env.AI = { run: async () => ({ response: mockAnalysis('continuing') }) };
+  await run(11, (await jobId())!);
+  expect((await app.request(path)).status).toBe(404);
+  expect(await (await app.request(endpoint)).json()).toMatchObject({
+    points: [{ revision: 1 }, { revision: 11, kind: 'continuing' }],
+  });
+  expect(await reserved()).toEqual(before);
+  expect(await readPublic()).toEqual({
+    items: [{ id: expect.any(String), kind: 'continuing', end_at: original.end_at }],
+    page: 1,
+    has_more: false,
+  });
+  expect(
+    await db
+      .prepare(
+        'SELECT title,summary FROM project_footprint_publications WHERE project_id=? AND revision=11',
+      )
+      .bind(project)
+      .first(),
+  ).toEqual(copy);
+  expect(
+    await db
+      .prepare('SELECT COUNT(*) AS count FROM processing_jobs WHERE target_id=? AND id LIKE ?')
+      .bind(project, 'footprint-reanalysis-%')
+      .first('count'),
+  ).toBe(3);
+});
+
+it('公開プロジェクトから非公開に戻した後の足あとを、個人用の根拠の版で生成する', async () => {
+  const changeVisibility = (is_public: boolean) =>
+    app.request(`/api/v1/projects/${project}/publication`, {
+      method: 'PATCH',
+      body: { is_public, public_description: '' },
+    });
+  await settings(1, true);
+  await app.env.DB.prepare(
+    `INSERT INTO questions(id,project_id,text,status,source)
+    VALUES('previous-public-question',?,'An earlier public question','ready','user')`,
+  )
+    .bind(project)
+    .run();
+  app.env.AI = {
+    run: async (_model, call) => ({
+      response: mockAnalysis(
+        JSON.parse(call.messages[1].content).beginning ? 'beginning' : 'deepening',
+      ),
+    }),
+  };
+  expect((await changeVisibility(true)).status).toBe(200);
+  await save(1);
+  await queueFootprintJobs(app.env);
+  await run(1);
+  expect(await (await app.request(`${endpoint}/1`)).json()).toMatchObject({
+    shared: { kind: 'beginning' },
+  });
+  expect((await changeVisibility(false)).status).toBe(200);
+  await save(2);
+  await queueFootprintJobs(app.env);
+  await run(2);
+  expect(await (await app.request(`${endpoint}/2`)).json()).toMatchObject({
+    kind: 'deepening',
+    shared: null,
+  });
+});
+
+it.each(['settings', 'deletion'] as const)(
+  '再分析の権限失効後に結果を保存しない (%s)',
+  async (revocation) => {
+    app.env.LOCAL_DEMO_ENABLED = 'true';
+    const db = app.env.DB;
+    await save(1);
+    await queueFootprintJobs(app.env);
+    await run(1);
+    const path = `${endpoint}/1`;
+    const start = (generation: number) =>
+      app.request(`${path}/reanalysis`, {
+        method: 'POST',
+        body: { generation },
+      });
+    const memoryUpdates = (enabled: boolean) =>
+      db
+        .prepare('UPDATE projects SET include_in_user_memory=? WHERE id=?')
+        .bind(Number(enabled), project)
+        .run();
+    const job = async () =>
+      (await db
+        .prepare('SELECT job_id FROM project_footprint_reanalyses WHERE project_id=?')
+        .bind(project)
+        .first<string>('job_id'))!;
+    const ai = vi.fn();
+    app.env.AI = { run: ai };
+
+    await memoryUpdates(false);
+    expect((await start(0)).status).toBe(409);
+    await memoryUpdates(true);
+    expect((await start(0)).status).toBe(202);
+    await memoryUpdates(false);
+    await run(1, await job());
+    expect(ai).not.toHaveBeenCalled();
+    await memoryUpdates(true);
+    expect((await start(1)).status).toBe(202);
+    const inFlight = await job();
+
+    ai.mockImplementation(async () => {
+      if (revocation === 'settings') {
+        await memoryUpdates(false);
+        await memoryUpdates(true);
+      } else await db.prepare('DELETE FROM projects WHERE id=?').bind(project).run();
+      return { response: mockAnalysis('beginning') };
+    });
+    await run(1, inFlight);
+    expect(ai).toHaveBeenCalledTimes(1);
+    expect(
+      await db
+        .prepare('SELECT result_json FROM ai_calls WHERE job_id=?')
+        .bind(inFlight)
+        .first('result_json'),
+    ).toBeNull();
+    const stored = await db
+      .prepare('SELECT result_json FROM project_footprint_reanalyses WHERE job_id=?')
+      .bind(inFlight)
+      .first();
+    if (revocation === 'deletion') {
+      expect(stored).toBeNull();
+      expect((await app.request(path)).status).toBe(404);
+    } else {
+      expect(stored).toEqual({ result_json: null });
+      await memoryUpdates(true);
+      expect(await (await app.request(path)).json()).toMatchObject({
+        kind: 'beginning',
+        reanalysis: { generation: 2, status: 'failed', result: null },
+      });
+    }
+  },
+);
 
 it('AI 応答中に削除された根拠を含む結果を保存しない', async () => {
   const db = app.env.DB;

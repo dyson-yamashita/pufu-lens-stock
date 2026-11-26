@@ -146,6 +146,120 @@ it('本人の同一Originセッションだけが足あとの公開内容を変�
   expect(await (await get(key)).json()).toMatchObject({ items: [revised] });
 });
 
+it('掲載済みの「続く」は日付と分類だけを公開ページに返す', async () => {
+  const stored = JSON.parse(analysis);
+  stored.analysis.kind = 'continuing';
+  await point(1, [], JSON.stringify(stored)).run();
+  const key = await share();
+  expect((await publish(1)).status).toBe(200);
+  expect(await (await get(key)).json()).toEqual({
+    items: [{ id: expect.any(String), end_at: end, kind: 'continuing' }],
+    page: 1,
+    has_more: false,
+  });
+  expect((await app.request(`${privateFootprints}/1`)).status).toBe(404);
+  const template = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  app.env.ASSETS = { fetch: async () => new Response(template) } as unknown as Fetcher;
+  const response = await worker.fetch(
+    new Request(`${app.env.APP_URL}/p/${key}?view=footprints`),
+    app.env,
+    app.ctx,
+  );
+  const html = await response.text();
+  expect(parseHTML(html).document.querySelector('article')?.textContent).toContain('続く');
+  expect(html).not.toContain(copy.title);
+  expect(html).not.toContain(copy.summary);
+  expect(html).not.toContain('PRIVATE_');
+});
+
+it.each(['beginning', 'deepening'] as const)('公開根拠を表示する (%s)', async (kind) => {
+  const beginning = kind === 'beginning';
+  const source = { kind: 'question', id: 'shared-question', label: '公開された問い' };
+  const startingSummary = '記録を始めた時点の要約';
+  const change = '問いの範囲が広がった。';
+  const strategy = 'ストックとプ譜の入口を整える。';
+  const question = '新たに比較できる問い';
+  const shared = {
+    analysis: {
+      ...JSON.parse(analysis).analysis,
+      kind,
+      title: '公開された分析 <確認>',
+      before: beginning ? '' : '以前の見方',
+      current: beginning ? startingSummary : '追加された判断材料',
+      changes: beginning ? [] : [{ text: change, links: [source] }],
+      process: '過程の保存済み本文',
+      meaning: '意味の保存済み本文',
+      interpretation: '記録から分かる解釈',
+      unchanged: '継続点の保存済み本文',
+      perspectives: { questions: question, strategy: beginning ? strategy : '' },
+    },
+    links: [source],
+  };
+  await app.env.DB.batch([
+    point(1, [], JSON.stringify(shared)),
+    app.env.DB.prepare(
+      `INSERT INTO questions(id,project_id,source,text,status,updated_at)
+    VALUES (?1,?2,'user','公開された問い','ready',?3)`,
+    ).bind(source.id, project, start),
+    app.env.DB.prepare(
+      'UPDATE project_footprints SET public_id=?,dependencies=? WHERE project_id=? AND revision=1',
+    ).bind(
+      'shared-id',
+      JSON.stringify([{ kind: 'question', id: source.id, version: '[null,null]' }]),
+      project,
+    ),
+  ]);
+  const key = await share();
+  const item = { ...shared, start_at: start, end_at: end, kind };
+  expect(await (await get(key)).json()).toMatchObject({ items: [{ id: 'shared-id', ...item }] });
+  expect(await (await app.request(`${privateFootprints}/1`)).json()).toMatchObject({
+    shared: item,
+  });
+  const template = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  app.env.ASSETS = { fetch: async () => new Response(template) } as unknown as Fetcher;
+  const response = await worker.fetch(
+    new Request(`${app.env.APP_URL}/p/${key}?view=footprints`),
+    app.env,
+    app.ctx,
+  );
+  const html = await response.text();
+  const { document } = parseHTML(html);
+  expect(document.querySelector('article h3')?.textContent).toBe(shared.analysis.title);
+  if (beginning) {
+    expect(document.querySelector('article dl')).toBeNull();
+    expect(document.querySelector('article')?.textContent).toContain(strategy);
+    expect(document.querySelector('article')?.textContent).toContain(question);
+  } else {
+    expect(document.querySelector('article dl dd')?.textContent).toBe(question);
+  }
+  const statement = document.querySelector('article .footprints-statements > li');
+  expect(statement?.querySelector('p')?.textContent).toBe(beginning ? startingSummary : change);
+  expect(statement?.querySelector('.footprints-evidence-links a')?.getAttribute('href')).toBe(
+    `/p/${key}/questions/${source.id}`,
+  );
+  expect(
+    Array.from(document.querySelectorAll('article h4'), (heading) => heading.textContent),
+  ).toEqual(
+    beginning
+      ? ['記録を始めた時点', '主な取り組み', '関心']
+      : ['以前', '今回', '変化と根拠', '観点別の変化'],
+  );
+  for (const text of [
+    shared.analysis.process,
+    shared.analysis.meaning,
+    shared.analysis.interpretation,
+    shared.analysis.unchanged,
+  ])
+    expect(html).not.toContain(text);
+  expect(html).toContain('&lt;確認&gt;');
+  await app.env.DB.prepare("UPDATE questions SET note='個人用のメモ',updated_at=? WHERE id=?")
+    .bind(end, source.id)
+    .run();
+  expect(await (await get(key)).json()).toMatchObject({ items: [{ id: 'shared-id', ...item }] });
+  await app.env.DB.prepare("UPDATE questions SET status='failed' WHERE id=?").bind(source.id).run();
+  expect(await (await get(key)).json()).toMatchObject({ items: [] });
+});
+
 it('根拠の削除、メモリ更新オフ、プロジェクトの非公開化・削除を取得時に反映する', async () => {
   const dependencies = [
     { kind: 'question', id: 'source', version: JSON.stringify([start, null]) },
@@ -207,8 +321,10 @@ it('同日の足あとが複数ページにまたがっても重複や取りこ�
   }
   const latest = (await (await get(key)).json()) as PublicFootprintPage;
   expect(latest.has_more).toBe(true);
-  expect(latest.items.map(({ title }) => Number(title))).toEqual(revisions.slice(1).reverse());
+  expect(latest.items.map((item) => ('title' in item ? Number(item.title) : null))).toEqual(
+    revisions.slice(1).reverse(),
+  );
   const past = (await (await get(key, 2)).json()) as PublicFootprintPage;
   expect(past.has_more).toBe(false);
-  expect(past.items.map(({ title }) => title)).toEqual(['1']);
+  expect(past.items.map((item) => ('title' in item ? item.title : null))).toEqual(['1']);
 });

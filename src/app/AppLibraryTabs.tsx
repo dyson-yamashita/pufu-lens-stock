@@ -60,7 +60,7 @@ export function AppLibraryTabs({ route, navigate }: Props) {
           onClick={() => navigate('memory', route.projectId)}
         >
           <Sparkles size={16} aria-hidden="true" />
-          {t('ui.app.memory')}
+          {t(route.projectId ? 'ui.app.memory_footprints' : 'ui.app.memory')}
         </button>
         {route.projectId && (
           <button
