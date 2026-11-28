@@ -166,6 +166,55 @@ theorem article_rejection_reachable :
     completeArticle ⟨some 3, true, false, none, 3, false⟩ 2 42 true =
       ⟨some 3, true, false, none, 3, false⟩ := by decide
 
+structure RetrievedBody where
+  article : ArticleState
+  urlSource : Bool
+  hasInputText : Bool
+  extracting : Bool
+  shortTextLength : Option Nat
+  deriving DecidableEq, Repr
+
+def retainShortText (s : RetrievedBody) (generation length : Nat) (running : Bool) : RetrievedBody :=
+  if (s.article.generation == some generation) && s.article.belongsToUser &&
+      s.urlSource && !s.hasInputText && s.extracting && running && decide (0 < length ∧ length < 200) then
+    { s with shortTextLength := some length }
+  else s
+
+theorem stale_short_text_denied (s : RetrievedBody) (generation length : Nat) (running : Bool)
+    (stale : s.article.generation ≠ some generation) :
+    retainShortText s generation length running = s := by
+  simp [retainShortText, stale]
+
+theorem foreign_short_text_denied (s : RetrievedBody) (generation length : Nat) (running : Bool)
+    (foreign : s.article.belongsToUser = false) :
+    retainShortText s generation length running = s := by
+  simp [retainShortText, foreign]
+
+theorem stopped_short_text_denied (s : RetrievedBody) (generation length : Nat) :
+    retainShortText s generation length false = s := by
+  simp [retainShortText]
+
+theorem non_extraction_short_text_denied (s : RetrievedBody) (generation length : Nat) (running : Bool)
+    (denied : s.urlSource = false ∨ s.hasInputText = true ∨ s.extracting = false) :
+    retainShortText s generation length running = s := by
+  rcases denied with h | h | h <;> simp [retainShortText, h]
+
+theorem out_of_range_short_text_denied (s : RetrievedBody) (generation length : Nat) (running : Bool)
+    (denied : ¬ (0 < length ∧ length < 200)) :
+    retainShortText s generation length running = s := by
+  simp [retainShortText, denied]
+
+theorem short_text_preserves_article_state (s : RetrievedBody) (generation length : Nat) (running : Bool) :
+    (retainShortText s generation length running).article = s.article ∧
+      (retainShortText s generation length running).extracting = s.extracting := by
+  unfold retainShortText
+  split <;> simp
+
+theorem short_text_decisions_reachable :
+    let s : RetrievedBody := ⟨⟨some 3, true, false, none, 0, false⟩, true, false, true, none⟩
+    (retainShortText s 3 199 true).shortTextLength = some 199 ∧
+      retainShortText s 2 199 true = s ∧ retainShortText s 3 200 true = s := by decide
+
 -- Restricted to jobs whose target has a source revision (article generation here).
 def retireSuperseded (job : Job) (revision : Nat) (current : Option Nat) (now : Nat) : Job :=
   if job.status == .pending && (current.any (fun actual => decide (revision < actual))) then

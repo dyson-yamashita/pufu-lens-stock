@@ -1,6 +1,6 @@
 import cmaps from 'virtual:pdf-cmaps';
 import { limitedBytes } from '../../../infrastructure/limited-bytes';
-import { pdfTooLargeMessage } from './errors';
+import { pdfInsufficientTextMessage, pdfTooLargeMessage } from './errors';
 import { extractPdf } from './pdf';
 
 // CMap以外のサービス・保存先・認証情報を持たない専用Worker。
@@ -55,7 +55,17 @@ export default {
         );
         return extractPdf(data, new URL(request.url), assets, controller.signal);
       })();
-      return Response.json(await Promise.race([operation, aborted]));
+      const result = await Promise.race([operation, aborted]);
+      if ('shortText' in result) {
+        return Response.json(
+          {
+            error: pdfInsufficientTextMessage,
+            ...(result.shortText ? { short_text: result.shortText } : {}),
+          },
+          { status: 422 },
+        );
+      }
+      return Response.json(result);
     } catch (error) {
       return Response.json(
         { error: error instanceof Error ? error.message : 'PDFを読み取れませんでした。' },

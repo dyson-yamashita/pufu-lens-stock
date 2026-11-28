@@ -23,14 +23,18 @@ describe('本文取得から要約とメモリまで', () => {
     vi.restoreAllMocks();
     await app.dispose();
   });
-  async function savedArticle() {
+  async function savedArticle(skipSummary = false) {
     const response = await app.request('/api/v1/stocks', {
       method: 'POST',
-      body: { project_id: 'alice-project', url: 'https://example.com/story' },
+      body: {
+        project_id: 'alice-project',
+        url: 'https://example.com/story',
+        skip_summary: skipSummary,
+      },
     });
     return (await response.json()) as { id: string };
   }
-  function articleFetch(status = 200) {
+  function articleFetch(status = 200, response?: () => Response | Promise<Response>) {
     const original = globalThis.fetch;
     const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(input instanceof Request ? input.url : String(input));
@@ -41,11 +45,14 @@ describe('本文取得から要約とメモリまで', () => {
             Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '8.8.8.8' }] : [],
           }),
         );
-      if (url.hostname === 'example.com')
+      if (url.hostname === 'example.com') {
+        if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
+        if (response) return response();
         return new Response(
           `<html><head><title>非同期処理の設計</title></head><body><article><h1>非同期処理の設計</h1>${'<p>記事の保存受付と要約処理を分離すると、通信が切れても処理を継続できます。再試行される処理では同じ操作を重複して実行しない設計が必要です。</p>'.repeat(12)}</article></body></html>`,
           { status, headers: { 'Content-Type': 'text/html' } },
         );
+      }
       return original(input, init);
     });
     vi.stubGlobal('fetch', mock);
@@ -313,6 +320,92 @@ describe('本文取得から要約とメモリまで', () => {
     articleFetch();
     await runArticle();
     expect((await app.env.DB.prepare('SELECT status FROM articles').first())!.status).toBe('ready');
+  });
+
+  it.each(['html', 'pdf'])(
+    'B08 %sの短い取得本文を失敗状態で本人に表示し、再取得成功で置き換える',
+    async (format) => {
+      const { id } = await savedArticle(true);
+      const text = 'This is the short retrieved text.';
+      const url = `/api/v1/stocks/${id}`;
+      articleFetch(200, () =>
+        format === 'pdf'
+          ? new Response(pdfFixture([text]), { headers: { 'Content-Type': 'application/pdf' } })
+          : new Response(`<html><body><article>${text}</article></body></html>`, {
+              headers: { 'Content-Type': 'text/html' },
+            }),
+      );
+      await expect(runArticle()).rejects.toThrow(
+        format === 'pdf' ? /PDFの文字情報を十分に取得/ : /Browser Run/,
+      );
+      expect(await (await app.request(url)).json()).toMatchObject({
+        stock: { status: 'failed', summary: null },
+      });
+      expect(await (await app.request(`${url}/content`)).json()).toEqual({ content: text });
+      expect((await app.request(`${url}/content`, { user: 'bob' })).status).toBe(404);
+      expect((await app.env.CONTENT.list()).objects).toHaveLength(0);
+
+      const published = await app.request('/api/v1/projects/alice-project/publication', {
+        method: 'PATCH',
+        body: { is_public: true, public_description: '' },
+      });
+      expect(published.status).toBe(200);
+      const { publication } = (await published.json()) as { publication: { public_id: string } };
+      const publicStocks = `/api/public/projects/${publication.public_id}/stocks`;
+      for (const [path, expected] of [
+        [publicStocks, { items: [{ id, summary: null }] }],
+        [`${publicStocks}/${id}`, { stock: { id, summary: null } }],
+      ] as const) {
+        const response = await app.request(path, { headers: { Cookie: '' } });
+        expect(response.status).toBe(200);
+        const payload = await response.text();
+        expect(JSON.parse(payload)).toMatchObject(expected);
+        expect(payload).not.toContain(text);
+      }
+
+      expect((await app.request(`${url}/retry`, { method: 'POST' })).status).toBe(202);
+      const fullText = 'a'.repeat(200);
+      articleFetch(
+        200,
+        () =>
+          new Response(`<html><body><article>${fullText}</article></body></html>`, {
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      );
+      await runArticle();
+      expect(await (await app.request(url)).json()).toMatchObject({
+        stock: { id, status: 'ready', summary: { overview: fullText } },
+      });
+      expect(await (await app.request(`${url}/content`)).json()).toEqual({ content: fullText });
+      expect(await app.env.DB.prepare('SELECT short_retrieved_text FROM articles').first()).toEqual(
+        {
+          short_retrieved_text: null,
+        },
+      );
+    },
+  );
+
+  it('B08 再試行で世代が進むと、進行中だった旧取得の短い本文を記録しない', async () => {
+    const { id } = await savedArticle();
+    const url = `/api/v1/stocks/${id}`;
+    articleFetch(200, async () => {
+      // 外部応答を待つ間に失敗を確定し、実際の再試行APIで記事の世代を進める。
+      await app.env.DB.prepare(
+        "UPDATE articles SET status='failed' WHERE id=(SELECT article_id FROM stocks WHERE id=?)",
+      )
+        .bind(id)
+        .run();
+      expect((await app.request(`${url}/retry`, { method: 'POST' })).status).toBe(202);
+      // 新世代が取得中でも、旧世代の応答では短い本文を更新できない。
+      await app.env.DB.prepare("UPDATE articles SET status='extracting' WHERE generation=2").run();
+      return new Response('<html><body><article>旧世代の短い本文</article></body></html>', {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    });
+    await expect(runArticle()).rejects.toThrow(/Browser Run/);
+    expect(
+      await app.env.DB.prepare('SELECT status, short_retrieved_text FROM articles').first(),
+    ).toEqual({ status: 'extracting', short_retrieved_text: null });
   });
   it('PDF専用Workerの資源超過ではURLを残して失敗し、本文保存・要約を開始しない', async () => {
     await savedArticle();

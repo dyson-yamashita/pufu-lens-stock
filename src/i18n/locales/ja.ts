@@ -1227,6 +1227,8 @@ export const ja: Record<string, string> = {
     '選ぶとすぐに反映されます。設定はこのブラウザに保存します。',
   'ui.user_manual.save_articles_as_stocks': '記事をストックする',
   'manual.stock_url_heading': '複数ページの記事・PDF・X・YouTube',
+  'manual.stock_short_retrieved_text':
+    'ステータスが「取得失敗」でも、短い本文を取得できた場合は、詳細の「取得した本文」で読めます。',
   'stock.detail_title': 'ストックの詳細',
   'stock.detail_description': 'ストックを見つめ直し、問い・気づきにつなげましょう。',
   'stock.back': '前の画面に戻る',

@@ -4,6 +4,7 @@ import { isYouTubeUrl, youtubeUnavailableMessage } from '../../../shared/youtube
 import type { Env } from '../../env';
 import {
   logArticleFetchFailure,
+  logDiagnosticError,
   type ArticleFetchDetails,
   type ArticleFetchFailureReason,
 } from '../../infrastructure/diagnostics';
@@ -11,6 +12,7 @@ import { limitedBytes } from '../../infrastructure/limited-bytes';
 import { assertPublicDestination, validateUrl } from '../../infrastructure/security';
 import { fetchXPost, xPostId } from '../integrations/x';
 import { isArticlePage, nextArticlePage } from './article-pages';
+import { isShortRetrievedText, minArticleTextLength } from './article-text';
 import { pdfInsufficientTextMessage, pdfTooLargeMessage } from './pdf/errors';
 import { parsePdf } from './pdf/pdf-client';
 import {
@@ -311,12 +313,24 @@ export async function fetchArticle(
   env: Env,
   value: string,
   userId?: string,
+  retainShortText?: (text: string) => Promise<void>,
 ): Promise<ArticleContent & { pages?: string[]; complete?: boolean }> {
   const details: ArticleFetchDetails = { stage: 'fetch' };
+  let shortText: string | undefined;
+  const rememberShortText = (text: string) => {
+    if (text.length > 0) shortText = isShortRetrievedText(text) ? text : undefined;
+  };
   try {
-    return await retrieveArticle(env, value, userId, details);
+    return await retrieveArticle(env, value, userId, details, rememberShortText);
   } catch (error) {
     logArticleFetchFailure(details, articleFetchFailure(error, details), error);
+    if (shortText !== undefined && retainShortText) {
+      try {
+        await retainShortText(shortText);
+      } catch (persistenceError) {
+        logDiagnosticError('article_short_text_save', persistenceError);
+      }
+    }
     throw error;
   }
 }
@@ -326,6 +340,7 @@ async function retrieveArticle(
   value: string,
   userId: string | undefined,
   details: ArticleFetchDetails,
+  rememberShortText: (text: string) => void,
 ): Promise<ArticleContent & { pages?: string[]; complete?: boolean }> {
   const deadline = Date.now() + 60000;
   const postId = xPostId(validateUrl(value).href);
@@ -348,7 +363,7 @@ async function retrieveArticle(
   details.content_type = format;
   if (format === 'pdf') {
     details.stage = 'parse_pdf';
-    return parsePdf(env, response, url);
+    return parsePdf(env, response, url, rememberShortText);
   }
   if (format === 'unsupported')
     throw new ArticleFetchError(
@@ -363,15 +378,17 @@ async function retrieveArticle(
     ? extractHtml(content, url.href)
     : { title: url.hostname, text: content.trim() };
   details.initial_text_length = result.text.length;
-  if (result.text.length < 200) {
+  if (result.text.length < minArticleTextLength) {
+    rememberShortText(result.text);
     details.stage = 'render';
     content = await renderHtml(env, url.href, robots, deadline, details);
     details.stage = 'extract_rendered_html';
     const rendered = extractHtml(content, url.href);
     details.rendered_text_length = rendered.text.length;
+    rememberShortText(rendered.text);
     result = { ...rendered, ogImageUrl: rendered.ogImageUrl ?? result.ogImageUrl };
   }
-  if (result.text.length < 200)
+  if (result.text.length < minArticleTextLength)
     throw new ArticleFetchError(
       'insufficient_text',
       '記事本文を十分に取得できませんでした。ログインやアクセス制限が必要な可能性があります。',

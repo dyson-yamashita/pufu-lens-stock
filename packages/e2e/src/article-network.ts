@@ -51,6 +51,10 @@ globalThis.fetch = async (input: RequestInfo | URL) => {
   }
   if (url.searchParams.get('fail') === 'true')
     return new Response('Fixture unavailable', { status: 503 });
+  if (url.searchParams.get('short') === 'true')
+    return new Response('<html><body><article>取得できた短い本文です。</article></body></html>', {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   // The browser releases this after observing the actual extracting state.
   await gate(key).ready;
   const pageMetadata = `<!--${' '.repeat(2.25 * 1024 * 1024)}-->`;

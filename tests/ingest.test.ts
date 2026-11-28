@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fetchArticle } from '../server/features/stocks/ingest';
+import { pdfInsufficientTextMessage } from '../server/features/stocks/pdf/errors';
 import type { Env } from '../server/env';
 import { japanesePdfFixture, japanesePdfText, pdfArticleText, pdfFixture } from './pdf-fixture';
 import { createPdfWorker } from './pdf-worker-helper';
@@ -414,6 +415,29 @@ Disallow: /shared-policy
       ).rejects.toThrow(/PDF.*本文を補完/);
     },
   );
+
+  it.each([
+    { error: 'PDFを読み取れませんでした。', short_text: 'partial text' },
+    { error: pdfInsufficientTextMessage, short_text: 'a'.repeat(200) },
+    { error: pdfInsufficientTextMessage, short_text: ' ' },
+  ])('PDFの短文保存条件に合わない応答を保持しない ($#)', async (result) => {
+    mockNetwork(() => new Response('PDF', { headers: { 'Content-Type': 'application/pdf' } }));
+    const parser = {
+      async fetch() {
+        return Response.json(result, { status: 422 });
+      },
+    } as unknown as Fetcher;
+    const retainShortText = vi.fn(async () => {});
+    await expect(
+      fetchArticle(
+        { ...env, PDF_PARSER: parser },
+        'https://example.com/paper.pdf',
+        undefined,
+        retainShortText,
+      ),
+    ).rejects.toThrow(result.error);
+    expect(retainShortText).not.toHaveBeenCalled();
+  });
 
   it('PDF専用Workerが応答しない場合は待機を打ち切る', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });

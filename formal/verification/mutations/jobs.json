@@ -32,6 +32,18 @@
       "theorem": "old_article_cannot_commit"
     },
     {
+      "name": "B08-short-text-generation",
+      "old": "(s.article.generation == some generation) && s.article.belongsToUser",
+      "new": "s.article.belongsToUser",
+      "theorem": "stale_short_text_denied"
+    },
+    {
+      "name": "B08-short-text-running",
+      "old": "s.urlSource && !s.hasInputText && s.extracting && running &&",
+      "new": "s.urlSource && !s.hasInputText && s.extracting &&",
+      "theorem": "stopped_short_text_denied"
+    },
+    {
       "name": "B08-retire-pending",
       "old": "job.status == .pending && (current.any (fun actual => decide (revision < actual)))",
       "new": "current.any (fun actual => decide (revision < actual))",
