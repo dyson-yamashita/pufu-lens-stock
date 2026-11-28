@@ -6,9 +6,22 @@ const unavailable = 'robots.txt を確認できなかったため、本文の取
 const MAX_ROBOTS_BYTES = 512 * 1024;
 const MAX_CACHED_ORIGINS = 8;
 
-export class RobotsError extends Error {}
+export class RobotsError extends Error {
+  constructor(
+    readonly reason: 'robots_disallowed' | 'robots_unavailable',
+    readonly httpStatus?: number,
+    options?: ErrorOptions,
+  ) {
+    super(reason === 'robots_disallowed' ? disallowed : unavailable, options);
+  }
+}
 export type RobotsGuard = (url: URL, deadline: number, signal: AbortSignal) => Promise<void>;
-type FetchRobots = (target: URL, deadline: number, signal: AbortSignal) => Promise<Response>;
+type FetchRobots = (
+  target: URL,
+  deadline: number,
+  signal: AbortSignal,
+  onResponseStatus: (status: number) => void,
+) => Promise<Response>;
 type Rule = { allow: boolean; parts: string[]; anchored: boolean; length: number };
 
 // Decode unreserved ASCII and use a consistent UTF-8 escape form for comparison.
@@ -89,8 +102,12 @@ async function readRules(
   requestSignal: AbortSignal,
 ) {
   const signal = AbortSignal.any([requestSignal, AbortSignal.timeout(20000)]);
+  let httpStatus: number | undefined;
   try {
-    const response = await fetchRobots(target, deadline, signal);
+    const response = await fetchRobots(target, deadline, signal, (status) => {
+      httpStatus = status;
+    });
+    httpStatus = response.status;
     if (response.status === 206 || response.headers.has('Content-Range')) {
       await response.body?.cancel();
       throw new Error('Incomplete robots.txt response');
@@ -108,7 +125,7 @@ async function readRules(
     );
     return parseRules(new TextDecoder().decode(bytes));
   } catch (error) {
-    throw new RobotsError(unavailable, { cause: error });
+    throw new RobotsError('robots_unavailable', httpStatus, { cause: error });
   }
 }
 
@@ -129,6 +146,6 @@ export function createRobotsGuard(fetchRobots: FetchRobots): RobotsGuard {
         continue;
       if (matches(path, rule)) best = rule;
     }
-    if (best && !best.allow) throw new RobotsError(disallowed);
+    if (best && !best.allow) throw new RobotsError('robots_disallowed');
   };
 }

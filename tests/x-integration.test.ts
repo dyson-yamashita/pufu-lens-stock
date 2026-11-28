@@ -17,6 +17,7 @@ describe('X外部連携と本文補完', () => {
   });
   afterEach(async () => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     await app.dispose();
   });
   const register = (user = 'alice') =>
@@ -140,6 +141,7 @@ describe('X外部連携と本文補完', () => {
   });
   it('APIや通信のエラー内容・トークンを公開しない', async () => {
     await register();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const network = vi.fn();
     vi.stubGlobal('fetch', network);
     for (const status of [401, 403, 404, 429, 500, 302]) {
@@ -149,11 +151,20 @@ describe('X外部連携と本文補完', () => {
       await expect(fetchArticle(app.env, 'https://x.com/u/status/123', 'alice')).rejects.toThrow(
         `HTTP ${status}`,
       );
+      expect(errors).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          event: 'article_fetch_failed',
+          stage: 'fetch_x',
+          reason: 'http_error',
+          http_status: status,
+        }),
+      );
     }
     network.mockRejectedValueOnce(new Error(`secret ${token}`));
     await expect(fetchArticle(app.env, 'https://x.com/u/status/123', 'alice')).rejects.toThrow(
       '時間をおくか',
     );
+    expect(JSON.stringify(errors.mock.calls)).not.toMatch(/test-x-token|evil\.example|x\.com/);
   });
   it('Workersが受理できるリクエストでX本文を取得する', async () => {
     await register();

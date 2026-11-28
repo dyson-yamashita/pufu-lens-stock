@@ -1,4 +1,5 @@
 import { getResolvedPDFJS } from 'unpdf';
+import { pdfInsufficientTextMessage } from './errors';
 
 class PdfContentError extends Error {}
 
@@ -67,10 +68,7 @@ export async function extractPdf(
           .replace(/[\t ]+\n/g, '\n')
           .replace(/\n{3,}/g, '\n\n')
           .trim();
-        if (text.length < 200)
-          throw new PdfContentError(
-            'PDFの文字情報を十分に取得できませんでした。画像のみのPDFには対応していません。本文を補完して再試行してください。',
-          );
+        if (text.length < 200) throw new PdfContentError(pdfInsufficientTextMessage);
         const { info } = await pdf.getMetadata();
         const metadataTitle =
           'Title' in info && typeof info.Title === 'string' ? info.Title.trim() : '';

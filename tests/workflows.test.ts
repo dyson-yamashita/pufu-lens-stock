@@ -20,6 +20,7 @@ describe('本文取得から要約とメモリまで', () => {
   });
   afterEach(async () => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     await app.dispose();
   });
   async function savedArticle() {
@@ -292,7 +293,16 @@ describe('本文取得から要約とメモリまで', () => {
   it('取得失敗を記録し、再試行では別のWorkflow世代を作る', async () => {
     const { id } = await savedArticle();
     articleFetch(403);
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(runArticle()).rejects.toThrow();
+    expect(errors).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'article_fetch_failed',
+        stage: 'fetch',
+        reason: 'http_error',
+        http_status: 403,
+      }),
+    );
     expect((await app.env.DB.prepare('SELECT status FROM articles').first())!.status).toBe(
       'failed',
     );

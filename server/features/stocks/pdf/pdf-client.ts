@@ -1,5 +1,6 @@
 import type { Env } from '../../../env';
 import { limitedBytes } from '../../../infrastructure/limited-bytes';
+import { pdfTooLargeMessage } from './errors';
 
 const unavailable = 'PDFの解析を完了できませんでした。本文を補完して再試行してください。';
 class PdfParserError extends Error {}
@@ -12,7 +13,7 @@ export async function parsePdf(
 ): Promise<{ title: string; text: string }> {
   if (Number(source.headers.get('Content-Length')) > 10 * 1024 * 1024) {
     await source.body?.cancel();
-    throw new Error('PDFが大きすぎます（上限10MB）。');
+    throw new Error(pdfTooLargeMessage);
   }
   const parser = env.PDF_PARSER;
   if (!parser) {

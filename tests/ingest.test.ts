@@ -8,6 +8,7 @@ describe('公開記事の取得', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
   const env = {} as Env;
   let pdfWorker: Awaited<ReturnType<typeof createPdfWorker>>;
@@ -148,6 +149,7 @@ Disallow: /shared-policy
   );
 
   it('別オリジンへの移動先は、リダイレクトされたrobots.txtを確認してから取得する', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const robots = vi.fn((url: URL) =>
       url.hostname === 'example.com'
         ? new Response(null, { status: 404 })
@@ -168,6 +170,9 @@ Disallow: /shared-policy
     await expect(fetchArticle(env, 'https://example.com/start')).rejects.toThrow(
       /robots\.txt.*禁止/,
     );
+    expect(errors).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ reason: 'robots_disallowed', http_status: 302 }),
+    );
     expect(robots.mock.calls.map(([url]) => url.href)).toEqual([
       'https://example.com/robots.txt',
       'https://second.com/robots.txt',
@@ -178,6 +183,7 @@ Disallow: /shared-policy
   it.each([206, 429, 503])(
     'robots.txtを確認できなければ本文を取得しない: HTTP %s',
     async (status) => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
       const requests = mockNetwork(
         () => htmlPage(articleText),
         () => new Response(null, { status }),
@@ -186,12 +192,21 @@ Disallow: /shared-policy
         /robots\.txt.*確認できなかった/,
       );
       expect(requests).toEqual([]);
+      expect(errors).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          event: 'article_fetch_failed',
+          stage: 'fetch',
+          reason: 'robots_unavailable',
+          robots_http_status: status,
+        }),
+      );
     },
   );
 
   it.each(['/story', '/st%6fry'])(
     'robots.txtが対象記事へ移動する場合は記事に接続しない: %s',
     async (location) => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
       const requests = mockNetwork(
         () => htmlPage(articleText),
         () => new Response(null, { status: 302, headers: { Location: location } }),
@@ -200,6 +215,9 @@ Disallow: /shared-policy
         /robots\.txt.*確認できなかった/,
       );
       expect(requests).toEqual([]);
+      expect(errors).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ reason: 'robots_unavailable', robots_http_status: 302 }),
+      );
     },
   );
 
@@ -471,6 +489,7 @@ Disallow: /shared-policy
   it.each([true, false])(
     '10MBを超えるPDFを拒否する（Content-Lengthあり: %s）',
     async (declared) => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockNetwork(
         () =>
           new Response(declared ? 'PDF' : new Uint8Array(10 * 1024 * 1024 + 1), {
@@ -481,6 +500,9 @@ Disallow: /shared-policy
           }),
       );
       await expect(fetchArticle(env, 'https://example.com/large.pdf')).rejects.toThrow(/PDF.*10MB/);
+      expect(errors).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ stage: 'parse_pdf', reason: 'body_too_large', http_status: 200 }),
+      );
     },
   );
 
@@ -493,7 +515,8 @@ Disallow: /shared-policy
       /PDF.*100ページ/,
     ],
     ['12万文字を超えるPDF', pdfFixture(['long text '.repeat(12001)]), /本文.*12万文字/],
-  ])('%sを理由付きで拒否する', async (_name, pdf, error) => {
+  ])('%sを理由付きで拒否する', async (name, pdf, error) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockNetwork(
       () =>
         new Response(pdf as Uint8Array<ArrayBuffer>, {
@@ -503,5 +526,14 @@ Disallow: /shared-policy
     await expect(fetchArticle(env, 'https://example.com/paper.pdf')).rejects.toThrow(
       error as RegExp,
     );
+    if (name === '文字情報のないPDF') {
+      expect(errors).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          stage: 'parse_pdf',
+          reason: 'insufficient_text',
+          http_status: 200,
+        }),
+      );
+    }
   });
 });

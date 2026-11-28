@@ -101,6 +101,62 @@ export function logDiagnosticError(operation: Operation, error: unknown) {
   emit('operation_failed', { operation, error: diagnosticError(error) }, true);
 }
 
+export type ArticleFetchDetails = {
+  stage:
+    | 'fetch'
+    | 'read_body'
+    | 'extract_html'
+    | 'render'
+    | 'extract_rendered_html'
+    | 'parse_pdf'
+    | 'fetch_x';
+  http_status?: number;
+  browser_http_status?: number;
+  content_type?: 'html' | 'text' | 'pdf' | 'unsupported';
+  initial_text_length?: number;
+  rendered_text_length?: number;
+  browser_robots_disallowed?: number;
+  browser_robots_unavailable?: number;
+};
+
+export type ArticleFetchFailureReason =
+  | 'robots_disallowed'
+  | 'robots_unavailable'
+  | 'http_error'
+  | 'unsupported_content_type'
+  | 'body_too_large'
+  | 'browser_not_configured'
+  | 'browser_navigation_failed'
+  | 'insufficient_text'
+  | 'text_too_long'
+  | 'redirect_failed'
+  | 'timeout'
+  | 'unexpected_error';
+
+export function logArticleFetchFailure(
+  details: ArticleFetchDetails,
+  failure: { reason: ArticleFetchFailureReason; robots_http_status?: number },
+  error: unknown,
+) {
+  emit(
+    'article_fetch_failed',
+    {
+      stage: details.stage,
+      reason: failure.reason,
+      http_status: details.http_status,
+      browser_http_status: details.browser_http_status,
+      robots_http_status: failure.robots_http_status,
+      content_type: details.content_type,
+      initial_text_length: details.initial_text_length,
+      rendered_text_length: details.rendered_text_length,
+      browser_robots_disallowed: details.browser_robots_disallowed,
+      browser_robots_unavailable: details.browser_robots_unavailable,
+      error: diagnosticError(error),
+    },
+    true,
+  );
+}
+
 export function requestDiagnostics(layer: 'worker' | 'api'): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const parent = context.getStore();

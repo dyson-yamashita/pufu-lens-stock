@@ -12,6 +12,16 @@
 - D1計測はキーワードのストック一覧、問い一覧、dispatch冒頭の世代整理・期限切れ検索・pending検索に限定。`total_attempts` はD1結果の数値だけ（最大32件）。空配列はメタデータ未取得で、再試行ゼロを意味しない。アプリ独自の再試行は追加しない。
 - scheduled全体の失敗はログ後に同じ例外を再throwし、`waitUntil` に拒否が伝わる。元から回復可能として扱っていた保守処理のcatchは維持する。
 
+## 記事URLの本文取得
+
+Workers Observabilityで `event` が `article_fetch_failed` のログを確認する。本文取得の失敗を試行ごとに1件記録する。
+
+- `stage` は失敗した段階。元ページへの接続、応答の読み取り、HTML抽出、ブラウザー描画、描画後の抽出、PDF解析、Xの取得を区別する。
+- `reason` は固定の理由。たとえば `robots_disallowed` はルールによるクロール禁止、`robots_unavailable` はルールの取得や確認の失敗、`insufficient_text` は抽出後の本文が200文字未満だったことを表す。
+- `http_status`、`browser_http_status`、`robots_http_status` は各取得経路で最後に確認できたHTTPステータス。順に元ページへの直接取得またはX API、ブラウザーのメイン文書、確認に失敗したrobots.txtを表す。リダイレクトを受信したあとに失敗したときは3xxが残ることがある。`content_type` は直接取得の応答形式を `html`、`text`、`pdf`、`unsupported` で示す。
+- `initial_text_length` と `rendered_text_length` はHTML・テキスト取得で得られた描画前後の本文候補の長さ。取得判定と同じUTF-16の長さを使う。
+- `browser_robots_disallowed` と `browser_robots_unavailable` は、ブラウザーのメイン文書以外のリクエストで、それぞれクロール禁止やルールの確認失敗が起きた回数。ブラウザー終了処理を始めるまでの回数を数え、1件以上の場合に値を記録する。
+
 ## 機密値と量の制限
 
 URLは固定のrouteテンプレートに変換し、それ以外を `/other` にする。query、fragment、動的ID、ユーザーID、本文、SQL、bind値、認証ヘッダーを記録しない。
