@@ -19,7 +19,7 @@ it.each([
 });
 
 it('空白だけなら全件を表示し、カテゴリ名でも絞り込める', () => {
-  expect(ids('  \u3000 ')).toHaveLength(27);
+  expect(ids('  \u3000 ')).toHaveLength(28);
   expect(searchFaq(faqCategories('ja'), '料金・利用制限').map((category) => category.id)).toEqual([
     'pricing',
   ]);

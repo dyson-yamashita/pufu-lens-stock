@@ -210,7 +210,7 @@ it.each([
     expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
       `https://ogp.example.test${path}`,
     );
-    expect(document.querySelectorAll('.faq-item')).toHaveLength(27);
+    expect(document.querySelectorAll('.faq-item')).toHaveLength(28);
     expect(document.querySelectorAll('main section')).toHaveLength(6);
     expect(document.querySelector('script[type="module"]')).not.toBeNull();
     expect(document.querySelector('link[hreflang="en"]')?.getAttribute('href')).toBe(
@@ -219,7 +219,7 @@ it.each([
     const data = [...document.querySelectorAll('script[type="application/ld+json"]')]
       .map((node) => JSON.parse(node.textContent!))
       .find((value) => value['@type'] === 'FAQPage');
-    expect(data.mainEntity).toHaveLength(27);
+    expect(data.mainEntity).toHaveLength(28);
     expect(data.mainEntity[0].name).toBe(
       document.querySelector('.faq-item summary span:last-child')?.textContent,
     );

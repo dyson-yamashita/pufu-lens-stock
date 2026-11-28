@@ -30,7 +30,7 @@ test('FAQ-001 未ログインでFAQへ移動し検索・クリア・日英表示
   }
   await headerLink.click();
   await expect(screen.getByRole('heading', 'よくある質問（FAQ）', { exact: true })).toBeVisible();
-  await expect(browser.locator('.faq-item')).toHaveCount(27);
+  await expect(browser.locator('.faq-item')).toHaveCount(28);
   await expect(browser.locator('main section')).toHaveCount(6);
   expect(
     await browser.evaluate(
@@ -55,7 +55,7 @@ test('FAQ-001 未ログインでFAQへ移動し検索・クリア・日英表示
   await expect(screen.getByRole('status')).toHaveText('0件の質問');
   await expect(browser.locator('.manual-note')).toContainText('一致する質問が見つかりませんでした');
   await screen.getByRole('button', '検索をクリア', { exact: true }).click();
-  await expect(browser.locator('.faq-item')).toHaveCount(27);
+  await expect(browser.locator('.faq-item')).toHaveCount(28);
   expect(await browser.evaluate(() => document.activeElement?.id ?? null)).toBe('faq-search');
   await browser.locator('#faq-contact summary').click();
   await expect(browser.locator('#faq-contact a')).toHaveAttribute(
@@ -66,7 +66,7 @@ test('FAQ-001 未ログインでFAQへ移動し検索・クリア・日英表示
   await expect(browser.locator('#faq-policies a[href="/terms"]')).toBeVisible();
   await expect(browser.locator('#faq-policies a[href="/privacy"]')).toBeVisible();
   await browser.reload();
-  await expect(browser.locator('.faq-item')).toHaveCount(27);
+  await expect(browser.locator('.faq-item')).toHaveCount(28);
   for (const theme of ['light', 'dark'] as const) {
     await browser.emulateMedia({ colorScheme: theme });
     await browser.evaluate(() => {
@@ -83,7 +83,7 @@ test('FAQ-001 未ログインでFAQへ移動し検索・クリア・日英表示
     screen.getByRole('heading', 'Frequently asked questions (FAQ)', { exact: true }),
   ).toBeVisible();
   await expect(browser.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(browser.locator('.faq-item')).toHaveCount(27);
+  await expect(browser.locator('.faq-item')).toHaveCount(28);
   await browser.locator('#faq-search').fill('ＭＣＰ ＦＲＥＥ');
   await expect(browser.locator('.faq-item')).toHaveCount(1);
   await expect(browser.locator('#faq-free .faq-answer')).toBeVisible();
