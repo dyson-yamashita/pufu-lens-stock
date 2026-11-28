@@ -198,5 +198,5 @@ test('THEME-001 トップのスイッチでテーマを選び、再読込と言�
   blocked = 'faq';
   await app.open('/en/faq');
   await recover('en');
-  await expect(browser.locator('.faq-item')).toHaveCount(27);
+  await expect(browser.locator('.faq-item')).toHaveCount(28);
 });

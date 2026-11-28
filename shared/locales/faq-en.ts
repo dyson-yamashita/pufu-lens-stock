@@ -18,6 +18,17 @@ export const faqEn: readonly FaqCategory[] = [
           'The main features are Stocks for saving articles and notes, Questions/Insights for recording questions and ideas, and Pufu for organizing goals and actions. AI can also summarize content and organize your interests and knowledge in Memory.',
       },
       {
+        id: 'transcription-ocr',
+        question:
+          'Can PufuLens transcribe video or audio, or read text from images and scans (OCR)?',
+        answer: [
+          'PufuLens currently does not offer video or audio transcription or OCR for images and scanned PDFs. Use an AI service that supports your file to transcribe it or extract its text. Then ask ChatGPT, Claude, or another AI service connected to PufuLens via MCP to save the text. For example, “Save this text as a Stock in the [project name] project.” ',
+          'See the ',
+          { text: 'MCP setup instructions in the user manual', href: '/en/manual#integrations' },
+          '.',
+        ],
+      },
+      {
         id: 'audience',
         question: 'Who is it for?',
         answer:

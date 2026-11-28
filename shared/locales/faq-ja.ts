@@ -18,6 +18,16 @@ export const faqJa: readonly FaqCategory[] = [
           '記事やメモを保存する「ストック」、疑問やアイデアを残す「問い・気づき」、目標や行動を整理する「プ譜」が主な機能です。AIによる要約や、関心・知識を整理するメモリ機能もあります。',
       },
       {
+        id: 'transcription-ocr',
+        question: '動画・音声の文字起こしや、画像・スキャン資料の文字認識（OCR）はできますか？',
+        answer: [
+          '現在、PufuLensは動画・音声の文字起こしや、画像・スキャンしたPDFなどのOCRに対応していません。対象ファイルに対応したAIサービスでテキストに変換し、PufuLensとMCPで連携したChatGPTやClaudeなどからストックに登録できます。たとえば「このテキストを『〇〇』プロジェクトにストックとして登録してください」と依頼できます。',
+          '接続方法は',
+          { text: 'ユーザーマニュアル', href: '/manual#integrations' },
+          'をご覧ください。',
+        ],
+      },
+      {
         id: 'audience',
         question: 'どんな人に向いていますか？',
         answer:
