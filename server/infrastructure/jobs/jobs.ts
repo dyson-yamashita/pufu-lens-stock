@@ -170,37 +170,55 @@ export async function scheduledMaintenance(env: Env, scheduledAt = Date.now()): 
       /* 接続失敗時には次回のCronで再確認する。 */
     }
   }
-  await env.DB.batch([
+  const beforeHistory = [
     queueQuestionJobStatement(env),
     env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now()),
     env.DB.prepare('DELETE FROM oauth_states WHERE expires_at < ?').bind(now()),
     env.DB.prepare(
       "DELETE FROM idempotency_keys WHERE created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-30 days')",
     ),
-    env.DB.prepare(
-      "DELETE FROM processing_jobs WHERE status = 'done' AND updated_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')",
-    ),
+  ];
+  const afterHistory = [
     env.DB.prepare(
       "DELETE FROM stock_usage WHERE created_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')",
-    ),
-    env.DB.prepare(
-      "DELETE FROM ai_attempts WHERE created_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')",
     ),
     env.DB.prepare(
       "DELETE FROM ai_operations WHERE created_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days') AND NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=ai_operations.id)",
     ),
     env.DB.prepare(
-      "DELETE FROM ai_calls WHERE updated_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days') AND status!='running' AND NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=ai_calls.job_id)",
-    ),
-    env.DB.prepare(
       'DELETE FROM ai_deferrals WHERE NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=ai_deferrals.job_id)',
     ),
-    env.DB.prepare(
-      'DELETE FROM job_dispatch_attempts WHERE NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=job_dispatch_attempts.job_id)',
-    ),
-  ]);
+  ];
+  const minute = new Date(scheduledAt).getUTCMinutes();
+  // 親を先に削除し、毎分の ai_operations / ai_deferrals 掃除にも孤立行が見えるようにする。
+  if (minute === 0) {
+    await env.DB.batch(beforeHistory);
+    try {
+      await observeOperation('d1', 'hourly_job_history_cleanup', () =>
+        env.DB.batch([
+          env.DB.prepare(
+            "DELETE FROM processing_jobs WHERE status = 'done' AND updated_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')",
+          ),
+          env.DB.prepare(
+            "DELETE FROM ai_attempts WHERE created_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days')",
+          ),
+          env.DB.prepare(
+            "DELETE FROM ai_calls WHERE updated_at<strftime('%Y-%m-%dT%H:%M:%fZ','now','-30 days') AND status!='running' AND NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=ai_calls.job_id)",
+          ),
+          env.DB.prepare(
+            'DELETE FROM job_dispatch_attempts WHERE NOT EXISTS (SELECT 1 FROM processing_jobs WHERE id=job_dispatch_attempts.job_id)',
+          ),
+        ]),
+      );
+    } catch {
+      // observeOperation が障害を記録する。毎分の保守と dispatch は続行する。
+    }
+    await env.DB.batch(afterHistory);
+  } else {
+    await env.DB.batch([...beforeHistory, ...afterHistory]);
+  }
   // 周期の締めは日本時間。処理の遅延や複数ユーザーを拾えるよう、10分ごとに予約を確認する。
-  if (new Date(scheduledAt).getUTCMinutes() % 10 === 0) {
+  if (minute % 10 === 0) {
     try {
       await queueDueReflections(env, scheduledAt);
     } catch (error) {

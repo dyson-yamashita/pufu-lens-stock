@@ -12,6 +12,7 @@ export type Operation =
   | 'cleanup_stock_images'
   | 'article_short_text_save'
   | 'scheduled_maintenance'
+  | 'hourly_job_history_cleanup'
   | 'dispatch_superseded'
   | 'dispatch_expired'
   | 'dispatch_pending'
