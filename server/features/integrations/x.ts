@@ -65,7 +65,12 @@ export async function xToken(env: Env, userId: string): Promise<string> {
 }
 class XFetchError extends Error {}
 
-export async function fetchXPost(env: Env, userId: string, id: string) {
+export async function fetchXPost(
+  env: Env,
+  userId: string,
+  id: string,
+  onResponseStatus?: (status: number) => void,
+) {
   const token = await xToken(env, userId);
   try {
     const response = await fetch(`https://api.x.com/2/tweets/${id}?tweet.fields=note_tweet`, {
@@ -74,6 +79,7 @@ export async function fetchXPost(env: Env, userId: string, id: string) {
       redirect: 'manual',
       signal: AbortSignal.timeout(20000),
     });
+    onResponseStatus?.(response.status);
     if (!response.ok) {
       await response.body?.cancel();
       const reason =

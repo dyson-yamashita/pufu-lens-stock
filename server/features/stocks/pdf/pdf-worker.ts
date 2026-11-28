@@ -1,5 +1,6 @@
 import cmaps from 'virtual:pdf-cmaps';
 import { limitedBytes } from '../../../infrastructure/limited-bytes';
+import { pdfTooLargeMessage } from './errors';
 import { extractPdf } from './pdf';
 
 // CMap以外のサービス・保存先・認証情報を持たない専用Worker。
@@ -49,7 +50,7 @@ export default {
         const data = await limitedBytes(
           new Response(request.body, { headers: request.headers }),
           10 * 1024 * 1024,
-          'PDFが大きすぎます（上限10MB）。',
+          pdfTooLargeMessage,
           controller.signal,
         );
         return extractPdf(data, new URL(request.url), assets, controller.signal);
