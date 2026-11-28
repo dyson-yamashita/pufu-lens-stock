@@ -3,6 +3,8 @@
 // only outbound HTTP/DNS. No request is sent to example.com or a DNS service.
 const articleText =
   'URLから取得した記事です。保存と要約を分離し、失敗後も同じストックで再試行します。'.repeat(12);
+const slideText = '公開Transcriptのテスト用本文です。ストックの詳細から確認します。';
+const speakerDeck = 'https://speakerdeck.com';
 const releases = new Map<string, { ready: Promise<void>; release: () => void }>();
 function gate(key: string) {
   let entry = releases.get(key);
@@ -22,7 +24,7 @@ globalThis.fetch = async (input: RequestInfo | URL) => {
   if (
     url.origin === 'https://cloudflare-dns.com' &&
     url.pathname === '/dns-query' &&
-    url.searchParams.get('name') === 'example.com'
+    ['example.com', 'speakerdeck.com'].includes(url.searchParams.get('name') ?? '')
   ) {
     return Response.json({
       Status: 0,
@@ -33,6 +35,23 @@ globalThis.fetch = async (input: RequestInfo | URL) => {
     return new Response('User-agent: *\nDisallow: /pufu-e2e/article?key=*&fail=true$');
   }
   const key = url.searchParams.get('key') ?? '';
+  if (url.origin === speakerDeck && url.pathname === '/robots.txt')
+    return new Response(null, { status: 404 });
+  if (
+    url.origin === speakerDeck &&
+    url.pathname === '/pufu-e2e/deck' &&
+    /^[a-f0-9-]{36}$/.test(key)
+  ) {
+    const slides = Array.from(
+      { length: 7 },
+      (_, index) =>
+        `<li><h3><a href="https://files.speakerdeck.com/presentations/0123456789abcdef0123456789abcdef/slide_${index}.jpg">${index + 1}枚目。${slideText}</a></h3></li>`,
+    ).join('');
+    return new Response(
+      `<html lang="ja"><head><title>資料ページ</title></head><body><main><h1>E2EのSpeaker Deck資料</h1><div><p>${'Annual Pro sale. Create an account for more features. '.repeat(10)}</p></div><section><h2>Transcript</h2><span>7 slides</span><ol>${slides}</ol></section></main></body></html>`,
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+    );
+  }
   if (
     url.origin !== 'https://example.com' ||
     url.pathname !== '/pufu-e2e/article' ||

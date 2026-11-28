@@ -9,6 +9,73 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
 });
+
+it.each([
+  { scenario: '資料本文が現れる', hasTranscript: true, pdfLinkRemains: true },
+  { scenario: 'PDFリンクが取り除かれる', hasTranscript: false, pdfLinkRemains: false },
+  { scenario: '資料IDの要素が消えてもPDFリンクが残る', hasTranscript: false, pdfLinkRemains: true },
+])(
+  'Speaker Deckはブラウザー描画後のTranscriptと公開リンクを確認する（$scenario）',
+  async ({ hasTranscript, pdfLinkRemains }) => {
+    const promotion = 'Annual Pro sale. Create an account to share your work. '.repeat(12);
+    const slideText = 'ブラウザー描画後に読み取れるスライドの本文です。'.repeat(12);
+    const presentationId = '0123456789abcdef0123456789abcdef';
+    const pdfUrl = `https://files.speakerdeck.com/presentations/${presentationId}/slides.pdf`;
+    const downloadLink = `<a href="${pdfUrl}">Download PDF</a>`;
+    const rendered = `<html><body><main><p>${promotion}</p>${hasTranscript ? `<ol class="speakerdeck-transcript"><li>${slideText}</li></ol>` : ''}${pdfLinkRemains ? downloadLink : ''}</main></body></html>`;
+    const waitForFunction = vi.fn(async () => {});
+    vi.mocked(launch).mockResolvedValue({
+      newContext: async () => ({
+        route: vi.fn(),
+        routeWebSocket: vi.fn(),
+        newPage: async () => ({
+          goto: async () => ({ ok: () => true, status: () => 200 }),
+          locator: () => ({ first: () => ({ waitFor: vi.fn() }) }),
+          waitForFunction,
+          content: async () => rendered,
+        }),
+      }),
+      close: vi.fn(),
+    } as unknown as Awaited<ReturnType<typeof launch>>);
+    const requestedPdf = vi.fn();
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.hostname === 'cloudflare-dns.com')
+        return Response.json({
+          Status: 0,
+          Answer: url.searchParams.get('type') === 'A' ? [{ type: 1, data: '8.8.8.8' }] : [],
+        });
+      if (url.pathname === '/robots.txt') return new Response(null, { status: 404 });
+      if (url.href === pdfUrl) {
+        requestedPdf();
+        return new Response(null, { status: 404 });
+      }
+      return new Response(
+        `<html><head><link type="application/json+oembed" href="/oembed.json?url=deck"></head><body><main><script class="speakerdeck-embed" data-id="${presentationId}"></script><p>${promotion}</p>${downloadLink}</main></body></html>`,
+        { headers: { 'Content-Type': 'text/html' } },
+      );
+    });
+    const retainShortText = vi.fn(async () => {});
+    const result = fetchArticle(
+      { BROWSER: {} } as Env,
+      'https://speakerdeck.com/pufu-test/deck',
+      undefined,
+      retainShortText,
+    );
+    if (hasTranscript) await expect(result).resolves.toMatchObject({ text: slideText });
+    else if (pdfLinkRemains) await expect(result).rejects.toThrow(/公開PDFを取得できませんでした/);
+    else await expect(result).rejects.toThrow(/Speaker Deckの資料本文を十分に取得できませんでした/);
+    expect(launch).toHaveBeenCalledOnce();
+    expect(waitForFunction).toHaveBeenCalledWith(
+      expect.stringContaining('speakerdeck-transcript'),
+      null,
+      { timeout: 5000 },
+    );
+    expect(retainShortText).not.toHaveBeenCalled();
+    expect(requestedPdf).toHaveBeenCalledTimes(Number(!hasTranscript && pdfLinkRemains));
+  },
+);
+
 const renderingFailureScenarios = [
   'なし',
   '初回ナビゲーション',

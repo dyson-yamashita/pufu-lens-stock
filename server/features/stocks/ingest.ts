@@ -22,12 +22,20 @@ import {
   robotsPath,
   type RobotsGuard,
 } from './robots';
+import {
+  readSpeakerDeck,
+  speakerDeckLists,
+  speakerDeckPdfId,
+  type SpeakerDeckPage,
+} from './speaker-deck';
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 const MAX_ARTICLE_HTML_BYTES = 3 * 1024 * 1024;
 const TEXT_TOO_LARGE = 'ページが大きすぎます（上限2MB）。';
 const ARTICLE_HTML_TOO_LARGE = 'ページが大きすぎます（上限3MB）。';
 const ARTICLE_TIMEOUT = '記事取得の時間上限を超えました。';
+const SPEAKER_DECK_PDF_UNAVAILABLE =
+  '公開PDFを取得できませんでした。本文を補完して再試行してください。';
 
 class ArticleFetchError extends Error {
   constructor(
@@ -87,7 +95,8 @@ async function limitedArticleHtml(response: Response): Promise<string> {
   );
 }
 type ArticleContent = { title: string; text: string; ogImageUrl?: string };
-export function extractHtml(html: string, url: string): ArticleContent {
+type HtmlContent = ArticleContent & { speakerDeck?: SpeakerDeckPage };
+export function extractHtml(html: string, url: string, initialDeck?: SpeakerDeckPage): HtmlContent {
   const { document } = parseHTML(html);
   let ogImageUrl: string | undefined;
   for (const selector of [
@@ -107,6 +116,13 @@ export function extractHtml(html: string, url: string): ArticleContent {
     }
     if (ogImageUrl) break;
   }
+  const deck = readSpeakerDeck(
+    document as unknown as Document,
+    new URL(url),
+    initialDeck,
+    ogImageUrl,
+  );
+  if (deck) return { ...deck, ...(ogImageUrl ? { ogImageUrl } : {}) };
   const base = document.createElement('base');
   base.setAttribute('href', url);
   document.head.insertBefore(base, document.head.firstChild);
@@ -128,6 +144,7 @@ async function renderHtml(
   robots: RobotsGuard,
   deadline: number,
   details: ArticleFetchDetails,
+  knownDeck: boolean,
 ): Promise<string> {
   if (!env.BROWSER)
     throw new ArticleFetchError(
@@ -206,7 +223,9 @@ async function renderHtml(
     await page.locator('article, main, body').first().waitFor({ timeout: 5000 });
     await page
       .waitForFunction(
-        "(document.querySelector('article, main')?.textContent || '').length >= 200",
+        knownDeck
+          ? `Array.from(document.querySelectorAll(${JSON.stringify(speakerDeckLists)})).some(list => (list.textContent || '').trim().length >= ${minArticleTextLength})`
+          : "(document.querySelector('article, main')?.textContent || '').length >= 200",
         null,
         { timeout: 5000 },
       )
@@ -374,30 +393,78 @@ async function retrieveArticle(
   details.stage = 'read_body';
   let content = await (isHtml ? limitedArticleHtml(response) : limitedText(response));
   details.stage = isHtml ? 'extract_html' : 'read_body';
-  let result: ArticleContent = isHtml
+  let result: HtmlContent = isHtml
     ? extractHtml(content, url.href)
     : { title: url.hostname, text: content.trim() };
   details.initial_text_length = result.text.length;
   if (result.text.length < minArticleTextLength) {
     rememberShortText(result.text);
-    details.stage = 'render';
-    content = await renderHtml(env, url.href, robots, deadline, details);
-    details.stage = 'extract_rendered_html';
-    const rendered = extractHtml(content, url.href);
-    details.rendered_text_length = rendered.text.length;
-    rememberShortText(rendered.text);
-    result = { ...rendered, ogImageUrl: rendered.ogImageUrl ?? result.ogImageUrl };
+    if (!result.speakerDeck || env.BROWSER) {
+      try {
+        details.stage = 'render';
+        content = await renderHtml(
+          env,
+          url.href,
+          robots,
+          deadline,
+          details,
+          result.speakerDeck !== undefined,
+        );
+        details.stage = 'extract_rendered_html';
+        const rendered = extractHtml(content, url.href, result.speakerDeck);
+        details.rendered_text_length = rendered.text.length;
+        rememberShortText(rendered.text);
+        result = { ...rendered, ogImageUrl: rendered.ogImageUrl ?? result.ogImageUrl };
+      } catch (error) {
+        if (!result.speakerDeck?.pdfUrl || error instanceof RobotsError) throw error;
+      }
+    }
+    const { pdfUrl, presentationId } = result.speakerDeck ?? {};
+    if (result.text.length < minArticleTextLength && pdfUrl && presentationId) {
+      details.stage = 'fetch_linked_pdf';
+      const { response: pdf, url: pdfSourceUrl } = await fetchPublic(pdfUrl.href, {
+        deadline,
+        robots,
+        guard: (target) => {
+          if (speakerDeckPdfId(target) !== presentationId)
+            throw new ArticleFetchError('redirect_failed', SPEAKER_DECK_PDF_UNAVAILABLE);
+        },
+        onResponseStatus: (status) => {
+          details.linked_pdf_http_status = status;
+        },
+      });
+      if (!pdf.ok || articleContentType(pdf.headers.get('Content-Type') ?? '') !== 'pdf') {
+        await pdf.body?.cancel();
+        throw new ArticleFetchError(
+          pdf.ok ? 'unsupported_content_type' : 'http_error',
+          SPEAKER_DECK_PDF_UNAVAILABLE,
+        );
+      }
+      details.stage = 'parse_pdf';
+      const { text } = await parsePdf(env, pdf, pdfSourceUrl, rememberShortText);
+      return {
+        title: result.title,
+        text,
+        ...(result.ogImageUrl ? { ogImageUrl: result.ogImageUrl } : {}),
+      };
+    }
   }
   if (result.text.length < minArticleTextLength)
     throw new ArticleFetchError(
       'insufficient_text',
-      '記事本文を十分に取得できませんでした。ログインやアクセス制限が必要な可能性があります。',
+      result.speakerDeck
+        ? 'Speaker Deckの資料本文を十分に取得できませんでした。本文を補完して再試行してください。'
+        : '記事本文を十分に取得できませんでした。ログインやアクセス制限が必要な可能性があります。',
     );
   if (result.text.length > 120000)
     throw new ArticleFetchError(
       'text_too_long',
       '本文が長すぎます（上限12万文字）。URLは保存されています。',
     );
+  if (result.speakerDeck) {
+    const { title, text, ogImageUrl } = result;
+    return { title, text, ...(ogImageUrl ? { ogImageUrl } : {}) };
+  }
   if (!isHtml) return result;
   let next = nextArticlePage(content, url);
   if (!next) return result;

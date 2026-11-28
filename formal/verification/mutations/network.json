@@ -24,6 +24,30 @@
       "old": "  r.beforeDeadline = true ∧ r.youtube = false ∧ robotsPermits r.robots = true",
       "new": "  r.beforeDeadline = true ∧ r.youtube = false",
       "theorem": "robots_refusal_does_not_fetch"
+    },
+    {
+      "name": "B09-linked-pdf-public-link",
+      "old": "facts.recognizedDeck && facts.publishedLink &&",
+      "new": "facts.recognizedDeck &&",
+      "theorem": "unlisted_pdf_does_not_fetch"
+    },
+    {
+      "name": "B09-linked-pdf-origin",
+      "old": "facts.insufficientTranscript && facts.fileOrigin && facts.pdfPath",
+      "new": "facts.insufficientTranscript && facts.pdfPath",
+      "theorem": "foreign_pdf_does_not_fetch"
+    },
+    {
+      "name": "B09-linked-pdf-path",
+      "old": "facts.insufficientTranscript && facts.fileOrigin && facts.pdfPath",
+      "new": "facts.insufficientTranscript && facts.fileOrigin",
+      "theorem": "nonpdf_target_does_not_fetch"
+    },
+    {
+      "name": "B09-linked-pdf-presentation",
+      "old": "facts.pdfPath && facts.samePresentation",
+      "new": "facts.pdfPath",
+      "theorem": "other_presentation_does_not_fetch"
     }
   ]
 }

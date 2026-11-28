@@ -109,10 +109,12 @@ export type ArticleFetchDetails = {
     | 'extract_html'
     | 'render'
     | 'extract_rendered_html'
+    | 'fetch_linked_pdf'
     | 'parse_pdf'
     | 'fetch_x';
   http_status?: number;
   browser_http_status?: number;
+  linked_pdf_http_status?: number;
   content_type?: 'html' | 'text' | 'pdf' | 'unsupported';
   initial_text_length?: number;
   rendered_text_length?: number;
@@ -146,6 +148,7 @@ export function logArticleFetchFailure(
       reason: failure.reason,
       http_status: details.http_status,
       browser_http_status: details.browser_http_status,
+      linked_pdf_http_status: details.linked_pdf_http_status,
       robots_http_status: failure.robots_http_status,
       content_type: details.content_type,
       initial_text_length: details.initial_text_length,

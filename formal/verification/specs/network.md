@@ -14,6 +14,14 @@
 
 OG画像の拒否は画像を書き込まず `false` を返し、記事本文・要約の処理を継続する。全DBやR2全体が不変になる境界ではない。
 
+## Speaker Deckで公開リンクのPDFを取得する条件
+
+[Speaker Deckの抽出](../../../server/features/stocks/speaker-deck.ts) は対象ホストの資料ページを判別し、Transcriptが200文字未満のときに、表示された資料のIDと一致する公開リンクからPDFの取得先を選ぶ。取得は [fetchPublic](../../../server/features/stocks/ingest.ts) を使い、最初の取得先とリダイレクト先ごとに `files.speakerdeck.com` のHTTPSオリジンと資料PDFのパス、同じ資料IDを確認し、共通の期限、robots.txt、URLとDNSの検証を通す。ブラウザー描画を使える場合は描画後のTranscriptと公開リンクを確認し、リンクの照合には取得時に確認した資料IDを保持する。
+
+`linkedPdfRequest` は資料ページ、公開リンク、本文不足、オリジン、パス、資料IDの一致の観測結果を `Request` のcaller guardに追加する。`unlisted_pdf_does_not_fetch`、`foreign_pdf_does_not_fetch`、`nonpdf_target_does_not_fetch`、`other_presentation_does_not_fetch` は許可条件を外す変異で失敗する。`pdf_robots_refusal_does_not_fetch` は既存のrobots条件も適用する。`linked_pdf_outcomes_reachable` は公開PDFの取得と、他オリジンや別資料への移動等の拒否を確認する。
+
+[取得テスト](../../../tests/ingest.test.ts) はリンク未掲載、robots拒否、許可範囲外へのリダイレクトのHTTP取得列を照合する。正常系は実PDF解析Workerの文字抽出を通す。モデルへの資料判別、リンク、オリジンとパスの入力値は実装の判定を抽象化し、HTMLの構造を数学的には検証しない。外部応答にはテスト用のHTMLとPDFを使う。
+
 ## 明示した許可条件
 
 `Url` はWHATWG URLによる解析・正規化後の値と検証対象文字列長を抽象化する。`urlAllowed` は次の条件を独立に要求する。
@@ -45,7 +53,7 @@ OG画像の拒否は画像を書き込まず `false` を返し、記事本文・
 
 DNS拒否の照合テストは狙う条件だけを不正にする。Statusエラーは公開IPの有効な回答を含み、HTTP 503もStatus=0と公開IPを含む有効なJSONを返す。空回答はHTTP 200/Status=0で検査し、期限ちょうどは許可されるDNS回答を用意したうえでDNS自体が呼ばれないことも確認する。
 
-変異4件はcredentials条件削除、DNS条件削除、各hopのrequest guard削除、robots判定の省略。それぞれ指定定理の証明箇所で失敗することを共通runnerで確認し、構文・定義エラーによる失敗は検出成功にしない。
+共通の取得条件の変異4件はcredentials条件削除、DNS条件削除、各hopのrequest guard削除、robots判定の省略。それぞれ指定定理の証明箇所で失敗することを共通runnerで確認し、構文・定義エラーによる失敗は検出成功にしない。
 
 ## 前提と未検証
 

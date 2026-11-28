@@ -112,6 +112,23 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
   await screen.getByRole('button', '取得した本文', { exact: true }).click();
   await expect(browser.locator('.article-body')).toHaveText('取得できた短い本文です。');
 
+  await screen.getByRole('button', '前の画面に戻る', { exact: true }).click();
+  await screen.getByRole('button', '記事をストック', { exact: true }).click();
+  const deckUrl = `https://speakerdeck.com/pufu-e2e/deck?key=${requestId()}&slide=7`;
+  await screen.getByLabel('投稿URL').fill(deckUrl);
+  await screen.getByRole('button', 'ストックする', { exact: true }).click();
+  const deckButton = screen.getByRole('button', 'E2EのSpeaker Deck資料', { exact: true });
+  await expect(deckButton).toBeVisible({ timeout: 15000 });
+  await deckButton.click();
+  await screen.getByRole('button', '取得した本文', { exact: true }).click();
+  await expect(browser.locator('.article-body')).toHaveText(
+    Array.from(
+      { length: 7 },
+      (_, index) =>
+        `${index + 1}枚目。公開Transcriptのテスト用本文です。ストックの詳細から確認します。`,
+    ).join('\n\n'),
+  );
+
   const { publication } = (await fixture.request(
     `/projects/${fixture.projectId}/publication`,
     'PATCH',

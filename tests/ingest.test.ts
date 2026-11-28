@@ -71,6 +71,118 @@ describe('公開記事の取得', () => {
     expect(requests).toEqual(['https://example.com/folder/start', 'https://example.com/article']);
   });
 
+  const deckUrl = 'https://speakerdeck.com/pufu-test/storage-slides?slide=22';
+  const slideFiles = 'https://files.speakerdeck.com/presentations/0123456789abcdef0123456789abcdef';
+  const deckPdf = `${slideFiles}/storage-slides.pdf`;
+  const otherDeckPdf =
+    'https://files.speakerdeck.com/presentations/ffffffffffffffffffffffffffffffff/related.pdf';
+  const slideText = 'スライドの本文を取得し、テキストの並び順と各スライドの説明を確認します。';
+  function deckPage(transcript = '', download = '') {
+    return new Response(
+      `<html><head><title>テスト資料 - Speaker Deck</title><link rel="alternate" type="application/json+oembed" href="/oembed.json?url=deck"><meta property="og:image" content="${slideFiles}/slide_0.jpg"></head><body><main><h1>テスト資料</h1>
+       <div><h2>Have presentations of your own?</h2><p>${'Annual Pro sale. Share your work with private links. '.repeat(12)}</p></div>
+       ${download}${transcript}<section><h2>More Decks</h2><p>関連資料の宣伝です。</p></section></main></body></html>`,
+      { headers: { 'Content-Type': 'text/html' } },
+    );
+  }
+
+  it('Speaker Deckでは広告の後にあるTranscriptからスライド本文を順番に取得する', async () => {
+    const slides = Array.from({ length: 7 }, (_, index) => `${index + 1}. ${slideText}`);
+    const transcript = `<section><div><h2>Transcript</h2><span>7 slides</span></div><ol>${slides
+      .map(
+        (slide, index) =>
+          `<li><h3><a href="${slideFiles}/slide_${index}.jpg">${slide}</a></h3><p>補足${index + 1}</p></li>`,
+      )
+      .join('')}</ol></section>`;
+    const requests = mockNetwork(() =>
+      deckPage(transcript, `<a href="${deckPdf}">Download PDF</a>`),
+    );
+    await expect(fetchArticle(env, deckUrl)).resolves.toMatchObject({
+      title: 'テスト資料',
+      text: slides.map((slide, index) => `${slide}\n補足${index + 1}`).join('\n\n'),
+    });
+    expect(requests).toEqual([deckUrl]);
+  });
+
+  it('Speaker DeckのTranscriptが空なら掲載されているPDFを既存のPDF Workerで読む', async () => {
+    const requests = mockNetwork((url) =>
+      url.href === deckPdf
+        ? new Response(pdfFixture([pdfArticleText]), {
+            headers: { 'Content-Type': 'application/pdf' },
+          })
+        : deckPage(
+            '',
+            `<a href="${otherDeckPdf}">Related deck PDF</a><a href="${deckPdf}">Download PDF</a>`,
+          ),
+    );
+    const article = await fetchArticle(env, deckUrl);
+    expect(article.title).toBe('テスト資料');
+    expect(article.text.replace(/\s+/g, ' ')).toBe(pdfArticleText.trim());
+    expect(requests).toEqual([deckUrl, deckPdf]);
+  });
+
+  it('Speaker Deckの短いTranscriptは取得失敗時の本文として記録する', async () => {
+    const short = '最初のスライドの短い説明。';
+    const requests = mockNetwork(() =>
+      deckPage(`<ol class="speakerdeck-transcript"><li>${short}</li></ol>`),
+    );
+    const retainShortText = vi.fn(async () => {});
+    await expect(fetchArticle(env, deckUrl, undefined, retainShortText)).rejects.toThrow(
+      /Speaker Deckの資料本文を十分に取得できませんでした/,
+    );
+    expect(retainShortText).toHaveBeenCalledExactlyOnceWith(short);
+    expect(requests).toEqual([deckUrl]);
+  });
+
+  it.each([
+    { restriction: 'リンクなし', error: /資料本文を十分に取得/ },
+    { restriction: 'robots拒否', error: /robots\.txt.*禁止/ },
+    { restriction: '別サイトへの移動', error: /公開PDFを取得できませんでした/ },
+    { restriction: '別資料への移動', error: /公開PDFを取得できませんでした/ },
+    { restriction: 'PDF以外への移動', error: /公開PDFを取得できませんでした/ },
+    { restriction: 'PDF以外の応答', error: /公開PDFを取得できませんでした/ },
+  ])(
+    'B09 Speaker Deckの広告だけを本文にせず、公開PDFの取得条件を守る（$restriction）',
+    async ({ restriction, error }) => {
+      const redirects: Record<string, string> = {
+        別サイトへの移動: 'https://example.com/unrelated.pdf',
+        別資料への移動: otherDeckPdf,
+        PDF以外への移動: `${slideFiles}/slide_0.jpg`,
+      };
+      const requests = mockNetwork(
+        (url) => {
+          if (url.href === deckPdf) {
+            if (restriction === 'PDF以外の応答') return deckPage();
+            return new Response(null, {
+              status: 302,
+              headers: {
+                Location: redirects[restriction],
+              },
+            });
+          }
+          return deckPage(
+            '',
+            restriction === 'リンクなし'
+              ? `<script type="application/json">${JSON.stringify({ pdf: deckPdf })}</script><a href="${otherDeckPdf}">Related deck PDF</a>`
+              : `<a href="${deckPdf}">Download PDF</a>`,
+          );
+        },
+        (url) =>
+          restriction === 'robots拒否' && url.hostname === 'files.speakerdeck.com'
+            ? new Response('User-agent: *\nDisallow: /presentations/')
+            : new Response(null, { status: 404 }),
+      );
+      const retainShortText = vi.fn(async () => {});
+      await expect(fetchArticle(env, deckUrl, undefined, retainShortText)).rejects.toThrow(error);
+      expect(retainShortText).not.toHaveBeenCalled();
+      expect(requests).toEqual(
+        restriction === 'リンクなし' || restriction === 'robots拒否'
+          ? [deckUrl]
+          : [deckUrl, deckPdf],
+      );
+    },
+  );
+
   it.each([
     ['<meta property="og:image" content="../cover.png">', 'https://example.com/cover.png'],
     [

@@ -1245,7 +1245,9 @@ export const en: Record<string, string> = {
   'ui.theme_settings.applied_immediately_this_setting_is_saved_in_this_browser':
     'Applied immediately. This setting is saved in this browser.',
   'ui.user_manual.save_articles_as_stocks': 'Save articles as stocks',
-  'manual.stock_url_heading': 'Multi-page articles, PDFs, X, and YouTube',
+  'manual.stock_url_heading': 'Multi-page articles, PDFs, Speaker Deck, X, and YouTube',
+  'manual.stock_speaker_deck':
+    'For Speaker Deck, PufuLens reads the public Transcript in slide order. If it contains too little text, PufuLens checks for a public PDF linked on the page.',
   'manual.stock_short_retrieved_text':
     'If a fetch fails after finding some text, you can read it under Retrieved text in the stock details.',
   'stock.detail_title': 'Stock details',
@@ -1567,6 +1569,9 @@ export const en: Record<string, string> = {
     'Currently HTML, text and PDF articles are supported.',
   'error.could_not_retrieve_enough_article_text_the_page_may_require':
     'Could not retrieve enough article text. The page may require sign-in or restrict access.',
+  'error.speaker_deck_text_insufficient':
+    'Could not retrieve enough slide text from Speaker Deck. Supply the text and retry.',
+  'error.public_pdf_unavailable': 'Could not retrieve the public PDF. Supply the text and retry.',
   'error.the_article_text_is_too_long_120_000_characters_maximum':
     'The article text is too long (120,000 characters maximum). The URL has been saved.',
   'error.ai_processing_stopped_after_waiting_30_minutes_from_acceptance_please':

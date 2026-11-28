@@ -1226,7 +1226,9 @@ export const ja: Record<string, string> = {
   'ui.theme_settings.applied_immediately_this_setting_is_saved_in_this_browser':
     '選ぶとすぐに反映されます。設定はこのブラウザに保存します。',
   'ui.user_manual.save_articles_as_stocks': '記事をストックする',
-  'manual.stock_url_heading': '複数ページの記事・PDF・X・YouTube',
+  'manual.stock_url_heading': '複数ページの記事・PDF・Speaker Deck・X・YouTube',
+  'manual.stock_speaker_deck':
+    'Speaker Deckの資料は、公開されている「Transcript」の文字情報をスライド順に取得します。文字情報が足りない場合は、ページに掲載された公開PDFも確認します。',
   'manual.stock_short_retrieved_text':
     'ステータスが「取得失敗」でも、短い本文を取得できた場合は、詳細の「取得した本文」で読めます。',
   'stock.detail_title': 'ストックの詳細',
@@ -1546,6 +1548,10 @@ export const ja: Record<string, string> = {
     '現在はHTML・テキスト・PDFの記事に対応しています。',
   'error.could_not_retrieve_enough_article_text_the_page_may_require':
     '記事本文を十分に取得できませんでした。ログインやアクセス制限が必要な可能性があります。',
+  'error.speaker_deck_text_insufficient':
+    'Speaker Deckの資料本文を十分に取得できませんでした。本文を補完して再試行してください。',
+  'error.public_pdf_unavailable':
+    '公開PDFを取得できませんでした。本文を補完して再試行してください。',
   'error.the_article_text_is_too_long_120_000_characters_maximum':
     '本文が長すぎます（上限12万文字）。URLは保存されています。',
   'error.ai_processing_stopped_after_waiting_30_minutes_from_acceptance_please':
