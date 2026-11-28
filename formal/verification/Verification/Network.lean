@@ -231,6 +231,58 @@ def publicRequest : Request := ⟨⟨publicUrl, publicDns⟩, true, true, false,
 def privateRedirect : Request :=
   { publicRequest with destination := ⟨publicUrl, ⟨true, 0, 0, [true, false]⟩⟩ }
 
+structure SpeakerDeckPdf where
+  recognizedDeck : Bool
+  publishedLink : Bool
+  insufficientTranscript : Bool
+  fileOrigin : Bool
+  pdfPath : Bool
+  samePresentation : Bool
+  deriving DecidableEq, Repr
+
+def linkedPdfRequest (facts : SpeakerDeckPdf) (r : Request) : Request :=
+  { r with callerGuard := r.callerGuard && facts.recognizedDeck && facts.publishedLink &&
+      facts.insufficientTranscript && facts.fileOrigin && facts.pdfPath && facts.samePresentation }
+
+theorem unlisted_pdf_does_not_fetch (s : State) (r : Request) (reply : Reply)
+    (facts : SpeakerDeckPdf) (missing : facts.publishedLink = false) :
+    (step s (linkedPdfRequest facts r) reply).fetched = s.fetched := by
+  apply rejected_request_does_not_fetch
+  simp [requestAllowed, linkedPdfRequest, missing]
+
+theorem foreign_pdf_does_not_fetch (s : State) (r : Request) (reply : Reply)
+    (facts : SpeakerDeckPdf) (foreign : facts.fileOrigin = false) :
+    (step s (linkedPdfRequest facts r) reply).fetched = s.fetched := by
+  apply rejected_request_does_not_fetch
+  simp [requestAllowed, linkedPdfRequest, foreign]
+
+theorem nonpdf_target_does_not_fetch (s : State) (r : Request) (reply : Reply)
+    (facts : SpeakerDeckPdf) (nonpdf : facts.pdfPath = false) :
+    (step s (linkedPdfRequest facts r) reply).fetched = s.fetched := by
+  apply rejected_request_does_not_fetch
+  simp [requestAllowed, linkedPdfRequest, nonpdf]
+
+theorem other_presentation_does_not_fetch (s : State) (r : Request) (reply : Reply)
+    (facts : SpeakerDeckPdf) (other : facts.samePresentation = false) :
+    (step s (linkedPdfRequest facts r) reply).fetched = s.fetched := by
+  apply rejected_request_does_not_fetch
+  simp [requestAllowed, linkedPdfRequest, other]
+
+theorem pdf_robots_refusal_does_not_fetch (s : State) (r : Request) (reply : Reply)
+    (facts : SpeakerDeckPdf) (denied : robotsPermits r.robots = false) :
+    (step s (linkedPdfRequest facts r) reply).fetched = s.fetched := by
+  exact robots_refusal_does_not_fetch s (linkedPdfRequest facts r) reply denied
+
+theorem linked_pdf_outcomes_reachable :
+    let facts : SpeakerDeckPdf := ⟨true, true, true, true, true, true⟩
+    let first := step initial (linkedPdfRequest facts publicRequest) (.redirect true)
+    first.fetched = [publicRequest.destination] ∧
+      (step first (linkedPdfRequest { facts with fileOrigin := false } publicRequest) .terminal).fetched = first.fetched ∧
+      (step first (linkedPdfRequest { facts with samePresentation := false } publicRequest) .terminal).fetched = first.fetched ∧
+      (step initial (linkedPdfRequest { facts with recognizedDeck := false } publicRequest) .terminal).fetched = [] ∧
+      (step initial (linkedPdfRequest { facts with insufficientTranscript := false } publicRequest) .terminal).fetched = [] := by
+  decide
+
 theorem successful_fetch_reachable :
     (step initial publicRequest .terminal).finished = true ∧
     (step initial publicRequest .terminal).fetched = [publicRequest.destination] := by

@@ -110,6 +110,10 @@ export const errorKeys: Record<string, string> = {
     'error.currently_html_text_and_pdf_articles_are_supported',
   '記事本文を十分に取得できませんでした。ログインやアクセス制限が必要な可能性があります。':
     'error.could_not_retrieve_enough_article_text_the_page_may_require',
+  'Speaker Deckの資料本文を十分に取得できませんでした。本文を補完して再試行してください。':
+    'error.speaker_deck_text_insufficient',
+  '公開PDFを取得できませんでした。本文を補完して再試行してください。':
+    'error.public_pdf_unavailable',
   '本文が長すぎます（上限12万文字）。URLは保存されています。':
     'error.the_article_text_is_too_long_120_000_characters_maximum',
   'AI処理の待機期限（受付から30分）に達したため停止しました。再試行してください。':

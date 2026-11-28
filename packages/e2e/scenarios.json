@@ -124,12 +124,13 @@
   },
   {
     "id": "STOCK-002",
-    "estimatedSeconds": 45,
+    "estimatedSeconds": 55,
     "title": "URL記事の取得状態と失敗後の再試行",
     "sources": [
       "src/app/App.tsx",
       "server/features/stocks/ingest.ts",
       "server/features/stocks/article-text.ts",
+      "server/features/stocks/speaker-deck.ts",
       "server/features/stocks/robots.ts",
       "server/infrastructure/jobs/workflows.ts",
       "server/api/app.ts",
@@ -153,6 +154,7 @@
       "URL入力から実際の取得・本文抽出・要約・保存と再読込までを確認。取得中を確認してからテスト専用HTTP fixtureを解放する",
       "取得した本文を表示し、本文を編集するボタンがないことを確認",
       "短い本文しか取得できないURLは取得失敗のまま、詳細画面の再読込後も『取得した本文』に抽出文字列を表示",
+      "Speaker Deck資料のURLを保存すると、スライド順のTranscriptが『取得した本文』に表示される。広告とPDF取得条件はVitestで照合する",
       "2MBを超える記事HTMLの取得・保存を両画面幅で確認。HTMLの3MB境界とプレーンテキストの2MB拒否はVitestで確認",
       "robots.txtで禁止された記事のURLと取得できなかった理由を表示。画面から本文を補完して再試行し、同じストックID・保存先のまま本文と要約を保持。再読込後も重複がない。禁止先へHTTP要求を送らないことはVitestで確認",
       "DNSと外部HTTPだけをscratch Workerのfixtureに置換。実サイト・実AIの品質、PDF・YouTubeは対象外",
