@@ -78,11 +78,16 @@ export function readSpeakerDeck(
   const text = slides.map(slideText).filter(Boolean).join('\n\n');
   const title =
     document.querySelector('h1')?.textContent?.trim() || document.title.trim() || url.hostname;
+  const player = document.querySelector('iframe.speakerdeck-iframe[src]')?.getAttribute('src');
+  const playerId = /^https:\/\/speakerdeck\.com\/player\/([0-9a-f]{32})(?:[?#]|$)/i.exec(
+    player ?? '',
+  )?.[1];
   const embedId = document.querySelector('.speakerdeck-embed[data-id]')?.getAttribute('data-id');
   const presentationId =
     initialDeck?.presentationId ??
     assetLinkId(transcript?.querySelector(slideLink)?.getAttribute('href'), url) ??
     assetLinkId(ogImageUrl, url) ??
+    playerId?.toLowerCase() ??
     (embedId && /^[0-9a-f]{32}$/i.test(embedId) ? embedId.toLowerCase() : undefined);
   return {
     title: title.slice(0, 300),

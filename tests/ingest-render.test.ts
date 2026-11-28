@@ -51,7 +51,7 @@ it.each([
         return new Response(null, { status: 404 });
       }
       return new Response(
-        `<html><head><link type="application/json+oembed" href="/oembed.json?url=deck"></head><body><main><script class="speakerdeck-embed" data-id="${presentationId}"></script><p>${promotion}</p>${downloadLink}</main></body></html>`,
+        `<html><head><link type="application/json+oembed" href="/oembed.json?url=deck"></head><body><main><iframe class="speakerdeck-iframe" src="https://speakerdeck.com/player/${presentationId}"></iframe><p>${promotion}</p>${downloadLink}</main></body></html>`,
         { headers: { 'Content-Type': 'text/html' } },
       );
     });
