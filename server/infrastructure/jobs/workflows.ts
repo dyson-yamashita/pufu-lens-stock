@@ -206,7 +206,16 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
           throw new Error('保存したテキスト本文が見つかりません。');
         const content = article.input_text
           ? { title: article.title, text: article.input_text }
-          : await fetchArticle(this.env, article.source_url, job.user_id);
+          : await fetchArticle(this.env, article.source_url, job.user_id, async (text) => {
+              await this.env.DB.prepare(
+                `UPDATE articles SET short_retrieved_text = ?
+                 WHERE id = ? AND user_id = ? AND generation = ? AND status = 'extracting'
+                   AND source_type = 'url' AND input_text IS NULL
+                   AND EXISTS (SELECT 1 FROM processing_jobs WHERE id = ? AND status = 'running')`,
+              )
+                .bind(text, article.id, job.user_id, job.revision, job.id)
+                .run();
+            });
         const pagesJson = 'pages' in content ? JSON.stringify(content.pages ?? []) : null;
         await this.env.CONTENT.put(key, content.text, {
           httpMetadata: { contentType: 'text/plain; charset=utf-8' },
@@ -230,7 +239,7 @@ export class ArticleWorkflow extends WorkflowEntrypoint<Env, { jobId: string }> 
         );
         const statements = [
           this.env.DB.prepare(
-            "UPDATE articles SET title = ?, content_key = ?, has_og_image = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
+            "UPDATE articles SET title = ?, content_key = ?, short_retrieved_text = NULL, has_og_image = ?, status = 'summarizing', updated_at = ? WHERE id = ? AND generation = ?",
           ).bind(content.title, key, Number(hasOgImage), now(), article.id, job.revision),
         ];
         if (current.content_key && current.content_key !== key) {

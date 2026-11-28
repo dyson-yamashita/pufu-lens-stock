@@ -54,6 +54,12 @@
       "old": "(o.status == 422 && !o.errorIsString)",
       "new": "(o.status == 422)",
       "theorem": "pdf_422_error_denied"
+    },
+    {
+      "name": "B14-pdf-short-text-error",
+      "old": "(o.status == 422) && o.errorIsString && insufficientText &&",
+      "new": "(o.status == 422) && o.errorIsString &&",
+      "theorem": "unrelated_pdf_error_has_no_short_text"
     }
   ]
 }

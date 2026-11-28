@@ -181,6 +181,41 @@ theorem pdf_large_response_denied (o : PdfOutput) (h : 1024 * 1024 < o.responseB
   have hn : ¬ o.responseBytes ≤ 1024 * 1024 := by omega
   simp [acceptPdf, hn]
 
+-- short_text is a separate optional field of the insufficient-text error response.
+def acceptPdfShortText (o : PdfOutput) (insufficientText nonblank : Bool) (shortLength : Option Nat) : Bool :=
+  (o.status == 422) && o.errorIsString && insufficientText &&
+    decide (o.responseBytes ≤ 1024 * 1024) && nonblank &&
+    shortLength.any (fun length => decide (0 < length ∧ length < 200))
+
+theorem unrelated_pdf_error_has_no_short_text (o : PdfOutput) (nonblank : Bool) (length : Option Nat) :
+    acceptPdfShortText o false nonblank length = false := by
+  simp [acceptPdfShortText]
+
+theorem pdf_short_text_requires_bounds (o : PdfOutput) (nonblank : Bool) (length : Nat)
+    (denied : ¬ (0 < length ∧ length < 200)) :
+    acceptPdfShortText o true nonblank (some length) = false := by
+  simp [acceptPdfShortText]
+  intro _ _ _ _ positive
+  omega
+
+theorem pdf_short_text_stays_failed (o : PdfOutput) (insufficientText nonblank : Bool)
+    (length : Option Nat) (accepted : acceptPdfShortText o insufficientText nonblank length = true) :
+    acceptPdf o = false := by
+  by_cases hs : o.status = 422
+  · cases he : o.errorIsString
+    · simp [acceptPdfShortText, hs, he] at accepted
+    · exact pdf_422_error_denied o hs he
+  · simp [acceptPdfShortText, hs] at accepted
+
+theorem pdf_short_text_decisions_reachable :
+    let o : PdfOutput := ⟨422, true, 512, false, 0, false, 0⟩
+    acceptPdfShortText o true true (some 199) = true ∧
+      acceptPdfShortText o true true (some 200) = false ∧
+      acceptPdfShortText o true false (some 10) = false ∧
+      acceptPdfShortText o true true none = false ∧
+      acceptPdfShortText { o with responseBytes := 1024 * 1024 + 1 } true true (some 10) = false := by
+  decide
+
 -- finish_reason can be stop, missing or null; present incomplete reasons fail.
 structure AiOutput where
   chatEnvelopeAccepted : Bool

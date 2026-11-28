@@ -26,6 +26,12 @@
 
 [jobs.json](../mutations/jobs.json) はrevision、owner、lease時刻、dispatcher生存user、記事世代、待機状態の条件を各1箇所だけ除去する。指定した拒否定理の証明失敗を確認し、構文・依存・型のエラーを検出成功に数えない。
 
+## 取得失敗時の短い本文
+
+- [ArticleWorkflow](../../../server/infrastructure/jobs/workflows.ts) は取得の失敗を受けて、URL記事かつ手入力なし、記事の所有者・世代が一致、記事が取得中、ジョブが実行中であることを、短い本文のD1保存時に確認する。削除済みの記事に対するUPDATEは行を作成しない。`retainShortText` は失敗時に得られた前後空白を除くと空でない本文のUTF-16長と保存時の状態を受け取り、採用時は短い本文の欄だけを更新する。
+- `stale_short_text_denied` と `stopped_short_text_denied` の変異は世代条件とジョブ状態を除く。`foreign_short_text_denied`、`non_extraction_short_text_denied`、`out_of_range_short_text_denied` はそれぞれの拒否、`short_text_preserves_article_state` は取得状態・要約・メモリ・問いの保持、`short_text_decisions_reachable` は成功と拒否への到達を扱う。状態照会後に世代が進んでも条件付きUPDATEで拒否する。進行中の外部取得自体の取消しは対象外。
+- [照合テスト](../../../tests/workflows.test.ts) はHTML・PDF取得から失敗、権限付き詳細表示、匿名公開、再取得成功を通す。旧世代の取得中に再試行した場合に、新世代のD1に短文が保存されないことを照合する。詳細の権限判定には既存の `ownedStock` を使い、公開用の要約は既存経路で採用される。成功時はR2本文の参照設定と同時に短い本文を削除する。
+
 ## 操作順序のMBT
 
 旧ジョブが要約確定を待つ間に本文を編集し、旧・新のジョブをどちらから完了するかで2経路を生成する。各経路の最後に、完了済みの新ジョブを同じIDで再配送する。 [要約のXStateモデル](../../../tests/models/article-summary.ts)

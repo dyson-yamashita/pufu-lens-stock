@@ -1,6 +1,7 @@
 import type { Env } from '../../../env';
 import { limitedBytes } from '../../../infrastructure/limited-bytes';
-import { pdfTooLargeMessage } from './errors';
+import { isShortRetrievedText, minArticleTextLength } from '../article-text';
+import { pdfInsufficientTextMessage, pdfTooLargeMessage } from './errors';
 
 const unavailable = 'PDFの解析を完了できませんでした。本文を補完して再試行してください。';
 class PdfParserError extends Error {}
@@ -10,6 +11,7 @@ export async function parsePdf(
   env: Env,
   source: Response,
   url: URL,
+  rememberShortText?: (text: string) => void,
 ): Promise<{ title: string; text: string }> {
   if (Number(source.headers.get('Content-Length')) > 10 * 1024 * 1024) {
     await source.body?.cancel();
@@ -59,13 +61,19 @@ export async function parsePdf(
         }
         const bytes = await limitedBytes(response, 1024 * 1024, unavailable, controller.signal);
         const result = JSON.parse(new TextDecoder().decode(bytes));
-        if (response.status === 422 && typeof result.error === 'string')
+        if (response.status === 422 && typeof result.error === 'string') {
+          if (
+            result.error === pdfInsufficientTextMessage &&
+            isShortRetrievedText(result.short_text)
+          )
+            rememberShortText?.(result.short_text);
           throw new PdfParserError(result.error.slice(0, 400));
+        }
         if (
           typeof result.title !== 'string' ||
           result.title.length > 300 ||
           typeof result.text !== 'string' ||
-          result.text.length < 200 ||
+          result.text.length < minArticleTextLength ||
           result.text.length > 120000
         )
           throw new Error(unavailable);

@@ -1,5 +1,5 @@
 import { getResolvedPDFJS } from 'unpdf';
-import { pdfInsufficientTextMessage } from './errors';
+import { minArticleTextLength } from '../article-text';
 
 class PdfContentError extends Error {}
 
@@ -8,7 +8,7 @@ export async function extractPdf(
   url: URL,
   assets?: Pick<Fetcher, 'fetch'>,
   signal?: AbortSignal,
-): Promise<{ title: string; text: string }> {
+): Promise<{ title: string; text: string } | { shortText: string }> {
   const { getDocument } = await getResolvedPDFJS();
   signal?.throwIfAborted();
   // URLを渡さず取得済みバイト列だけを解析し、外部のフォント等も読み込まない。
@@ -68,7 +68,7 @@ export async function extractPdf(
           .replace(/[\t ]+\n/g, '\n')
           .replace(/\n{3,}/g, '\n\n')
           .trim();
-        if (text.length < 200) throw new PdfContentError(pdfInsufficientTextMessage);
+        if (text.length < minArticleTextLength) return { shortText: text };
         const { info } = await pdf.getMetadata();
         const metadataTitle =
           'Title' in info && typeof info.Title === 'string' ? info.Title.trim() : '';

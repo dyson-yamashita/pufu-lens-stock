@@ -155,7 +155,8 @@ it.each(renderingFailureScenarios)(
       );
     });
     const url = 'https://example.com/story' + (failure === '本文不足' ? '?token=private-url' : '');
-    const result = fetchArticle({ BROWSER: {} } as Env, url);
+    const retainShortText = vi.fn(async () => {});
+    const result = fetchArticle({ BROWSER: {} } as Env, url, undefined, retainShortText);
     if (blockedNavigation) {
       await expect(result).rejects.toThrow(/robots\.txt.*禁止/);
       expect(errors).toHaveBeenCalledExactlyOnceWith(
@@ -169,6 +170,7 @@ it.each(renderingFailureScenarios)(
       );
     } else if (failure === '本文不足') {
       await expect(result).rejects.toThrow(/記事本文を十分に取得できませんでした/);
+      expect(retainShortText).toHaveBeenCalledExactlyOnceWith(shortText);
       expect(errors).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({
           event: 'article_fetch_failed',
@@ -194,6 +196,7 @@ it.each(renderingFailureScenarios)(
       expect(article.text).toContain('後半だけの条件');
       expect(article.pages).toHaveLength(2);
       expect(errors).not.toHaveBeenCalled();
+      expect(retainShortText).not.toHaveBeenCalled();
     }
     expect(routeOutcomes).toEqual(
       requests.map(([, , , shouldLoad]) => [shouldLoad ? 'loaded' : 'aborted']),

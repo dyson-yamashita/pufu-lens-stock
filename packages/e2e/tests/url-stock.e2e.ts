@@ -101,6 +101,17 @@ test('STOCK-002 URL記事の取得中・完了と取得失敗後の本文補完�
     status: 'ready',
   });
 
+  await screen.getByRole('button', '前の画面に戻る', { exact: true }).click();
+  await screen.getByRole('button', '記事をストック', { exact: true }).click();
+  const shortUrl = `https://example.com/pufu-e2e/article?key=${requestId()}&short=true`;
+  await screen.getByLabel('投稿URL').fill(shortUrl);
+  await screen.getByRole('button', 'ストックする', { exact: true }).click();
+  await expect(browser.locator('.article-card .status')).toHaveText('取得失敗', { timeout: 30000 });
+  await browser.locator('.article-card:has(.status-failed) .article-title').click();
+  await browser.reload();
+  await screen.getByRole('button', '取得した本文', { exact: true }).click();
+  await expect(browser.locator('.article-body')).toHaveText('取得できた短い本文です。');
+
   const { publication } = (await fixture.request(
     `/projects/${fixture.projectId}/publication`,
     'PATCH',

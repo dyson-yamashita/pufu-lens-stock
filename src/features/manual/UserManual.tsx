@@ -31,6 +31,7 @@ const sections = (tr: typeof t) => [
           <details>
             <summary>{tr('manual.stock_url_heading')}</summary>
             <p>{tr('manual.article_pages')}</p>
+            <p>{tr('manual.stock_short_retrieved_text')}</p>
             <p>{tr('manual.stock_og_image')}</p>
             <p>{tr('ui.user_manual.you_can_save_publicly_accessible_pdf_urls_pdfs_with')}</p>
             <p>{tr('manual.stock_x')}</p>

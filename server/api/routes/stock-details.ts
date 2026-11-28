@@ -124,6 +124,13 @@ export function registerStockDetailsRoutes(app: Hono<AppEnv>) {
     const stock = await ownedStock(c);
     if (stock.source_type === 'url' && isYouTubeUrl(stock.source_url))
       return c.json({ content: null });
+    if (
+      stock.source_type === 'url' &&
+      stock.status === 'failed' &&
+      stock.input_text === null &&
+      stock.short_retrieved_text !== null
+    )
+      return c.json({ content: stock.short_retrieved_text });
     // テキストでは要約処理中もD1の手入力本文を優先する。URL取得の本文は従来どおりR2を使う。
     const inputText = stock.source_type === 'text' ? stock.input_text : null;
     const object =

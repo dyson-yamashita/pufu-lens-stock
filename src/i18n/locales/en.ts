@@ -1246,6 +1246,8 @@ export const en: Record<string, string> = {
     'Applied immediately. This setting is saved in this browser.',
   'ui.user_manual.save_articles_as_stocks': 'Save articles as stocks',
   'manual.stock_url_heading': 'Multi-page articles, PDFs, X, and YouTube',
+  'manual.stock_short_retrieved_text':
+    'If a fetch fails after finding some text, you can read it under Retrieved text in the stock details.',
   'stock.detail_title': 'Stock details',
   'stock.detail_description': 'Reflect on this stock and connect it to questions and insights.',
   'stock.back': 'Back to previous page',

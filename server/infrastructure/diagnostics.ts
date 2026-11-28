@@ -10,6 +10,7 @@ export type Operation =
   | 'questions_list'
   | 'dispatch_jobs'
   | 'cleanup_stock_images'
+  | 'article_short_text_save'
   | 'scheduled_maintenance'
   | 'dispatch_superseded'
   | 'dispatch_expired'

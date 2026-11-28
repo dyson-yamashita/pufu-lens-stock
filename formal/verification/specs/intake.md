@@ -26,6 +26,12 @@
 
 [変異](../mutations/intake.json)はowner・検出形式・最終project・object key・PDF本文下限・AIスキーマを外し、それぞれ対応する定理が失敗することを確認する。
 
+## 取得失敗したPDFの短い本文
+
+- `acceptPdfShortText` は、サービス応答が1MiB以内、HTTP 422、本文不足の既知のエラー、`short_text` が長さ1〜199で空白以外の文字を含む文字列であることを採用条件とする。モデルには、文字列であれば測定済みのUTF-16長を渡し、空白以外の文字の有無を個別に渡す。実Workerは文字を含む短い抽出結果を本文不足の応答に含める。
+- `unrelated_pdf_error_has_no_short_text` は既知エラーの一致条件を外す変異を検出する。`pdf_short_text_requires_bounds` は長さの拒否、`pdf_short_text_stays_failed` は正常な解析結果として扱わないことを証明する。`pdf_short_text_decisions_reachable` は短文の採用と、境界長・過大な応答・空白のみ・短文の欄なしでの拒否を確認する。
+- [取得テスト](../../../tests/ingest.test.ts) は短文を採用しないサービス応答を照合する。[Workflowテスト](../../../tests/workflows.test.ts) は実PDF Parser Workerを経由した短文の保存と失敗状態を確認する。短い本文をD1に保存する世代条件は [B08](jobs.md#取得失敗時の短い本文) が扱う。
+
 ## 足あと分析の根拠
 
 - `footprintRefsAccepted` は、関連記録・各変化・きっかけの参照を、今回のモデル入力に含む根拠の番号へ照合する。モデルの添字は、Zodで正の整数として読み取った番号から1を引いた値。許可された変化の参照は送信済みの資料を指す。各番号のリンクは生成処理がDBから読んだ同じ資料から組み立てる。参照が無効なら生成結果を保存せず、足あとの本文・参照・メモリの版や履歴は保持する。AIの呼出・試行・失敗は利用記録に残る。
